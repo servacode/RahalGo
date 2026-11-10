@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -66,17 +65,17 @@ fun SuggestRow(items: List<Item>, media: (String?) -> String?, onAdd: (Item) -> 
             stringResource(R.string.suggest_title),
             color = Rahal.colors.ink,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
+            style = Rahal.type.sectionTitle,
         )
         Spacer(Modifier.height(Rahal.space.sm))
         LazyRow(
-            contentPadding = PaddingValues(vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(vertical = Rahal.space.xs),
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
         ) {
             items(items, key = { it.id }) { item ->
                 Column(
                     Modifier
-                        .width(104.dp)
+                        .width(Rahal.size.tileMin + Rahal.space.lg)
                         .clip(Rahal.shape.md)
                         // **وضغطةٌ واحدةٌ تُدخله** — **ونافذةُ تأكيدٍ
                         // لأجل كولا تُلغي فائدةَ الاقتراح كلَّها.**
@@ -88,18 +87,18 @@ fun SuggestRow(items: List<Item>, media: (String?) -> String?, onAdd: (Item) -> 
                         name = item.name,
                         modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(Rahal.shape.sm),
                     )
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     Text(
                         item.name,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                     )
                     Text(
                         money(item.price),
                         color = Rahal.colors.brand,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                     )
                 }
             }

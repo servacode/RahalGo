@@ -50,3 +50,16 @@ fun statusColor(status: String): Color = when (status) {
     "on_the_way", "at_dropoff" -> Rahal.colors.brand
     else -> Rahal.colors.inkMuted
 }
+
+/**
+ * **نبرةُ الحال للرقاقة الموحّدة** (`StatusChip`) — المعنى نفسُه في `statusColor`، **والحبرُ البرتقاليُّ
+ * غامقٌ يُقرأ** (البرتقاليُّ نفسُه نصّاً على الأبيض لا يُقرأ).
+ */
+fun statusTone(status: String): com.rahalgo.ui.StatusTone = when (status) {
+    "delivered" -> com.rahalgo.ui.StatusTone.Success
+    "cancelled", "rejected", "failed" -> com.rahalgo.ui.StatusTone.Danger
+    "pending", "dispatching" -> com.rahalgo.ui.StatusTone.Warning
+    "accepted", "confirmed", "preparing", "assigned", "at_pickup", "picked_up",
+    "on_the_way", "at_dropoff" -> com.rahalgo.ui.StatusTone.Info
+    else -> com.rahalgo.ui.StatusTone.Neutral
+}

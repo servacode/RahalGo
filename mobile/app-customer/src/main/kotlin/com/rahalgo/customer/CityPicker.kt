@@ -1,5 +1,7 @@
 package com.rahalgo.customer
 
+import com.rahalgo.ui.RahalDivider
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -12,9 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -67,21 +67,21 @@ fun CityRow(name: String, onClick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = Rahal.space.md),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             painter = painterResource(UiR.drawable.ic_pin),
             contentDescription = null,
             tint = Rahal.colors.brand,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(Rahal.icon.sm),
         )
         Spacer(Modifier.size(Rahal.space.md))
         Column(Modifier.weight(1f)) {
             Text(
                 stringResource(R.string.city_shopping_in),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.labelSmall,
+                style = Rahal.type.meta,
             )
             // **واسمٌ فارغٌ يقول «لم تُحدَّد»** — **وسطرٌ فارغٌ يُقرأ
             // عطباً في الشاشة لا حالاً في الحساب.**
@@ -91,14 +91,14 @@ fun CityRow(name: String, onClick: () -> Unit) {
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
         }
         Icon(
             painter = painterResource(UiR.drawable.ic_chevron_down),
             contentDescription = null,
             tint = Rahal.colors.brand,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(Rahal.icon.sm),
         )
     }
 }
@@ -121,11 +121,11 @@ fun CitySheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Rahal.colors.canvas,
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = Rahal.space.xl)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier
-                        .size(48.dp)
+                        .size(Rahal.size.touch)
                         .clip(CircleShape)
                         .background(Rahal.colors.warnTint),
                     contentAlignment = Alignment.Center,
@@ -134,7 +134,7 @@ fun CitySheet(
                         painter = painterResource(UiR.drawable.ic_pin),
                         contentDescription = null,
                         tint = Rahal.colors.accent,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(Rahal.icon.md),
                     )
                 }
                 Spacer(Modifier.size(Rahal.space.md))
@@ -144,17 +144,17 @@ fun CitySheet(
                         stringResource(R.string.city_sheet_title),
                         color = Rahal.colors.ink,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = Rahal.type.screenTitle,
                     )
                     Text(
                         stringResource(R.string.city_sheet_hint),
                         color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = Rahal.type.body,
                     )
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
 
             // **والتلقائيُّ أوّلاً** — انظر أعلاه: **بلاه لا رجوعَ لمن
             // ثبّت مدينةً ثمّ سافر.**
@@ -197,23 +197,23 @@ private fun Choice(title: String, subtitle: String, selected: Boolean, onClick: 
             painter = painterResource(UiR.drawable.ic_pin),
             contentDescription = null,
             tint = if (selected) Rahal.colors.accent else Rahal.colors.inkMuted,
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier.size(Rahal.icon.md),
         )
         Spacer(Modifier.size(Rahal.space.md))
         Column(Modifier.weight(1f)) {
             Text(
                 title,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
             if (subtitle.isNotEmpty()) {
                 Text(
                     subtitle,
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
             }
         }
     }
-    HorizontalDivider()
+    RahalDivider()
 }

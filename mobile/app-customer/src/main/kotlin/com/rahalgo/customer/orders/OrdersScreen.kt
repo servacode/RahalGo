@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.CircularProgressIndicator
@@ -81,43 +81,20 @@ fun OrdersScreen(
         walletBalance = if (showHistory) 0 else walletBalance,
         onBrowse = if (showHistory) null else onBrowse,
         tabs = {
-            Spacer(Modifier.height(Rahal.space.xs))
-            androidx.compose.foundation.layout.Row(
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Rahal.space.sm),
-            ) {
-                TabPill(
-                    text = stringResource(R.string.ord_tab_open, vm.open.size.toString()),
-                    on = !showHistory,
-                ) { showHistory = false }
-                TabPill(
-                    text = stringResource(
+            // **مفتاحٌ مقسومٌ بعرض الشاشة** (إعادةُ التصميم ٢٠٢٦-١١-١١) — `Segmented` نفسُه في الطلب الخاصّ.
+            com.rahalgo.customer.Segmented(
+                options = listOf(
+                    stringResource(R.string.ord_tab_open, vm.open.size.toString()),
+                    stringResource(
                         R.string.ord_tab_history,
                         vm.history.size.toString() + if (vm.historyHasMore) "+" else "",
                     ),
-                    on = showHistory,
-                ) { showHistory = true }
-            }
+                ),
+                selected = if (showHistory) 1 else 0,
+                onSelect = { showHistory = it == 1 },
+            )
             Spacer(Modifier.height(Rahal.space.xs))
         },
-    )
-}
-
-/** **حبّةُ اختيار** — المختارةُ بلون العلامة والأخرى بإطار، كفلاتر لوحة الإدارة. */
-@Composable
-private fun TabPill(text: String, on: Boolean, onClick: () -> Unit) {
-    Text(
-        text = text,
-        color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
-        fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
-        style = MaterialTheme.typography.labelLarge,
-        modifier = Modifier
-            .clip(Rahal.shape.pill)
-            .then(
-                if (on) Modifier.background(Rahal.colors.brand)
-                else Modifier.border(1.dp, Rahal.colors.line, Rahal.shape.pill),
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = Rahal.space.lg, vertical = 10.dp),
     )
 }
 
@@ -244,22 +221,21 @@ private fun OrdersList(
             }
             // **ولا «لا طلبات» قبل أوّل جواب** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت تومض لحظةً
             // فيظنّ من طلب الآن أنّ طلبَه ضاع.
+            // **وهيكلُ بطاقاتٍ ينبض بدل الدوّارة** (D11) — يقول «طلباتُك قادمة» بشكلها.
             if (list.isEmpty() && !vm.loadedOnce) {
-                androidx.compose.foundation.layout.Box(
-                    Modifier.fillMaxWidth().padding(vertical = 40.dp),
-                    contentAlignment = androidx.compose.ui.Alignment.Center,
-                ) { com.rahalgo.ui.RahalLoader() }
+                com.rahalgo.ui.SkeletonList(count = 3, modifier = Modifier.padding(top = Rahal.space.sm))
             } else if (list.isEmpty()) {
                 Empty(
                     text = empty,
                     actionLabel = if (onBrowse != null) stringResource(R.string.act_browse_market) else "",
                     onAction = onBrowse,
+                    icon = R.drawable.ic_orders,
                 )
             }
         }
 
         items(list, key = { it.id }) { o ->
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             val left = if (history) 0 else cancelLeft(o.cancelSecondsLeft, vm.loadedAt)
             OrderCard(
                 order = o,
@@ -344,7 +320,7 @@ private fun OrdersList(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (vm.loadingMore) {
-                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(Modifier.size(Rahal.icon.sm), strokeWidth = Rahal.stroke.focus)
                     } else {
                         Text(stringResource(R.string.ord_load_more))
                     }
@@ -444,7 +420,7 @@ private fun ConfirmCancel(
 private fun DialogError(error: String) {
     if (error.isEmpty()) return
     Spacer(Modifier.height(Rahal.space.sm))
-    Text(error, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
+    Text(error, color = Rahal.colors.danger, style = Rahal.type.caption)
 }
 
 /**
@@ -494,18 +470,21 @@ internal fun RateDialog(
                 Text(
                     text = stringResource(R.string.ord_rate_service),
                     color = Rahal.colors.ink,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = Rahal.type.cardTitle,
                 )
+                Spacer(Modifier.height(Rahal.space.xs))
                 StarRow(stars) { stars = it }
                 if (hasDriver) {
-                    Spacer(Modifier.height(Rahal.space.sm))
+                    // **فاصلٌ بين التقييمين** — فلا يُقرأ سطرُ السائق تتمّةً للخدمة.
+                    Spacer(Modifier.height(Rahal.space.md))
+                    com.rahalgo.ui.RahalDivider()
+                    Spacer(Modifier.height(Rahal.space.md))
                     Text(
                         text = stringResource(R.string.ord_rate_driver),
                         color = Rahal.colors.ink,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = Rahal.type.cardTitle,
                     )
+                    Spacer(Modifier.height(Rahal.space.xs))
                     StarRow(driverStars) { driverStars = it }
                 }
                 DialogError(error)
@@ -535,12 +514,12 @@ private fun StarRow(value: Int, onPick: (Int) -> Unit) {
             val label = stringResource(R.string.rate_star_n, n.toString())
             androidx.compose.foundation.layout.Box(
                 Modifier
-                    .size(44.dp)
+                    .size(Rahal.size.touch)
                     .clip(androidx.compose.foundation.shape.CircleShape)
                     .clickable(onClickLabel = label) { onPick(n) },
                 contentAlignment = androidx.compose.ui.Alignment.Center,
             ) {
-                com.rahalgo.ui.RatingStar(filled = n <= value, size = 40.dp)
+                com.rahalgo.ui.RatingStar(filled = n <= value, size = Rahal.size.iconBox)
             }
         }
     }
@@ -557,7 +536,7 @@ private fun StarRow(value: Int, onPick: (Int) -> Unit) {
             },
         ),
         color = if (value > 0) Rahal.colors.accent else Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.bodySmall,
+        style = Rahal.type.caption,
         fontWeight = if (value > 0) FontWeight.Bold else FontWeight.Normal,
     )
 }
@@ -632,7 +611,7 @@ private fun ComplainDialog(
                             text = reasonLabel(r.code),
                             color = if (on) Rahal.colors.ink else Rahal.colors.inkMuted,
                             fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = Rahal.type.body,
                         )
                     }
                 }

@@ -1,5 +1,7 @@
 package com.rahalgo.customer.custom
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.draw.shadow
 import android.app.Application
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -10,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -152,7 +153,16 @@ fun CustomScreen(
         onSent()
     }
 
-    Screen {
+    // **الزرُّ الأساسيُّ ثابتٌ تحت** (إعادةُ التصميم ٢٠٢٦-١١-١١) — كشريط السلّة: «أرسل الطلب» يُرى
+    // من أوّل الصفحة وسببُ تعطيله فوقه، **والحقولُ تمرّ فوقه.**
+    // **وما ينقص والزرُّ يُحسبان قبل الصفحة** — كلاهما في الشريط.
+    val missing = if (mode != "amanah") emptyList() else buildList {
+        if (holderName.isBlank()) add(stringResource(R.string.cst_holder_name))
+        if (holderPhone.count { it.isDigit() } < 9) add(stringResource(R.string.cst_holder_phone))
+    }
+    val needHolder = missing.isNotEmpty()
+    androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+    Screen(Modifier.weight(1f)) {
         // **«اطلب أي شيء…» هي العنوان، ولا «طلب خاص» فوقها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
         // واسمُ التبويب تحت يبقى «طلب خاص».
         // **عنوانٌ عاديّ بسطرٍ ثانويّ أصغر** (تدقيق D8، ٢٠٢٦-١١-١١): «طلب خاص» أو «أمانة» حسب الوضع،
@@ -175,28 +185,19 @@ fun CustomScreen(
             else -> ""
         }
         if (closedText.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             com.rahalgo.ui.ServiceClosedBanner(closedText)
         }
 
         // **ولا «نوع الطلب» فوق الخيارين** — «مشتريات/أمانة» تشرح نفسَها (قرارُ المالك ٢٠٢٦-١٠-٣٠).
         Spacer(Modifier.height(Rahal.space.md))
-        androidx.compose.foundation.layout.Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Rahal.space.sm),
-        ) {
-            for ((key, label) in listOf("purchase" to R.string.cst_mode_purchase, "amanah" to R.string.cst_mode_amanah)) {
-                if (mode == key) {
-                    RahalButton(onClick = { mode = key }, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(label))
-                    }
-                } else {
-                    com.rahalgo.ui.RahalOutlineButton(onClick = { mode = key }, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(label))
-                    }
-                }
-            }
-        }
+        // **اختيارٌ لا فعلان** (إعادةُ التصميم ٢٠٢٦-١١-١١): كان زرّاً مملوءاً وآخرَ محدَّداً فيُقرآن
+        // زرّين يفعلان شيئاً. **والمفتاحُ المقسومُ نفسُه الذي في «طلباتي».**
+        com.rahalgo.customer.Segmented(
+            options = listOf(stringResource(R.string.cst_mode_purchase), stringResource(R.string.cst_mode_amanah)),
+            selected = if (mode == "amanah") 1 else 0,
+            onSelect = { mode = if (it == 1) "amanah" else "purchase" },
+        )
         // **ولا سطرَ شرحٍ تحت النوع** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
         Spacer(Modifier.height(Rahal.space.md))
         // **وحقلُ الطلب واسعٌ** — من يكتب «كيلو لحمة من ملحمة أبو أحمد
@@ -214,7 +215,7 @@ fun CustomScreen(
                 Text(
                     stringResource(if (mode == "amanah") R.string.cst_what_hint_amanah else R.string.cst_what_hint),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                     modifier = Modifier.padding(top = Rahal.space.xs),
                 )
             },
@@ -265,6 +266,10 @@ fun CustomScreen(
                 },
                 label = { Text(stringResource(R.string.cst_holder_phone)) },
                 singleLine = true,
+                // **الرقمُ يُكتب من اليسار** — فلا ينقلب «+963» في سطرٍ عربيّ.
+                textStyle = androidx.compose.material3.LocalTextStyle.current.copy(
+                    textDirection = androidx.compose.ui.text.style.TextDirection.Ltr,
+                ),
                 enabled = !vm.busy,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                     keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone,
@@ -275,7 +280,7 @@ fun CustomScreen(
             HolderAskCard(vm, holderPhone)
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         OutlinedTextField(
             value = notes,
             onValueChange = { notes = TextLimits.fit(it, TextLimits.ORDER_NOTES) },
@@ -293,14 +298,7 @@ fun CustomScreen(
         // **والأجرةُ بطاقةٌ برقمٍ واضح** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — لا ثلاثةُ أسطرٍ رماديّة.
         Spacer(Modifier.height(Rahal.space.md))
         // **بلا ظلٍّ (تدقيق D9)**: بطاقةُ الأجرة خبرٌ لا زرّ — أرضٌ هادئةٌ وحدٌّ رفيع.
-        androidx.compose.foundation.layout.Column(
-            Modifier
-                .fillMaxWidth()
-                .clip(Rahal.shape.md)
-                .background(Rahal.colors.field)
-                .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
-                .padding(Rahal.space.md),
-        ) {
+        com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Plain) {
         if (Serving.customFeeAdminDefined) {
             val fee = Serving.customFeeFor(mode)
             // **وعرضُ التوصيل المجاني يُسقطها** (٢٠٢٦-١٠-٢٦) — مشطوبةً وسطرُ العرض تحتها.
@@ -310,7 +308,7 @@ fun CustomScreen(
                 color = if (waive > 0) Rahal.colors.inkMuted else Rahal.colors.ink,
                 textDecoration = if (waive > 0) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
                 fontWeight = if (waive > 0) null else androidx.compose.ui.text.font.FontWeight.Bold,
-                style = if (waive > 0) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
+                style = if (waive > 0) Rahal.type.body else Rahal.type.sectionTitle,
             )
             if (waive > 0) {
                 // **والإعفاءُ الجزئيُّ لا يُقال «مجانية»** — سقفُ العرض أقلُّ من الأجرة.
@@ -319,10 +317,10 @@ fun CustomScreen(
                     else stringResource(R.string.ord_fee_value, money(fee - waive)),
                     color = Rahal.colors.success,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = Rahal.type.sectionTitle,
                 )
                 com.rahalgo.customer.freeUntilText(com.rahalgo.customer.FreeOffer.state.endsAt)?.let {
-                    Text(it, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+                    Text(it, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
                 }
             }
             // **ولا سطرَ تحت الأجرة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا «الإجمالي… أجرة التوصيل
@@ -331,7 +329,7 @@ fun CustomScreen(
             Text(
                 stringResource(R.string.cst_fee_on_deal),
                 color = Rahal.colors.ink,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
             // **والعرضُ يُقال ولو كانت الأجرةُ عند السائق** — بصيغةٍ صادقة: يُحجز وقتَ
             // تحديد السعر لا الآن (تدقيقُ المنطق ٢٠٢٦-١٠-٢٧).
@@ -341,18 +339,54 @@ fun CustomScreen(
                     stringResource(R.string.free_custom_pending),
                     color = Rahal.colors.success,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
             }
         }
         }
-        Spacer(Modifier.height(Rahal.space.lg))
-        // **والأمانةُ بلا صاحبها ورقمه لا تُرسَل** — السائقُ يتّصل به. **والموقعُ ليس شرطاً.**
-        val missing = if (mode != "amanah") emptyList() else buildList {
-            if (holderName.isBlank()) add(stringResource(R.string.cst_holder_name))
-            if (holderPhone.count { it.isDigit() } < 9) add(stringResource(R.string.cst_holder_phone))
+        // ══════════════════════════════════════════════════════════════
+        // **وسببُ الرفض يبقى تحت الزرّ — لا ومضةٌ تختفي** (فحصُ القبول ٢٠٢٦-١٠-٠٣)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **أوقف المكتبُ المنصّةَ مؤقّتاً فضغط «أرسل الطلب» ولم يرَ سبباً** —
+        // كانت `Flash` وحدَها تقوله ثانيتين. **ومن لم يقرأ السببَ أعاد
+        // الضغطَ ثمّ خرج.** فيبقى حتّى يُرسَل من جديد — **والنصُّ نصُّ
+        // المحرّك** (`apiError`: الإيقافُ ورسالتُه وموعدُ العودة، والدوام،
+        // والإطلاق، والتغطية).
+        if (vm.error.isNotEmpty()) {
+            Spacer(Modifier.height(Rahal.space.md))
+            com.rahalgo.ui.Note(vm.error, Rahal.colors.danger)
         }
-        val needHolder = missing.isNotEmpty()
+
+        Spacer(Modifier.height(Rahal.space.lg))
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **الشريطُ الثابت — ما ينقص سطرٌ فوق الزرّ** (بشكل شريط السلّة)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ويُقال ما ينقص قبل أن يُضغط** — لا زرٌّ معطّلٌ بلا سبب:
+    // **من رأى زرّاً لا يعمل ولا يعرف لماذا أغلق التطبيق.**
+    val why = when {
+        address == null -> stringResource(R.string.cst_need_point)
+        needHolder -> stringResource(R.string.cst_missing, missing.joinToString("، "))
+        else -> ""
+    }
+    androidx.compose.foundation.layout.Column(
+        Modifier
+            .fillMaxWidth()
+            .shadow(Rahal.elevation.raised, clip = false)
+            .background(Rahal.colors.canvas)
+            .padding(horizontal = Rahal.space.gutter, vertical = Rahal.space.md),
+    ) {
+        if (why.isNotEmpty()) {
+            Text(
+                text = why,
+                color = Rahal.colors.inkMuted,
+                style = Rahal.type.caption,
+            )
+            Spacer(Modifier.height(Rahal.space.sm))
+        }
         RahalButton(
             onClick = {
                 address?.let {
@@ -371,45 +405,12 @@ fun CustomScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (vm.busy) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(Modifier.size(Rahal.icon.sm), strokeWidth = Rahal.stroke.focus)
             } else {
                 Text(stringResource(R.string.cst_send))
             }
         }
-
-        // ══════════════════════════════════════════════════════════════
-        // **وسببُ الرفض يبقى تحت الزرّ — لا ومضةٌ تختفي** (فحصُ القبول ٢٠٢٦-١٠-٠٣)
-        // ══════════════════════════════════════════════════════════════
-        //
-        // **أوقف المكتبُ المنصّةَ مؤقّتاً فضغط «أرسل الطلب» ولم يرَ سبباً** —
-        // كانت `Flash` وحدَها تقوله ثانيتين. **ومن لم يقرأ السببَ أعاد
-        // الضغطَ ثمّ خرج.** فيبقى حتّى يُرسَل من جديد — **والنصُّ نصُّ
-        // المحرّك** (`apiError`: الإيقافُ ورسالتُه وموعدُ العودة، والدوام،
-        // والإطلاق، والتغطية).
-        if (vm.error.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
-            com.rahalgo.ui.Note(vm.error, Rahal.colors.danger)
-        }
-
-        // **ويُقال ما ينقص قبل أن يُضغط** — لا زرٌّ معطّلٌ بلا سبب:
-        // **من رأى زرّاً لا يعمل ولا يعرف لماذا أغلق التطبيق.**
-        if (address == null) {
-            Spacer(Modifier.height(Rahal.space.sm))
-            Text(
-                text = stringResource(R.string.cst_need_point),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        if (needHolder) {
-            Spacer(Modifier.height(Rahal.space.sm))
-            Text(
-                text = stringResource(R.string.cst_missing, missing.joinToString("، ")),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        Spacer(Modifier.height(28.dp))
+    }
     }
 }
 
@@ -670,7 +671,7 @@ private fun HolderAskCard(vm: CustomViewModel, phone: String) {
             Text(
                 stringResource(if (req.whatsappSent) R.string.cst_ask_waiting else R.string.cst_ask_not_sent),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
             // **ولم تصل الرسالة** (البوتُ غيرُ مقترن) — يشارك الرابطَ بنفسه بلمسة.
             if (!req.whatsappSent && req.waUrl.isNotEmpty()) {
@@ -683,17 +684,17 @@ private fun HolderAskCard(vm: CustomViewModel, phone: String) {
             stringResource(R.string.cst_ask_received),
             color = Rahal.colors.success,
             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
         )
         vm.ask == HolderAsk.Expired -> Text(
             stringResource(R.string.cst_ask_expired),
             color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
         )
         vm.ask == HolderAsk.Idle && vm.askError.isEmpty() -> Text(
             stringResource(R.string.cst_ask_hint),
             color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
         )
     }
     if (vm.askError.isNotEmpty()) {

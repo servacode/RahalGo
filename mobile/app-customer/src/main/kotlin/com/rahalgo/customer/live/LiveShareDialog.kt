@@ -1,6 +1,5 @@
 package com.rahalgo.customer.live
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
@@ -39,7 +38,7 @@ fun LiveShareDialog(
             Text(
                 text = stringResource(R.string.live_ask_body),
                 color = Rahal.colors.ink,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
         },
         // **زرّان معبّآن متقابلان — أخضرُ وأحمر** (ملاحظةُ المالك ٢٠٢٦-١٠-١٦): «لازم أزرار

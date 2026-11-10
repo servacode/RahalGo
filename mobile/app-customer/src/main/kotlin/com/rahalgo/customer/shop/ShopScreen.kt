@@ -35,7 +35,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -295,7 +294,7 @@ fun ShopScreen(
                     onClick = { com.rahalgo.customer.CityScope.exitPreview(context); vm.load() },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(com.rahalgo.ui.R.string.preview_exit)) }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
             }
         } else {
             availability?.takeIf { !it.available }?.let { av ->
@@ -310,7 +309,7 @@ fun ShopScreen(
                         flagshipName = flagship?.name ?: "",
                         onBrowseFlagship = enterPreview,
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(Rahal.space.md))
                 }
             }
         }
@@ -394,8 +393,8 @@ fun ShopScreen(
         // **ذيلٌ يفسح لقرص الحديث** — والقرصُ يطفو فوق المحتوى فلا يزيحه، **وبطاقةٌ
         // نصفُها تحت زرٍّ تُقرأ عطباً.**
         contentPadding = PaddingValues(
-            start = 12.dp, end = 12.dp,
-            bottom = 16.dp + com.rahalgo.ui.LocalChatFabInset.current,
+            start = Rahal.space.md, end = Rahal.space.md,
+            bottom = Rahal.space.lg + com.rahalgo.ui.LocalChatFabInset.current,
         ),
         horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
         verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
@@ -409,7 +408,7 @@ fun ShopScreen(
     // أعلاها** يمرّ مع التمرير. (ولم يُثبَّت البحثُ والأقسام: لا `stickyHeader`
     // في شبكة Compose.) **وحشوةُ الشبكة الجانبيّةُ تُلغى عنه** كي لا يضيق.
     item(key = "home-head", span = { GridItemSpan(maxLineSpan) }) {
-    Column(Modifier.bleed(12.dp)) {
+    Column(Modifier.bleed(Rahal.space.md)) {
         // ══════════════════════════════════════════════════════════════
         // **سلايدرٌ ثمّ «متاجر مميّزة» ثمّ البحث** (قرارُ المالك ٢٠٢٦-١٠-١٨)
         // ══════════════════════════════════════════════════════════════
@@ -442,7 +441,7 @@ fun ShopScreen(
                         everyMs = vm.bannerEveryMs,
                         // **ولا حشوةَ جانبيّةٌ هنا** — السلايدرُ يفسحها بنفسه
                         // ليُظهر حافّةَ التالية.
-                        modifier = Modifier.padding(vertical = 10.dp),
+                        modifier = Modifier.padding(vertical = Rahal.space.md),
                     )
 
                 ShopBlock.Strip -> FeaturedStrip(vm.featured, media, vm::openStore)
@@ -468,7 +467,7 @@ fun ShopScreen(
                                 painter = painterResource(com.rahalgo.ui.R.drawable.ic_search),
                                 contentDescription = null,
                                 tint = Rahal.colors.inkMuted,
-                                modifier = Modifier.size(20.dp),
+                                modifier = Modifier.size(Rahal.icon.sm),
                             )
                         },
                         singleLine = true,
@@ -478,7 +477,7 @@ fun ShopScreen(
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = Rahal.space.sm),
+                            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
                     )
             }
         }
@@ -508,14 +507,13 @@ fun ShopScreen(
         when {
             vm.busy && vm.items.isEmpty() ->
                 item(key = "home-state", span = { GridItemSpan(maxLineSpan) }) {
-                    Box(Modifier.fillMaxWidth().heightIn(min = 280.dp), contentAlignment = Alignment.Center) {
-                        RahalLoader()
-                    }
+                    // **شبكةُ هيكلٍ تنبض لا دوّارةٌ في فراغ** (D11) — بالقطعة المشتركة.
+                    com.rahalgo.ui.SkeletonList(count = 4)
                 }
 
             vm.error.isNotEmpty() && vm.items.isEmpty() ->
                 item(key = "home-state", span = { GridItemSpan(maxLineSpan) }) {
-                    Box(Modifier.fillMaxWidth().heightIn(min = 280.dp)) {
+                    Box(Modifier.fillMaxWidth().heightIn(min = HomeStateMin)) {
                         LoadState(loading = false, error = vm.error, onRetry = vm::load)
                     }
                 }
@@ -546,7 +544,7 @@ fun ShopScreen(
             // **وإعادةُ نداءٍ ناجحٍ تردّ جوابَه عينَه.** **وزرٌّ لا
             // يغيّر شيئاً يُضغط ثمّ يُفقَد الرجاءُ بالتطبيق.**
             // **والسوقُ الفارغةُ تُعرَض أقساماً** (٢٠٢٦-١٠-٠٦) — ولا تُطوى إلى رسالةٍ إلّا خارجَ التغطية.
-            (vm.sections.isEmpty() || (vm.marketEmpty && availability?.available == false)) && !vm.searching -> item(key = "home-state", span = { GridItemSpan(maxLineSpan) }) { Box(Modifier.fillMaxWidth().heightIn(min = 280.dp)) {
+            (vm.sections.isEmpty() || (vm.marketEmpty && availability?.available == false)) && !vm.searching -> item(key = "home-state", span = { GridItemSpan(maxLineSpan) }) { Box(Modifier.fillMaxWidth().heightIn(min = HomeStateMin)) {
                 // ══════════════════════════════════════════════════════
                 // **وسوقٌ فارغةٌ خارجَ التغطيةِ ليست «قريباً»** (`CUST-07-034`)
                 // ══════════════════════════════════════════════════════
@@ -578,6 +576,7 @@ fun ShopScreen(
                 } else {
                     // **وداخلَ التغطيةِ سوقٌ لم تمتلئ بعدُ** — «قريباً» صادقة.
                     Empty(
+                        icon = R.drawable.ic_store,
                         text = stringResource(R.string.shop_market_empty),
                         hint = stringResource(R.string.shop_market_empty_hint),
                         actionLabel = "",
@@ -587,8 +586,9 @@ fun ShopScreen(
             } }
 
             vm.items.isEmpty() -> item(key = "home-state", span = { GridItemSpan(maxLineSpan) }) {
-                Box(Modifier.fillMaxWidth().heightIn(min = 280.dp)) {
+                Box(Modifier.fillMaxWidth().heightIn(min = HomeStateMin)) {
                     Empty(
+                        icon = if (vm.searching) com.rahalgo.ui.R.drawable.ic_search else R.drawable.ic_store,
                         text = stringResource(
                             if (vm.searching) R.string.shop_no_results else R.string.shop_section_empty,
                         ),
@@ -661,13 +661,16 @@ private fun CardButton(text: String, filled: Boolean, onClick: () -> Unit, modif
             text = text,
             color = if (filled) Rahal.colors.onBrand else Rahal.colors.brand,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelSmall,
+            style = Rahal.type.meta,
             maxLines = 1,
         )
     }
 }
 
 const val ShopCols = 3
+
+/** **أدنى ارتفاعٍ لحال السوق** (فراغ/خطأ) — يُوسَّط فيه ولا يلتصق بالأقسام فوقه. */
+private val HomeStateMin = com.rahalgo.design.RahalSizeTokens.tileMin * 3
 
 /**
  * **مقاسُ السلّة العائمة.**
@@ -690,7 +693,7 @@ internal fun SectionRail(
     onPick: (String) -> Unit,
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+        contentPadding = PaddingValues(horizontal = Rahal.space.md, vertical = Rahal.space.xs),
         horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
     ) {
         items(sections, key = { it.id }) { s ->
@@ -780,7 +783,7 @@ internal fun SectionRail(
                 // الشريطُ مضطربا.
                 // **وصار سطراً واحداً يصغر خطُّه حتّى يسع** (طلبُ المالك ٢٠٢٦-١٠-١٩: «اسم
                 // الاقسام… مابدي ع سطرين ع سطر واحد بس») — فلا يُقصّ ولا يعلو الشريط.
-                val catStyle = MaterialTheme.typography.labelMedium.copy(
+                val catStyle = Rahal.type.label.copy(
                     // **والمختارُ يُعرف بلونه وثقله** — لا بإطارٍ يزاحم
                     // الصورة.
                     color = if (on) Rahal.colors.brand else Rahal.colors.inkMuted,
@@ -873,12 +876,26 @@ internal fun ItemCard(
                 itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 // **قطعةُ السعر المشتركة** (ملاحظةُ المالك ٢٠٢٦-١١-١١): الدولارُ عريضٌ والليرةُ بعد «≈» تحته.
-                com.rahalgo.ui.DualPrice(
-                    usd = item.priceUsd,
-                    syp = item.price,
-                    stacked = true,
-                    style = MaterialTheme.typography.labelMedium,
-                )
+                Column(horizontalAlignment = Alignment.End) {
+                    com.rahalgo.ui.DualPrice(
+                        usd = item.priceUsd,
+                        syp = item.price,
+                        stacked = true,
+                        style = Rahal.type.label,
+                        horizontalAlignment = Alignment.End,
+                    )
+                    // **والمشطوبُ تحت السعر داخلَ البطاقة** (إعادةُ التصميم ٢٠٢٦-١١-١١) — كان سطراً
+                    // خارجَ الإطار تحت البطاقة فيُقرأ ابنَ البطاقة التالية.
+                    item.priceBefore?.let {
+                        Text(
+                            text = item.priceBeforeUsd?.let { u -> com.rahalgo.ui.dollars(u) } ?: money(it),
+                            color = Rahal.colors.inkMuted,
+                            textDecoration = TextDecoration.LineThrough,
+                            style = Rahal.type.meta,
+                            maxLines = 1,
+                        )
+                    }
+                }
             }
 
             // **لا وصفَ للصنف عند الزبون** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — فلا قلبَ للصورة؛
@@ -927,14 +944,14 @@ internal fun ItemCard(
                         ),
                         color = Rahal.colors.canvas,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = Rahal.type.label,
                         maxLines = 1,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(Rahal.space.xs)
                             .clip(Rahal.shape.sm)
                             .background(Rahal.colors.ink.copy(alpha = 0.88f))
-                            .padding(horizontal = Rahal.space.sm, vertical = 3.dp),
+                            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs),
                     )
                 }
 
@@ -955,7 +972,7 @@ internal fun ItemCard(
             // **كان خارج الإطار بخطٍّ ١٢ فلا يُقرأ أنّه ابنُ البطاقة.** وصار سطران
             // يصغر خطُّهما حتّى يسعا (لا قصَّ لحرف)، **واسمُ المتجر سطرٌ رماديٌّ ثانٍ.**
             run {
-                val itemStyle = MaterialTheme.typography.bodyMedium.copy(
+                val itemStyle = Rahal.type.body.copy(
                     color = Rahal.colors.ink,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
@@ -988,7 +1005,7 @@ internal fun ItemCard(
             ) {
                 val toStore = onStore?.takeIf { !item.merchantName.isNullOrBlank() && item.merchantId.isNotBlank() }
                 // **سطرٌ واحدٌ يصغر خطُّه حتّى يسع** (طلبُ المالك ٢٠٢٦-١٠-١٩) — لا «امبراطور الشاو…».
-                val nameStyle = MaterialTheme.typography.labelSmall.copy(
+                val nameStyle = Rahal.type.meta.copy(
                     // **رماديٌّ دائماً (D7)** — وإن فُتحت به صفحةُ المتجر.
                     color = Rahal.colors.inkMuted,
                 )
@@ -1040,7 +1057,7 @@ internal fun ItemCard(
                             if (liked) R.string.shop_unlike else R.string.shop_like,
                         ),
                         tint = if (liked) Rahal.colors.danger else Rahal.colors.inkMuted,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(Rahal.icon.sm),
                     )
                 }
                 if (!closed && onAdd != null) {
@@ -1052,17 +1069,6 @@ internal fun ItemCard(
                     )
                 }
             }
-        }
-        Spacer(Modifier.height(5.dp))
-        // **والمشطوبُ وحدَه ينزل سطرا** — ولا يقع إلّا في المحسوم.
-        item.priceBefore?.let {
-            Text(
-                text = item.priceBeforeUsd?.let { u -> com.rahalgo.ui.dollars(u) } ?: money(it),
-                color = Rahal.colors.inkMuted,
-                textDecoration = TextDecoration.LineThrough,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-            )
         }
     }
 }

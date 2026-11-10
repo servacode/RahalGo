@@ -1,5 +1,7 @@
 package com.rahalgo.customer.orders
 
+import com.rahalgo.ui.RahalDivider
+
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -7,8 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import com.rahalgo.customer.R
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.customer.OrderSection
-import com.rahalgo.ui.Chip
 
 /**
  * **نصُّ حالِ القسم** — دالّةٌ صرفةٌ تُختبر بلا واجهة.
@@ -57,14 +56,14 @@ internal fun sectionsCount(sections: List<OrderSection>?): Int? =
 @Composable
 internal fun OrderSectionsBlock(sections: List<OrderSection>?) {
     val n = sectionsCount(sections) ?: return
-    Spacer(Modifier.height(10.dp))
-    HorizontalDivider()
+    Spacer(Modifier.height(Rahal.space.md))
+    RahalDivider()
     Spacer(Modifier.height(Rahal.space.sm))
     Text(
         text = stringResource(R.string.sec_title, n.toString()),
         color = Rahal.colors.ink,
         fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.titleSmall,
+        style = Rahal.type.cardTitle,
     )
     sections.orEmpty().sortedBy { it.seq }.forEach { s ->
         Spacer(Modifier.height(Rahal.space.sm))
@@ -78,15 +77,15 @@ internal fun OrderSectionsBlock(sections: List<OrderSection>?) {
                 text = stringResource(R.string.sec_part, s.seq.toString()),
                 color = if (gone) Rahal.colors.inkMuted else Rahal.colors.ink,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
-            Chip(
+            com.rahalgo.ui.StatusChip(
                 stringResource(sectionStatusRes(s.status)),
                 when (s.status) {
-                    "unavailable" -> Rahal.colors.danger
-                    "picked_up" -> Rahal.colors.success
-                    "accepted" -> Rahal.colors.brand
-                    else -> Rahal.colors.accent
+                    "unavailable" -> com.rahalgo.ui.StatusTone.Danger
+                    "picked_up" -> com.rahalgo.ui.StatusTone.Success
+                    "accepted" -> com.rahalgo.ui.StatusTone.Info
+                    else -> com.rahalgo.ui.StatusTone.Warning
                 },
             )
         }
@@ -95,7 +94,7 @@ internal fun OrderSectionsBlock(sections: List<OrderSection>?) {
                 Text(
                     text = it.name + " × " + it.qty,
                     color = if (gone) Rahal.colors.inkMuted else Rahal.colors.ink,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                     textDecoration = if (gone) TextDecoration.LineThrough else null,
                 )
             }
