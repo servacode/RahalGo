@@ -125,7 +125,7 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT m.id, m.name, c.icon, c.name, lm.thumb_path, m.status,
 		       m.created_at::date::text,
-		       NULLIF(ou.phone::text, ''),
+		       NULLIF(ou.phone::text, ''), NULLIF(btrim(ou.full_name), ''),
 		       -- **وطلبٌ بعدّة محطّات فيه قسمٌ حيٌّ لهذا المتجر طلبُه أيضاً.**
 		       (SELECT count(*) FROM orders o WHERE `+orders.LiveStoreOrdersSQL("m.id")+` AND o.status = 'delivered'),
 		       -- «الملغية» تجمع كل نهاية غير التسليم: رفضٌ من المتجر، وإلغاءٌ من
@@ -210,14 +210,16 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type repMerchant struct {
-		ID           string     `json:"id"`
-		Name         string     `json:"name"`
-		CategoryIcon string     `json:"category_icon"`
-		CategoryName string     `json:"category_name"`
-		LogoThumbURL *string    `json:"logo_thumb_url"`
-		Status       string     `json:"status"`
-		JoinedAt     string     `json:"joined_at"`
-		OwnerPhone   *string    `json:"owner_phone"`
+		ID           string  `json:"id"`
+		Name         string  `json:"name"`
+		CategoryIcon string  `json:"category_icon"`
+		CategoryName string  `json:"category_name"`
+		LogoThumbURL *string `json:"logo_thumb_url"`
+		Status       string  `json:"status"`
+		JoinedAt     string  `json:"joined_at"`
+		OwnerPhone   *string `json:"owner_phone"`
+		// OwnerName اسمُ صاحب المتجر (حقلُ قراءةٍ فقط) — يظهر في بطاقة العميل؛ رقمُه لا يُعرض بل يُستعمل للاتّصال.
+		OwnerName    *string    `json:"owner_name"`
 		Delivered    int        `json:"delivered_orders"`
 		Cancelled    int        `json:"cancelled_orders"`
 		MyCommission int64      `json:"my_commission"`
@@ -252,7 +254,7 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var m repMerchant
 		if err := rows.Scan(&m.ID, &m.Name, &m.CategoryIcon, &m.CategoryName, &m.LogoThumbURL,
-			&m.Status, &m.JoinedAt, &m.OwnerPhone, &m.Delivered, &m.Cancelled,
+			&m.Status, &m.JoinedAt, &m.OwnerPhone, &m.OwnerName, &m.Delivered, &m.Cancelled,
 			&m.MyCommission, &m.LastOrderAt, &m.ActivationDone,
 			&m.ItemsCount, &m.OffersCount, &m.opener, &m.counted,
 			&m.HasHours, &m.HasLocation, &m.PhotoItems); err != nil {

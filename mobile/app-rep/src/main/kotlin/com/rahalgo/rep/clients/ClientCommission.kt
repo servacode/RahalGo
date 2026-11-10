@@ -122,6 +122,7 @@ fun StoreCommissionRow(
     head: RepMerchantHead,
     saving: Boolean,
     onSave: (String, () -> Unit) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val current = head.storeCommissionPercent
     val lo = head.storeCommissionMin
@@ -129,51 +130,60 @@ fun StoreCommissionRow(
     var editing by remember(merchantId) { mutableStateOf(false) }
     var text by remember(merchantId, current) { mutableStateOf(pctText(current)) }
 
-    Spacer(Modifier.height(8.dp))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            stringResource(R.string.cd_commission_title) + ": " + stringResource(R.string.cd_commission_value, pctText(current)),
-            color = Rahal.colors.ink,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-        if (!editing) {
-            RahalTextButton(onClick = { editing = true }) {
-                Text(stringResource(R.string.cd_commission_edit), color = Rahal.colors.brand)
-            }
-        }
-    }
+    // **مربّعٌ بأيقونةٍ وقيمةٍ يُضغط فتُفتح نافذةُ التعديل** (طلبُ المالك ٢٠٢٦-١١-١١) — لا سطرٌ وزرٌّ مؤطَّر.
+    InfoTile(
+        icon = R.drawable.ic_percent,
+        label = stringResource(R.string.cd_commission_tile),
+        value = pctLabel(current),
+        valueColor = Rahal.colors.brand,
+        modifier = modifier,
+        onClick = { editing = true },
+    )
     if (!editing) return
-    Column {
-        Text(
-            stringResource(R.string.cd_commission_range, pctText(lo), pctText(hi)),
-            style = MaterialTheme.typography.bodySmall,
-            color = Rahal.colors.inkMuted,
-        )
-        Spacer(Modifier.height(6.dp))
-        // **ما يُفحص هو ما يُرسَل** — لاتينيّاً وبما يقبله المحرّك وحدَه، والفارغُ `null` (`commissionPayload`).
-        val payload = commissionPayload(text, lo, hi)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = text,
-                // **والخانةُ تُظهر ما سيُرسَل**: الأرقامُ العربيّةُ تصير لاتينيّةً عند الكتابة (قاعدةُ الأرقام).
-                onValueChange = { v -> text = normalizePctInput(v).filter { c -> c in '0'..'9' || c == '.' }.take(6) },
-                label = { Text(stringResource(R.string.cd_commission_field)) },
-                singleLine = true,
-                isError = text.isNotBlank() && payload == null,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(8.dp))
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { editing = false; text = pctText(current) },
+        title = { Text(stringResource(R.string.cd_commission_title), fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                Text(
+                    stringResource(R.string.cd_commission_range, pctLabel(lo), pctLabel(hi)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Rahal.colors.inkMuted,
+                )
+                Spacer(Modifier.height(10.dp))
+                // **ما يُفحص هو ما يُرسَل** — لاتينيّاً وبما يقبله المحرّك وحدَه، والفارغُ `null` (`commissionPayload`).
+                val payload = commissionPayload(text, lo, hi)
+                OutlinedTextField(
+                    value = text,
+                    // **والخانةُ تُظهر ما سيُرسَل**: الأرقامُ العربيّةُ تصير لاتينيّةً عند الكتابة (قاعدةُ الأرقام).
+                    onValueChange = { v -> text = normalizePctInput(v).filter { c -> c in '0'..'9' || c == '.' }.take(6) },
+                    label = { Text(stringResource(R.string.cd_commission_field)) },
+                    singleLine = true,
+                    isError = text.isNotBlank() && payload == null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            val payload = commissionPayload(text, lo, hi)
             RahalButton(
-                // **الحفظُ في الـvm لا هنا** (انظر أعلاه) — ونجاحُه يُغلق الخانةَ، وفشلُه يتركها مفتوحةً.
+                // **الحفظُ في الـvm لا هنا** (انظر أعلاه) — ونجاحُه يُغلق النافذةَ، وفشلُه يتركها مفتوحةً.
                 onClick = { if (payload != null) onSave(payload) { editing = false } },
                 enabled = payload != null && !saving,
             ) { Text(stringResource(com.rahalgo.ui.R.string.act_save)) }
-        }
-        RahalTextButton(onClick = { editing = false; text = pctText(current) }) {
-            Text(stringResource(R.string.cd_commission_cancel), color = Rahal.colors.inkMuted)
-        }
-    }
+        },
+        dismissButton = {
+            RahalTextButton(onClick = { editing = false; text = pctText(current) }) {
+                Text(stringResource(R.string.cd_commission_cancel), color = Rahal.colors.inkMuted)
+            }
+        },
+    )
 }
+
+/**
+ * **«10٪» بأيّ اتّجاه** — الرقمُ ثمّ ٪ بعده، **معزولاً يساريّاً**: داخل جملةٍ عربيّةٍ كان الإشارةُ تنزاح
+ * فتُقرأ «٪10». (طلبُ المالك ٢٠٢٦-١١-١١.)
+ */
+internal fun pctLabel(v: Double): String = "⁦" + pctText(v) + "٪" + "⁩"
