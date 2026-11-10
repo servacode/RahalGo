@@ -44,8 +44,9 @@ class CustWalletUxTest {
     fun walletOptionHiddenWhenInsufficient() {
         val s = read(cart)
         assertTrue(
-            "**لا يُحسَب `walletBlocked` من الإجماليّ المستحقّ**",
-            s.contains("val walletBlocked = payableTotal == null || walletBalance < payableTotal"),
+            "**لا يُحسَب `walletBlocked` من أجرة التوصيل** (المحفظةُ تدفع التوصيلَ وحدَه منذ ٢٠٢٦-١١-١٠)",
+            s.contains("val deliveryOk = payableTotal != null && deliveryPart > 0 && walletBalance >= deliveryPart") &&
+                s.contains("val walletBlocked = !deliveryOk"),
         )
         assertTrue(
             "**المحفظةُ لا تغيب حين لا تكفي** — يجب سطرُ «نقداً عند الاستلام» بدل الخيارين",
@@ -72,12 +73,12 @@ class CustWalletUxTest {
     fun exactBoundaryIsValid() {
         val s = read(cart)
         assertTrue(
-            "**المقارنةُ تمنع المساواة** — يجب `walletBalance < payableTotal` (فـ`==` يمرّ)",
-            s.contains("walletBalance < payableTotal"),
+            "**المقارنةُ تمنع المساواة** — يجب `walletBalance >= deliveryPart` (فـ`==` يمرّ)",
+            s.contains("walletBalance >= deliveryPart"),
         )
         assertFalse(
-            "**استُعمل `<=` فمُنعت المساواة**",
-            s.contains("walletBalance <= payableTotal"),
+            "**استُعمل `>` فمُنعت المساواة**",
+            s.contains("walletBalance > deliveryPart"),
         )
     }
 
@@ -102,7 +103,7 @@ class CustWalletUxTest {
         // وخيارٌ معطّلٌ لا يبقى مختاراً (يُعاد إلى النقد)
         assertTrue(
             "**لا يُعاد الخيارُ إلى النقد حين يُعطَّل**",
-            c.contains("if (walletBlocked && vm.wallet) vm.wallet = false"),
+            c.contains("if (vm.walletScope != \"none\" && !deliveryOk) {") && c.contains("vm.walletScope = \"none\""),
         )
     }
 
@@ -113,7 +114,7 @@ class CustWalletUxTest {
         val s = read(cart)
         assertTrue(
             "**الإرسالُ لا يُمرّر طريقةَ الدفع للخادم**",
-            s.contains("if (vm.wallet) \"wallet\" else \"cash\""),
+            s.contains("if (vm.walletScope == \"none\") \"cash\" else \"wallet\""),
         )
     }
 }
