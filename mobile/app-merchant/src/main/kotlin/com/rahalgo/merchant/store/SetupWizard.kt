@@ -1,5 +1,6 @@
 package com.rahalgo.merchant.store
 
+import androidx.compose.foundation.layout.heightIn
 import com.rahalgo.ui.hours.HoursPlan
 import com.rahalgo.ui.hours.HoursPlanner
 import com.rahalgo.ui.hours.IconChoice
@@ -26,9 +27,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.animation.core.Animatable
@@ -131,7 +130,7 @@ private fun Welcome(steps: List<SetupStep>, onStart: () -> Unit) {
             // (`intro_logo` المولَّدُ من `mobile/brand/logo.png`) على أرضٍ بيضاء.
             Box(
                 Modifier
-                    .size(72.dp)
+                    .size(Rahal.size.avatarLg)
                     .clip(Rahal.shape.md)
                     .background(Rahal.colors.canvas),
                 contentAlignment = Alignment.Center,
@@ -139,19 +138,19 @@ private fun Welcome(steps: List<SetupStep>, onStart: () -> Unit) {
                 androidx.compose.foundation.Image(
                     painterResource(com.rahalgo.design.R.drawable.intro_logo),
                     contentDescription = null,
-                    modifier = Modifier.size(60.dp),
+                    modifier = Modifier.size(Rahal.size.avatarMd),
                 )
             }
             Text(
                 stringResource(R.string.wz_welcome_title),
                 color = Rahal.colors.onBrand,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.headlineMedium,
+                style = Rahal.type.headline,
             )
             Text(
                 stringResource(R.string.wz_welcome_body),
                 color = Rahal.colors.onBrand.copy(alpha = 0.85f),
-                style = MaterialTheme.typography.bodyLarge,
+                style = Rahal.type.bodyLarge,
             )
         }
         Column(
@@ -170,7 +169,7 @@ private fun Welcome(steps: List<SetupStep>, onStart: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier
-                            .size(30.dp)
+                            .size(Rahal.icon.lg)
                             .clip(Rahal.shape.pill)
                             .background(Rahal.colors.brand.copy(alpha = 0.10f)),
                         contentAlignment = Alignment.Center,
@@ -179,16 +178,16 @@ private fun Welcome(steps: List<SetupStep>, onStart: () -> Unit) {
                             (i + 1).toString(),
                             color = Rahal.colors.brand,
                             fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = Rahal.type.label,
                         )
                     }
                     Spacer(Modifier.width(Rahal.space.md))
-                    Text(stepLabel(s), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                    Text(stepLabel(s), modifier = Modifier.weight(1f), style = Rahal.type.bodyLarge)
                     if (s == SetupStep.Logo) {
                         Text(
                             stringResource(R.string.wz_optional),
                             color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = Rahal.type.caption,
                         )
                     }
                 }
@@ -201,9 +200,9 @@ private fun Welcome(steps: List<SetupStep>, onStart: () -> Unit) {
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(horizontal = Rahal.space.xl, vertical = Rahal.space.lg)
-                .height(56.dp),
+                .heightIn(min = Rahal.size.touch),
         ) {
-            Text(stringResource(R.string.wz_start), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.wz_start), fontWeight = FontWeight.Bold, style = Rahal.type.sectionTitle)
         }
     }
 }
@@ -240,23 +239,23 @@ private fun StepScreen(
                 Text(
                     stringResource(R.string.wz_header),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
                     stringResource(R.string.wz_progress, idx + 1, steps.size),
                     color = Rahal.colors.brand,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                 )
             }
             Spacer(Modifier.height(Rahal.space.md))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs)) {
                 steps.indices.forEach { i ->
                     Box(
                         Modifier
                             .weight(1f)
-                            .height(6.dp)
+                            .height(Rahal.space.xs)
                             .clip(Rahal.shape.pill)
                             .background(if (i <= idx) Rahal.colors.brand else Rahal.colors.line),
                     )
@@ -273,7 +272,7 @@ private fun StepScreen(
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .shadow(6.dp, Rahal.shape.lg)
+                    .shadow(Rahal.elevation.raised, Rahal.shape.lg)
                     .clip(Rahal.shape.lg)
                     .background(Rahal.colors.canvas)
                     .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.lg)
@@ -301,8 +300,8 @@ private fun StepScreen(
             RahalOutlineButton(
                 onClick = { vm.wizardIndex = idx - 1 },
                 modifier = Modifier
-                    .width(104.dp)
-                    .height(54.dp),
+                    .width(Rahal.size.avatarLg + Rahal.space.xxl)
+                    .heightIn(min = Rahal.size.touch),
             ) { Text(stringResource(R.string.wz_prev), fontWeight = FontWeight.Bold) }
             val go = next
             RahalButton(
@@ -310,12 +309,12 @@ private fun StepScreen(
                 enabled = go.ok && !vm.saving,
                 modifier = Modifier
                     .weight(1f)
-                    .height(54.dp),
+                    .heightIn(min = Rahal.size.touch),
             ) {
                 Text(
                     stringResource(go.label ?: R.string.wz_next),
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = Rahal.type.sectionTitle,
                 )
             }
         }
@@ -327,10 +326,10 @@ private class StepNext(val ok: Boolean, val label: Int? = null, val act: () -> U
 
 @Composable
 private fun StepTitle(title: Int, hint: Int? = null) {
-    Text(stringResource(title), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
+    Text(stringResource(title), fontWeight = FontWeight.Bold, style = Rahal.type.screenTitle)
     // **ولا سطرَ شرحٍ إلّا للقرارين الماليّين** — الاستلامُ والإرجاع (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩).
     if (hint != null) {
-        Text(stringResource(hint), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(hint), color = Rahal.colors.inkMuted, style = Rahal.type.body)
     }
 }
 
@@ -348,7 +347,7 @@ private fun ColumnScope.LogoStep(vm: StoreViewModel, advance: () -> Unit): StepN
         name = store.name.ifBlank { "?" },
         modifier = Modifier
             .align(Alignment.CenterHorizontally)
-            .size(128.dp)
+            .size((Rahal.size.avatarLg + Rahal.size.avatarMd))
             .clip(Rahal.shape.lg)
             .border(Rahal.stroke.focus, Rahal.colors.line, Rahal.shape.lg)
             .clickable(enabled = !vm.saving) { pick() },
@@ -511,7 +510,7 @@ private fun Ready(onFinish: () -> Unit) {
     ) {
         Box(
             Modifier
-                .size(128.dp)
+                .size((Rahal.size.avatarLg + Rahal.size.avatarMd))
                 .graphicsLayer {
                     scaleX = grow.value
                     scaleY = grow.value
@@ -525,14 +524,14 @@ private fun Ready(onFinish: () -> Unit) {
                 painterResource(R.drawable.ic_check),
                 contentDescription = null,
                 tint = Rahal.colors.onBrand,
-                modifier = Modifier.size(72.dp),
+                modifier = Modifier.size(Rahal.size.avatarLg),
             )
         }
         Spacer(Modifier.height(Rahal.space.xl))
         Text(
             stringResource(R.string.wz_ready_title),
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.headlineMedium,
+            style = Rahal.type.headline,
             color = Rahal.colors.success,
             textAlign = TextAlign.Center,
             modifier = Modifier.graphicsLayer { alpha = fade.value },

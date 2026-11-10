@@ -31,10 +31,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -348,7 +346,7 @@ private fun HomeHeader(
             url = com.rahalgo.ui.AppCore.get().media(store.logoThumbUrl),
             name = store.name.ifBlank { "?" },
             modifier = Modifier
-                .size(80.dp)
+                .size(Rahal.size.avatarLg)
                 .clip(Rahal.shape.lg)
                 .background(Rahal.colors.canvas)
                 .border(Rahal.stroke.focus, Rahal.colors.canvas, Rahal.shape.lg)
@@ -360,7 +358,7 @@ private fun HomeHeader(
                 store.name,
                 color = Rahal.colors.onBrand,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.headlineSmall,
+                style = Rahal.type.screenTitle,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -372,7 +370,7 @@ private fun HomeHeader(
                         stringResource(R.string.store_switch),
                         color = Rahal.colors.onBrand,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelLarge,
+                        style = Rahal.type.label,
                         modifier = Modifier.clickable { open = true }.padding(vertical = Rahal.space.xs),
                     )
                     androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -389,7 +387,7 @@ private fun HomeHeader(
             // نفسُه يُضغط، وسطرا «الشعار» و«العنوان» في الإعدادات تحت.
         }
         if (!suspended) {
-            IconButton(onClick = onRename, modifier = Modifier.size(48.dp)) {
+            IconButton(onClick = onRename, modifier = Modifier.size(Rahal.size.touch)) {
                 Icon(
                     painterResource(com.rahalgo.ui.R.drawable.ic_edit),
                     contentDescription = stringResource(R.string.store_rename),
@@ -453,7 +451,7 @@ private fun StatusBand(
     ) {
         Box(
             Modifier
-                .size(44.dp)
+                .size(Rahal.size.iconBox)
                 .clip(Rahal.shape.pill)
                 .background(color.copy(alpha = 0.18f)),
             contentAlignment = Alignment.Center,
@@ -468,13 +466,13 @@ private fun StatusBand(
                 ),
                 contentDescription = null,
                 tint = ink,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(Rahal.icon.md),
             )
         }
         Spacer(Modifier.width(Rahal.space.md))
         Column(Modifier.weight(1f)) {
-            Text(label, color = ink, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-            Text(sub, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+            Text(label, color = ink, fontWeight = FontWeight.Bold, style = Rahal.type.sectionTitle)
+            Text(sub, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
         }
         if (!suspended) {
             Spacer(Modifier.width(Rahal.space.sm))
@@ -487,7 +485,7 @@ private fun StatusBand(
                 Text(
                     stringResource(if (reopen) R.string.home_reopen else R.string.store_emergency),
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = Rahal.type.label,
                 )
             }
         }
@@ -508,26 +506,26 @@ private fun QuickAction(
         Column(
             Modifier
                 .fillMaxSize()
-                .cardSurface(Rahal.shape.md, elevation = 2.dp)
+                .cardSurface(Rahal.shape.md, elevation = Rahal.elevation.card)
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(vertical = Rahal.space.md, horizontal = Rahal.space.xs),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
                 Modifier
-                    .size(44.dp)
+                    .size(Rahal.size.iconBox)
                     .clip(Rahal.shape.pill)
                     .background(tint.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
+                Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(Rahal.icon.md))
             }
             Spacer(Modifier.height(Rahal.space.sm))
             Text(
                 label,
                 color = Rahal.colors.ink,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelMedium,
+                style = Rahal.type.label,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
             )
@@ -537,7 +535,7 @@ private fun QuickAction(
                 badge.toString(),
                 color = Rahal.colors.onPanel,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelSmall,
+                style = Rahal.type.meta,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .offset(x = Rahal.space.xs * -1, y = Rahal.space.xs)
@@ -555,7 +553,7 @@ private fun GroupTitle(title: String) {
         title,
         color = Rahal.colors.inkMuted,
         fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.titleSmall,
+        style = Rahal.type.cardTitle,
         modifier = Modifier.padding(horizontal = Rahal.space.xs),
     )
 }
@@ -572,32 +570,32 @@ private fun Tile(
 ) {
     Row(
         modifier
-            .cardSurface(Rahal.shape.md, elevation = 2.dp)
+            .cardSurface(Rahal.shape.md, elevation = Rahal.elevation.card)
             .padding(Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             Modifier
-                .size(36.dp)
+                .size(Rahal.size.iconBox)
                 .clip(Rahal.shape.sm)
                 .background(tint.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+            Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(Rahal.icon.sm))
         }
         Spacer(Modifier.width(Rahal.space.sm))
         Column(Modifier.weight(1f)) {
             Text(
                 value,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleLarge,
+                style = Rahal.type.sectionTitle,
                 color = Rahal.colors.ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(label, color = Rahal.colors.inkMuted, style = Rahal.type.caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (sub.isNotBlank()) {
-                Text(sub, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                Text(sub, color = Rahal.colors.inkMuted, style = Rahal.type.meta, maxLines = 1)
             }
         }
     }
@@ -615,7 +613,7 @@ internal fun Chevron(tint: Color = Rahal.colors.inkMuted) {
         contentDescription = null,
         tint = tint,
         modifier = Modifier
-            .size(18.dp)
+            .size(Rahal.icon.xs)
             .graphicsLayer { rotationZ = 180f },
     )
 }
@@ -628,14 +626,14 @@ internal fun SettingsGroup(title: String, content: @Composable ColumnScope.() ->
             title,
             color = Rahal.colors.inkMuted,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleSmall,
+            style = Rahal.type.cardTitle,
             modifier = Modifier.padding(horizontal = Rahal.space.xs),
         )
         Spacer(Modifier.height(Rahal.space.sm))
         Column(
             Modifier
                 .fillMaxWidth()
-                .cardSurface(Rahal.shape.md, elevation = 2.dp),
+                .cardSurface(Rahal.shape.md, elevation = Rahal.elevation.card),
             content = content,
         )
     }
@@ -656,27 +654,27 @@ internal fun SettingsRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 60.dp)
+            .heightIn(min = Rahal.size.touch + Rahal.space.md)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             Modifier
-                .size(36.dp)
+                .size(Rahal.size.iconBox)
                 .clip(Rahal.shape.sm)
                 .background(tint.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+            Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(Rahal.icon.sm))
         }
         Spacer(Modifier.width(Rahal.space.md))
-        Text(label, color = Rahal.colors.ink, style = MaterialTheme.typography.bodyLarge)
+        Text(label, color = Rahal.colors.ink, style = Rahal.type.bodyLarge)
         Spacer(Modifier.width(Rahal.space.sm))
         Text(
             value,
             color = if (warn) Rahal.colors.danger else Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = androidx.compose.ui.text.style.TextAlign.End,
@@ -687,7 +685,7 @@ internal fun SettingsRow(
             Spacer(Modifier.width(Rahal.space.sm))
             Box(
                 Modifier
-                    .size(10.dp)
+                    .size(Rahal.size.dot)
                     .clip(Rahal.shape.pill)
                     .background(Rahal.colors.danger),
             )
@@ -695,7 +693,7 @@ internal fun SettingsRow(
         Spacer(Modifier.width(Rahal.space.xs))
         Chevron()
     }
-    if (!last) HorizontalDivider(color = Rahal.colors.line, thickness = Rahal.stroke.hair)
+    if (!last) com.rahalgo.ui.RahalDivider()
 }
 
 /** **رأسُ صفحةٍ فرعيّة** — سهمُ رجوعٍ وعنوان. */
@@ -746,7 +744,7 @@ private fun StorePageScreen(
             StorePage.Settlement -> Card {
                 // **نقدٌ لا غير** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٩: شيلت «المحفظة») — بطاقةٌ ثابتة،
                 // **ومتجرٌ لم يؤكّدها بعد يؤكّد «نقدي» بزرّ.** ورصيدُ المحفظة القديمُ يبقى ويُسحب.
-                Text(stringResource(R.string.q_settlement), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.q_settlement), fontWeight = FontWeight.Bold, style = Rahal.type.cardTitle)
                 Spacer(Modifier.height(Rahal.space.sm))
                 CashOnlyCard()
                 if (!store.settlementConfirmed && !suspended) {
@@ -767,7 +765,7 @@ private fun StorePageScreen(
                 }
             }
             StorePage.Returns -> Card {
-                Text(stringResource(R.string.wz_returns_hint), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.wz_returns_hint), fontWeight = FontWeight.Bold, style = Rahal.type.cardTitle)
                 Spacer(Modifier.height(Rahal.space.sm))
                 IconChoicePair(
                     first = IconChoice(
@@ -786,9 +784,9 @@ private fun StorePageScreen(
                 )
             }
             StorePage.Ameen -> Card {
-                Text(stringResource(R.string.ameen_q), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.ameen_q), fontWeight = FontWeight.Bold, style = Rahal.type.cardTitle)
                 Spacer(Modifier.height(Rahal.space.xs))
-                Text(stringResource(R.string.ameen_q_hint), style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.ameen_q_hint), style = Rahal.type.caption)
                 Spacer(Modifier.height(Rahal.space.sm))
                 IconChoicePair(
                     first = IconChoice(
@@ -813,12 +811,12 @@ private fun StorePageScreen(
                     Text(
                         stringResource(R.string.store_prep),
                         modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = Rahal.type.bodyLarge,
                     )
                     RahalTextButton(
                         onClick = { vm.setPrepMinutes(store.prepMinutes - 5) },
                         enabled = !vm.saving && !suspended && store.prepMinutes > 5,
-                    ) { Text("−", style = MaterialTheme.typography.titleLarge) }
+                    ) { Text("−", style = Rahal.type.sectionTitle) }
                     Text(
                         "${store.prepMinutes} ${stringResource(R.string.store_prep_unit)}",
                         fontWeight = FontWeight.Bold,
@@ -826,7 +824,7 @@ private fun StorePageScreen(
                     RahalTextButton(
                         onClick = { vm.setPrepMinutes(store.prepMinutes + 5) },
                         enabled = !vm.saving && !suspended,
-                    ) { Text("+", style = MaterialTheme.typography.titleLarge) }
+                    ) { Text("+", style = Rahal.type.sectionTitle) }
                 }
             }
         }
@@ -848,7 +846,7 @@ private fun RateCard(vm: StoreViewModel, store: Store, suspended: Boolean) {
                 vm.setExchangeRate(rateText)
             }
         }
-        Text(stringResource(R.string.store_rate), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.store_rate), fontWeight = FontWeight.Bold, style = Rahal.type.cardTitle)
         Spacer(Modifier.height(Rahal.space.sm))
         OutlinedTextField(
             value = rateText,

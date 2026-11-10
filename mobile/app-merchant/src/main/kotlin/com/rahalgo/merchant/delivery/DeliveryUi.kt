@@ -8,19 +8,16 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,12 +32,15 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.merchant.R
+import com.rahalgo.ui.CardVariant
 import com.rahalgo.ui.ConfirmDialog
+import com.rahalgo.ui.RahalCard
+import com.rahalgo.ui.RahalDivider
+import com.rahalgo.ui.StatusChip
+import com.rahalgo.ui.StatusTone
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -104,7 +104,7 @@ internal fun deliveryStatusText(status: String): String = stringResource(
 
 /** **نقطةٌ تنبض** — تتّسع وتخفت بلا توقّف. */
 @Composable
-internal fun PulseDot(color: Color, size: Dp = 10.dp) {
+internal fun PulseDot(color: Color, size: Dp = Rahal.size.dot) {
     val pulse = rememberInfiniteTransition(label = "dot")
     val a by pulse.animateFloat(
         initialValue = 1f,
@@ -119,22 +119,20 @@ internal fun PulseDot(color: Color, size: Dp = 10.dp) {
 @Composable
 internal fun StatusPill(status: String) {
     val tone = toneOf(status)
-    val c = toneColor(tone)
-    Row(
-        Modifier
-            .clip(CircleShape)
-            .background(c.copy(alpha = 0.12f))
-            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (tone == Tone.Waiting) PulseDot(c, 8.dp)
-        else Box(Modifier.size(8.dp).clip(CircleShape).background(c))
-        Spacer(Modifier.width(Rahal.space.xs))
-        Text(
-            deliveryStatusText(status),
-            color = c,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelMedium,
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        // **والانتظارُ نقطتُه تنبض** (طلبُ المالك ٢٠٢٦-١٠-٠١) — قبل الرقاقة.
+        if (tone == Tone.Waiting) {
+            PulseDot(toneColor(tone))
+            Spacer(Modifier.width(Rahal.space.xs))
+        }
+        StatusChip(
+            text = deliveryStatusText(status),
+            tone = when (tone) {
+                Tone.Waiting -> StatusTone.Warning
+                Tone.Moving -> StatusTone.Info
+                Tone.Done -> StatusTone.Success
+                Tone.Ended -> StatusTone.Neutral
+            },
         )
     }
 }
@@ -155,17 +153,14 @@ internal fun SearchingBanner(compact: Boolean = false) {
         infiniteRepeatable(tween(1600, delayMillis = 800, easing = LinearEasing)),
         label = "w2",
     )
-    val box = if (compact) 44.dp else 64.dp
-    val core = if (compact) 28.dp else 40.dp
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(c.copy(alpha = 0.08f))
-            .border(Rahal.stroke.hair, c.copy(alpha = 0.35f), Rahal.shape.md)
-            .padding(if (compact) Rahal.space.sm else Rahal.space.md),
-        verticalAlignment = Alignment.CenterVertically,
+    val box = if (compact) Rahal.size.avatarSm else Rahal.size.avatarMd
+    val core = if (compact) Rahal.icon.md else Rahal.size.iconBox
+    RahalCard(
+        variant = CardVariant.Tinted,
+        tone = StatusTone.Warning,
+        padding = if (compact) Rahal.space.sm else Rahal.space.md,
     ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(box), contentAlignment = Alignment.Center) {
             for (p in listOf(p1, p2)) {
                 Box(
@@ -185,7 +180,7 @@ internal fun SearchingBanner(compact: Boolean = false) {
                     painterResource(com.rahalgo.ui.R.drawable.ic_moto),
                     contentDescription = null,
                     tint = Rahal.colors.onBrand,
-                    modifier = Modifier.size(if (compact) 16.dp else 22.dp),
+                    modifier = Modifier.size(if (compact) Rahal.icon.xs else Rahal.icon.sm),
                 )
             }
         }
@@ -193,11 +188,11 @@ internal fun SearchingBanner(compact: Boolean = false) {
         Column(Modifier.weight(1f)) {
             Text(
                 stringResource(R.string.md_searching),
-                color = c,
-                fontWeight = FontWeight.Bold,
-                style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
+                color = Rahal.colors.accentInk,
+                style = if (compact) Rahal.type.cardTitle else Rahal.type.sectionTitle,
             )
         }
+    }
     }
 }
 
@@ -205,21 +200,20 @@ internal fun SearchingBanner(compact: Boolean = false) {
 @Composable
 internal fun InfoLine(icon: Int, text: String, strong: Boolean = false, muted: Boolean = false) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = Rahal.space.xs / 2),
+        Modifier.fillMaxWidth().padding(vertical = Rahal.space.xxs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             painterResource(icon),
             contentDescription = null,
             tint = Rahal.colors.inkMuted,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(Rahal.icon.sm),
         )
         Spacer(Modifier.width(Rahal.space.sm))
         Text(
             text,
-            fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal,
             color = if (muted) Rahal.colors.inkMuted else Rahal.colors.ink,
-            style = MaterialTheme.typography.bodyMedium,
+            style = if (strong) Rahal.type.bodyStrong else Rahal.type.body,
         )
     }
 }
@@ -242,12 +236,11 @@ internal fun CancelDeliveryButton(busy: Boolean, onConfirm: () -> Unit) {
         Icon(
             painterResource(com.rahalgo.ui.R.drawable.ic_close),
             contentDescription = null,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(Rahal.icon.sm),
         )
         Spacer(Modifier.width(Rahal.space.sm))
         Text(
             stringResource(if (busy) R.string.md_cancelling else R.string.md_cancel),
-            fontWeight = FontWeight.Bold,
         )
     }
     if (asking) {
@@ -264,11 +257,5 @@ internal fun CancelDeliveryButton(busy: Boolean, onConfirm: () -> Unit) {
 /** **فاصلٌ رفيع** بين رأس البطاقة وتفاصيلها. */
 @Composable
 internal fun Hairline() {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = Rahal.space.sm)
-            .height(Rahal.stroke.hair)
-            .background(Rahal.colors.line),
-    )
+    RahalDivider(Modifier.padding(vertical = Rahal.space.sm))
 }

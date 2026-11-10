@@ -8,15 +8,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.rahalgo.design.Rahal
 import com.rahalgo.merchant.R
@@ -45,38 +42,41 @@ fun FetchAmountApproveDialog(
         onDismissRequest = {},
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
         title = {
-            Text(stringResource(R.string.md_amount_title, d.number.toString()), fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(R.string.md_amount_title, d.number.toString()),
+                style = Rahal.type.sectionTitle,
+                color = Rahal.colors.ink,
+            )
         },
         text = {
             Column(
                 Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(stringResource(R.string.md_amount_paid), color = Rahal.colors.inkMuted)
-                Spacer(Modifier.height(6.dp))
+                Text(stringResource(R.string.md_amount_paid), color = Rahal.colors.inkMuted, style = Rahal.type.body)
+                Spacer(Modifier.height(Rahal.space.xs))
                 Text(
                     // **بعملة التوصيلة** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — والدولارُ بالسنتات.
                     DeliveryTexts.amount(d, d.fetchAmount ?: 0L),
-                    color = Rahal.colors.accent,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.headlineMedium,
+                    color = Rahal.colors.accentInk,
+                    style = Rahal.type.headline,
                 )
                 d.collectAmount?.takeIf { it > 0 }?.let {
                     Spacer(Modifier.height(Rahal.space.xs))
-                    Text(stringResource(R.string.md_amount_estimate, DeliveryTexts.amount(d, it)), color = Rahal.colors.inkMuted)
+                    Text(stringResource(R.string.md_amount_estimate, DeliveryTexts.amount(d, it)), color = Rahal.colors.inkMuted, style = Rahal.type.caption)
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 Text(
                     stringResource(R.string.md_amount_body),
                     color = Rahal.colors.ink,
                     textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                 )
                 if (error.isNotEmpty()) {
                     Spacer(Modifier.height(Rahal.space.sm))
-                    Text(error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
+                    Text(error, color = Rahal.colors.danger, textAlign = TextAlign.Center, style = Rahal.type.body)
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(Rahal.space.lg))
                 RahalButton(
                     onClick = onApprove,
                     enabled = !busy,
@@ -84,9 +84,9 @@ fun FetchAmountApproveDialog(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (busy) {
-                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(Modifier.size(Rahal.icon.sm), strokeWidth = Rahal.stroke.focus)
                     } else {
-                        Text(stringResource(R.string.md_amount_approve), fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.md_amount_approve))
                     }
                 }
                 Spacer(Modifier.height(Rahal.space.sm))
@@ -96,7 +96,7 @@ fun FetchAmountApproveDialog(
                     tone = Tone.Danger,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(stringResource(R.string.md_amount_reject), fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.md_amount_reject))
                 }
             }
         },

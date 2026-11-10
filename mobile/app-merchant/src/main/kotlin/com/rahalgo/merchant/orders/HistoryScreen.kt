@@ -13,10 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -290,12 +288,12 @@ private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> U
             Text(
                 "#" + o.number,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleSmall,
+                style = Rahal.type.cardTitle,
             )
             val at = com.rahalgo.ui.timeText(o.createdAt)
             if (at.isNotBlank() && at != o.createdAt) {
                 Spacer(Modifier.width(Rahal.space.sm))
-                Text(at, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+                Text(at, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
             }
             Spacer(Modifier.weight(1f))
             com.rahalgo.ui.Chip(
@@ -312,17 +310,17 @@ private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> U
             // **الفاتورةُ بشكلها الواحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «بندورة × 1 كيلو ...... 600 ل.س»،
             // **وبما اختاره الزبون** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — «بندورة» بلا «كيلو» لا تُجهَّز.
             com.rahalgo.ui.InvoiceLines(o.items.map { it.toInvoiceLine() })
-            Spacer(Modifier.height(6.dp))
-            HorizontalDivider()
+            Spacer(Modifier.height(Rahal.space.xs))
+            com.rahalgo.ui.RahalDivider()
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
         // **وثلاثةُ أرقامٍ بشفافية** (بلاغُ المالك ٢٠٢٦-٠٨-٢٦) — **إلّا طلباً انتهى بلا بيع**:
         // «المستحق لك» فيه يُقرأ مالاً عند المنصّة وليس له شيء (تدقيقُ ٢٠٢٦-١٠-٢٧).
         if (noPayout(o.status)) {
             Text(
                 stringResource(com.rahalgo.merchant.R.string.ord_no_payout),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         } else {
             SumLine(
@@ -334,7 +332,7 @@ private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> U
                 value = "− " + money(o.platformCommission),
             )
             Spacer(Modifier.height(Rahal.space.xs))
-            HorizontalDivider()
+            com.rahalgo.ui.RahalDivider()
             SumLine(
                 label = stringResource(com.rahalgo.merchant.R.string.ord_due_lbl),
                 value = money(o.merchantNet),
@@ -350,13 +348,13 @@ private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> U
                     painter = painterResource(com.rahalgo.ui.R.drawable.ic_warning),
                     contentDescription = null,
                     tint = Rahal.colors.danger,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(Rahal.icon.xs),
                 )
                 Spacer(Modifier.width(Rahal.space.xs))
                 Text(
                     stringResource(com.rahalgo.merchant.R.string.report_driver),
                     color = Rahal.colors.danger,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = Rahal.type.label,
                 )
             }
         }
@@ -385,15 +383,15 @@ private fun ReportSheet(vm: HistoryViewModel, order: MerchantOrder, onClose: () 
         Text(
             stringResource(com.rahalgo.merchant.R.string.report_title, order.number),
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
+            style = Rahal.type.sectionTitle,
         )
         Spacer(Modifier.height(Rahal.space.xs))
         Text(
             stringResource(com.rahalgo.merchant.R.string.report_hint),
             color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.md))
 
         vm.reasons.forEach { code ->
             Row(

@@ -24,10 +24,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -72,9 +70,9 @@ internal const val MIN_RATE = 10.0
  */
 @Composable
 internal fun BigChoice(question: String, options: List<Pair<String, Boolean>>, enabled: Boolean, onPick: (Int) -> Unit) {
-    Text(question, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+    Text(question, fontWeight = FontWeight.Bold, style = Rahal.type.cardTitle)
     Spacer(Modifier.height(Rahal.space.sm))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.md)) {
         options.forEachIndexed { i, (label, on) ->
             if (on) {
                 RahalButton(onClick = { onPick(i) }, enabled = enabled, modifier = Modifier.weight(1f)) {
@@ -89,6 +87,6 @@ internal fun BigChoice(question: String, options: List<Pair<String, Boolean>>, e
     }
     if (options.none { it.second }) {
         Spacer(Modifier.height(Rahal.space.xs))
-        Text(stringResource(R.string.choose_one), color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.choose_one), color = Rahal.colors.danger, style = Rahal.type.caption)
     }
 }

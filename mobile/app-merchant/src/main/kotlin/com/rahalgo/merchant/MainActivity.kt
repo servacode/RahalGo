@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.rahalgo.ui.RahalButton
@@ -861,17 +860,17 @@ private fun NeedSections(
         Text(
             title,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
+            style = Rahal.type.sectionTitle,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(Rahal.space.sm))
         Text(
             body,
             color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
         RahalButton(onClick = onGo) {
             Text(stringResource(R.string.need_sections_go))
         }
@@ -900,7 +899,7 @@ private fun RoleBadge() {
             stringResource(if (staff) R.string.acc_role_staff else R.string.acc_role_owner),
             color = if (staff) Rahal.colors.ink else Rahal.colors.brand,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelLarge,
+            style = Rahal.type.label,
             modifier = Modifier
                 .clip(Rahal.shape.pill)
                 .background(if (staff) Rahal.colors.line else Rahal.colors.brand.copy(alpha = 0.12f))

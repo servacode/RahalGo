@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -43,7 +42,7 @@ internal fun CashOnlyCard() {
     ) {
         Box(
             Modifier
-                .size(48.dp)
+                .size(Rahal.size.touch)
                 .clip(Rahal.shape.pill)
                 .background(Rahal.colors.brand),
             contentAlignment = Alignment.Center,
@@ -52,7 +51,7 @@ internal fun CashOnlyCard() {
                 painterResource(R.drawable.ic_banknotes),
                 contentDescription = null,
                 tint = Rahal.colors.onBrand,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(Rahal.icon.md),
             )
         }
         Column(Modifier.weight(1f)) {
@@ -60,12 +59,12 @@ internal fun CashOnlyCard() {
                 stringResource(R.string.wz_pay_cash),
                 color = Rahal.colors.ink,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
+                style = Rahal.type.sectionTitle,
             )
             Text(
                 stringResource(R.string.settlement_cash_only),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
     }

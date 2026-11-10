@@ -9,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -58,22 +57,22 @@ fun StoreSwitcher(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = Rahal.space.lg, vertical = 6.dp)
+            .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.xs)
             .background(Rahal.colors.field, Rahal.shape.sm)
             .clickable { expanded = true }
-            .padding(horizontal = Rahal.space.md, vertical = 10.dp),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             painterResource(com.rahalgo.ui.R.drawable.ic_store),
             contentDescription = null,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(Rahal.icon.xs),
             tint = Rahal.colors.brand,
         )
         Text(
             current.name,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             modifier = Modifier
                 .padding(start = Rahal.space.sm)
                 .weight(1f),
@@ -81,7 +80,7 @@ fun StoreSwitcher(
         Text(
             stringResource(R.string.store_switch),
             color = Rahal.colors.brand,
-            style = MaterialTheme.typography.labelMedium,
+            style = Rahal.type.label,
         )
 
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {

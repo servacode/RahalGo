@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.draw.alpha
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -44,7 +43,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -286,7 +284,7 @@ private fun ItemsList(
                     androidx.compose.material3.Text(
                         stringResource(com.rahalgo.ui.R.string.grid_wa_hint),
                         color = com.rahalgo.design.Rahal.colors.inkMuted,
-                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        style = com.rahalgo.design.Rahal.type.caption,
                     )
                 }
             }
