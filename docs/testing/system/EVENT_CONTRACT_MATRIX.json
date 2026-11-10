@@ -1623,17 +1623,17 @@
     },
     {
       "file": "internal/orders/rotation.go",
-      "line": 314,
-      "room": "driver:*"
-    },
-    {
-      "file": "internal/orders/rotation.go",
-      "line": 804,
+      "line": 315,
       "room": "driver:*"
     },
     {
       "file": "internal/orders/rotation.go",
       "line": 805,
+      "room": "driver:*"
+    },
+    {
+      "file": "internal/orders/rotation.go",
+      "line": 806,
       "room": "ops"
     },
     {
