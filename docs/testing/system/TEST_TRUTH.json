@@ -33,8 +33,8 @@
     "setting_defs": 282,
     "behaviour_settings": 237,
     "order_fields": 144,
-    "test_files": 808,
-    "test_funcs": 3126
+    "test_files": 809,
+    "test_funcs": 3129
   },
   "flows": [
     {
@@ -11050,6 +11050,24 @@
     {
       "name": "TestCustomQuote_WalletInsufficient",
       "file": "internal/orders/custom_quote_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomRefundAfterDelivery_CashRefundsFeeOnly",
+      "file": "internal/orders/custom_refund_after_delivery_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomRefundAfterDelivery_FreeDeliveryPostsNothing",
+      "file": "internal/orders/custom_refund_after_delivery_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomRefundAfterDelivery_WalletRefundsFeeOnly",
+      "file": "internal/orders/custom_refund_after_delivery_test.go",
       "package": "orders_test",
       "orphan": true
     },

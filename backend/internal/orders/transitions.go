@@ -1067,6 +1067,11 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 			}
 			return s.settleCustomWallet(ctx, q, in, out)
 		}
+		// **واسترجاعٌ بعد التسليم يردّ الأجرةَ المدفوعةَ وحدَها** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٦) —
+		// وكان يخرج صامتاً بلا أثر. انظر `refundCustomDeliveredFee`.
+		if in.to == StRefunded && in.from == StDelivered {
+			return s.refundCustomDeliveredFee(ctx, q, in, out)
+		}
 		// **ونهايةٌ فاشلةٌ بعد الشراء خسارةٌ على المنصّة** (قرارُ المالك ٢٠٢٦-١٠-١٦) —
 		// السائقُ دفع ثمنَ البضاعة من سلفة المكتب ولم يقبض شيئاً. انظر `settleCustomLostGoods`.
 		if refundOnEnter(in.to) && in.from != StDelivered && pastPickup[in.from] {
