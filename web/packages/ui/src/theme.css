@@ -5602,7 +5602,7 @@ html[data-console-theme="dark"] .console-root .seg-item[aria-pressed="true"] {
   }
 }
 @utility nav-group {
-  padding: 0.875rem 0.625rem 0.3125rem;
+  padding: 0.5rem 0.625rem 0.25rem;
   font-size: 0.71875rem;
   font-weight: 700;
   color: var(--color-ink-dim);
@@ -6096,5 +6096,29 @@ html[data-console-theme="dark"] .console-root .seg-item[aria-pressed="true"] {
   .console-root *::after {
     transition: none !important;
     animation-duration: 0.01ms !important;
+  }
+}
+
+/* **فعلٌ مضمَّنٌ في سطر — يُقرأ زرّا لا رابطا** (قرارُ المالك ٢٠٢٦-١١-١٠: «كلّ زرٍّ لازم يبين إنو زر»).
+   حدٌّ شعريٌّ وأرضٌ خفيفةٌ وهو ساكن (لا تحويمَ على اللمس)، ويشتدّ عند التحويم. */
+@utility inline-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding-inline: 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  background-color: var(--color-row-hover);
+  color: var(--color-ink);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 150ms ease;
+  &:hover {
+    background-color: color-mix(in oklab, var(--color-ink) 12%, transparent);
+  }
+  &:disabled {
+    opacity: 0.6;
+    pointer-events: none;
   }
 }

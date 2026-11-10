@@ -66,7 +66,7 @@ const PLATFORM: readonly (readonly [string, string])[] = [
   ["/privacy", N.privacy],
 ];
 
-const ROW = "flex items-center gap-3 rounded-control px-3 py-3 text-sm hover:bg-row-hover";
+const ROW = "flex min-h-11 min-w-0 items-center gap-3 rounded-control px-3 text-sm hover:bg-row-hover";
 
 export default function StoreMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { logout } = useAuth();
@@ -75,7 +75,7 @@ export default function StoreMenu({ open, onClose }: { open: boolean; onClose: (
   const role = useTeamRole();
   return (
     <Drawer open={open} onClose={onClose} title={N.more}>
-      <nav className="flex flex-col gap-4" aria-label={N.more} data-testid="store-menu">
+      <nav className="flex flex-col gap-2" aria-label={N.more} data-testid="store-menu">
         <section>
           <p className="px-3 pb-1 text-xs font-bold text-ink-muted">{N.mine}</p>
           <ul className="flex flex-col">
@@ -83,7 +83,7 @@ export default function StoreMenu({ open, onClose }: { open: boolean; onClose: (
               <li key={href}>
                 <Link href={href} onClick={onClose} className={ROW}>
                   <Ico size={18} className="shrink-0 text-primary" />
-                  {label}
+                  <span className="min-w-0 truncate">{label}</span>
                 </Link>
               </li>
             ))}
@@ -91,7 +91,7 @@ export default function StoreMenu({ open, onClose }: { open: boolean; onClose: (
         </section>
         <section>
           <p className="px-3 pb-1 text-xs font-bold text-ink-muted">{N.platform}</p>
-          <ul className="flex flex-col">
+          <ul className="grid grid-cols-2">
             <li>
               <a href={tutorial} target="_blank" rel="noopener noreferrer" onClick={onClose} className={ROW}>
                 <IconApp size={18} className="shrink-0 text-primary" />
@@ -102,7 +102,7 @@ export default function StoreMenu({ open, onClose }: { open: boolean; onClose: (
               <li key={href}>
                 <Link href={href} onClick={onClose} className={ROW}>
                   <IconSupport size={18} className="shrink-0 text-ink-muted" />
-                  {label}
+                  <span className="min-w-0 truncate">{label}</span>
                 </Link>
               </li>
             ))}

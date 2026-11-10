@@ -328,7 +328,7 @@ export function DriverPanel({ d, onChanged, endShift }: { d: DriverInfo; onChang
               : A.cashCapCustom}
           </span>
           {canCap && (
-            <button type="button" className="font-medium text-primary hover:underline" onClick={() => setCapOpen(true)}>
+            <button type="button" className="inline-action" onClick={() => setCapOpen(true)}>
               {A.cashCapEdit}
             </button>
           )}
@@ -343,7 +343,7 @@ export function DriverPanel({ d, onChanged, endShift }: { d: DriverInfo; onChang
             {A.vehicle}
           </span>
           {canVehicle && (
-            <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => setVehOpen(true)}>
+            <button type="button" className="inline-action" onClick={() => setVehOpen(true)}>
               <span className="inline-flex items-center gap-1">
                 <IconEdit size={12} />
                 {A.vehicleEdit}
@@ -551,7 +551,7 @@ export function TempPasswordBadge({
         </span>
       </Badge>
       {canResend && (
-        <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => setConfirm(true)}>
+        <button type="button" className="inline-action" onClick={() => setConfirm(true)}>
           {A.resend}
         </button>
       )}

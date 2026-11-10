@@ -574,7 +574,7 @@ export default function AllAccountsTable() {
       {error && data && (
         <Alert className="mb-4">
           <span>{error}</span>{" "}
-          <button type="button" onClick={() => void load()} className="font-bold underline">
+          <button type="button" onClick={() => void load()} className="inline-action">
             {A.retry}
           </button>
         </Alert>

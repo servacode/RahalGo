@@ -1,5 +1,6 @@
 package com.rahalgo.rep.add
 
+import com.rahalgo.ui.DialogConfirmButton
 import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -227,7 +228,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             },
             text = { Text(stringResource(if (vm.resent) R.string.ac_resent_body else R.string.ac_ok_body)) },
             confirmButton = {
-                RahalTextButton(onClick = { vm.dismissDone(); onDone() }) {
+                DialogConfirmButton(onClick = { vm.dismissDone(); onDone() }) {
                     Text(stringResource(R.string.ac_ok_go))
                 }
             },

@@ -21,7 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.rahalgo.ui.RahalTextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -241,7 +241,7 @@ fun PickPoint(
                         .background(Rahal.colors.canvas)
                         .padding(10.dp),
                 ) {
-                    TextButton(onClick = { query = p.label; vm.goTo(p) }) {
+                    RahalTextButton(onClick = { query = p.label; vm.goTo(p) }) {
                         Text(
                             text = p.label,
                             maxLines = 1,
@@ -267,7 +267,7 @@ fun PickPoint(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
                     )
-                    TextButton(onClick = { vm.retrySearch() }) {
+                    RahalTextButton(onClick = { vm.retrySearch() }) {
                         Text(stringResource(R.string.pick_search_retry))
                     }
                 }
@@ -394,7 +394,7 @@ fun PickPoint(
                     text = LocatingText.message(ctx, why),
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                TextButton(
+                RahalTextButton(
                     onClick = {
                         // **والعلاجُ فعلٌ لا «حسناً»** — **ففاتحُ
                         // الإعدادات يفتحها، والمحاولةُ تعيد النداء.**
@@ -406,7 +406,7 @@ fun PickPoint(
                         }
                     },
                 ) {
-                    Text(LocatingText.action(ctx, why), color = Rahal.colors.accent)
+                    Text(LocatingText.action(ctx, why))
                 }
             }
         }

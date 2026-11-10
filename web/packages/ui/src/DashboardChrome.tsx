@@ -306,7 +306,7 @@ export function DashboardChrome({
           الوسط على الجوّال وحدَه، **فتُرى الشاشتان مختلفتين.** */}
       {/* **ورأسٌ بارتفاعٍ يسع زرَّ الإغلاق على الجوّال** (تدقيقُ السايدبار ٢٠٢٦-١٠-٢٧) — كان ستّةَ
           عشرَ بكسلاً بلا علامة، فيركب الزرُّ طرفَ أوّل بند **ومن ضغط البندَ أغلق القائمة.** */}
-      <div className={`relative flex items-center justify-center ${showBrand ? "p-4" : "h-12 lg:hidden"}`}>
+      <div className={`relative flex items-center justify-center ${showBrand ? "px-4 py-2.5" : "h-12 lg:hidden"}`}>
         <div className="flex items-center gap-2">
           {/* ══════════════════════════════════════════════════════
               **اللوغو وحدَه — لا اسمٌ ولا تسميةُ بوّابة**
@@ -325,14 +325,12 @@ export function DashboardChrome({
               يفتحها عشرَ مرّاتٍ في اليوم، **والعلامةُ تقول له ما يعرف** —
               وتأخذ سطراً من قائمةٍ طويلة. **ويبقى في البوّابات الأربع**:
               يفتحها صاحبُها مرّةً في اليوم فتقول له أين هو. */}
-          {showBrand && <BrandMark size={92} disc />}
+          {showBrand && <BrandMark size={32} disc />}
         </div>
         <button
           onClick={() => setMenuOpen(false)}
           type="button"
-          className={`absolute end-3 flex items-center rounded-control p-2 text-ink-muted hover:bg-row-hover hover:text-ink lg:hidden ${
-            showBrand ? "top-3" : "top-1/2 -translate-y-1/2"
-          }`}
+          className="absolute end-3 top-1/2 flex -translate-y-1/2 items-center rounded-control p-2 text-ink-muted hover:bg-row-hover hover:text-ink lg:hidden"
           aria-label={m.shared.closeMenu}
           title={m.shared.closeMenu}
         >
@@ -371,10 +369,10 @@ export function DashboardChrome({
           **ونبرةٌ ثانيةٌ لا نبرةُ القسم**: الأخضرُ للخروج إلى السوق،
           **والأزرقُ لموضعك في اللوحة** — فلا يلتبسان ولو تجاورا. */}
       {shopUrl && (
-        <div className="p-3 pb-0">
+        <div className="p-2 pb-0">
           <button
             onClick={shopAsCustomer}
-            className="flex w-full items-center justify-center gap-2 rounded-control bg-accent px-3 py-2.5 text-sm font-bold text-on-bright elev-1 transition-opacity hover:opacity-90"
+            className="flex w-full items-center justify-center gap-2 rounded-control bg-accent px-3 py-2 text-sm font-bold text-on-bright elev-1 transition-opacity hover:opacity-90"
           >
             <IconStore size={17} />
             {shopLabel}
@@ -382,7 +380,7 @@ export function DashboardChrome({
         </div>
       )}
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+      <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2 lg:space-y-0">
         {nav.map((item) => {
           const active = isActive(item);
           const Icon = item.icon;
@@ -394,7 +392,7 @@ export function DashboardChrome({
                   كلّ مجموعةٍ يجعل القائمةَ سلسلةَ صناديق** — وهي عينُ ما
                   خرجنا منه في الشريط العلويّ. */}
               {item.group && (
-                <p className="px-3 pt-4 pb-1.5 text-2xs font-bold tracking-wider text-ink-muted first:pt-0">
+                <p className="px-3 pt-2.5 pb-1 text-2xs font-bold tracking-wider text-ink-muted first:pt-0 lg:pt-2 lg:pb-0.5">
                   {item.group}
                 </p>
               )}
@@ -416,7 +414,7 @@ export function DashboardChrome({
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-2.5 rounded-control border-s-2 px-3 py-2 text-sm transition-colors ${
+                className={`flex items-center gap-2.5 rounded-control border-s-2 px-3 py-2.5 text-sm transition-colors lg:py-1.5 ${
                   active
                     ? "border-primary bg-primary-tint font-bold text-ink"
                     : "border-transparent text-ink-muted hover:bg-row-hover hover:text-ink"

@@ -681,7 +681,7 @@ export default function DeliveryPage() {
           {pointFromSaved && (
             <div className="-mt-1 flex items-center gap-2 rounded-control border border-success-edge bg-success-tint px-3 py-2" data-testid="delivery-saved-point">
               <p className="min-w-0 flex-1 text-xs font-bold text-success">{isFetch ? D.savedPointFetch : D.savedPoint}</p>
-              <button type="button" className="shrink-0 text-sm font-bold text-accent-text" disabled={busy} onClick={clearSavedPoint}>
+              <button type="button" className="shrink-0 inline-action" disabled={busy} onClick={clearSavedPoint}>
                 {D.savedPointRemove}
               </button>
             </div>
@@ -726,7 +726,7 @@ export default function DeliveryPage() {
                     >
                       {D.askLocShare}
                     </a>
-                    <button type="button" className="text-sm font-bold text-accent-text" onClick={() => void copyLink()}>
+                    <button type="button" className="inline-action" onClick={() => void copyLink()}>
                       {copied ? D.askLocCopied : D.askLocCopy}
                     </button>
                   </div>

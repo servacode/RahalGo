@@ -42,7 +42,8 @@ const buttonVariants = {
      ولا يصرخ، **والتعبئةُ تبقى للخطوة الأساسيّة وحدَها.** */
   "danger-outline":
     "border border-danger-edge bg-surface text-danger hover:bg-danger-tint",
-  ghost: "text-ink-muted hover:bg-row-hover hover:text-ink",
+  /* **زرٌّ يُرى زرّا وهو ساكن** (قرارُ المالك ٢٠٢٦-١١-١٠) — حدٌّ شعريٌّ وأرضٌ خفيفة؛ الهاتفُ بلا تحويم. */
+  ghost: "border border-line bg-row-hover text-ink hover:bg-surface hover:border-ink-muted",
 } as const;
 
 /**

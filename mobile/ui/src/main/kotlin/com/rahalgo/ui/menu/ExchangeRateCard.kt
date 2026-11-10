@@ -1,5 +1,7 @@
 package com.rahalgo.ui.menu
 
+import com.rahalgo.ui.DialogDismissButton
+import com.rahalgo.ui.DialogConfirmButton
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -90,8 +92,8 @@ fun RateJumpDialog(oldRate: String, newRate: String, samples: String, onConfirm:
                 }
             }
         },
-        confirmButton = { RahalTextButton(onClick = onConfirm) { Text(stringResource(R.string.fx_rate_jump_yes)) } },
-        dismissButton = { RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.fx_rate_jump_no)) } },
+        confirmButton = { DialogConfirmButton(onClick = onConfirm) { Text(stringResource(R.string.fx_rate_jump_yes)) } },
+        dismissButton = { DialogDismissButton(onClick = onDismiss) { Text(stringResource(R.string.fx_rate_jump_no)) } },
     )
 }
 

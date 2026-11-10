@@ -1,5 +1,6 @@
 package com.rahalgo.driver.location
 
+import com.rahalgo.ui.DialogDismissButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -82,7 +83,7 @@ fun LocationDisclosure(onAgree: () -> Unit, onDismiss: () -> Unit) {
             RahalButton(onClick = onAgree) { Text(stringResource(R.string.disc_agree)) }
         },
         dismissButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.disc_deny)) }
+            DialogDismissButton(onClick = onDismiss) { Text(stringResource(R.string.disc_deny)) }
         },
     )
 }
