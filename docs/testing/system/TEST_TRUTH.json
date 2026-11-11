@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 136,
+    "notify_sites": 137,
     "notify_targeted": 69,
     "publish_rooms": [
       "customer",
@@ -33,8 +33,8 @@
     "setting_defs": 283,
     "behaviour_settings": 238,
     "order_fields": 146,
-    "test_files": 823,
-    "test_funcs": 3176
+    "test_files": 826,
+    "test_funcs": 3183
   },
   "flows": [
     {
@@ -28975,6 +28975,36 @@
       "orphan": true
     },
     {
+      "name": "TestWAAMN001_Validations",
+      "file": "internal/qa/whatsapp_amanah_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAAMN002_WaitsForSenderThenDispatches",
+      "file": "internal/qa/whatsapp_amanah_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAAMN003_PinnedSenderGoesStraightToDrivers",
+      "file": "internal/qa/whatsapp_amanah_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAAMN004_StoreModeUnchanged",
+      "file": "internal/qa/whatsapp_amanah_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAAMN005_FollowUpCoversSender",
+      "file": "internal/qa/whatsapp_amanah_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestWACOMM01_OurStoreWalletPays",
       "file": "internal/qa/whatsapp_commission_test.go",
       "package": "qa",
@@ -33165,6 +33195,12 @@
       "orphan": true
     },
     {
+      "name": "TestRepStoreList_CommissionPercent",
+      "file": "internal/server/rep_list_commission_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestRepSetLogo",
       "file": "internal/server/rep_logo_test.go",
       "package": "server",
@@ -33197,6 +33233,12 @@
     {
       "name": "TestRepMe_CountsNeedsInfoLeadsApart",
       "file": "internal/server/rep_needs_info_count_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRepStore_OwnerNameShown",
+      "file": "internal/server/rep_owner_name_test.go",
       "package": "server",
       "orphan": true
     },

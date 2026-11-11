@@ -14,6 +14,10 @@
  *	الأجرة    يكتبها الموظّف (لا مسافةَ تُحسب قبل أن يصل الموقع) — والأساسُ والحدّان اقتراحاً
  *	البضاعة   **يكتب ثمنَها السائقُ لما يستلم**، والزبونُ تصله رسالةٌ بالمبالغ
  *
+ * **و«أمانة من شخص»** (قرارُ المالك ٢٠٢٦-١١-١١): صاحبُ الأمانة مكانَ المتجر — رقمُه (واسمُه اختياريّ)،
+ * والبوتُ يطلب الموقعَ من الطرفين، **والطلبُ لا ينزل للسائقين حتّى يصل موقعُ صاحب الأمانة** (أو يُلصق
+ * رابطُ موقعه هنا). ولا ثمنَ بضاعة.
+ *
  * **والحسبةُ والتحقّقُ في المحرّك** (`orders/whatsapp_order.go`) — الشاشةُ تعرض ما يقوله.
  * **والإرسالُ مرّةً واحدةً مهما أُعيد** — مفتاحُ المحاولة (`Idempotency-Key`).
  */
@@ -39,7 +43,27 @@ interface WaQuote {
   fee_required: boolean;
 }
 
-export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number: number; noPoint: boolean }) => void }) {
+/** **ما يقوله الإنشاءُ للصفحة** — و`pickupPending` أمانةٌ تنتظر موقعَ صاحبها. */
+export interface WaSent {
+  id: string;
+  number: number;
+  noPoint: boolean;
+  pickupPending: boolean;
+}
+
+/** **نقطةُ صاحب الأمانة من رابطٍ ملصق** — `resolve-location`. */
+interface WaPoint {
+  lat: number;
+  lng: number;
+}
+
+export function WhatsAppOrderForm({ onSent }: { onSent: (o: WaSent) => void }) {
+  const [source, setSource] = useState<"store" | "amanah">("store");
+  const [senderName, setSenderName] = useState("");
+  const [senderPhone, setSenderPhone] = useState("");
+  const [senderLink, setSenderLink] = useState("");
+  const [senderPoint, setSenderPoint] = useState<WaPoint | null>(null);
+  const [linkState, setLinkState] = useState<"" | "busy" | "found" | "notFound">("");
   const [storeKind, setStoreKind] = useState<"ours" | "notOurs">("ours");
   const [store, setStore] = useState<WaStore | null>(null);
   const [storeName, setStoreName] = useState("");
@@ -53,18 +77,25 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
   const [error, setError] = useState("");
   const [tried, setTried] = useState(false);
 
-  // ── الأساسُ والحدّان — من متجرنا إن اختير، وإلّا بلا نقطة ─────────────
-  const storeId = storeKind === "ours" ? (store?.id ?? "") : "";
+  // ── الأساسُ والحدّان — من متجرنا إن اختير، أو نقطة صاحب الأمانة، وإلّا بلا نقطة ─────
+  const amanah = source === "amanah";
+  const storeId = !amanah && storeKind === "ours" ? (store?.id ?? "") : "";
+  const pickLat = amanah ? senderPoint?.lat : undefined;
+  const pickLng = amanah ? senderPoint?.lng : undefined;
   const fetchQuote = useCallback(async () => {
     setQuoteError("");
     try {
-      const q = storeId ? `?store_id=${encodeURIComponent(storeId)}` : "";
+      const q = storeId
+        ? `?store_id=${encodeURIComponent(storeId)}`
+        : pickLat != null && pickLng != null
+          ? `?pickup_lat=${pickLat}&pickup_lng=${pickLng}`
+          : "";
       setQuote(await api<WaQuote>(`/api/v1/admin/whatsapp-orders/quote${q}`));
     } catch (e) {
       setQuote(null);
       setQuoteError(errorText(e));
     }
-  }, [storeId]);
+  }, [storeId, pickLat, pickLng]);
   useEffect(() => {
     void fetchQuote();
   }, [fetchQuote]);
@@ -87,12 +118,49 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
     return () => clearTimeout(t);
   }, [phone]);
 
+  // ── رابطُ موقع صاحب الأمانة ← نقطة (اختياريّ) — والمحرّكُ يقرؤه (`geolink`) ─────
+  async function resolveSenderLink() {
+    const url = senderLink.trim();
+    setSenderPoint(null);
+    if (!url) {
+      setLinkState("");
+      return;
+    }
+    setLinkState("busy");
+    try {
+      const r = await api<{ found: boolean; lat?: number; lng?: number }>(
+        "/api/v1/admin/whatsapp-orders/resolve-location",
+        { method: "POST", body: JSON.stringify({ url }) },
+      );
+      if (r.found && r.lat != null && r.lng != null) {
+        setSenderPoint({ lat: r.lat, lng: r.lng });
+        setLinkState("found");
+      } else {
+        setLinkState("notFound");
+      }
+    } catch {
+      setLinkState("notFound");
+    }
+  }
+
+  /** **رقمٌ بلا مفتاحٍ ولا صفر** — لمقارنة رقمي الطرفين (والمحرّكُ يحرسها أيضاً: `wa_same_phone`). */
+  const digits = (v: string) => v.replace(/\D/g, "").replace(/^(00963|963|0)/, "");
   const feeValue = feeText.trim() === "" ? null : Number(feeText.replace(/\D/g, ""));
   const feeOk = feeValue != null && feeValue > 0;
   const hasStore = storeKind === "ours" ? !!store : !!storeName.trim();
-  const missing = [!hasStore && W.store, !phone.trim() && W.customerPhone, !feeOk && W.fee].filter(Boolean) as string[];
+  const samePhone = amanah && !!senderPhone.trim() && digits(senderPhone) === digits(phone);
+  const missing = (
+    amanah
+      ? [!senderPhone.trim() && W.senderPhone, !phone.trim() && W.recipientPhone, !feeOk && W.fee]
+      : [!hasStore && W.store, !phone.trim() && W.customerPhone, !feeOk && W.fee]
+  ).filter(Boolean) as string[];
 
   function reset() {
+    setSenderName("");
+    setSenderPhone("");
+    setSenderLink("");
+    setSenderPoint(null);
+    setLinkState("");
     setStore(null);
     setStoreName("");
     setPhone("");
@@ -103,7 +171,7 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
 
   async function send() {
     if (busy) return;
-    if (missing.length > 0) {
+    if (missing.length > 0 || samePhone || linkState === "busy") {
       setTried(true);
       return;
     }
@@ -115,16 +183,27 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
         details: details.trim(),
         fee: feeValue,
       };
-      if (storeKind === "ours" && store) body.store_id = store.id;
+      if (amanah) {
+        body.amanah = true;
+        body.sender_name = senderName.trim();
+        body.sender_phone = senderPhone.trim();
+        if (senderPoint) {
+          body.sender_lat = senderPoint.lat;
+          body.sender_lng = senderPoint.lng;
+        }
+      } else if (storeKind === "ours" && store) body.store_id = store.id;
       else body.store_name = storeName.trim();
-      const r = await api<{ id: string; number: number; has_point?: boolean }>("/api/v1/admin/whatsapp-orders", {
-        method: "POST",
-        headers: { "Idempotency-Key": attemptKey(SLOT) },
-        body: JSON.stringify(body),
-      });
+      const r = await api<{ id: string; number: number; has_point?: boolean; pickup_pending?: boolean }>(
+        "/api/v1/admin/whatsapp-orders",
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": attemptKey(SLOT) },
+          body: JSON.stringify(body),
+        },
+      );
       clearAttempt(SLOT);
       reset();
-      onSent({ id: r.id, number: r.number, noPoint: r.has_point !== true });
+      onSent({ id: r.id, number: r.number, noPoint: r.has_point !== true, pickupPending: r.pickup_pending === true });
     } catch (e) {
       if (isDecided(e)) clearAttempt(SLOT);
       setError(errorText(e));
@@ -135,8 +214,73 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
 
   return (
     <div className="space-y-4">
+      {/* ── ٠ · نوعُ الطلب — من متجر أو أمانة من شخص (قرارُ المالك ٢٠٢٦-١١-١١) ─────────── */}
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={W.source}>
+        {(["store", "amanah"] as const).map((k) => (
+          <Button
+            key={k}
+            variant={source === k ? "primary" : "secondary"}
+            role="radio"
+            aria-checked={source === k}
+            disabled={busy}
+            onClick={() => {
+              setSource(k);
+              setTried(false);
+            }}
+          >
+            {k === "store" ? W.fromStore : W.amanah}
+          </Button>
+        ))}
+      </div>
+
+      {/* ── ١أ · صاحبُ الأمانة — رقمُه، والبوتُ يطلب موقعَه ───────────────────── */}
+      {amanah && (
+        <AdminCard title={W.sender}>
+          <div className="space-y-3">
+            <Input
+              label={W.senderName}
+              value={senderName}
+              maxLength={120}
+              disabled={busy}
+              onChange={(e) => setSenderName(e.target.value)}
+            />
+            <div className="space-y-1">
+              <Input
+                label={W.senderPhone}
+                dir="ltr"
+                inputMode="tel"
+                value={senderPhone}
+                disabled={busy}
+                error={tried && !senderPhone.trim() ? W.required : tried && samePhone ? W.samePhone : undefined}
+                onChange={(e) => setSenderPhone(e.target.value)}
+              />
+              <p className="text-sm text-ink-muted">{W.senderPhoneHint}</p>
+            </div>
+            <div className="space-y-1">
+              <Input
+                label={W.senderLink}
+                dir="ltr"
+                value={senderLink}
+                disabled={busy}
+                onChange={(e) => {
+                  setSenderLink(e.target.value);
+                  setSenderPoint(null);
+                  setLinkState("");
+                }}
+                onBlur={() => void resolveSenderLink()}
+              />
+              <p className="text-sm text-ink-muted">{W.senderLinkHint}</p>
+              {linkState === "busy" && <p className="text-sm text-ink-muted">{W.searching}</p>}
+              {linkState === "found" && <p className="text-sm text-success">{W.senderLinkFound}</p>}
+              {linkState === "notFound" && <p className="text-sm text-danger">{W.senderLinkNotFound}</p>}
+            </div>
+          </div>
+        </AdminCard>
+      )}
+
       {/* ── ١ · المتجر — اسمُه وحدَه ───────────────────────────────────── */}
-      <AdminCard title={W.store}>
+      {!amanah && (
+        <AdminCard title={W.store}>
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={W.store}>
             {(["ours", "notOurs"] as const).map((k) => (
@@ -168,14 +312,15 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
             />
           )}
         </div>
-      </AdminCard>
+        </AdminCard>
+      )}
 
       {/* ── ٢ · الزبون — رقمُه وحدَه، والبوتُ يطلب موقعَه وعنوانَه ─────────── */}
-      <AdminCard title={W.customer}>
+      <AdminCard title={amanah ? W.recipient : W.customer}>
         <div className="space-y-3">
           <div className="space-y-1">
             <Input
-              label={W.customerPhone}
+              label={amanah ? W.recipientPhone : W.customerPhone}
               dir="ltr"
               inputMode="tel"
               value={phone}
@@ -183,7 +328,7 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
               error={tried && !phone.trim() ? W.required : undefined}
               onChange={(e) => setPhone(e.target.value)}
             />
-            <p className="text-sm text-ink-muted">{W.customerPhoneHint}</p>
+            <p className="text-sm text-ink-muted">{amanah ? W.recipientPhoneHint : W.customerPhoneHint}</p>
             {openFor != null && <Alert tone="warning">{fill(W.openForPhone, { n: openFor })}</Alert>}
           </div>
           <Textarea
@@ -219,7 +364,7 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
               </span>
             )}
           </div>
-          <p className="text-sm text-ink-muted">{W.goodsByDriver}</p>
+          <p className="text-sm text-ink-muted">{amanah ? W.amanahNoGoods : W.goodsByDriver}</p>
           {tried && missing.length > 0 && (
             <Alert tone="warning">{fill(W.missing, { fields: missing.join(m.common.listSep) })}</Alert>
           )}

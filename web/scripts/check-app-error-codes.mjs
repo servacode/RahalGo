@@ -229,6 +229,8 @@ const SERVER_ADMIN = new Set([
   "wa_fee_below_share", "wa_not_whatsapp", "wa_cancel_after_pickup",
   // **طلبٌ بلا موقعٍ للمستلِم وتصحيحُ عنوانه** (ملحقُ المالك ٢٠٢٦-١١-٠٥).
   "wa_fee_required", "wa_address_closed",
+  // **«أمانة من شخص»** (قرارُ المالك ٢٠٢٦-١١-١١) — نموذجُ اللوحة ونزولُ الطلب بيد المكتب.
+  "wa_amanah_sender_required", "wa_amanah_store", "wa_same_phone", "wa_pickup_pending",
   // **مكافأةُ بلاغ «طلب رقمي»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — زرُّ التذكرة في اللوحة وحدَه.
   "reward_not_eligible", "reward_already_granted",
 ]);

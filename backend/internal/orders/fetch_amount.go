@@ -289,6 +289,17 @@ func (s *Service) whatsAppGoodsAmount(ctx context.Context, tx pgx.Tx, orderID, d
 	if amount < 0 {
 		return httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
+	// **و«أمانة من شخص» لا ثمنَ فيها** (قرارُ المالك ٢٠٢٦-١١-١١) — صفرُها موثَّقٌ من الإنشاء، **ولا
+	// تصل المستلِمَ رسالةُ مبالغ عن شيءٍ لم يُشترَ.**
+	if amount > 0 {
+		var amanah bool
+		if err := tx.QueryRow(ctx, `SELECT wa_amanah FROM orders WHERE id = $1`, orderID).Scan(&amanah); err != nil {
+			return err
+		}
+		if amanah {
+			return ErrFetchAmountStage
+		}
+	}
 	var collect *int64
 	note := fmt.Sprintf("السائق كتب ثمن الطلب: %d — وصل للزبون برسالة", amount)
 	if amount > 0 {

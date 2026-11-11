@@ -61,7 +61,18 @@ var waErrors = []struct {
 		"wa_fee_required", "errors.wa_fee_required")},
 	{orders.ErrWAAddressClosed, httpx.NewError(http.StatusConflict,
 		"wa_address_closed", "errors.wa_address_closed")},
+	// **«أمانة من شخص»** (قرارُ المالك ٢٠٢٦-١١-١١).
+	{orders.ErrWAAmanahSender, httpx.NewError(http.StatusBadRequest,
+		"wa_amanah_sender_required", "errors.wa_amanah_sender_required")},
+	{orders.ErrWAAmanahStore, httpx.NewError(http.StatusBadRequest,
+		"wa_amanah_store", "errors.wa_amanah_store")},
+	{orders.ErrWASamePhone, httpx.NewError(http.StatusBadRequest,
+		"wa_same_phone", "errors.wa_same_phone")},
 }
+
+// errWAPickupPending **أمانةٌ تنتظر موقعَ صاحبها** (قرارُ المالك ٢٠٢٦-١١-١١) — ردُّ `orders.ErrWAPickupPending`
+// من أيّ باب انتقال (`respondErr`): المكتبُ يحاول إنزالَها بيده قبل الموقع.
+var errWAPickupPending = httpx.NewError(http.StatusConflict, "wa_pickup_pending", "errors.wa_pickup_pending")
 
 // waReply **علامةُ المحرّك ← ردُّ اللوحة** — وحدّا الأجرة في التفصيل نصّاً.
 func waReply(err error) error {
@@ -102,7 +113,46 @@ func (s *Server) handleListWhatsAppOrders(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, err)
 		return
 	}
+	if err := s.markWAAmanah(r.Context(), list, views); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"orders": views})
+}
+
+// markWAAmanah **«أمانة من شخص» وانتظارُها موقعَ صاحبها** (قرارُ المالك ٢٠٢٦-١١-١١) — غلافٌ للّوحة لا
+// حقلٌ في الطلب (`withExtra`): «بانتظار موقع صاحب الأمانة» على الطلب الذي لم ينزل للسائقين بعد.
+func (s *Server) markWAAmanah(ctx context.Context, list []orders.Order, views []map[string]any) error {
+	if len(list) == 0 {
+		return nil
+	}
+	ids := make([]string, len(list))
+	for i := range list {
+		ids[i] = list[i].ID
+	}
+	pending := map[string]bool{}
+	rows, err := s.pg.Query(ctx, `
+		SELECT id::text, pickup_override IS NULL FROM orders WHERE id = ANY($1::uuid[]) AND wa_amanah`, ids)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var p bool
+		if err := rows.Scan(&id, &p); err != nil {
+			return err
+		}
+		pending[id] = p
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for i := range views {
+		p, amanah := pending[list[i].ID]
+		views[i] = withExtra(views[i], map[string]any{"wa_amanah": amanah, "pickup_pending": amanah && p})
+	}
+	return nil
 }
 
 // handleWhatsAppStores `GET /admin/whatsapp-orders/stores?q=` — متاجرُنا الفعّالةُ ذاتُ الموقع.
@@ -235,6 +285,13 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 		// وصل الموقعُ قبلها؟ نقطتُه نقطةُ التسليم إن لم تُحدَّد. **وإن وصل بعدها كُتب حين يصل.**
 		// **ولرقم المستلِم نفسِه وحدَه** — طلبُ موقعٍ لرقمٍ آخرَ لا يُربط.
 		LocationRequestID string `json:"location_request_id"`
+		// Amanah **«أمانة من شخص»** (قرارُ المالك ٢٠٢٦-١١-١١) — صاحبُ الأمانة مكانَ المتجر: اسمُه
+		// (اختياريّ) ورقمُه (إلزاميّ)، **ونقطتُه اختياريّة** — وبلاها يطلبها البوتُ منه.
+		Amanah      bool     `json:"amanah"`
+		SenderName  string   `json:"sender_name"`
+		SenderPhone string   `json:"sender_phone"`
+		SenderLat   *float64 `json:"sender_lat"`
+		SenderLng   *float64 `json:"sender_lng"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -248,6 +305,7 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 		tf("recipient_name", &req.RecipientName, maxPersonName, textguard.Name),
 		tf("address_text", &req.AddressText, maxAddressText, textguard.Address),
 		tf("driver_note", &req.DriverNote, maxOrderNotes, textguard.Notes),
+		tf("sender_name", &req.SenderName, maxPersonName, textguard.Name),
 	); err != nil {
 		s.respondErr(w, err)
 		return
@@ -263,12 +321,24 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 		s.respondErr(w, identity.ErrInvalidPhone)
 		return
 	}
+	// **ورقمُ صاحب الأمانة يُطبَّع كرقم المستلِم** — منه يُطلب الموقع، ويتّصل به السائق.
+	senderPhone := ""
+	if req.Amanah && strings.TrimSpace(req.SenderPhone) != "" {
+		p, ok := identity.NormalizePhone(req.SenderPhone)
+		if !ok {
+			s.respondErr(w, identity.ErrInvalidPhone)
+			return
+		}
+		senderPhone = p
+	}
 	in := orders.WhatsAppOrderInput{
 		StoreID: req.StoreID, StoreName: req.StoreName, StorePhone: storePhone,
 		StoreAddress: req.StoreAddress, StoreLat: req.StoreLat, StoreLng: req.StoreLng,
 		Details: req.Details, Currency: req.Currency,
 		RecipientName: req.RecipientName, RecipientPhone: phone, AddressText: req.AddressText,
 		Lat: req.Lat, Lng: req.Lng, DriverNote: req.DriverNote, Fee: req.Fee,
+		Amanah: req.Amanah, SenderName: req.SenderName, SenderPhone: senderPhone,
+		SenderLat: req.SenderLat, SenderLng: req.SenderLng,
 	}
 	if req.GoodsAmount != nil {
 		v, ok := orders.AmountUnits(*req.GoodsAmount, req.Currency)
@@ -322,11 +392,21 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 		// والعنوان يطلبهم البوت») — صفٌّ مربوطٌ بالطلب في المعاملة نفسِها، **والرسالةُ بعد التثبيت.**
 		var auto *waAutoLocReq
 		if locReqID == "" && !c.HasPoint && late == nil {
-			a, err := newWALocReqTx(ctx, q, actor, phone, c.StoreName, c.ID)
+			a, err := newWALocReqTx(ctx, q, actor, phone, c.StoreName, c.ID, locReqModeWhatsApp)
 			if err != nil {
 				return IdempotentBody{}, err
 			}
 			auto = &a
+		}
+		// **وموقعُ صاحب الأمانة يُطلب منه** (قرارُ المالك ٢٠٢٦-١١-١١) — الرسالةُ نفسُها، **وردُّه يملأ
+		// نقطةَ الاستلام** (`whatsapp_pickup`) فينزل الطلبُ للسائقين.
+		var sender *waAutoLocReq
+		if c.Amanah && !c.PickupKnown {
+			a, err := newWALocReqTx(ctx, q, actor, senderPhone, "", c.ID, locReqModeWAPickup)
+			if err != nil {
+				return IdempotentBody{}, err
+			}
+			sender = &a
 		}
 		if err := s.auditTx(ctx, q, r, "ops.whatsapp_order_create", "order", c.ID, map[string]any{
 			"number":             c.Number,
@@ -341,6 +421,9 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 			"location_request":   locReqID,
 			"location_auto":      auto != nil,
 			"point_after_create": late != nil,
+			"amanah":             c.Amanah,
+			"pickup_known":       c.PickupKnown,
+			"sender_request":     sender != nil,
 		}); err != nil {
 			return IdempotentBody{}, err
 		}
@@ -349,7 +432,9 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 			Status: http.StatusCreated,
 			// has_point **أعلى الطلب موقعُ المستلِم** — من الخادم لا من الشاشة: موقعٌ وصل بين جولتين
 			// من سؤال النموذج كُتب في الطلب، **فلا تقول الشاشةُ «نزل بالعنوان المكتوب».**
-			Payload: map[string]any{"id": id, "number": c.Number, "has_point": c.HasPoint || late != nil},
+			// pickup_pending **أمانةٌ تنتظر موقعَ صاحبها** — لم تنزل للسائقين بعد.
+			Payload: map[string]any{"id": id, "number": c.Number, "has_point": c.HasPoint || late != nil,
+				"amanah": c.Amanah, "pickup_pending": c.Amanah && !c.PickupKnown},
 			AfterCommit: func() {
 				ctx := context.WithoutCancel(r.Context())
 				// **والموقعُ الواصلُ خارجَ التغطية يُكتب قبل العرض على السائقين** — ويُخبَر المكتب.
@@ -363,8 +448,16 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 					s.logger.Error("طلب واتساب: بعد الإنشاء", "order", id, "error", err)
 				}
 				// **ورسالةُ الموقع والعنوان للزبون** — وإن لم تصل فالمكتبُ يرى «ما وصلت» في طلب الموقع.
+				// **والأمانةُ تقول «لديك أمانة» للطرفين** (`locReqText`).
+				text := locReqModeWhatsApp
+				if c.Amanah {
+					text = "amanah"
+				}
 				if auto != nil {
-					s.locReqSend(ctx, auto.id, phone, locReqModeWhatsApp, auto.token, auto.expires)
+					s.locReqSend(ctx, auto.id, phone, text, auto.token, auto.expires)
+				}
+				if sender != nil {
+					s.locReqSend(ctx, sender.id, senderPhone, text, sender.token, sender.expires)
 				}
 				s.touch("orders", "ops")
 			},
@@ -420,6 +513,14 @@ func (s *Server) handleCancelWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 // locReqModeWhatsApp **طلبُ موقعٍ من المكتب لطلب واتساب.**
 const locReqModeWhatsApp = "whatsapp"
 
+// locReqModeWAPickup **طلبُ موقع صاحب الأمانة** (قرارُ المالك ٢٠٢٦-١١-١١، هجرة ٠٥٣٧) — يملأ نقطةَ
+// الاستلام لا التسليم. **نوعٌ في الشيفرة لا في القاعدة**: الصفُّ `mode='whatsapp'` بـ`target='pickup'`،
+// **وقارئُ الصفّ يردّه بهذا الاسم** (`locReqModeSQL`).
+const locReqModeWAPickup = "whatsapp_pickup"
+
+// locReqModeSQL **نوعُ طلب الموقع كما تقرؤه الشيفرة** — `whatsapp_pickup` لطلب صاحب الأمانة.
+const locReqModeSQL = `CASE WHEN l.target = 'pickup' THEN 'whatsapp_pickup' ELSE l.mode END`
+
 // waLocReqPerHour **حدُّ الموظّف في الساعة** — المكتبُ يكتب طلباتٍ أكثرَ من متجر، **ورسائلُ البوت
 // ليست مجّانيّةً على الرقم.**
 const waLocReqPerHour = 60
@@ -435,7 +536,7 @@ func lockWhatsAppLocReqTx(ctx context.Context, q dbtx.Querier, id, phone string)
 	}
 	err = q.QueryRow(ctx, `
 		SELECT lat, lng, COALESCE(address_text, '') FROM recipient_location_requests
-		 WHERE id = $1 AND mode = 'whatsapp' AND order_id IS NULL AND phone = $2
+		 WHERE id = $1 AND mode = 'whatsapp' AND target = 'dropoff' AND order_id IS NULL AND phone = $2
 		 FOR UPDATE`, id, phone).Scan(&lat, &lng, &address)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil, "", errAmanahLocReq
@@ -487,7 +588,7 @@ func (s *Server) handleWhatsAppRequestLocation(w http.ResponseWriter, r *http.Re
 		s.respondErr(w, errLocReqLimit)
 		return
 	}
-	a, err := newWALocReqTx(ctx, s.pg, actor, phone, req.StoreName, "")
+	a, err := newWALocReqTx(ctx, s.pg, actor, phone, req.StoreName, "", locReqModeWhatsApp)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -501,8 +602,9 @@ type waAutoLocReq struct {
 	expires   time.Time
 }
 
-// newWALocReqTx **يكتب طلبَ موقعٍ للمكتب** — مربوطاً بطلبٍ (`orderID`) أو حرّاً حتّى يُربط.
-func newWALocReqTx(ctx context.Context, q dbtx.Querier, actor, phone, storeName, orderID string) (waAutoLocReq, error) {
+// newWALocReqTx **يكتب طلبَ موقعٍ للمكتب** — مربوطاً بطلبٍ (`orderID`) أو حرّاً حتّى يُربط. **و`mode`
+// `whatsapp` للمستلِم أو `whatsapp_pickup` لصاحب الأمانة.**
+func newWALocReqTx(ctx context.Context, q dbtx.Querier, actor, phone, storeName, orderID, mode string) (waAutoLocReq, error) {
 	raw := make([]byte, 18)
 	if _, err := rand.Read(raw); err != nil {
 		return waAutoLocReq{}, err
@@ -510,11 +612,11 @@ func newWALocReqTx(ctx context.Context, q dbtx.Querier, actor, phone, storeName,
 	a := waAutoLocReq{token: base64.RawURLEncoding.EncodeToString(raw)}
 	err := q.QueryRow(ctx, `
 		INSERT INTO recipient_location_requests
-		       (requested_by, phone, mode, store_label, token_hash, expires_at, order_id)
+		       (requested_by, phone, mode, store_label, token_hash, expires_at, order_id, target)
 		VALUES (NULLIF($1, '')::uuid, $2, 'whatsapp', NULLIF($3, ''), $4, now() + make_interval(secs => $5),
-		        NULLIF($6, '')::uuid)
+		        NULLIF($6, '')::uuid, CASE WHEN $7::text = 'whatsapp_pickup' THEN 'pickup' ELSE 'dropoff' END)
 		RETURNING id::text, expires_at`,
-		actor, phone, strings.TrimSpace(storeName), locReqHash(a.token), int(locReqTTL.Seconds()), orderID).
+		actor, phone, strings.TrimSpace(storeName), locReqHash(a.token), int(locReqTTL.Seconds()), orderID, mode).
 		Scan(&a.id, &a.expires)
 	return a, err
 }

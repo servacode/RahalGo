@@ -17,14 +17,14 @@ import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { AdminPage, Alert, IconWhatsApp } from "@rahalgo/ui";
 import { fill } from "@/lib/customer/texts";
-import { OpenOrderLink, WhatsAppOrderForm } from "@/components/admin/whatsapp/WhatsAppOrderForm";
+import { OpenOrderLink, WhatsAppOrderForm, type WaSent } from "@/components/admin/whatsapp/WhatsAppOrderForm";
 import { RecentWhatsAppOrders } from "@/components/admin/whatsapp/RecentWhatsAppOrders";
 
 const m = getMessages(defaultLocale);
 const W = m.admin.whatsappOrders;
 
 export default function WhatsAppOrdersPage() {
-  const [sent, setSent] = useState<{ id: string; number: number; noPoint: boolean } | null>(null);
+  const [sent, setSent] = useState<WaSent | null>(null);
   const [refresh, setRefresh] = useState(0);
 
   return (
@@ -35,11 +35,16 @@ export default function WhatsAppOrdersPage() {
         sent && (
           <Alert tone="success">
             <span className="flex flex-wrap items-center gap-2">
-              {fill(W.sent, { n: sent.number })}
+              {fill(sent.pickupPending ? W.sentAmanahTitle : W.sent, { n: sent.number })}
               <OpenOrderLink id={sent.id} />
             </span>
             {/* **بلا موقع: العنوانُ المكتوب، والموقعُ يصل السائقَ حين يبعته المستلِم** (ملحق ٢٠٢٦-١١-٠٥). */}
-            {sent.noPoint && <span className="mt-1 block">{W.sentNoPoint}</span>}
+            {/* **وأمانةٌ تنتظر موقعَ صاحبها لم تنزل بعد** (قرارُ المالك ٢٠٢٦-١١-١١). */}
+            {sent.pickupPending ? (
+              <span className="mt-1 block">{W.sentAmanahPending}</span>
+            ) : (
+              sent.noPoint && <span className="mt-1 block">{W.sentNoPoint}</span>
+            )}
           </Alert>
         )
       }

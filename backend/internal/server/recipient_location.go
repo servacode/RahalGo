@@ -134,6 +134,11 @@ func (s *Server) locReqReceived(ctx context.Context, ownerID, customerID, orderI
 			if _, err := s.orders.ApplyWhatsAppShared(ctx, orderID, lat, lng); err != nil {
 				s.logger.Warn("موقعُ مستلِم طلب الواتساب: تعذّرت كتابتُه في الطلب", "order", orderID, "error", err)
 			}
+		// **وموقعُ صاحب الأمانة نقطةُ الاستلام** (قرارُ المالك ٢٠٢٦-١١-١١) — وينزل الطلبُ للسائقين.
+		case locReqModeWAPickup:
+			if _, err := s.orders.ApplyWhatsAppPickup(ctx, orderID, lat, lng); err != nil {
+				s.logger.Warn("موقعُ صاحب أمانة الواتساب: تعذّرت كتابتُه في الطلب", "order", orderID, "error", err)
+			}
 		default:
 			if _, err := s.orders.ApplyAmanahShared(ctx, orderID, lat, lng); err != nil {
 				s.logger.Warn("موقعُ الأمانة: تعذّرت كتابتُه في الطلب", "order", orderID, "error", err)
@@ -144,7 +149,7 @@ func (s *Server) locReqReceived(ctx context.Context, ownerID, customerID, orderI
 		s.touchUser(customerID, "location_request", "orders")
 	}
 	// **ونموذجُ الواتساب في اللوحة يقرأ من جديد** — لا ينتظر دورةَ السؤال.
-	if mode == locReqModeWhatsApp {
+	if mode == locReqModeWhatsApp || mode == locReqModeWAPickup {
 		s.touch("orders", "ops")
 	}
 }
@@ -170,7 +175,7 @@ func (s *Server) HandleWALocation(ctx context.Context, from string, lat, lng, ac
 		                ORDER BY created_at DESC LIMIT 1)
 		   AND l.received_at IS NULL AND l.expires_at > now()
 		RETURNING COALESCE((SELECT m.owner_user_id::text FROM merchants m WHERE m.id = l.merchant_id), ''),
-		          COALESCE(l.customer_id::text, ''), COALESCE(l.order_id::text, ''), l.mode`,
+		          COALESCE(l.customer_id::text, ''), COALESCE(l.order_id::text, ''), `+locReqModeSQL,
 		phone, lat, lng, locReqAcc(&accuracy)).Scan(&ownerID, &customerID, &orderID, &mode)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ""
@@ -419,7 +424,7 @@ func (s *Server) handlePublicSubmitLocation(w http.ResponseWriter, r *http.Reque
 		 WHERE l.token_hash = $1
 		   AND l.received_at IS NULL AND l.expires_at > now()
 		RETURNING COALESCE((SELECT m.owner_user_id::text FROM merchants m WHERE m.id = l.merchant_id), ''),
-		          COALESCE(l.customer_id::text, ''), COALESCE(l.order_id::text, ''), l.mode`,
+		          COALESCE(l.customer_id::text, ''), COALESCE(l.order_id::text, ''), `+locReqModeSQL,
 		hash, *req.Lat, *req.Lng, acc).Scan(&ownerID, &customerID, &orderID, &mode)
 	if errors.Is(err, pgx.ErrNoRows) {
 		var exists bool

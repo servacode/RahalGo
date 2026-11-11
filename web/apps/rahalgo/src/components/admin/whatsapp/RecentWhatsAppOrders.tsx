@@ -30,6 +30,7 @@ import {
   AdminLoading,
   AdminReload,
   Alert,
+  Badge,
   Button,
   FormActions,
   IconWhatsApp,
@@ -61,14 +62,17 @@ interface WaRow {
   dropoff_known?: boolean;
   /** **ثمنُ الطلب كتبه السائق** (قرارُ المالك ٢٠٢٦-١١-٠٦) — ووصل الزبونَ برسالة. */
   fetch_amount?: number | null;
+  /** **«أمانة من شخص»، وانتظارُها موقعَ صاحبها** (قرارُ المالك ٢٠٢٦-١١-١١) — غلافُ القائمة. */
+  wa_amanah?: boolean;
+  pickup_pending?: boolean;
 }
 
-/** **قبل الاستلام وحدَه** — والمحرّكُ يحرسه (`wa_cancel_after_pickup`). */
-const CANCELLABLE = new Set(["dispatching", "assigned", "at_pickup"]);
+/** **قبل الاستلام وحدَه** — والمحرّكُ يحرسه (`wa_cancel_after_pickup`). و«مقبول» أمانةٌ تنتظر موقعَ صاحبها. */
+const CANCELLABLE = new Set(["accepted", "dispatching", "assigned", "at_pickup"]);
 /** **«بدّل السائق» قبل الاستلام** (قرارُ المالك ٢٠٢٦-١١-٠٨) — والمحرّكُ يحرسه، ولا يعود لمن تُرك. */
 const DRIVER_CHANGEABLE = new Set(["assigned", "at_pickup"]);
 /** **قبل التسليم** — والمحرّكُ يحرسه (`wa_address_closed`). */
-const ADDRESS_EDITABLE = new Set(["dispatching", "assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff"]);
+const ADDRESS_EDITABLE = new Set(["accepted", "dispatching", "assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff"]);
 
 export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
   const [rows, setRows] = useState<WaRow[] | null>(null);
@@ -224,6 +228,7 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
                     #{o.number}
                   </Link>
                   <StatusBadge domain="order" status={o.status} />
+                  {o.wa_amanah && <Badge variant="info">{W.amanahBadge}</Badge>}
                 </span>
               }
               meta={
@@ -231,6 +236,7 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
                   {o.merchant_name} ← {o.customer_name} · {fmtDamascusTime(o.created_at)} ·{" "}
                   {o.driver_name || W.noDriver}
                   {o.address_text ? <span className="block">{o.address_text}</span> : null}
+                  {o.pickup_pending && <span className="block text-warning">{W.pickupPending}</span>}
                   {o.dropoff_known === false && ADDRESS_EDITABLE.has(o.status) && (
                     <span className="block text-warning">{W.noPoint}</span>
                   )}

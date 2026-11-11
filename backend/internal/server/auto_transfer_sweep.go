@@ -85,6 +85,8 @@ func (s *Server) SweepAutoTransfer(ctx context.Context) (picked, progressed int)
 		   AND driver_id IS NULL
 		   AND closed_at IS NULL
 		   AND updated_at < now() - $1::interval
+		   -- **وأمانةُ واتسابٍ تنتظر موقعَ صاحبها ليست عالقة** — تنزل حين يصل (قرارُ المالك ٢٠٢٦-١١-١١).
+		   AND NOT (wa_amanah AND pickup_override IS NULL)
 		 ORDER BY updated_at
 		 LIMIT 50
 		 FOR UPDATE SKIP LOCKED`, autoTransferSweepAge.String())
