@@ -16,7 +16,8 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtRef, fmtSpan, fmtUsd } from "@rahalgo/i18n";
-import { Alert, Button, Chips, Confirm, InvoiceLines, Money } from "@rahalgo/ui";
+import { Alert, Button, Confirm, InvoiceLines, Money } from "@rahalgo/ui";
+import { OUTLINE_CARD, RadioCard } from "./kit";
 import { api } from "@/lib/api";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { fill, stageLabel } from "@/lib/customer/texts";
@@ -167,7 +168,7 @@ export function CancelOrder({ order, onDone }: { order: MyOrder; onDone: () => v
   if (ENDED.has(order.status) || left === 0 || left < -1) return null;
   return (
     <div className="space-y-2">
-      <Button variant="danger" className="w-full" onClick={() => setAsk(true)} disabled={busy}>
+      <Button variant="danger" className="min-h-12 w-full" onClick={() => setAsk(true)} disabled={busy}>
         {O.cancel}
       </Button>
       {error && <Alert>{error}</Alert>}
@@ -344,14 +345,14 @@ export function QuotePanel({
       {/* **والمحفظةُ خيارٌ فقط إن غطّت المبلغ** — وإلّا سطرٌ واحدٌ «الدفع: نقداً عند الاستلام»
           (قرارُ المالك ٢٠٢٦-١٠-٣٠)، والطريقةُ تبقى نقداً. مرآةُ `QuoteConfirmPanel`. */}
       {walletOk ? (
-        <Chips<"cash" | "delivery">
-          items={[
+        <div role="radiogroup" aria-label={m.shop.cart.payment} className="flex flex-col gap-rg-sm">
+          {([
             { id: "cash", label: m.shop.cart.cash },
             ...(deliveryOk ? [{ id: "delivery" as const, label: m.shop.cart.walletDelivery }] : []),
-          ]}
-          value={pay}
-          onChange={setMethod}
-        />
+          ] as { id: "cash" | "delivery"; label: string }[]).map((it) => (
+            <RadioCard key={it.id} selected={pay === it.id} onSelect={() => setMethod(it.id)} title={it.label} />
+          ))}
+        </div>
       ) : (
         <p className="text-sm">{O.payCashOnly}</p>
       )}
@@ -565,10 +566,14 @@ export function PayScope({
   };
 
   return (
-    <div className="surface flex flex-col gap-2 p-4">
-      <p className="text-sm font-bold">{O.changePay}</p>
-      <p className="text-xs text-ink-muted">{O.changePayHint}</p>
-      <Chips<"none" | "full" | "delivery"> items={items} value={scope} onChange={change} />
+    <div className={`${OUTLINE_CARD} flex flex-col gap-rg-sm`}>
+      <p className="text-card-title">{O.changePay}</p>
+      <p className="text-caption text-ink-muted">{O.changePayHint}</p>
+      <div role="radiogroup" aria-label={O.changePay} className="flex flex-col gap-rg-sm">
+        {items.map((it) => (
+          <RadioCard key={it.id} selected={scope === it.id} onSelect={() => void change(it.id)} title={it.label} disabled={busy} />
+        ))}
+      </div>
       {error && <Alert>{error}</Alert>}
     </div>
   );

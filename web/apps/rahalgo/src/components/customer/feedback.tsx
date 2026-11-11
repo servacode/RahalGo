@@ -60,7 +60,7 @@ export function useRated(): { rated: Set<string>; mark: (id: string) => void; re
 function Stars({ value, onPick, label }: { value: number; onPick: (n: number) => void; label: string }) {
   return (
     <div>
-      <p className="mb-1 text-sm">{label}</p>
+      <p className="mb-rg-xs text-card-title">{label}</p>
       <div className="flex gap-1" role="radiogroup" aria-label={label}>
         {[1, 2, 3, 4, 5].map((n) => (
           <button
@@ -70,14 +70,14 @@ function Stars({ value, onPick, label }: { value: number; onPick: (n: number) =>
             aria-checked={value === n}
             aria-label={fill(R.star, { n: fmtNum(n) })}
             onClick={() => onPick(n)}
-            className="taparea flex h-11 w-11 items-center justify-center rounded-control hover:bg-row-hover"
+            className="taparea flex h-12 w-12 items-center justify-center rounded-control hover:bg-row-hover"
           >
             <IconStar size={32} className={n <= value ? "fill-current text-accent" : "text-ink-muted"} />
           </button>
         ))}
       </div>
       {/* **وكلمةٌ تحت النجوم تقول ما اختار** — وقبل الاختيار: «اضغط على النجوم لتقيّم». */}
-      <p className={`mt-1 text-xs ${value > 0 ? "font-bold text-accent" : "text-ink-muted"}`}>
+      <p className={`mt-rg-xs text-caption ${value > 0 ? "font-bold text-accent-text" : "text-ink-muted"}`}>
         {value > 0 ? (R.words as Record<string, string>)[String(value)] : R.pick}
       </p>
     </div>
@@ -135,7 +135,13 @@ export function RateDialog({
           #{fmtRef(order.number)}
         </p>
         <Stars value={stars} onPick={setStars} label={R.service} />
-        {driver && <Stars value={driverStars} onPick={setDriverStars} label={R.driver} />}
+        {driver && (
+          <>
+            {/* فاصلٌ ومسافةٌ بين تقييم الخدمة وتقييم السائق (مرآةُ `RateDialog`). */}
+            <hr className="my-rg-lg border-line-soft" />
+            <Stars value={driverStars} onPick={setDriverStars} label={R.driver} />
+          </>
+        )}
         {error && <Alert>{error}</Alert>}
         <div className="flex gap-3">
           <Button className="flex-1" onClick={send} disabled={busy || !ready}>
@@ -196,7 +202,7 @@ export function RateButton({ order }: { order: MyOrder }) {
   if (rated.has(order.id)) return <p className="text-center text-xs text-ink-muted">{R.rated}</p>;
   return (
     <>
-      <Button className="flex w-full items-center justify-center gap-2" onClick={() => setOpen(true)}>
+      <Button className="flex min-h-12 w-full items-center justify-center gap-2" onClick={() => setOpen(true)}>
         <IconStar size={16} />
         {R.button}
       </Button>
@@ -273,7 +279,7 @@ export function ComplaintBox({ order }: { order: MyOrder }) {
 
   return (
     <>
-      <Button variant="secondary" className="w-full" onClick={openBox}>
+      <Button variant="secondary" className="min-h-12 w-full" onClick={openBox}>
         {Q.button}
       </Button>
       <Modal open={open} onClose={() => setOpen(false)} title={Q.title}>

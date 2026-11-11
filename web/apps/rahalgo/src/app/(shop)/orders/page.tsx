@@ -12,7 +12,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
-import { Button, ButtonLink, Chips, EmptyState, LoadingState, ReloadState, IconOrder } from "@rahalgo/ui";
+import { Button, ButtonLink, EmptyState, LoadingState, ReloadState, ScreenTitle, IconOrder } from "@rahalgo/ui";
+import { Segmented } from "@/components/customer/kit";
 import { api } from "@/lib/api";
 import { fill } from "@/lib/customer/texts";
 import { useAuth } from "@/lib/auth";
@@ -75,16 +76,15 @@ export default function OrdersPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="heading-page">{O.title}</h1>
-        <span className="text-xs text-ink-muted">{O.live}</span>
-      </div>
-      <Chips<"open" | "history">
+      <ScreenTitle title={O.title} actions={<span className="text-caption text-ink-muted">{O.live}</span>} />
+      {/* مفتاحٌ بنصفَين متساويَين (مرآةُ `SegmentedControl`) — والعدّادُ في نصّ الخيار. */}
+      <Segmented<"open" | "history">
+        label={O.title}
         items={[
-          { id: "open", label: O.open, count: open.length },
+          { id: "open", label: `${O.open} (${fmtNum(open.length)})` },
           hasMore
             ? { id: "history", label: fill(O.historyMore, { n: fmtNum(history.length) }) }
-            : { id: "history", label: O.history, count: history.length },
+            : { id: "history", label: `${O.history} (${fmtNum(history.length)})` },
         ]}
         value={tab}
         onChange={setTab}
@@ -99,7 +99,7 @@ export default function OrdersPage() {
           title={tab === "open" ? O.noneOpen : O.noneHistory}
           action={
             tab === "open" ? (
-              <ButtonLink href="/shop" variant="secondary">
+              <ButtonLink href="/shop" className="min-h-12">
                 {O.browse}
               </ButtonLink>
             ) : undefined

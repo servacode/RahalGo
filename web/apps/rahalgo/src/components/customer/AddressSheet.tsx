@@ -24,7 +24,6 @@ import {
   EmptyState,
   FormActions,
   LoadingState,
-  Chips,
   Sheet,
   Switch,
   Textarea,
@@ -138,12 +137,26 @@ function AddressForm({
           }}
         />
       </Suspense>
-      <Chips
-        wrap
-        items={KINDS.map(([k, label]) => ({ id: k, label }))}
-        value={kind as (typeof KINDS)[number][0]}
-        onChange={(k) => setKind(k)}
-      />
+      {/* نوعُ العنوان: رقاقاتٌ ≥٤٨px، والمختارةُ بحدٍّ ٢px وحبرِ التمييز الداكن (`accentInk` في التطبيق). */}
+      <div role="radiogroup" aria-label={A.pageTitle} className="flex flex-wrap gap-rg-sm">
+        {KINDS.map(([k, label]) => {
+          const on = kind === k;
+          return (
+            <button
+              key={k}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => setKind(k)}
+              className={`min-h-12 min-w-24 flex-1 rounded-rg-md border-2 px-rg-md text-button transition-colors ${
+                on ? "border-accent bg-accent-tint text-accent-text" : "border-line text-ink hover:bg-row-hover"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
       <Switch
         checked={live}
         label={A.liveAuto}
@@ -153,7 +166,10 @@ function AddressForm({
         }}
       />
       {error && <Alert>{error}</Alert>}
-      <FormActions submit saveLabel={A.save} onCancel={onCancel} busy={busy} />
+      {/* «احفظ العنوان» شريطٌ لاصقٌ في أسفل الورقة (مرآةُ `AddressPage.kt`). */}
+      <div className="sticky bottom-0 z-10 -mx-1 bg-shell px-1 py-rg-md rg-raised-bar">
+        <FormActions submit saveLabel={A.save} onCancel={onCancel} busy={busy} />
+      </div>
     </form>
   );
 }

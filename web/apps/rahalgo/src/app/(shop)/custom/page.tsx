@@ -29,6 +29,7 @@ import { useCustomer } from "@/lib/customer/context";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { customFee, fill, freeCustomOn, freeUntilText } from "@/lib/customer/texts";
 import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
+import { OUTLINE_CARD, Segmented, StickyActionBar } from "@/components/customer/kit";
 import { NeedLogin } from "@/components/customer/NeedLogin";
 import { useOrderingState, useAddGate, AvailabilityNotice } from "@/components/customer/ServiceNotices";
 import { useShopToast } from "@/components/customer/toast";
@@ -210,22 +211,10 @@ export default function CustomOrderPage() {
         {closed && <Alert tone="warning">{closedText}</Alert>}
       </div>
 
-      <section className="surface flex flex-col gap-3 p-4">
-        {/* **ولا «نوع الطلب» ولا سطرَ شرحٍ** — الخياران يشرحان نفسَيهما (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
-        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={K.modeTitle}>
-          {modes.map((it) => (
-            <Button
-              key={it.id}
-              role="radio"
-              aria-checked={mode === it.id}
-              variant={mode === it.id ? "primary" : "secondary"}
-              className="w-full py-3"
-              onClick={() => setMode(it.id)}
-            >
-              {it.label}
-            </Button>
-          ))}
-        </div>
+      <section className={`${OUTLINE_CARD} flex flex-col gap-3`}>
+        {/* **ولا «نوع الطلب» ولا سطرَ شرحٍ** — الخياران يشرحان نفسَيهما (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+            **ومفتاحُ نصفَين** كطلباتي (مرآةُ `SegmentedControl`) لا زرٌّ مصمتٌ وزرٌّ بحدّ. */}
+        <Segmented<Mode> label={K.modeTitle} items={modes} value={mode} onChange={setMode} />
 
         {/* **والمثالُ نصٌّ رماديٌّ داخلَ الحقل يزول بالكتابة** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
         <Textarea
@@ -243,7 +232,7 @@ export default function CustomOrderPage() {
 
       {/* **صاحبُ الأمانة ورقمُه، و«اطلب الموقع منه»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كـ«إحضار» المتجر. */}
       {mode === "amanah" && (
-        <section className="surface flex flex-col gap-3 p-4">
+        <section className={`${OUTLINE_CARD} flex flex-col gap-3`}>
           <Input
             id="holder-name"
             label={K.holderName}
@@ -300,7 +289,7 @@ export default function CustomOrderPage() {
         </section>
       )}
 
-      <section className="surface flex flex-col gap-3 p-4">
+      <section className={OUTLINE_CARD}>
         <Textarea
           id="custom-notes"
           label={K.notes}
@@ -309,7 +298,11 @@ export default function CustomOrderPage() {
           rows={2}
           maxLength={MAX_NOTES}
         />
-        <div className="flex flex-col gap-1 border-t border-line-soft pt-3">
+      </section>
+
+      {/* **صندوقُ الأجرة بطاقةُ سطحٍ سادة** (مرآةُ `CustomScreen.kt`) — لا خطٌّ فاصلٌ داخل بطاقة الملاحظات. */}
+      <section className={OUTLINE_CARD}>
+        <div className="flex flex-col gap-1">
           {adminFee ? (
             <>
               {waive > 0 ? (
@@ -342,15 +335,6 @@ export default function CustomOrderPage() {
       {!ordering.open && <Alert tone="warning">{ordering.text}</Alert>}
       {gate.kind === "blocked" && <AvailabilityNotice av={gate.av} address={address} />}
 
-      <Button
-        className="w-full py-3 text-base"
-        onClick={send}
-        disabled={busy || !request.trim() || !address || needHolder || !ordering.open || closed || gate.kind === "blocked"}
-      >
-        {busy ? K.sending : K.send}
-      </Button>
-      {!address && <p className="text-xs text-ink-muted">{K.needAddress}</p>}
-      {needHolder && <p className="text-xs text-ink-muted">{fill(K.missing, { list: missing.join(K.listSep) })}</p>}
       {error && (
         <Alert>
           {error}
@@ -362,6 +346,19 @@ export default function CustomOrderPage() {
         </Alert>
       )}
       </div>
+
+      {/* **زرُّ الإرسال في شريطٍ سفليٍّ ثابت** وفوقه «ما الناقص» بنصٍّ هادئ (مرآةُ `BottomActionBar`). */}
+      <StickyActionBar aboveTabs className="lg:col-span-2">
+        {!address && <p className="text-caption text-ink-muted">{K.needAddress}</p>}
+        {needHolder && <p className="text-caption text-ink-muted">{fill(K.missing, { list: missing.join(K.listSep) })}</p>}
+        <Button
+          className="min-h-12 w-full text-base"
+          onClick={send}
+          disabled={busy || !request.trim() || !address || needHolder || !ordering.open || closed || gate.kind === "blocked"}
+        >
+          {busy ? K.sending : K.send}
+        </Button>
+      </StickyActionBar>
       <AddressSheet open={pickAddr} onClose={() => setPickAddr(false)} />
     </div>
   );

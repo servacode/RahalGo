@@ -10,8 +10,9 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, errorText, fmtNum, withPlatform } from "@rahalgo/i18n";
-import { Button, CopyCode, LoadingState, Money, ReloadState, usePlatform, IconCopy, IconShare } from "@rahalgo/ui";
+import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum, withPlatform } from "@rahalgo/i18n";
+import { Button, CopyCode, LoadingState, Money, ReloadState, StatTile, usePlatform, IconCopy, IconShare } from "@rahalgo/ui";
+import { OUTLINE_CARD } from "@/components/customer/kit";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fill } from "@/lib/customer/texts";
@@ -65,14 +66,23 @@ export default function InvitePage() {
         </p>
       </div>
 
-      <section className="surface flex flex-col gap-3 p-4 lg:row-span-2">
-        <CopyCode code={r.code} title={m.shop.invite.code} />
-        <p className="text-xs text-ink-muted">{V.yourLink}</p>
-        <p dir="ltr" className="break-all rounded-control bg-field px-3 py-2 text-sm">
+      <section className={`${OUTLINE_CARD} flex flex-col gap-3 lg:row-span-2`}>
+        {/* صندوقُ الرمز: الرمزُ بخطٍّ كبير (لاتينيّ) وزرُّ نسخٍ صغيرٌ جنبه. */}
+        <div className="flex items-center justify-between gap-rg-md rounded-rg-md bg-field px-rg-md py-rg-sm">
+          <div className="min-w-0">
+            <p className="text-caption text-ink-muted">{m.shop.invite.code}</p>
+            <p dir="ltr" className="truncate text-price-lg font-mono text-start">
+              {r.code}
+            </p>
+          </div>
+          <CopyCode code={r.code} title={m.shop.invite.code} />
+        </div>
+        <p className="text-caption text-ink-muted">{V.yourLink}</p>
+        <p dir="ltr" className="break-all rounded-rg-md bg-field px-rg-md py-rg-sm text-body">
           {r.link}
         </p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Button variant="secondary" className="flex items-center justify-center gap-2" onClick={copy}>
+          <Button variant="secondary" size="sm" className="flex min-h-12 items-center justify-center gap-2" onClick={copy}>
             <IconCopy size={16} />
             {copied ? V.copied : V.copy}
           </Button>
@@ -80,35 +90,25 @@ export default function InvitePage() {
             href={`https://wa.me/?text=${encodeURIComponent(share)}`}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-center gap-2 rounded-control bg-success px-4 py-2 text-sm font-bold text-on-bright hover:opacity-90"
+            className="flex min-h-12 items-center justify-center gap-2 rounded-control bg-success px-4 py-2 text-sm font-bold text-on-bright hover:opacity-90"
           >
             <IconShare size={16} />
             {V.shareWhatsApp}
           </a>
         </div>
-        <p className="text-xs text-ink-muted">{r.reward_on === "first_order" ? V.onFirstOrder : V.onSignup}</p>
+        <p className="text-caption text-ink-muted">{r.reward_on === "first_order" ? V.onFirstOrder : V.onSignup}</p>
       </section>
 
-      <dl className="surface grid grid-cols-1 gap-2 p-4 text-center sm:grid-cols-3">
-        <div>
-          <dt className="text-xs text-ink-muted">{V.invited}</dt>
-          <dd className="figure">{fmtNum(r.invited)}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-ink-muted">{V.ordered}</dt>
-          <dd className="figure">{fmtNum(r.rewarded)}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-ink-muted">{V.earned}</dt>
-          <dd className="figure text-accent-text">
-            <Money value={r.earned} />
-          </dd>
-        </div>
-      </dl>
+      {/* مربّعاتُ الأرقام المشتركة (`StatTile`) — الاسمُ فوق والرقمُ تحت. */}
+      <div className="grid grid-cols-2 gap-rg-sm sm:grid-cols-3">
+        <StatTile label={V.invited} value={r.invited} />
+        <StatTile label={V.ordered} value={r.rewarded} />
+        <div className="col-span-2 sm:col-span-1"><StatTile label={V.earned} value={fmtMoney(r.earned)} /></div>
+      </div>
 
       {r.tiers.length > 0 && (
-        <section className="surface flex flex-col gap-2 p-4">
-          <h2 className="heading-card">{V.tiersTitle}</h2>
+        <section className={`${OUTLINE_CARD} flex flex-col gap-2`}>
+          <h2 className="text-section-title">{V.tiersTitle}</h2>
           <ul className="flex flex-col divide-y divide-line-soft text-sm">
             {r.tiers.slice(0, 3).map((amount, i) => (
               <li key={i} className="flex items-center justify-between gap-2 py-2">

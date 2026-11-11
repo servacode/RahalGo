@@ -56,3 +56,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .cart-roll, .cart-pop, .cart-ring { animation: none; }
 }
+
+/* شريطُ الفعل السفليّ الثابت: ظلٌّ مرفوعٌ إلى أعلى (مرآةُ `BottomActionBar`) — يُستعمل في components/customer/kit.tsx. */
+.rg-raised-bar {
+  box-shadow: 0 -6px 18px -8px var(--color-scrim);
+}
