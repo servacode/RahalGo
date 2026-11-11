@@ -1,5 +1,6 @@
 package com.rahalgo.driver.rating
 
+import com.rahalgo.ui.RahalDivider
 import android.app.Application
 import com.rahalgo.ui.LoadState
 import com.rahalgo.design.Rahal
@@ -17,9 +18,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -125,27 +124,28 @@ fun RatingScreen(vm: RatingViewModel) {
         // **وبعنوان شاشات القائمة نفسِه** (`ScreenTitle`) — كالسجلّ وصندوقي.
         com.rahalgo.ui.ScreenTitle(stringResource(R.string.rate_title))
         Summary(rep)
-        Spacer(Modifier.height(20.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(Rahal.space.lg))
 
-        Text(stringResource(R.string.rate_reviews), style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(10.dp))
+        // **الأقسامُ بعنوان المجموعة الموحّد** وقائمتُها في بطاقةٍ بحدود (إعادةُ التصميم ٢٠٢٦-١١-١١).
+        com.rahalgo.ui.SectionHeader(title = stringResource(R.string.rate_reviews))
         if (rep.reviews.isEmpty()) {
-            com.rahalgo.ui.Empty(stringResource(R.string.rate_no_reviews), icon = com.rahalgo.ui.R.drawable.ic_star_outline)
+            com.rahalgo.ui.EmptyState(title = stringResource(R.string.rate_no_reviews), icon = com.rahalgo.ui.R.drawable.ic_star_outline)
+        } else {
+            com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined) {
+                rep.reviews.forEachIndexed { i, r ->
+                    if (i > 0) RahalDivider()
+                    ReviewRow(r)
+                }
+            }
         }
-        rep.reviews.forEach { ReviewRow(it) }
 
         if (rep.complaints.isNotEmpty()) {
-            Spacer(Modifier.height(20.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(Rahal.space.lg))
-            Text(
-                stringResource(R.string.rate_complaints),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(Modifier.height(10.dp))
-            rep.complaints.forEach { ComplaintRow(it) }
+            com.rahalgo.ui.SectionHeader(title = stringResource(R.string.rate_complaints))
+            com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined) {
+                rep.complaints.forEachIndexed { i, c ->
+                    if (i > 0) RahalDivider()
+                    ComplaintRow(c)
+                }
+            }
         }
         Spacer(Modifier.height(Rahal.space.xxl))
     }
@@ -156,7 +156,7 @@ private fun Summary(rep: Reputation) {
     // **ومن لا يُقيَّم دورُه لا تُعرض له بطاقةٌ صفريّة** — «٠٫٠ من ٥»
     // يُقرأ حكماً عليه، ولم يفعل شيئا.
     if (!rep.rated || rep.rating.count == 0) {
-        com.rahalgo.ui.Empty(stringResource(R.string.rate_none_yet), icon = com.rahalgo.ui.R.drawable.ic_star_outline)
+        com.rahalgo.ui.EmptyState(title = stringResource(R.string.rate_none_yet), icon = com.rahalgo.ui.R.drawable.ic_star_outline)
         return
     }
 
@@ -190,7 +190,7 @@ private fun Summary(rep: Reputation) {
         StatBox(
             label = stringResource(R.string.rate_avg),
             value = "%.1f".format(java.util.Locale.US, rep.rating.avg),
-            color = Rahal.colors.accent,
+            color = Rahal.colors.accentInk,
             modifier = Modifier.weight(1f),
         )
         StatBox(
@@ -205,11 +205,11 @@ private fun Summary(rep: Reputation) {
             modifier = Modifier.weight(1f),
         )
     }
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(Rahal.space.md))
     Text(
         stringResource(R.string.rate_hint),
         color = Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.bodySmall,
+        style = Rahal.type.caption,
     )
 }
 
@@ -225,18 +225,18 @@ private fun Summary(rep: Reputation) {
 
 @Composable
 private fun ReviewRow(r: Review) {
-    Column(Modifier.fillMaxWidth().padding(vertical = Rahal.space.sm)) {
+    Column(Modifier.fillMaxWidth().padding(vertical = Rahal.space.md)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // **والنجومُ تُرسم لا تُكتب** — «٣ من ٥» تُقرأ، **وثلاثُ
             // نجومٍ تُرى.**
             repeat(5) { i ->
-                com.rahalgo.ui.RatingStar(filled = i < r.stars, size = 16.dp)
+                com.rahalgo.ui.RatingStar(filled = i < r.stars, size = Rahal.icon.sm)
             }
-            Spacer(Modifier.size(Rahal.space.sm))
+            Spacer(Modifier.weight(1f))
             Text(
-                text = "#" + r.orderNumber,
+                text = com.rahalgo.driver.Bidi.isolate("#" + r.orderNumber),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.meta,
             )
         }
         // ══════════════════════════════════════════════════════════════
@@ -266,19 +266,17 @@ private fun ReviewRow(r: Review) {
         // نجمةً نقصت.**
         Text(
             text = r.customerName,
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
+            color = Rahal.colors.ink,
+            style = Rahal.type.body,
         )
-        Spacer(Modifier.height(Rahal.space.sm))
-        HorizontalDivider()
     }
 }
 
 @Composable
 private fun ComplaintRow(c: ComplaintBrief) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("#" + c.number, style = MaterialTheme.typography.titleSmall)
+    Column(Modifier.fillMaxWidth().padding(vertical = Rahal.space.md)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(com.rahalgo.driver.Bidi.isolate("#" + c.number), style = Rahal.type.cardTitle)
             // **وكانت `c.status` خاماً** — «open» إنكليزيّةً في شاشةٍ
             // عربيّة. **ورمزٌ إنكليزيٌّ لا يُقرأ، فيمرّ عليه السائقُ
             // ولا يعرف أشكواه فُصل فيها أم لا.** (وقعت مثلُها في محفظة
@@ -286,11 +284,10 @@ private fun ComplaintRow(c: ComplaintBrief) {
             Text(
                 ticketStatusText(c.status),
                 color = ticketStatusColor(c.status),
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
-        Text(c.subject, style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(6.dp))
-        HorizontalDivider()
+        Spacer(Modifier.height(Rahal.space.xxs))
+        Text(c.subject, style = Rahal.type.body, color = Rahal.colors.ink)
     }
 }

@@ -25,7 +25,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -83,20 +82,20 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             // **وارتفاعٌ محدود** — النصف الأعلى يبقى خريطةً: **من فتح
             // الحديث لم يقف عن السير**، وهو يقرأ سطرا ويرفع عينه.
             .heightIn(max = 340.dp)
-            .shadow(10.dp, Rahal.shape.lg)
+            .shadow(Rahal.elevation.overlay, Rahal.shape.lg)
             .clip(Rahal.shape.lg)
             .background(Rahal.colors.canvas)
             .imePadding(),
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(start = Rahal.space.sm, end = 14.dp, top = 6.dp),
+            Modifier.fillMaxWidth().padding(start = Rahal.space.lg, end = Rahal.space.xs, top = Rahal.space.xs),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
                 text = state.peerName.ifBlank { stringResource(R.string.detail_customer) },
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                style = Rahal.type.sectionTitle,
+                color = Rahal.colors.ink,
             )
             // **ويُغلق من زرّه ومن أيقونته** — من فتحه بضغطةٍ يغلقه
             // بمثلها، **ومن بحث عن باب الخروج وهو يقود** رفع عينه عن
@@ -106,7 +105,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                     painter = painterResource(R.drawable.ic_close_circle),
                     contentDescription = stringResource(R.string.act_back),
                     tint = Rahal.colors.inkMuted,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(Rahal.icon.md),
                 )
             }
         }
@@ -116,8 +115,8 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             Text(
                 text = stringResource(R.string.chat_empty_driver),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = Rahal.space.md),
+                style = Rahal.type.body,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
             )
         }
         LazyColumn(
@@ -185,8 +184,8 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                 Text(
                     text = state.error,
                     color = Rahal.colors.danger,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                    style = Rahal.type.caption,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Rahal.space.md),
                 )
             }
             // ══════════════════════════════════════════════════════════
@@ -202,7 +201,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                 Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
-                    .padding(start = 10.dp, end = 10.dp, top = 6.dp),
+                    .padding(start = Rahal.space.md, end = Rahal.space.md, top = Rahal.space.sm),
                 horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
             ) {
                 quick.forEach { q ->
@@ -211,11 +210,11 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                             .clip(Rahal.shape.pill)
                             .background(Rahal.colors.field)
                             .clickable(enabled = !state.busy) { actions.send(q) }
-                            .heightIn(min = 40.dp)
-                            .padding(horizontal = 14.dp),
+                            .heightIn(min = Rahal.size.touch)
+                            .padding(horizontal = Rahal.space.md),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(q, color = Rahal.colors.ink, style = MaterialTheme.typography.labelLarge)
+                        Text(q, color = Rahal.colors.ink, style = Rahal.type.bodyStrong)
                     }
                 }
             }
@@ -223,7 +222,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                 value = draft,
                 onValueChange = { draft = it },
                 placeholder = { Text(stringResource(R.string.chat_hint)) },
-                modifier = Modifier.fillMaxWidth().padding(10.dp),
+                modifier = Modifier.fillMaxWidth().padding(Rahal.space.md),
                 singleLine = true,
                 shape = Rahal.shape.lg,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -243,6 +242,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             Text(
                 text = stringResource(R.string.chat_closed),
                 color = Rahal.colors.inkMuted,
+                style = Rahal.type.body,
                 modifier = Modifier.fillMaxWidth().padding(Rahal.space.lg),
             )
         }

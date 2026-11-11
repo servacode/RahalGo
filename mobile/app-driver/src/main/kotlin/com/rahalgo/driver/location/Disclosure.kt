@@ -8,13 +8,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.driver.R
 import com.rahalgo.ui.RahalButton
@@ -65,16 +63,16 @@ fun LocationDisclosure(onAgree: () -> Unit, onDismiss: () -> Unit) {
         text = {
             Column {
                 Text(stringResource(R.string.disc_what))
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 // **والخلفيّةُ تُقال بأوضح ما يمكن** — «والشاشةُ مطفأة».
                 Text(
                     text = stringResource(R.string.disc_background),
                     fontWeight = FontWeight.Bold,
                     color = Rahal.colors.accent,
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 Text(stringResource(R.string.disc_why), color = Rahal.colors.inkMuted)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 Text(stringResource(R.string.disc_stop), color = Rahal.colors.inkMuted)
             }
         },
@@ -100,10 +98,10 @@ fun LocationNotice(modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .padding(vertical = Rahal.space.sm),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
             Text(
                 text = stringResource(R.string.disc_title),
-                style = MaterialTheme.typography.titleSmall,
+                style = Rahal.type.cardTitle,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -113,7 +111,7 @@ fun LocationNotice(modifier: Modifier = Modifier) {
                 stringResource(R.string.disc_background) + " " +
                 stringResource(R.string.disc_why) + " " +
                 stringResource(R.string.disc_stop),
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
             color = Rahal.colors.inkMuted,
         )
     }

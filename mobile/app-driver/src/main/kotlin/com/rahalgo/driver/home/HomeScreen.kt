@@ -43,7 +43,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.rahalgo.driver.R
 import com.rahalgo.ui.grouped
 import com.rahalgo.ui.money
@@ -92,12 +91,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
             } else {
                 // **وأوّل نداء قد يسقط والشاشة فارغة** — فلا يبقى صاحبها
                 // أمام بياض بلا سبب ولا زرّ.
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
-                    RahalTextButton(onClick = actions.refresh) {
-                        Text(stringResource(R.string.home_retry))
-                    }
-                }
+                com.rahalgo.ui.ErrorState(title = state.error, onRetry = actions.refresh)
             }
         }
         return
@@ -175,14 +169,11 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
             // فلو أُضيف هنا `safeDrawing` لحُسب مرّتين وارتفع المحتوى.
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = Rahal.space.lg),
     ) {
-        Spacer(Modifier.height(28.dp))
-        Text(
-            text = stringResource(R.string.login_welcome, me.fullName),
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(Rahal.space.lg))
+        // **عنوانُ الشاشة بالدور الواحد** كباقي الشاشات (إعادةُ التصميم ٢٠٢٦-١١-١١).
+        com.rahalgo.ui.ScreenTitle(title = stringResource(R.string.login_welcome, me.fullName))
 
         // ══════════════════════════════════════════════════════════════
         // **الموقع مطفأ يُقال فوق كلّ شيء**
@@ -194,34 +185,24 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // **والحسابُ الموقوفُ يُقال أوّلاً** (٢٠٢٦-١٠-٠٢).
         if (me.suspended) {
             // **والإيقافُ وحدَه بالأحمر** — ليس نقصاً يُصلَح بزرّ.
-            Text(
+            BannerCard(
+                icon = R.drawable.ic_block,
                 text = stringResource(R.string.suspended_banner),
-                color = Rahal.colors.danger,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(Rahal.shape.md)
-                    .background(Rahal.colors.danger.copy(alpha = 0.10f))
-                    .padding(Rahal.space.lg),
+                tone = com.rahalgo.ui.StatusTone.Danger,
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(Rahal.space.md))
         }
 
         // **وشروطُ العمل الجديدة قبل مفتاح الورديّة** (قرارُ المالك ٢٠٢٦-١١-٠٥) —
         // شريطٌ يفتح اللوحة، **والمفتاحُ نفسُه يفتحها إن ضُغط قبل الموافقة.**
         if (me.termsRequired && !me.suspended) {
-            Text(
+            BannerCard(
+                icon = R.drawable.ic_terms,
                 text = stringResource(R.string.terms_banner),
-                color = Rahal.colors.brand,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(Rahal.shape.md)
-                    .background(Rahal.colors.brand.copy(alpha = 0.10f))
-                    .clickable(onClick = actions.openTerms)
-                    .padding(Rahal.space.lg),
+                tone = com.rahalgo.ui.StatusTone.Info,
+                onClick = actions.openTerms,
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(Rahal.space.md))
         }
         state.terms?.let {
             TermsSheet(
@@ -306,10 +287,10 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
             }
         }
         if (fixes.isNotEmpty()) {
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             FixesCard(fixes, online = me.onShift)
         }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(Rahal.space.md))
 
         MapPrepStatus(
             // **وطلبتها الورديّةُ أو طلبٌ مقبول** (٢٠٢٦-١٠-٣٠) — تُرى ولو لم يبدأ العاملُ بعد.
@@ -335,54 +316,57 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
 
         if (state.error.isNotEmpty()) {
             Spacer(Modifier.height(Rahal.space.md))
-            Text(state.error, color = Rahal.colors.danger, modifier = Modifier.fillMaxWidth())
+            Text(state.error, color = Rahal.colors.danger, style = Rahal.type.bodyStrong, modifier = Modifier.fillMaxWidth())
         }
 
-        Spacer(Modifier.height(20.dp))
-        Text(
-            text = stringResource(R.string.act_today),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Spacer(Modifier.height(10.dp))
+        com.rahalgo.ui.SectionHeader(title = stringResource(R.string.act_today))
         // **أرباحُ اليوم رقمٌ كبيرٌ بعملته** — كانت مربّعاً ثالثاً بلا «ل.س» جنب عدّين،
         // **فيضيع الفرقُ بين عددٍ ومبلغ.** والعدّان تحتها بخطٍّ أصغر.
-        com.rahalgo.ui.Card {
+        com.rahalgo.ui.RahalCard(padding = Rahal.space.lg) {
             Text(
                 text = stringResource(R.string.home_earned),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.label,
             )
-            Spacer(Modifier.height(Rahal.space.xs))
+            Spacer(Modifier.height(Rahal.space.xxs))
             Text(
-                text = money(me.todayEarned),
+                text = com.rahalgo.driver.Bidi.isolate(money(me.todayEarned)),
                 color = Rahal.colors.success,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
+                style = Rahal.type.display,
             )
             if (me.todayCompensated > 0) {
                 Text(
                     text = stringResource(R.string.home_compensated, money(me.todayCompensated)),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
             }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = stringResource(
-                    R.string.home_today_counts,
-                    grouped(me.todayDelivered.toLong()),
-                    grouped(me.todayFailed.toLong()),
-                ),
-                color = Rahal.colors.ink,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            // **ومسافةُ طلباته اليوم** (قرارُ المالك ٢٠٢٦-١١-٠٥) — تبدأ بصفرٍ وتزيد مع كلّ طلب،
-            // من القيادة الفعليّة كما يحسبها المحرّك.
-            Text(
-                text = stringResource(R.string.home_today_drive, com.rahalgo.ui.dist(me.todayDriveM.toDouble())),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Spacer(Modifier.height(Rahal.space.md))
+            // **ثلاثةُ أرقامٍ مستقلّةٍ في ثلاثة مربّعاتٍ متساوية** — تُقرأ بنظرةٍ وهو واقف.
+            StatRow {
+                com.rahalgo.ui.StatTile(
+                    label = stringResource(R.string.home_stat_delivered),
+                    value = grouped(me.todayDelivered.toLong()),
+                    modifier = Modifier.weight(1f),
+                    valueColor = Rahal.colors.success,
+                    icon = R.drawable.ic_check_circle,
+                )
+                com.rahalgo.ui.StatTile(
+                    label = stringResource(R.string.home_stat_failed),
+                    value = grouped(me.todayFailed.toLong()),
+                    modifier = Modifier.weight(1f),
+                    valueColor = if (me.todayFailed > 0) Rahal.colors.danger else Rahal.colors.ink,
+                    icon = R.drawable.ic_warning,
+                )
+                // **ومسافةُ طلباته اليوم** (قرارُ المالك ٢٠٢٦-١١-٠٥) — تبدأ بصفرٍ وتزيد مع كلّ طلب،
+                // من القيادة الفعليّة كما يحسبها المحرّك. **وصفرُها شرطة** — لا «٠ م».
+                com.rahalgo.ui.StatTile(
+                    label = stringResource(R.string.home_stat_drive),
+                    value = if (me.todayDriveM > 0) com.rahalgo.ui.dist(me.todayDriveM.toDouble()) else "—",
+                    modifier = Modifier.weight(1f),
+                    icon = R.drawable.ic_moto,
+                )
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -405,8 +389,8 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // **والسقفُ ليس زينة**: من بلغه لا يُعرض عليه طلبٌ نقديّ، **فيقف
         // عملُه ولا يعرف لماذا.** **وشريطٌ يُرى قبل أن يُقرأ رقم.**
         if (me.cashLimit > 0) {
-            Spacer(Modifier.height(14.dp))
-            com.rahalgo.ui.Card { CashBar(held = me.cashHeld, limit = me.cashLimit) }
+            Spacer(Modifier.height(Rahal.space.md))
+            com.rahalgo.ui.RahalCard(padding = Rahal.space.lg) { CashBar(held = me.cashHeld, limit = me.cashLimit) }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -420,8 +404,8 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // طلباتٍ من مكافأةٍ لا يسعى إليها.
         val st = state.goal?.standing
         if (st != null && st.target > 0) {
-            Spacer(Modifier.height(14.dp))
-            com.rahalgo.ui.Card {
+            Spacer(Modifier.height(Rahal.space.md))
+            com.rahalgo.ui.RahalCard(padding = Rahal.space.lg) {
                 GoalBar(
                     done = st.done,
                     target = st.target,
@@ -444,7 +428,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // الإعادة وأنشطتُه تبقى في `src/debug` (تُطلَق بـ`adb` عند الحاجة
         // الهندسيّة)، **ولا مدخلَ لها في التطبيق، والإصدارُ لا يحملها أصلاً.**
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
     }
 }
 
@@ -479,22 +463,22 @@ private fun MapPrepStatus(
                 Text(
                     text = stringResource(failureMessage(failure)),
                     color = Rahal.colors.accent,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                     modifier = Modifier.weight(1f),
                 )
                 RahalTextButton(onClick = onRetry) {
                     Text(stringResource(R.string.offline_map_retry))
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(Rahal.space.md))
         }
         downloading -> {
             Text(
                 text = stringResource(R.string.offline_map_preparing),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(Rahal.space.md))
         }
     }
 }
@@ -538,10 +522,9 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(Rahal.shape.md)
+            .clip(Rahal.shape.lg)
             .background(if (on) Rahal.colors.brand else Rahal.colors.field)
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.xl),
     ) {
         // ══════════════════════════════════════════════════════════════
         // **مفتاحٌ واحدٌ — حالٌ وفعلٌ معا**
@@ -562,17 +545,26 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = stringResource(if (on) R.string.shift_on else R.string.shift_off),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (on) Rahal.colors.onBrand else Rahal.colors.inkMuted,
-            )
+            // **نقطةُ حالٍ قبل الكلمة** — خضراءُ تعمل ورماديّةٌ واقفة، تُرى بطرف العين.
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(Rahal.space.md)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(if (on) Rahal.colors.success else Rahal.colors.inkMuted),
+                )
+                Spacer(Modifier.size(Rahal.space.sm))
+                Text(
+                    text = stringResource(if (on) R.string.shift_on else R.string.shift_off),
+                    style = Rahal.type.headline,
+                    color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
+                )
+            }
             if (busy) {
                 // **ويُرى على البطاقة** — كان بلون العلامة فوق بطاقةٍ بلون العلامة.
                 CircularProgressIndicator(
-                    Modifier.size(22.dp),
-                    strokeWidth = 2.dp,
+                    Modifier.size(Rahal.icon.md),
+                    strokeWidth = Rahal.stroke.focus,
                     color = if (on) Rahal.colors.onBrand else Rahal.colors.brand,
                 )
             } else {
@@ -588,16 +580,17 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
                 )
             }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         // **وما يترتّب عليه تحته** — لا يُترك ليُستنتج من كلمتين.
         Text(
             text = stringResource(
                 if (on) R.string.shift_on_hint else R.string.shift_off_hint,
             ),
             color = if (on) Rahal.colors.onBrand.copy(alpha = 0.85f) else Rahal.colors.inkMuted,
+            style = Rahal.type.body,
         )
         if (me.activeOrders > 0) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Text(
                 text = stringResource(
                     R.string.shift_active_orders,
@@ -605,26 +598,52 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
                     grouped(me.maxActiveOrders),
                 ),
                 color = if (on) Rahal.colors.onBrand else Rahal.colors.inkMuted,
+                style = Rahal.type.bodyStrong,
             )
         }
     }
 }
 
-
+/**
+ * **شريطُ تنبيهٍ بأيقونته** — الإيقافُ والشروطُ بقطعةٍ واحدة (إعادةُ التصميم ٢٠٢٦-١١-١١).
+ * **وما يُضغط عليه سهمٌ في طرفه** — فيُعرف أنّه يُفتح.
+ */
 @Composable
-private fun MoneyRow(label: String, value: String, warn: Boolean = false) {
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = Rahal.space.sm),
-        horizontalArrangement = Arrangement.SpaceBetween,
+private fun BannerCard(
+    icon: Int,
+    text: String,
+    tone: com.rahalgo.ui.StatusTone,
+    onClick: (() -> Unit)? = null,
+) {
+    val ink = if (tone == com.rahalgo.ui.StatusTone.Danger) Rahal.colors.danger else Rahal.colors.brand
+    com.rahalgo.ui.RahalCard(
+        variant = com.rahalgo.ui.CardVariant.Tinted,
+        tone = tone,
+        onClick = onClick,
+        padding = Rahal.space.lg,
     ) {
-        Text(label, color = Rahal.colors.inkMuted)
-        Text(
-            text = value,
-            fontWeight = FontWeight.Bold,
-            color = if (warn) Rahal.colors.accent else MaterialTheme.colorScheme.onSurface,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                tint = ink,
+                modifier = Modifier.size(Rahal.icon.md),
+            )
+            Spacer(Modifier.size(Rahal.space.md))
+            Text(text = text, color = ink, style = Rahal.type.bodyStrong, modifier = Modifier.weight(1f))
+            if (onClick != null) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_end),
+                    contentDescription = null,
+                    tint = ink,
+                    modifier = Modifier.size(Rahal.icon.sm),
+                )
+            }
+        }
     }
 }
+
+
 
 /** ما تعرضه اللوحة — **ولا تملكه هي.** */
 data class HomeState(
@@ -696,34 +715,36 @@ private data class Fix(
  */
 @Composable
 private fun FixesCard(fixes: List<Fix>, online: Boolean) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.warnTint)
-            .padding(Rahal.space.lg),
+    com.rahalgo.ui.RahalCard(
+        variant = com.rahalgo.ui.CardVariant.Tinted,
+        tone = com.rahalgo.ui.StatusTone.Warning,
+        padding = Rahal.space.lg,
     ) {
         Text(
             // **وهو يعمل الآن؟ «حتى تستمر بالعمل»** لا «قبل أن تبدأ» (المالك ٢٠٢٦-١١-١٠).
             text = stringResource(if (online) R.string.home_fixes_title_online else R.string.home_fixes_title, fixes.size),
             fontWeight = FontWeight.Bold,
             color = Rahal.colors.ink,
-            style = MaterialTheme.typography.titleMedium,
+            style = Rahal.type.sectionTitle,
         )
         fixes.forEachIndexed { i, f ->
-            Spacer(Modifier.height(if (i == 0) 10.dp else 14.dp))
+            if (i > 0) {
+                Spacer(Modifier.height(Rahal.space.md))
+                com.rahalgo.ui.RahalDivider()
+            }
+            Spacer(Modifier.height(Rahal.space.md))
             Row(verticalAlignment = Alignment.Top) {
                 Icon(
                     painter = painterResource(R.drawable.ic_warning),
                     contentDescription = null,
                     tint = Rahal.colors.accent,
-                    modifier = Modifier.padding(top = Rahal.space.xxs).size(20.dp),
+                    modifier = Modifier.padding(top = Rahal.space.xxs).size(Rahal.icon.sm),
                 )
-                Spacer(Modifier.size(10.dp))
+                Spacer(Modifier.size(Rahal.space.md))
                 Column(Modifier.weight(1f)) {
-                    Text(f.title, fontWeight = FontWeight.Bold, color = Rahal.colors.ink)
+                    Text(f.title, color = Rahal.colors.ink, style = Rahal.type.cardTitle)
                     Spacer(Modifier.height(Rahal.space.xxs))
-                    Text(f.text, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
+                    Text(f.text, color = Rahal.colors.inkMuted, style = Rahal.type.body)
                     if (f.button.isNotEmpty()) {
                         Spacer(Modifier.height(Rahal.space.sm))
                         RahalButton(onClick = f.onClick, compact = true) { Text(f.button) }
@@ -776,11 +797,11 @@ private fun CashBar(held: Long, limit: Long) {
             append(com.rahalgo.driver.Bidi.isolate(money(held)))
             pop()
         },
-        style = MaterialTheme.typography.titleMedium,
+        style = Rahal.type.sectionTitle,
     )
     Spacer(Modifier.height(Rahal.space.sm))
     Bar(ratio = ratio, color = com.rahalgo.driver.menu.cashBarColor(ratio))
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     Text(
         text = if (left > 0) {
             stringResource(R.string.home_cash_left, money(left))
@@ -788,7 +809,7 @@ private fun CashBar(held: Long, limit: Long) {
             stringResource(R.string.home_cash_over)
         },
         color = if (left > 0) Rahal.colors.inkMuted else Rahal.colors.danger,
-        style = MaterialTheme.typography.bodySmall,
+        style = Rahal.type.caption,
     )
 }
 
@@ -808,7 +829,7 @@ private fun GoalBar(done: Int, target: Int, reached: Boolean, reward: Long) {
     ) {
         Text(
             text = stringResource(R.string.act_month_target),
-            style = MaterialTheme.typography.titleMedium,
+            style = Rahal.type.sectionTitle,
         )
         Text(
             text = grouped(done.toLong()) + " / " + grouped(target.toLong()),
@@ -821,7 +842,7 @@ private fun GoalBar(done: Int, target: Int, reached: Boolean, reward: Long) {
         ratio = done.toFloat() / target,
         color = if (reached) Rahal.colors.success else Rahal.colors.brand,
     )
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -830,7 +851,7 @@ private fun GoalBar(done: Int, target: Int, reached: Boolean, reward: Long) {
             Text(
                 text = targetLeftText(target - done),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
         if (reward > 0) {
@@ -841,7 +862,7 @@ private fun GoalBar(done: Int, target: Int, reached: Boolean, reward: Long) {
                 ),
                 color = if (reached) Rahal.colors.success else Rahal.colors.accent,
                 fontWeight = FontWeight.Medium,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
     }

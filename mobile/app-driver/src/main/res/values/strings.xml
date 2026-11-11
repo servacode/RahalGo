@@ -810,6 +810,10 @@
     <string name="odo_bike_used">استعملت تبديل الدرّاجة اليوم — اتّصل بالعمليات ليصحّحوا الرقم</string>
     <string name="odo_lower">الرقم أقل من آخر رقم سجّلته (%1$s كم) — صوّر العدّاد من جديد واكتب الرقم كما هو</string>
     <string name="home_today_drive">مسافة طلباتك اليوم: %1$s</string>
+    <!-- مربّعاتُ «اليوم» في لوحتي (إعادةُ التصميم ٢٠٢٦-١١-١١) -->
+    <string name="home_stat_delivered">سلّمت</string>
+    <string name="home_stat_failed">تعذّر</string>
+    <string name="home_stat_drive">المسافة</string>
     <string name="hist_drive">المسافة: %1$s</string>
     <string-array name="compass_dirs">
         <item>الشمال</item>

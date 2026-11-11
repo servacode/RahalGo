@@ -35,11 +35,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -65,7 +63,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.rahalgo.driver.R
 import com.rahalgo.ui.money
 import com.rahalgo.ui.amountInput
@@ -171,18 +168,18 @@ internal fun AgreeDialog(
                     stringResource(if (step == "goods") R.string.agree_goods_hint else R.string.agree_fee_hint),
                     color = Rahal.colors.inkMuted,
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 // **و«both» بعد رفض الزبون** (٢٠٢٦-١٠-٢١) — الأجرةُ والبضاعةُ معاً، والأمانةُ بلا بضاعة.
                 if (goodsShown) {
                     GoodsCurrencyToggle(usd = goodsUsd, onChange = { goodsUsd = it; goods = "" })
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                 }
                 if (goodsShown) OutlinedTextField(
                     value = goods,
                     onValueChange = { goods = amountInput(it, goodsCurrency) },
                     label = { Text(stringResource(R.string.agree_goods)) },
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                    textStyle = Rahal.type.headline.copy(
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Bold,
                     ),
@@ -202,7 +199,7 @@ internal fun AgreeDialog(
                     onValueChange = { if (!feeLocked) fee = it.filter { c -> c.isDigit() } },
                     label = { Text(stringResource(R.string.agree_fee)) },
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                    textStyle = Rahal.type.headline.copy(
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Bold,
                     ),
@@ -217,12 +214,12 @@ internal fun AgreeDialog(
                     Text(
                         stringResource(R.string.agree_fee_fixed),
                         color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                     )
                 }
                 if (error.isNotEmpty()) {
                     Spacer(Modifier.height(Rahal.space.sm))
-                    Text(error, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
+                    Text(error, color = Rahal.colors.danger, style = Rahal.type.caption)
                 }
             }
         },
@@ -301,24 +298,24 @@ internal fun FetchAmountDialog(
                     color = Rahal.colors.inkMuted,
                 )
                 if (estimate != null && estimate > 0) {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     Text(
                         stringResource(R.string.fetch_amount_estimate, amountText(estimate, currency)),
                         color = Rahal.colors.accent,
                         fontWeight = FontWeight.Bold,
                     )
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 if (whatsApp) {
                     GoodsCurrencyToggle(usd = chosenUsd, onChange = { chosenUsd = it; amount = "" })
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                 }
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = amountInput(it, shownCurrency) },
                     label = { Text(stringResource(R.string.fetch_amount_field)) },
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                    textStyle = Rahal.type.headline.copy(
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Bold,
                     ),
@@ -395,8 +392,8 @@ internal fun SmallAction(
     ) {
         if (busy) {
             CircularProgressIndicator(
-                Modifier.size(16.dp),
-                strokeWidth = 2.dp,
+                Modifier.size(Rahal.icon.xs),
+                strokeWidth = Rahal.stroke.focus,
                 color = Rahal.colors.onPanel,
             )
             return@RahalButton
@@ -405,7 +402,7 @@ internal fun SmallAction(
             painter = painterResource(icon),
             contentDescription = null,
             tint = Rahal.colors.onPanel,
-            modifier = Modifier.size(16.dp),
+            modifier = Modifier.size(Rahal.icon.xs),
         )
         Spacer(Modifier.size(Rahal.space.xs))
         Text(
@@ -413,7 +410,7 @@ internal fun SmallAction(
             // **وحجمٌ واحدٌ للثلاثة** — (طلب المالك ٢٠٢٦-٠٨-١٢: «لازم
             // تكون بنفس الشكل»). **وزرٌّ أكبرُ من جاره** يُقرأ أهمَّ
             // منه، وهي ثلاثةُ أفعالٍ لا فعلٌ وحاشيتان.
-            style = MaterialTheme.typography.labelMedium,
+            style = Rahal.type.label,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -457,13 +454,14 @@ internal fun EmergencyDialog(
                 Text(
                     if (failed) stringResource(R.string.emg_failed) else stringResource(R.string.emg_body),
                     color = if (failed) Rahal.colors.danger else Rahal.colors.inkMuted,
+                    style = Rahal.type.body,
                 )
                 if (failed) {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     Text(
                         error,
                         color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                     )
                 }
             }
@@ -591,10 +589,10 @@ internal fun FailDialog(
             // **وكلُّ خيارٍ سطرٌ بإطارٍ وارتفاع ٤٨dp**، والمنتظِرُ شريحةٌ رماديّة.
             Column(
                 Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
             ) {
                 if (error.isNotEmpty()) {
-                    Text(error, color = Rahal.colors.danger)
+                    Text(error, color = Rahal.colors.danger, style = Rahal.type.bodyStrong)
                     RahalTextButton(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.problem_retry), modifier = Modifier.fillMaxWidth())
                     }
@@ -663,16 +661,15 @@ private fun ProblemGroup(
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(Rahal.shape.md)
+            .clip(Rahal.shape.lg)
             .background(tone.copy(alpha = 0.08f))
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .padding(Rahal.space.md),
+        verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
     ) {
         Text(
             text = stringResource(title),
             color = tone,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelLarge,
+            style = Rahal.type.cardTitle,
         )
         content()
     }
@@ -689,18 +686,18 @@ private fun ProblemOption(
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .clip(Rahal.shape.sm)
+            .heightIn(min = Rahal.size.touch)
+            .clip(Rahal.shape.md)
             .background(Rahal.colors.canvas)
-            .border(1.dp, Rahal.colors.line, Rahal.shape.sm)
-            .clickable(enabled = enabled, onClick = onClick)
+            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+            .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
             .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = text,
             color = if (enabled) Rahal.colors.ink else Rahal.colors.inkMuted,
-            fontWeight = FontWeight.Medium,
+            style = Rahal.type.bodyStrong,
             modifier = Modifier.weight(1f),
         )
         if (wait.isNotEmpty()) {
@@ -708,11 +705,11 @@ private fun ProblemOption(
             Text(
                 text = wait,
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.labelSmall,
+                style = Rahal.type.meta,
                 modifier = Modifier
                     .clip(Rahal.shape.pill)
                     .background(Rahal.colors.field)
-                    .padding(horizontal = Rahal.space.sm, vertical = 3.dp),
+                    .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs),
             )
         }
     }
@@ -729,7 +726,7 @@ private fun Section(title: Int) {
     Text(
         text = stringResource(title),
         color = Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.labelMedium,
+        style = Rahal.type.label,
         modifier = Modifier.padding(bottom = Rahal.space.xxs),
     )
 }
@@ -788,13 +785,13 @@ internal fun PriceEditDialog(
                 )
                 Spacer(Modifier.height(Rahal.space.xs))
                 Text(stringResource(R.string.price_edit_hint), color = Rahal.colors.inkMuted)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 OutlinedTextField(
                     value = goods,
                     onValueChange = { goods = amountInput(it, cur, 9) },
                     label = { Text(stringResource(R.string.price_edit_new)) },
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                    textStyle = Rahal.type.headline.copy(
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Bold,
                     ),
@@ -807,7 +804,7 @@ internal fun PriceEditDialog(
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = if (usd) KeyboardType.Decimal else KeyboardType.Number),
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 OutlinedTextField(
                     value = reason,
                     onValueChange = { reason = it.take(200) },
@@ -817,7 +814,7 @@ internal fun PriceEditDialog(
                 )
                 if (error.isNotEmpty()) {
                     Spacer(Modifier.height(Rahal.space.sm))
-                    Text(error, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
+                    Text(error, color = Rahal.colors.danger, style = Rahal.type.caption)
                 }
             }
         },
@@ -879,9 +876,9 @@ internal fun ShamcashChoice(
     text: String,
     onText: (String) -> Unit,
 ) {
-    Spacer(Modifier.height(14.dp))
+    Spacer(Modifier.height(Rahal.space.md))
     Text(stringResource(R.string.shamcash_how), fontWeight = FontWeight.Bold)
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm), verticalAlignment = Alignment.CenterVertically) {
         androidx.compose.material3.FilterChip(
             selected = !sham,
@@ -897,13 +894,13 @@ internal fun ShamcashChoice(
     if (!sham) return
     Spacer(Modifier.height(Rahal.space.sm))
     GoodsCurrencyToggle(usd = usd, onChange = onUsd)
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     OutlinedTextField(
         value = text,
         onValueChange = { onText(amountInput(it, if (usd) "USD" else "SYP")) },
         label = { Text(stringResource(R.string.shamcash_amount)) },
         singleLine = true,
-        textStyle = MaterialTheme.typography.headlineSmall.copy(
+        textStyle = Rahal.type.headline.copy(
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.Bold,
         ),
@@ -920,7 +917,7 @@ internal fun ShamcashChoice(
     Text(
         stringResource(R.string.shamcash_hint),
         color = Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.bodySmall,
+        style = Rahal.type.caption,
         textAlign = TextAlign.Center,
     )
 }

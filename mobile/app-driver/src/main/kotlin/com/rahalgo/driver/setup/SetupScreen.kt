@@ -3,6 +3,7 @@ package com.rahalgo.driver.setup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -75,21 +75,20 @@ fun SetupWizard(
     Column(
         Modifier
             .fillMaxSize()
-            .background(Rahal.colors.surface)
+            .background(Rahal.colors.canvas)
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(Rahal.space.xl),
+            .padding(Rahal.space.gutter),
     ) {
         Spacer(Modifier.height(Rahal.space.xl))
         Text(
             text = stringResource(R.string.setup_title),
-            style = androidx.compose.material3.MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = Rahal.colors.brand,
+            style = Rahal.type.headline,
+            color = Rahal.colors.ink,
         )
         Spacer(Modifier.height(Rahal.space.sm))
-        Text(stringResource(R.string.setup_why), color = Rahal.colors.inkMuted)
-        Spacer(Modifier.height(20.dp))
+        Text(stringResource(R.string.setup_why), color = Rahal.colors.inkMuted, style = Rahal.type.body)
+        Spacer(Modifier.height(Rahal.space.lg))
 
         // ── خطواتٌ بترتيب `Readiness` — كلٌّ بحالتها من القائمة نفسِها ──
         // **ورقمٌ أو علامةُ صحّ لكلّ خطوة، والحاليّةُ مظلّلة، وفوقها «خلصت X من Y»**
@@ -110,19 +109,22 @@ fun SetupWizard(
         )
         val doneCount = steps.count { it.second }
         val current = steps.indexOfFirst { !it.second }
-        Text(
-            text = stringResource(R.string.setup_progress, doneCount, steps.size),
-            color = Rahal.colors.ink,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(6.dp))
-        com.rahalgo.ui.Bar(ratio = doneCount.toFloat() / steps.size, color = Rahal.colors.success)
-        Spacer(Modifier.height(14.dp))
-        steps.forEachIndexed { i, (label, done) ->
-            StepRow(number = i + 1, done = done, current = i == current, label = label)
+        // **الخطواتُ في بطاقةٍ واحدةٍ بحدود** (إعادةُ التصميم ٢٠٢٦-١١-١١) — العدّادُ وشريطُه رأسُها.
+        com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined, padding = Rahal.space.lg) {
+            Text(
+                text = stringResource(R.string.setup_progress, doneCount, steps.size),
+                color = Rahal.colors.ink,
+                style = Rahal.type.cardTitle,
+            )
+            Spacer(Modifier.height(Rahal.space.sm))
+            com.rahalgo.ui.Bar(ratio = doneCount.toFloat() / steps.size, color = Rahal.colors.success)
+            Spacer(Modifier.height(Rahal.space.md))
+            steps.forEachIndexed { i, (label, done) ->
+                StepRow(number = i + 1, done = done, current = i == current, label = label)
+            }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(Rahal.space.lg))
 
         // ── الفعلُ التالي: أوّلُ مانعٍ في الحال يقرّر الزرَّ ونصَّه ──
         val next = readiness.first
@@ -138,14 +140,14 @@ fun SetupWizard(
                     onGrantNotifications to R.string.setup_grant_notifications
             }
             RahalButton(onClick = action, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(labelRes))
+                Text(stringResource(labelRes), style = Rahal.type.button)
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             // **ورفضٌ نهائيٌّ لا يُصلحه طلبٌ ثانٍ** — فبابُ الإعدادات دائماً.
             Text(
                 text = stringResource(R.string.setup_recovery_hint),
                 color = Rahal.colors.inkMuted,
-                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
             // **وبابُ الإعدادات رابطٌ صغير** — لا زرٌّ برتقاليٌّ ممتلئٌ ينازع الأساسيّ.
             com.rahalgo.ui.RahalTextButton(onClick = onOpenAppSettings, modifier = Modifier.fillMaxWidth()) {
@@ -158,8 +160,9 @@ fun SetupWizard(
         // يُمنَح، ويختفي حين يُمنَح — **بلا «لاحقاً» دائمةٍ على الرئيسيّة.**
         if (canWork && !batteryExempt) {
             Spacer(Modifier.height(Rahal.space.lg))
-            RahalButton(onClick = onGrantBattery, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.setup_grant_battery))
+            // **ثانويٌّ بحدود** — استرشاديٌّ لا يحجب، والأساسيُّ «متابعة» تحته.
+            com.rahalgo.ui.RahalOutlineButton(onClick = onGrantBattery, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.setup_grant_battery), style = Rahal.type.button)
             }
         }
 
@@ -167,7 +170,7 @@ fun SetupWizard(
         if (canWork) {
             Spacer(Modifier.height(Rahal.space.lg))
             RahalButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.setup_continue))
+                Text(stringResource(R.string.setup_continue), style = Rahal.type.button)
             }
         }
     }
@@ -178,14 +181,15 @@ private fun StepRow(number: Int, done: Boolean, current: Boolean, label: String)
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(Rahal.shape.sm)
+            .clip(Rahal.shape.md)
             .background(if (current) Rahal.colors.brand.copy(alpha = 0.08f) else androidx.compose.ui.graphics.Color.Transparent)
-            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.sm),
+            .heightIn(min = Rahal.size.touch)
+            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             Modifier
-                .size(26.dp)
+                .size(Rahal.icon.lg)
                 .background(
                     when {
                         done -> Rahal.colors.success
@@ -200,28 +204,28 @@ private fun StepRow(number: Int, done: Boolean, current: Boolean, label: String)
                 androidx.compose.material3.Icon(
                     painter = androidx.compose.ui.res.painterResource(R.drawable.ic_check_circle),
                     contentDescription = null,
-                    tint = androidx.compose.ui.graphics.Color.White,
-                    modifier = Modifier.size(18.dp),
+                    tint = Rahal.colors.onBrand,
+                    modifier = Modifier.size(Rahal.icon.sm),
                 )
             } else {
                 Text(
                     text = com.rahalgo.ui.grouped(number.toLong()),
                     color = if (current) Rahal.colors.onBrand else Rahal.colors.inkMuted,
                     fontWeight = FontWeight.Bold,
-                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                    style = Rahal.type.label,
                 )
             }
         }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(Rahal.space.md))
         Text(
             label,
             color = when {
-                done -> Rahal.colors.success
+                done -> Rahal.colors.ink
                 current -> Rahal.colors.ink
                 else -> Rahal.colors.inkMuted
             },
-            fontWeight = if (current) FontWeight.Bold else FontWeight.Normal,
+            style = if (current) Rahal.type.bodyStrong else Rahal.type.body,
         )
     }
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(Rahal.space.xs))
 }

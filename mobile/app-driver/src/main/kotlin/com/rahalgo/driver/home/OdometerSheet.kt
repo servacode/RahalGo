@@ -126,7 +126,7 @@ fun OdometerSheet(ask: OdometerAsk, actions: OdometerActions) {
         text = {
             Column(
                 Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
             ) {
                 Text(stringResource(R.string.odo_hint), color = Rahal.colors.inkMuted)
                 if (ask.bikeChange) {
