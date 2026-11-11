@@ -58,6 +58,7 @@ import com.rahalgo.design.Rahal
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.DayHours
 import com.rahalgo.ui.LoadState
+import com.rahalgo.ui.cardSurface
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalOutlineButton
 import com.rahalgo.ui.RahalTextButton
@@ -269,10 +270,20 @@ private fun StepScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
         ) {
-            // **البطاقةُ الموحّدة** (تصميمُ ٢٠٢٦-١١-١١) — `RahalCard` لا صندوقٌ بيدٍ.
-            com.rahalgo.ui.RahalCard(padding = Rahal.space.lg) {
+            // ══════════════════════════════════════════════════════════════
+            // **سطحُ البطاقة الموحّد بمعدِّلٍ لا بـ`RahalCard`** (عطبٌ رُئي على جوال المالك ٢٠٢٦-١١-١١:
+            // «تطبيق المتجر مايكمل الاعداد»)
+            // ══════════════════════════════════════════════════════════════
+            //
+            // **`RahalCard` نطاقُ إعادة رسمٍ مستقلّ** — فاختيارُ قسمٍ يُعيد رسمَ داخل البطاقة وحدَه،
+            // و`next` يُكتب هناك **و«التالي» تحتها لا يُعاد رسمُه** فيبقى معطّلاً كما فُتحت الشاشة.
+            // **و`Column` مضمَّنٌ** فتُكتب الخطوةُ ويُقرأ «التالي» في المرور نفسِه. والشكلُ هو نفسُه
+            // (`cardSurface` هو ما يرسمه `RahalCard` المرفوعُ أصلاً).
             Column(
-                Modifier.fillMaxWidth(),
+                Modifier
+                    .fillMaxWidth()
+                    .cardSurface()
+                    .padding(Rahal.space.lg),
                 verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
             ) {
                 next = when (step) {
@@ -283,7 +294,6 @@ private fun StepScreen(
                     SetupStep.Settlement -> SettlementStep(vm, advance)
                     SetupStep.Returns -> ReturnsStep(vm, advance)
                 }
-            }
             }
         }
         // ── «السابق» و«التالي» — في شريط الفعل الثابت الموحّد (تصميمُ ٢٠٢٦-١١-١١) ──
