@@ -864,12 +864,14 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO order_items (order_id, menu_item_id, name, unit_price,
 			                         merchant_price, merchant_id, qty, note, options,
-			                         merchant_settlement_method, offer_cut, offer_borne_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NULLIF($12,''))
+			                         merchant_settlement_method, offer_cut, offer_borne_by,
+			                         image_media_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NULLIF($12,''), $13::uuid)
 			RETURNING id`,
 			orderID, it.MenuItemID, it.Name, it.UnitPrice, it.MerchantPrice,
 			it.MerchantID, it.Qty, it.Note,
-			marshalOptions(it.Options), method, it.OfferCut, it.OfferBorneBy).Scan(&lineID); err != nil {
+			marshalOptions(it.Options), method, it.OfferCut, it.OfferBorneBy,
+			it.ImageMediaID).Scan(&lineID); err != nil {
 			return nil, nil, err
 		}
 		// **ومشروباتُه بنودٌ بعده** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — بمتجره وطريقةِ تسويته.
@@ -983,12 +985,13 @@ func (s *Service) priceItems(ctx context.Context, q dbtx.Querier, inputs []ItemI
 		var itemMargin, sectionMargin *int64
 		err := q.QueryRow(ctx, `
 			SELECT mi.id, mi.name, mi.merchant_price, mi.available AND mi.approved,
-			       mi.margin_override, ps.margin_override, mi.merchant_id::text
+			       mi.margin_override, ps.margin_override, mi.merchant_id::text,
+			       mi.image_media_id::text
 			FROM menu_items mi
 			LEFT JOIN platform_sections ps ON ps.id = mi.platform_section_id
 			WHERE mi.id = $1`, in.MenuItemID).
 			Scan(&it.MenuItemID, &it.Name, &it.MerchantPrice, &available,
-				&itemMargin, &sectionMargin, &it.MerchantID)
+				&itemMargin, &sectionMargin, &it.MerchantID, &it.ImageMediaID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, 0, ErrItemGone
 		}

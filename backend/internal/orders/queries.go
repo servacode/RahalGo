@@ -127,10 +127,15 @@ const orderSelect = `
 	                          'qty', oi.qty, 'note', oi.note,
 	                          'options', COALESCE(oi.options, '[]'::jsonb),
 	                          'drink_for', oi.drink_for, 'drink_option_id', oi.drink_option_id,
-	                          'returned', oi.returned)
+	                          'returned', oi.returned,
+	                          'image_url', CASE WHEN lim.path IS NULL OR lim.path = '' THEN NULL
+	                                            ELSE '/media/' || lim.path END,
+	                          'image_thumb_url', CASE WHEN lim.thumb_path IS NULL OR lim.thumb_path = '' THEN NULL
+	                                                  ELSE '/media/' || lim.thumb_path END)
 	                        -- **والمشروبُ بعد صنفه** — وترتيبُ غيره كما كان.
 	                        ORDER BY COALESCE(oi.drink_for, oi.id), oi.drink_for IS NOT NULL, oi.id)
-	                 FROM order_items oi WHERE oi.order_id = o.id), '[]'::json),
+	                 FROM order_items oi LEFT JOIN media lim ON lim.id = oi.image_media_id
+	                 WHERE oi.order_id = o.id), '[]'::json),
 	       -- **ووصفُ الغرض ومن يدفع** — للتوصيلة وحدَها، وفراغٌ لغيرها.
 	       COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, ''), o.dropoff_known,
 	       -- **وأين البضاعةُ إن لم تكن في المتجر** — كلمةُ الطارئ للسائق التالي.
@@ -287,9 +292,11 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 	// **وبنودُ الطلب من منفّذِ نداءه** — `XG-46`: **كان يُمرَّر المنفّذ
 	// ثمّ تُقرأ البنودُ من المَسبَح**، **فوصلةٌ ثانيةٌ داخلَ معاملة.**
 	rows, err := db.Query(ctx, `
-		SELECT id, menu_item_id, name, unit_price, qty, note, options,
-		       drink_for::text, drink_option_id::text, returned
-		FROM order_items WHERE order_id = $1`, id)
+		SELECT oi.id, oi.menu_item_id, oi.name, oi.unit_price, oi.qty, oi.note, oi.options,
+		       oi.drink_for::text, oi.drink_option_id::text, oi.returned,
+		       lim.path, lim.thumb_path
+		FROM order_items oi LEFT JOIN media lim ON lim.id = oi.image_media_id
+		WHERE oi.order_id = $1`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -298,10 +305,12 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 		var it OrderItem
 		var opts []byte
 		if err := rows.Scan(&it.ID, &it.MenuItemID, &it.Name, &it.UnitPrice, &it.Qty, &it.Note, &opts,
-			&it.DrinkFor, &it.DrinkOptionID, &it.Returned); err != nil {
+			&it.DrinkFor, &it.DrinkOptionID, &it.Returned, &it.ImageURL, &it.ImageThumbURL); err != nil {
 			rows.Close()
 			return nil, err
 		}
+		it.ImageURL = media.URLForPtr(it.ImageURL)
+		it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 		it.Options = []OptionSnapshot{}
 		_ = json.Unmarshal(opts, &it.Options)
 		o.Items = append(o.Items, it)

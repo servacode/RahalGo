@@ -33,8 +33,8 @@
     "setting_defs": 285,
     "behaviour_settings": 240,
     "order_fields": 147,
-    "test_files": 836,
-    "test_funcs": 3203
+    "test_files": 837,
+    "test_funcs": 3204
   },
   "flows": [
     {
@@ -23471,6 +23471,12 @@
     {
       "name": "TestORDERFILE_AdminDetailAndHistoryFilters",
       "file": "internal/qa/order_file_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderLineCarriesItemImageAndKeepsIt",
+      "file": "internal/qa/order_line_image_test.go",
       "package": "qa",
       "orphan": true
     },

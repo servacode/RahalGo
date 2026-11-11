@@ -965,6 +965,8 @@ internal fun MyOrderLine.toInvoiceLine(): com.rahalgo.ui.InvoiceLine = com.rahal
     qty = qty,
     options = options.orEmpty().map { it.group to it.name },
     returned = returned,
+    imageUrl = imageUrl,
+    thumbUrl = imageThumbUrl,
 )
 
 /**

@@ -699,6 +699,8 @@
     },
     "listSeparator": "، ",
     "returnedByCustomer": "رجّعه الزبون",
+    "itemPhoto": "صورة الصنف",
+    "itemPhotoOpen": "تكبير صورة الصنف",
     "nameSeparator": "، ",
     "failReasons": {
       "customer_absent": "الزبون غير موجود",

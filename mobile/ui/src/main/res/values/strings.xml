@@ -346,6 +346,7 @@
     <string name="wal_debt_order_edit">نقص حقك بتعديل طلب بعد استلامه</string>
     <string name="wal_debt_whatsapp_commission">عمولة طلب واتساب</string>
     <string name="inv_returned">رجّعه الزبون</string>
+    <string name="inv_line_photo">صورة الصنف</string>
     <string name="wal_closing">رصيد آخر المدة</string>
     <string name="wal_doc_title">كشف حساب المحفظة</string>
     <string name="wal_k_adjustment">تسوية من الإدارة</string>

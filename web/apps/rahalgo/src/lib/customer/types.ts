@@ -360,6 +360,9 @@ export interface MyOrderLine {
   drink_option_id?: string | null;
   /** **رجّعه الزبونُ بعد الاستلام** (٢٠٢٦-١١-٠٣) — سعرُه صفر. */
   returned?: boolean;
+  /** **صورةُ الصنف لحظةَ الطلب** (٢٠٢٦-١١-١٢) — وغائبةٌ لطلبٍ قديم. */
+  image_url?: string | null;
+  image_thumb_url?: string | null;
 }
 
 export interface MyOrdersPage {
