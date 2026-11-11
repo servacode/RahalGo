@@ -72,10 +72,12 @@ internal fun FeaturedStrip(
     stores: List<FeaturedStore>,
     media: (String?) -> String?,
     onOpen: (String) -> Unit,
+    /** عنوان الصفّ — «متاجر مميّزة» للرئيسية و«متاجر» لنتائج البحث. */
+    title: String = stringResource(R.string.shop_featured_stores),
 ) {
     Column(Modifier.fillMaxWidth().padding(vertical = Rahal.space.xs)) {
         Text(
-            text = stringResource(R.string.shop_featured_stores),
+            text = title,
             color = Rahal.colors.ink,
             fontWeight = FontWeight.Bold,
             style = Rahal.type.cardTitle,
@@ -339,6 +341,15 @@ internal fun StoreScreen(
                             fontWeight = if (h.emergencyClosed) FontWeight.Bold else FontWeight.Normal,
                             style = Rahal.type.caption,
                         )
+                        // **شارةُ «مفتوح هلق / مسكّر هلق»** (قرارُ المالك ٢٠٢٦-١١-١١، تعدّل ٢٠٢٦-١٠-٢٨) — من
+                        // `open_now` الذي يردّه المحرّك (الدوامُ + الإغلاقُ الطارئ)، لا من حسبةٍ في الجهاز.
+                        // **ورسمُ التوصيل لعنوانه غائبٌ**: لا نقطةَ تقدير بلا سلّة (`/public/quote` يطلب أصنافاً)،
+                        // فلا يُختلَق رقم.
+                        Spacer(Modifier.height(Rahal.space.xxs))
+                        com.rahalgo.ui.Chip(
+                            text = stringResource(if (h.openNow && !h.emergencyClosed) R.string.store_open_now else R.string.store_closed_now),
+                            color = if (h.openNow && !h.emergencyClosed) Rahal.colors.success else Rahal.colors.inkMuted,
+                        )
                         // **زمنُ التحضير إن أرسله المحرّك (تدقيق D16)** — لا تقييمَ ولا غلافَ في ردّ المتجر
                         // اليوم، ولا يُختلَق حقل.
                         if (h.prepMinutes > 0 && !h.emergencyClosed) {
@@ -420,6 +431,9 @@ internal fun StoreScreen(
                             media = media,
                             liked = item.id in liked,
                             onAdd = { onAdd(item) },
+                            qty = cartQtyOf(item),
+                            onMinus = { com.rahalgo.customer.cart.Cart.setQty(item.id + "|", cartQtyOf(item) - 1) },
+                            onPlus = { onAdd(item) },
                             onOpen = { onOpen(item) },
                             onLike = { onLike(item) },
                             // **ولا رابطَ إلى الصفحة التي هو فيها** (`StoreLink`).

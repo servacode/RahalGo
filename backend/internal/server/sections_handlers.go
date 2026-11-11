@@ -442,6 +442,16 @@ func (s *Server) handlePublicSectionItems(w http.ResponseWriter, r *http.Request
 		LIMIT 200`, args...)
 }
 
+// handlePublicAllItems **أصنافُ السوق كلُّها بلا قسم** — ما تعرضه الرئيسيةُ حين لا يُختار قسم
+// (ملاحظة المالك ٢٠٢٦-١١-١١: دائرةٌ مختارةٌ وشبكةٌ من كلّ الأقسام لا تتّفقان؛ فالافتراضُ
+// بلا اختيار والشبكةُ للكلّ، والضغطةُ تُرشّح والثانيةُ تمحو). **وسوقُ مدينته وحدَه كالقسم.**
+func (s *Server) handlePublicAllItems(w http.ResponseWriter, r *http.Request) {
+	where, geo := s.cityWhere(r.Context(), scopeFrom(r), 1)
+	s.scanItems(w, r, itemSelect+where+`
+		ORDER BY (i.available AND `+orders.OpenNowSQL+`) DESC, ps.sort_order, i.sort_order, i.name
+		LIMIT 200`, geo...)
+}
+
 // handlePublicItem صنفٌ واحدٌ بتفصيله — **صفحةُ الصنف.**
 func (s *Server) handlePublicItem(w http.ResponseWriter, r *http.Request) {
 	rule := pricing.RuleFrom(r.Context(), s.settings)
@@ -494,7 +504,7 @@ func (s *Server) handlePublicItem(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"item": it, "modifiers": groups})
 }
 
-// handleSearchItems بحثٌ بالأصناف — **لا بالمتاجر.**
+// handleSearchItems بحثٌ بالأصناف **ومعه المتاجرُ المطابقةُ باسمها** (حقل stores).
 //
 // **ومن يشتهي صنفاً لا يعرف اسم المتجر الذي يصنعه.** والبحثُ القديم كان يعيد
 // متاجر ويقول «طابق في: شاورما، فروج» — **فيُقرأ اسمُ المتجر أوّلاً وهو ما
@@ -502,16 +512,27 @@ func (s *Server) handlePublicItem(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleSearchItems(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	if len([]rune(q)) < 2 {
-		httpx.JSON(w, http.StatusOK, map[string]any{"items": []publicItem{}})
+		httpx.JSON(w, http.StatusOK, map[string]any{"items": []publicItem{}, "stores": []featuredStore{}})
+		return
+	}
+	// **والمتاجرُ المطابقةُ باسمها تُردّ بجانب الأصناف** (إضافةٌ: التطبيقاتُ القديمة تتجاهل الحقل).
+	stores, err := s.searchStores(r, q)
+	if err != nil {
+		s.respondErr(w, err)
 		return
 	}
 	// **والبحثُ في سوقِ مدينته أيضاً** — **وبحثٌ يجد ما لا يُطلب أسوأُ
 	// من بحثٍ لا يجد.**
 	where, geo := s.cityWhere(r.Context(), scopeFrom(r), 2)
 	args := append([]any{q}, geo...)
-	s.scanItems(w, r, itemSelect+`
+	out, err := s.queryItems(r, itemSelect+`
 		  AND (i.name ILIKE '%'||$1||'%' OR ps.name ILIKE '%'||$1||'%')`+where+`
 		ORDER BY (i.name ILIKE $1||'%') DESC,
 		         (i.available AND `+orders.OpenNowSQL+`) DESC, i.name
 		LIMIT 60`, args...)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"items": out, "stores": stores})
 }

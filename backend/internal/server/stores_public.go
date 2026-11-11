@@ -75,6 +75,36 @@ func (s *Server) featuredStores(r *http.Request) ([]featuredStore, error) {
 	return out, rows.Err()
 }
 
+// searchStores **المتاجرُ التي يحوي اسمُها كلمةَ البحث** — تُعرض صفّاً فوق الأصناف.
+// (ملاحظة المالك ٢٠٢٦-١١-١١: «البحث يرجّع أصناف فقط ولا متاجر».)
+// **وسوقُ المدينة وحدَه كالباقي**، والفعّالُ وحدَه، ومن يبدأ اسمُه بالكلمة أوّلاً.
+func (s *Server) searchStores(r *http.Request, q string) ([]featuredStore, error) {
+	where, geo := s.cityWhere(r.Context(), scopeFrom(r), 2)
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT m.id, m.name, lm.path, lm.thumb_path,
+		       `+orders.OpenNowSQL+`, `+orders.NextOpenSQL+`
+		FROM merchants m
+		LEFT JOIN media lm ON lm.id = m.logo_media_id
+		WHERE m.status = 'active' AND m.name ILIKE '%'||$1||'%'`+where+`
+		ORDER BY (m.name ILIKE $1||'%') DESC, m.name, m.id
+		LIMIT 12`, append([]any{q}, geo...)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []featuredStore{}
+	for rows.Next() {
+		var f featuredStore
+		if err := rows.Scan(&f.ID, &f.Name, &f.LogoURL, &f.LogoThumbURL, &f.OpenNow, &f.OpensAt); err != nil {
+			return nil, err
+		}
+		f.LogoURL = media.URLForPtr(f.LogoURL)
+		f.LogoThumbURL = media.URLForPtr(f.LogoThumbURL)
+		out = append(out, f)
+	}
+	return out, rows.Err()
+}
+
 // storeSectionHead **قسمُ منصّةٍ كما يُعنوَن في صفحة المتجر.**
 type storeSectionHead struct {
 	ID            string  `json:"id"`

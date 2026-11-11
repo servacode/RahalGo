@@ -38,7 +38,7 @@ import {
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useBrowseQuery } from "@/lib/customer/context";
-import type { HomePage, Item } from "@/lib/customer/types";
+import type { FeaturedStore, HomePage, Item } from "@/lib/customer/types";
 import { ItemGrid, ItemSheet } from "@/components/customer/items";
 import { FeaturedStrip } from "@/components/customer/stores";
 import { InviteHomeCard } from "@/components/customer/InviteNudge";
@@ -48,6 +48,7 @@ import { SHOP_SEARCH_EVENT } from "@/components/customer/ShopChrome";
 const m = getMessages(defaultLocale);
 const H = m.shop.home;
 const SC = m.shop.section;
+const ST = m.shop.stores;
 
 function useSearch(scope: string) {
   // **النصُّ الأوّليُّ من الرابط** (`?q=` — من بحث الشريط في صفحةٍ أخرى) وما يكتبه الشريطُ بعدها.
@@ -59,6 +60,8 @@ function useSearch(scope: string) {
     return () => window.removeEventListener(SHOP_SEARCH_EVENT, on);
   }, []);
   const [items, setItems] = useState<Item[] | null>(null);
+  /* **المتاجرُ المطابقةُ باسمها** — صفٌّ فوق الأصناف (٢٠٢٦-١١-١١)، من حقل `stores` في ردّ البحث. */
+  const [stores, setStores] = useState<FeaturedStore[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -66,13 +69,18 @@ function useSearch(scope: string) {
     setError("");
     if (term.length < 2) {
       setItems(null);
+      setStores([]);
       return;
     }
     let alive = true;
     setBusy(true);
     const t = setTimeout(() => {
-      api<{ items: Item[] }>(`/api/v1/public/search/items?q=${encodeURIComponent(term)}${scope}`)
-        .then((r) => alive && setItems(r.items ?? []))
+      api<{ items: Item[]; stores?: FeaturedStore[] }>(`/api/v1/public/search/items?q=${encodeURIComponent(term)}${scope}`)
+        .then((r) => {
+          if (!alive) return;
+          setItems(r.items ?? []);
+          setStores(r.stores ?? []);
+        })
         .catch((err) => alive && setError(errorText(err)))
         .finally(() => alive && setBusy(false));
     }, 300);
@@ -81,7 +89,7 @@ function useSearch(scope: string) {
       clearTimeout(t);
     };
   }, [q, scope]);
-  return { q, setQ, items, error, busy };
+  return { q, setQ, items, stores, error, busy };
 }
 
 export default function ShopPage() {
@@ -102,19 +110,22 @@ export default function ShopPage() {
 
   useEffect(load, [load]);
 
-  // **القسمُ المختار وأصنافُه** — أوّلُ قسمٍ افتراضاً.
+  // **القسمُ المختار وأصنافُه** — بلا اختيارٍ افتراضاً فالشبكةُ لكلّ الأقسام، والنقرةُ تُرشّح والثانيةُ تمحو
+  // (ملاحظةُ المالك ٢٠٢٦-١١-١١: دائرةٌ مختارةٌ وشبكةٌ من كلّ الأقسام لا تتّفقان — المتغيّرُ واحد).
   const [active, setActive] = useState("");
   const [items, setItems] = useState<Item[] | null>(null);
   const [itemsErr, setItemsErr] = useState("");
-  const sectionID = active || home?.sections[0]?.id || "";
+  const sectionID = active;
+  const homeReady = !!home && home.sections.length > 0;
   const loadItems = useCallback(() => {
-    if (!sectionID) return;
+    if (!homeReady) return;
     setItemsErr("");
     setItems(null);
-    api<{ items: Item[] }>(`/api/v1/public/sections/${sectionID}/items${scopeQ}`)
+    const url = sectionID ? `/api/v1/public/sections/${sectionID}/items${scopeQ}` : `/api/v1/public/items${scopeQ}`;
+    api<{ items: Item[] }>(url)
       .then((r) => setItems(r.items ?? []))
       .catch((err) => setItemsErr(errorText(err)));
-  }, [sectionID, scopeQ]);
+  }, [sectionID, scopeQ, homeReady]);
   useEffect(loadItems, [loadItems]);
 
   const slides: SlideItem[] = (home?.banners ?? []).map((b) => ({
@@ -169,10 +180,13 @@ export default function ShopPage() {
             <Alert>{search.error}</Alert>
           ) : search.items === null || search.busy ? (
             <LoadingState variant="list" rows={3} />
-          ) : search.items.length === 0 ? (
+          ) : search.items.length === 0 && search.stores.length === 0 ? (
             <EmptyState icon={IconSearch} title={H.noResults} action={<span className="text-xs text-ink-muted">{H.noResultsHint}</span>} />
           ) : (
-            <ItemGrid items={search.items} onOpen={setOpen} />
+            <>
+              <FeaturedStrip stores={search.stores} title={ST.searchStores} />
+              {search.items.length > 0 && <ItemGrid items={search.items} onOpen={setOpen} />}
+            </>
           )}
         </section>
       ) : error ? (
@@ -188,7 +202,7 @@ export default function ShopPage() {
               {/* **شريطُ الأقسام دوائرُ بصورها كالتطبيق** (قرارُ المالك ٢٠٢٦-١١-٠٩: «نشيل المربّعات، يظلّ مثل تطبيق الجوال») —
                   بعد «ادعُ صديقك» ولافتات الخدمة وقبل الأصناف، على كلّ المقاسات، ويبدّل القسمَ في مكانه. */}
               <section id="shop-sections" className="scroll-mt-20" aria-label={H.sections}>
-                <SectionRail items={rail} activeID={sectionID} auto={false} onSelect={setActive} />
+                <SectionRail items={rail} activeID={sectionID} auto={false} onSelect={(id) => setActive((cur) => (cur === id ? "" : id))} />
               </section>
               <section className="flex flex-col gap-3">
                 {activeSection && (

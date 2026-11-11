@@ -12161,6 +12161,12 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/public/items",
+      "handler": "handlePublicAllItems",
+      "auth": false
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/public/items/{id}",
       "handler": "handlePublicItem",
       "auth": false,
@@ -12590,6 +12596,10 @@
       "response": [
         {
           "name": "items",
+          "type": "array"
+        },
+        {
+          "name": "stores",
           "type": "array"
         }
       ],

@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
-import { Alert, EmptyState, Input, LoadingState, ReloadState, IconClose, IconPrev, IconSearch, IconStore } from "@rahalgo/ui";
+import { Alert, Badge, EmptyState, Input, LoadingState, ReloadState, IconClose, IconPrev, IconSearch, IconStore } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useBrowseQuery } from "@/lib/customer/context";
 import type { Item, StoreItemsPage, StoreSummary } from "@/lib/customer/types";
@@ -211,6 +211,12 @@ export default function StorePageView() {
                 ) : (
                   <span className="text-ink-muted">{todayText(page.store.today)}</span>
                 )}
+                {/* **شارةُ «مفتوح هلق / مسكّر هلق»** (قرارُ المالك ٢٠٢٦-١١-١١، مرآةُ `StoreScreen.kt`) — من
+                    `open_now` الذي يردّه المحرّك. **ورسمُ التوصيل لعنوانه لا يُعرض**: لا تقديرَ بلا سلّة
+                    (`/public/quote` يطلب أصنافاً) فلا يُختلَق رقم. */}
+                <Badge variant={page.store.open_now && !page.store.emergency_closed ? "success" : "neutral"}>
+                  {page.store.open_now && !page.store.emergency_closed ? ST.openNow : ST.closedNow}
+                </Badge>
                 {page.store.prep_minutes > 0 && (
                   <span className="text-ink-muted">{fill(SK.prep, { n: fmtNum(page.store.prep_minutes) })}</span>
                 )}

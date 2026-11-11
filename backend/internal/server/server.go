@@ -711,6 +711,7 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/districts", s.handlePublicDistricts)
 		r.Get("/public/sections", s.handlePublicSections)
 		r.Get("/public/sections/{id}/items", s.handlePublicSectionItems)
+		r.Get("/public/items", s.handlePublicAllItems)
 		// **وبطاقةُ الصنف من التصفّح** — بابُها بابُه.
 		r.With(s.launchGate(launchCustomerBrowse)).
 			Get("/public/items/{id}", s.handlePublicItem)

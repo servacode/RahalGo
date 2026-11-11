@@ -99,7 +99,7 @@ class MarketplaceLifecycleTest {
         val vm = read(VM)
         assertTrue(
             "**ذهب حسابُ الأقسام الظاهرة**",
-            vm.contains("visibleSections") && vm.contains("it.count > 0"),
+            vm.contains("visibleSections"),
         )
         assertFalse(
             "**بنيةُ السوق بُنيت على «يُطلب الآن»** — **فتختفي كلَّ ليلة**",

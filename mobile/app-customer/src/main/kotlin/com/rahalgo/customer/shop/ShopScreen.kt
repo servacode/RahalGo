@@ -504,6 +504,21 @@ fun ShopScreen(
     }
     }
 
+        // **متاجرُ البحث المطابقةُ باسمها صفٌّ فوق الأصناف** (ملاحظةُ المالك ٢٠٢٦-١١-١١) — من حقل
+        // `stores` في ردّ البحث؛ **وفارغُه من خادمٍ أقدم لا يُرسم.**
+        if (vm.searching && vm.searchStores.isNotEmpty()) {
+            item(key = "search-stores", span = { GridItemSpan(maxLineSpan) }) {
+                Box(Modifier.bleed(Rahal.space.md)) {
+                    FeaturedStrip(
+                        vm.searchStores,
+                        media,
+                        vm::openStore,
+                        title = stringResource(R.string.shop_search_stores),
+                    )
+                }
+            }
+        }
+
         when {
             vm.busy && vm.items.isEmpty() ->
                 item(key = "home-state", span = { GridItemSpan(maxLineSpan) }) {
@@ -609,6 +624,9 @@ fun ShopScreen(
                     media = media,
                     liked = item.id in liked,
                     onAdd = { addItem(item) },
+                    qty = cartQtyOf(item),
+                    onMinus = { Cart.setQty(item.id + "|", cartQtyOf(item) - 1) },
+                    onPlus = { addItem(item) },
                     onOpen = { openItem(item) },
                     onLike = { onLike(item) },
                     // **واسمُ المتجر يفتح صفحتَه** (٢٠٢٦-١٠-١٨).
@@ -666,6 +684,41 @@ private fun CardButton(text: String, filled: Boolean, onClick: () -> Unit, modif
         )
     }
 }
+
+/**
+ * **عدّادٌ صغيرٌ − ن + على البطاقة** (٢٠٢٦-١١-١١) — بعد أوّل إضافة. **ثلاثُ خاناتٍ بارتفاع
+ * الزرّ الذي يحلّ محلَّه**، فلا تقفز البطاقة. **والنزولُ إلى 0 يحذف السطرَ ويُعيد الزرَّ.**
+ */
+@Composable
+private fun QtyCounter(qty: Int, onMinus: () -> Unit, onPlus: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .fillMaxHeight()
+            .clip(Rahal.shape.sm)
+            .border(Rahal.stroke.hair, Rahal.colors.brand, Rahal.shape.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.weight(1f).fillMaxHeight().clickable(onClick = onMinus),
+            contentAlignment = Alignment.Center,
+        ) { Text("−", color = Rahal.colors.brand, fontWeight = FontWeight.Bold, style = Rahal.type.body) }
+        Text(
+            text = qty.toString(),
+            color = Rahal.colors.ink,
+            fontWeight = FontWeight.Bold,
+            style = Rahal.type.meta,
+            maxLines = 1,
+        )
+        Box(
+            Modifier.weight(1f).fillMaxHeight().clickable(onClick = onPlus),
+            contentAlignment = Alignment.Center,
+        ) { Text("+", color = Rahal.colors.brand, fontWeight = FontWeight.Bold, style = Rahal.type.body) }
+    }
+}
+
+/** **كمّيةُ صنفٍ بلا خيارات في السلّة** — 0 إن لم يُضف أو كان له خيارات (تُفتح له نافذتُه). */
+internal fun cartQtyOf(item: Item): Int =
+    if (item.hasOptions) 0 else Cart.lines.firstOrNull { it.key == item.id + "|" }?.qty ?: 0
 
 const val ShopCols = 3
 
@@ -851,6 +904,13 @@ internal fun ItemCard(
     onOpen: (() -> Unit)? = null,
     /** **وداخل صفحة المتجر نفسِها لا يتكرّر اسمُه تحت كلّ صنف** (٢٠٢٦-١١-٠٤). */
     showStoreName: Boolean = true,
+    /**
+     * **كم منه في السلّة** (٢٠٢٦-١١-١١): بعد أوّل إضافةٍ يصير زرُّ «اطلب» عدّاداً صغيراً − ن +
+     * على البطاقة نفسِها. **و0 (أو غيابُ الدالّتين) يُبقي الزرَّ** — ومنه كلُّ صنفٍ بخيارات.
+     */
+    qty: Int = 0,
+    onMinus: (() -> Unit)? = null,
+    onPlus: (() -> Unit)? = null,
 ) {
     val closed = item.sourceClosed || !item.available
     var zoom by remember(item.id) { mutableStateOf<String?>(null) }
@@ -980,6 +1040,10 @@ internal fun ItemCard(
             //
             // **كان خارج الإطار بخطٍّ ١٢ فلا يُقرأ أنّه ابنُ البطاقة.** وصار سطران
             // يصغر خطُّهما حتّى يسعا (لا قصَّ لحرف)، **واسمُ المتجر سطرٌ رماديٌّ ثانٍ.**
+            // **الاسمُ واسمُ المتجر كتلةٌ واحدةٌ ملتصقةٌ من الأعلى** (٢٠٢٦-١١-١١) — كان الاسمُ يحجز سطرين
+            // دائماً فيبقى فراغٌ بينه وبين اسم المتجر. **والارتفاعُ الأدنى للكتلة كلِّها** كي لا تتفاوت
+            // البطاقاتُ ويبقى الزرُّ في القاع؛ **فالفراغُ إن وُجد صار تحت المتجر لا بينهما.**
+            Column(Modifier.fillMaxWidth().heightIn(min = if (showStoreName) 60.dp else 40.dp)) {
             run {
                 val itemStyle = Rahal.type.body.copy(
                     color = Rahal.colors.ink,
@@ -990,13 +1054,10 @@ internal fun ItemCard(
                     text = item.name,
                     style = itemStyle,
                     maxLines = 2,
-                    // **وسطران محجوزان دائماً** — اسمٌ قصيرٌ لا يُقصّر بطاقتَه عن جارتها.
-                    minLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 14.sp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 36.dp)
                         .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs)
                         .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier),
                 )
@@ -1010,7 +1071,6 @@ internal fun ItemCard(
             if (showStoreName) Row(
                 Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 28.dp)
                     .padding(horizontal = Rahal.space.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1039,6 +1099,7 @@ internal fun ItemCard(
                             },
                         ),
                 )
+            }
             }
             // **«اطلب» عريضٌ والقلبُ جنبه** (اقتراحُ المالك ٢٠٢٦-١١-٠٤) — والسطرُ بارتفاعه ولو غاب «اطلب».
             Row(
@@ -1072,12 +1133,16 @@ internal fun ItemCard(
                     )
                 }
                 if (!closed && onAdd != null) {
-                    CardButton(
-                        text = stringResource(R.string.shop_order_btn),
-                        filled = true,
-                        onClick = onAdd,
-                        modifier = Modifier.weight(1f),
-                    )
+                    if (qty > 0 && onMinus != null && onPlus != null) {
+                        QtyCounter(qty, onMinus, onPlus, Modifier.weight(1f))
+                    } else {
+                        CardButton(
+                            text = stringResource(R.string.shop_order_btn),
+                            filled = true,
+                            onClick = onAdd,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
         }
