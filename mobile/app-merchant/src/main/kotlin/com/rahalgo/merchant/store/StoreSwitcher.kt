@@ -1,5 +1,6 @@
 package com.rahalgo.merchant.store
 
+import com.rahalgo.ui.cardVariant
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -58,8 +59,8 @@ fun StoreSwitcher(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.xs)
-            .background(Rahal.colors.field, Rahal.shape.sm)
-            .clickable { expanded = true }
+            .cardVariant(com.rahalgo.ui.CardVariant.Outlined, shape = Rahal.shape.md)
+            .clickable(role = androidx.compose.ui.semantics.Role.Button) { expanded = true }
             .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {

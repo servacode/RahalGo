@@ -163,7 +163,7 @@ private fun Welcome(steps: List<SetupStep>, onStart: () -> Unit) {
             Text(
                 stringResource(R.string.wz_welcome_count, steps.size),
                 color = Rahal.colors.inkMuted,
-                fontWeight = FontWeight.Bold,
+                style = Rahal.type.label,
             )
             steps.forEachIndexed { i, s ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -269,14 +269,10 @@ private fun StepScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
         ) {
+            // **البطاقةُ الموحّدة** (تصميمُ ٢٠٢٦-١١-١١) — `RahalCard` لا صندوقٌ بيدٍ.
+            com.rahalgo.ui.RahalCard(padding = Rahal.space.lg) {
             Column(
-                Modifier
-                    .fillMaxWidth()
-                    .shadow(Rahal.elevation.raised, Rahal.shape.lg)
-                    .clip(Rahal.shape.lg)
-                    .background(Rahal.colors.canvas)
-                    .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.lg)
-                    .padding(Rahal.space.lg),
+                Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
             ) {
                 next = when (step) {
@@ -288,13 +284,12 @@ private fun StepScreen(
                     SetupStep.Returns -> ReturnsStep(vm, advance)
                 }
             }
+            }
         }
-        // ── «السابق» و«التالي» ──
+        // ── «السابق» و«التالي» — في شريط الفعل الثابت الموحّد (تصميمُ ٢٠٢٦-١١-١١) ──
+        com.rahalgo.ui.BottomActionBar {
         Row(
-            Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
+            Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
         ) {
             RahalOutlineButton(
@@ -313,10 +308,10 @@ private fun StepScreen(
             ) {
                 Text(
                     stringResource(go.label ?: R.string.wz_next),
-                    fontWeight = FontWeight.Bold,
                     style = Rahal.type.sectionTitle,
                 )
             }
+        }
         }
     }
 }

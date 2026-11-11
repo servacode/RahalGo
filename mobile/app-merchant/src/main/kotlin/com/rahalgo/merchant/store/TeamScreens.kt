@@ -647,6 +647,7 @@ private fun TimeChip(value: String, enabled: Boolean, onChange: (String) -> Unit
             .background(Rahal.colors.brand.copy(alpha = 0.08f))
             .border(Rahal.stroke.hair, Rahal.colors.brand.copy(alpha = 0.35f), Rahal.shape.pill)
             .clickable(enabled = enabled, role = Role.Button, onClick = open)
+            .heightIn(min = Rahal.size.touch)
             .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
