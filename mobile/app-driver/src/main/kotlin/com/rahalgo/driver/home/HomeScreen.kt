@@ -198,12 +198,15 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         if (me.termsRequired && !me.suspended) {
             BannerCard(
                 icon = R.drawable.ic_terms,
-                text = stringResource(R.string.terms_banner),
+                // **والخادمُ يمنع فتحَ الدوام وحدَه** (`driverTermsBlock` عند `on=true`، ولا يمنع الإغلاقَ ولا ما بيده):
+                // فمن دوامُه مفتوحٌ يُقال له إنّ الموافقةَ لدوامه الجاي، لا «لتقدر تفتح» وهو مفتوح (٢٠٢٦-١١-١١).
+                text = stringResource(if (me.onShift) R.string.terms_banner_on_shift else R.string.terms_banner),
                 tone = com.rahalgo.ui.StatusTone.Info,
                 onClick = actions.openTerms,
             )
             Spacer(Modifier.height(Rahal.space.md))
         }
+        state.shiftSummary?.let { ShiftSummaryDialog(it, onClose = actions.closeSummary) }
         state.terms?.let {
             TermsSheet(
                 terms = it,
@@ -295,6 +298,10 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         MapPrepStatus(
             // **وطلبتها الورديّةُ أو طلبٌ مقبول** (٢٠٢٦-١٠-٣٠) — تُرى ولو لم يبدأ العاملُ بعد.
             downloading = (OfflineMap.downloading || MapPackageWorker.tripWanted) && !OfflineMap.ready,
+            ready = OfflineMap.ready,
+            percent = OfflineMap.status.progress,
+            downloadedBytes = OfflineMap.status.downloadedBytes,
+            totalBytes = OfflineMap.status.totalBytes,
             failed = OfflineMap.failed,
             failure = OfflineMap.failure,
             onRetry = { MapPackageWorker.enqueue(context) },
@@ -347,6 +354,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                 com.rahalgo.ui.StatTile(
                     label = stringResource(R.string.home_stat_delivered),
                     value = grouped(me.todayDelivered.toLong()),
+                    compact = true,
                     modifier = Modifier.weight(1f),
                     valueColor = Rahal.colors.success,
                     icon = R.drawable.ic_check_circle,
@@ -354,6 +362,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                 com.rahalgo.ui.StatTile(
                     label = stringResource(R.string.home_stat_failed),
                     value = grouped(me.todayFailed.toLong()),
+                    compact = true,
                     modifier = Modifier.weight(1f),
                     valueColor = if (me.todayFailed > 0) Rahal.colors.danger else Rahal.colors.ink,
                     icon = R.drawable.ic_warning,
@@ -363,6 +372,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                 com.rahalgo.ui.StatTile(
                     label = stringResource(R.string.home_stat_drive),
                     value = if (me.todayDriveM > 0) com.rahalgo.ui.dist(me.todayDriveM.toDouble()) else "—",
+                    compact = true,
                     modifier = Modifier.weight(1f),
                     icon = R.drawable.ic_moto,
                 )
@@ -391,6 +401,12 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         if (me.cashLimit > 0) {
             Spacer(Modifier.height(Rahal.space.md))
             com.rahalgo.ui.RahalCard(padding = Rahal.space.lg) { CashBar(held = me.cashHeld, limit = me.cashLimit) }
+        }
+
+        // **وأفضلُ أوقات الشغل** (قرارُ المالك ٢٠٢٦-١١-١١) — بطاقةٌ تُخفى إن لم تصل بياناتٌ كافية.
+        state.busyHours?.takeIf { it.top.isNotEmpty() }?.let {
+            Spacer(Modifier.height(Rahal.space.md))
+            BusyHoursCard(it)
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -450,11 +466,40 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
 @Composable
 private fun MapPrepStatus(
     downloading: Boolean,
+    ready: Boolean,
+    percent: Int,
+    downloadedBytes: Long,
+    totalBytes: Long,
     failed: Boolean,
     failure: com.rahalgo.map.data.MapFailure?,
     onRetry: () -> Unit,
 ) {
+    // ══════════════════════════════════════════════════════════════════
+    // **تقدّمٌ يُرى، و«جاهزة ✓» ثوانيَ ثمّ تغيب** (ملاحظةُ المالك ٢٠٢٦-١١-١١)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **«تُحضَّر خريطةُ مدينتك…» كانت تبقى بلا رقم**، فلا يُعرف أتتحرّك أم عالقة. **والنجاحُ يُقال مرّةً**
+    // إن رأى التحضيرَ في هذه الشاشة، ثمّ يُخفى — فمن فتحها والخريطةُ جاهزةٌ من أسبوع لا يرى شيئاً.
+    var sawPreparing by remember { mutableStateOf(false) }
+    var showReady by remember { mutableStateOf(false) }
+    if (downloading) sawPreparing = true
+    LaunchedEffect(ready, sawPreparing) {
+        if (ready && sawPreparing) {
+            showReady = true
+            kotlinx.coroutines.delay(READY_SHOWN_MS)
+            showReady = false
+            sawPreparing = false
+        }
+    }
     when {
+        showReady -> {
+            Text(
+                text = stringResource(R.string.offline_map_ready),
+                color = Rahal.colors.success,
+                style = Rahal.type.caption,
+            )
+            Spacer(Modifier.height(Rahal.space.md))
+        }
         failed -> {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -473,15 +518,37 @@ private fun MapPrepStatus(
             Spacer(Modifier.height(Rahal.space.md))
         }
         downloading -> {
+            // **المئويّةُ والميغاباتُ حين يُعرف الحجم** — وقبل ذلك (في الطابور) النصُّ القديم بلا رقمٍ كاذب.
+            val sized = totalBytes > 0
             Text(
-                text = stringResource(R.string.offline_map_preparing),
+                text = if (sized) {
+                    stringResource(
+                        R.string.offline_map_preparing_pct,
+                        percent.toString(),
+                        megabytes(downloadedBytes),
+                        megabytes(totalBytes),
+                    )
+                } else {
+                    stringResource(R.string.offline_map_preparing)
+                },
                 color = Rahal.colors.inkMuted,
                 style = Rahal.type.caption,
             )
+            if (sized) {
+                Spacer(Modifier.height(Rahal.space.xs))
+                Bar(ratio = percent / 100f, color = Rahal.colors.brand)
+            }
             Spacer(Modifier.height(Rahal.space.md))
         }
     }
 }
+
+/** **كم تبقى «جاهزة ✓» ظاهرة** قبل أن تغيب. */
+private const val READY_SHOWN_MS = 4_000L
+
+/** **الميغاباتُ بمنزلةٍ عشريّةٍ واحدة** — بأرقامٍ غربيّة. */
+private fun megabytes(bytes: Long): String =
+    String.format(java.util.Locale.US, "%.1f", bytes / 1_048_576.0)
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -523,7 +590,8 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
         Modifier
             .fillMaxWidth()
             .clip(Rahal.shape.lg)
-            .background(if (on) Rahal.colors.brand else Rahal.colors.field)
+            // **وأخضرُ حين يعمل** (ملاحظةُ المالك ٢٠٢٦-١١-١١): كان أزرقَ بمفتاحٍ أخضرَ عليه فلا يُقرأ.
+            .background(if (on) Rahal.colors.success else Rahal.colors.field)
             .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.xl),
     ) {
         // ══════════════════════════════════════════════════════════════
@@ -551,7 +619,7 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
                     Modifier
                         .size(Rahal.space.md)
                         .clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(if (on) Rahal.colors.success else Rahal.colors.inkMuted),
+                        .background(if (on) Rahal.colors.onBrand else Rahal.colors.inkMuted),
                 )
                 Spacer(Modifier.size(Rahal.space.sm))
                 Text(
@@ -568,18 +636,39 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
                     color = if (on) Rahal.colors.onBrand else Rahal.colors.brand,
                 )
             } else {
+                // **مفتاحٌ بعلامة ✓ في زرّه حين يعمل** — الزرُّ الأبيضُ وحدَه على اليسار كان يُقرأ «مطفأ».
                 Switch(
                     checked = on,
                     onCheckedChange = onToggle,
+                    thumbContent = if (on) {
+                        {
+                            Icon(
+                                painter = painterResource(com.rahalgo.ui.R.drawable.ic_check),
+                                contentDescription = null,
+                                tint = Rahal.colors.onBrand,
+                                modifier = Modifier.size(SwitchDefaults.IconSize),
+                            )
+                        }
+                    } else {
+                        null
+                    },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Rahal.colors.onBrand,
-                        checkedTrackColor = Rahal.colors.success,
+                        checkedThumbColor = Rahal.colors.success,
+                        checkedTrackColor = Rahal.colors.onBrand,
+                        checkedBorderColor = Rahal.colors.onBrand,
                         uncheckedThumbColor = Rahal.colors.canvas,
                         uncheckedTrackColor = Rahal.colors.inkMuted,
                     ),
                 )
             }
         }
+        Spacer(Modifier.height(Rahal.space.xs))
+        // **وما يفعله المفتاحُ يُقال بجانبه** (ملاحظةُ المالك ٢٠٢٦-١١-١١) — «شغّال — اضغط لتسكّر الدوام».
+        Text(
+            text = stringResource(if (on) R.string.shift_switch_on else R.string.shift_switch_off),
+            color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
+            style = Rahal.type.bodyStrong,
+        )
         Spacer(Modifier.height(Rahal.space.sm))
         // **وما يترتّب عليه تحته** — لا يُترك ليُستنتج من كلمتين.
         Text(
@@ -678,6 +767,10 @@ data class HomeState(
     val terms: com.rahalgo.shared.model.DriverTerms? = null,
     val termsBusy: Boolean = false,
     val termsError: String = "",
+    /** **ملخّصُ نهاية الدوام** — يُفتح عند سكّره، وفارغٌ لا نافذة (٢٠٢٦-١١-١١). */
+    val shiftSummary: ShiftSummary? = null,
+    /** **أفضلُ أوقات الشغل** — وفارغٌ أو بلا ساعاتٍ تُخفى البطاقة. */
+    val busyHours: com.rahalgo.shared.model.BusyHours? = null,
 ) {
     /** **أيُنتَج موقعٌ فعلاً؟** — **إذناً وخدمةً معاً.** */
     val locationOn: Boolean get() = Readiness.canWork(readiness)
@@ -773,6 +866,7 @@ data class HomeActions(
     val openTerms: () -> Unit = {},
     val acceptTerms: () -> Unit = {},
     val closeTerms: () -> Unit = {},
+    val closeSummary: () -> Unit = {},
 )
 
 /**
@@ -802,15 +896,21 @@ private fun CashBar(held: Long, limit: Long) {
     Spacer(Modifier.height(Rahal.space.sm))
     Bar(ratio = ratio, color = com.rahalgo.driver.menu.cashBarColor(ratio))
     Spacer(Modifier.height(Rahal.space.sm))
+    // **«بتقدر تحمل لحد X» — السقفُ كما هو** لا ما بقي منه (ملاحظةُ المالك ٢٠٢٦-١١-١١: «يبقى ٩٬٨٩٨» لم يُفهم).
     Text(
         text = if (left > 0) {
-            stringResource(R.string.home_cash_left, money(left))
+            stringResource(R.string.home_cash_left, money(limit))
         } else {
             stringResource(R.string.home_cash_over)
         },
         color = if (left > 0) Rahal.colors.inkMuted else Rahal.colors.danger,
         style = Rahal.type.caption,
     )
+    // **ومن معه نقدٌ يسلّمه من هنا** — ورقةٌ بالمبلغ وعنوان المكتب ورقمه، بلا حركة مال.
+    if (held > 0) {
+        Spacer(Modifier.height(Rahal.space.md))
+        HandInButton(held = held)
+    }
 }
 
 /**

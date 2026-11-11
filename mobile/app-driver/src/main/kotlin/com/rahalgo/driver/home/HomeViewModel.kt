@@ -66,6 +66,12 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
      * كلَّ ١٥ ثانيةً إن انقطعت). **فـ`busy` لفعل السائق وحدَه**، والقراءةُ لها رايتُها.
      */
     private var refreshing = false
+    private var busyAt = 0L
+
+    /** **يغلق ملخّصَ نهاية الدوام.** */
+    fun closeSummary() {
+        state = state.copy(shiftSummary = null)
+    }
 
     fun refresh() {
         if (refreshing || state.busy) return
@@ -81,7 +87,17 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 // **وفشلُه لا يُسقط اللوحة**: `runCatching` يُبقي ما وصل،
                 // **ومفتاحُ العمل أهمُّ ما فيها.**
                 val goal = runCatching { backend.me.incentives() }.getOrNull() ?: state.goal
-                state.copy(me = me, goal = goal, readiness = readiness())
+                // **وأفضلُ أوقات الشغل أرقامٌ تتبدّل بالساعة** (٢٠٢٦-١١-١١): تُجلب أوّلَ مرّةٍ وكلَّ نصف
+                // ساعة، **وفشلُها يُخفي البطاقةَ ولا يُسقط اللوحة.**
+                val now = System.currentTimeMillis()
+                var busy = state.busyHours
+                if (busy == null || now - busyAt > BUSY_REFRESH_MS) {
+                    runCatching { backend.driver.busyHours() }.getOrNull()?.let {
+                        busy = it
+                        busyAt = now
+                    }
+                }
+                state.copy(me = me, goal = goal, readiness = readiness(), busyHours = busy)
             } catch (e: Exception) {
                 state.copy(error = describe(e))
             } finally {
@@ -353,11 +369,15 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 // أوّل دخول، **فلا بطاقةَ «اعمل في الخلفية» على الرئيسيّة بعد اليوم.**
                 // (خدمةُ الموقع أماميّةٌ فتعمل والتطبيقُ ظاهر؛ والإعفاءُ للتعافي
                 // بعد قتل النظام — استرشاديٌّ لا يحجب العمل، انظر `Readiness`.)
+                // **وملخّصُ الدوام عند سكّره** (قرارُ المالك ٢٠٢٦-١١-١١) — لا عند الخروج من التطبيق (`logout`)،
+                // **فمن يغادر التطبيقَ لا يريد نافذةً تُفتح خلفه.** والأرقامُ من `me` بعد السكّر: يومُ حسابه ما زال قائماً.
+                val summary = if (!on && via != "logout") ShiftSummary.of(me) else null
                 state = state.copy(
                     me = me,
                     busy = false,
                     readiness = readiness(),
                     odometer = null,
+                    shiftSummary = summary ?: state.shiftSummary,
                 )
                 // **والخروجُ الذي انتظر صورةَ الليل يُكمَل الآن.**
                 afterLogout?.let {
@@ -608,6 +628,9 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private fun describe(e: Exception): String = apiError(getApplication(), e)
 
     private companion object {
+        /** **نصفُ ساعة** بين قراءتين لأفضل الأوقات — الخادمُ نفسُه يحفظها ساعة. */
+        const val BUSY_REFRESH_MS = 30 * 60 * 1000L
+
         /** **قراءةُ البداية تُعاد نصفَ ساعة** — كما يقبلها المحرّك. */
         const val PENDING_MS = 29 * 60 * 1000L
     }

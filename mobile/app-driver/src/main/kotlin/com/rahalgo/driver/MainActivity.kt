@@ -799,6 +799,8 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                 // تنقله إلى اللوحة** حيث سطرُ رصيدٍ لا كشفُ حساب.
                 onWallet = { overlay.show(Overlay.Wallet) },
                 showBalance = overlay.current != Overlay.Wallet,
+                // **ورقمُه رصيدُ محفظته لا ما عليه للمكتب** (ملاحظةُ المالك ٢٠٢٦-١١-١١) — يُقال فوقه.
+                balanceCaption = stringResource(R.string.wallet_chip_label),
                 // ══════════════════════════════════════════════════════════
                 // **والجرسُ يفتح ويُغلق بلمسته هو**
                 // ══════════════════════════════════════════════════════
@@ -1182,6 +1184,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         openTerms = { home.openTerms() },
                         acceptTerms = home::acceptTerms,
                         closeTerms = home::closeTerms,
+                        closeSummary = home::closeSummary,
                         enableLocation = {
                             when {
                                 !LocationPermission.granted(context) ->

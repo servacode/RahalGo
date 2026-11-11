@@ -51,8 +51,8 @@
 
          **والفرقُ ليس لفظاً**: من ظنّه مالَه انتظر أن يصله، **ومن
          عرف أنّه دَينٌ عليه سلّمه.** -->
-    <string name="home_cash_bar">مدين للمكتب بـ</string>
-    <string name="home_cash_left">يبقى %1$s</string>
+    <string name="home_cash_bar">معك للمكتب:</string>
+    <string name="home_cash_left">بتقدر تحمل لحد %1$s</string>
     <string name="home_cash_over">تجاوزت السقف</string>
     <string name="home_target_left_one">يبقى طلب واحد</string>
     <string name="home_target_left_two">يبقى طلبان</string>
@@ -462,7 +462,7 @@
     <!-- صندوقي — النصوصُ نفسُها التي في شاشة الويب -->
     <!-- **وكذلك في صندوقي** — واللفظُ واحدٌ في الشاشتين: **ولفظان
          لمعنًى واحدٍ يجعلان السائقَ يظنّهما رقمين.** -->
-    <string name="cash_held">مدين للمكتب الآن بـ</string>
+    <string name="cash_held">معك للمكتب الآن</string>
     <string name="cash_limit">السقف</string>
     <string name="cash_left">يبقى قبل السقف</string>
     <string name="cash_over">تجاوزت السقف ب</string>
@@ -825,4 +825,38 @@
         <item>الغرب</item>
         <item>الشمال الغربي</item>
     </string-array>
+
+    <!-- ═══ دفعة السائق ٢٠٢٦-١١-١١ ═══ -->
+    <string name="terms_banner_on_shift">وافق على شروط العمل الجديدة — لازم توافق قبل ما تفتح دوامك الجاي</string>
+    <string name="why_missing">ينقصك شي لتوصلك الطلبات</string>
+    <string name="why_missing_button">افتح لوحتي وأصلحه</string>
+    <string name="wallet_chip_label">رصيد محفظتك</string>
+    <string name="offline_map_preparing_pct">تُحضَّر خريطة مدينتك… %1$s%% (%2$s من %3$s ميغا)</string>
+    <string name="offline_map_ready">الخريطة جاهزة ✓</string>
+    <string name="shift_switch_on">شغّال — اضغط لتسكّر الدوام</string>
+    <string name="shift_switch_off">مسكّر — اضغط لتفتح الدوام</string>
+    <string name="shift_summary_title">ملخص دوامك</string>
+    <string name="shift_summary_delivered">سلّمت اليوم</string>
+    <string name="shift_summary_earned">كسبت اليوم</string>
+    <string name="shift_summary_km">المسافة اليوم</string>
+    <string name="shift_summary_cash">معك للمكتب الآن</string>
+    <string name="shift_summary_cash_hint">سلّمهم للمكتب قبل ما تخلص يومك</string>
+    <string name="shift_summary_done">تمام</string>
+    <string name="busy_hours_title">أفضل أوقات الشغل</string>
+    <string name="busy_hours_best">أكتر وقت فيه طلبات: %1$s</string>
+    <string name="busy_hours_note">حسب طلبات آخر %1$s يوم</string>
+    <string name="busy_period_night">الليل</string>
+    <string name="busy_period_morning">الصبح</string>
+    <string name="busy_period_noon">الضهر</string>
+    <string name="busy_period_afternoon">العصر</string>
+    <string name="busy_period_evening">المسا</string>
+    <string name="handin_button">سلّم المصاري للمكتب</string>
+    <string name="handin_title">تسليم المصاري للمكتب</string>
+    <string name="handin_amount">المبلغ اللي معك للمكتب</string>
+    <string name="handin_how">روح للمكتب وسلّم المبلغ كامل للموظف. التسليم بيتسجّل من عند المكتب، وما في شي بيتحرّك من التطبيق.</string>
+    <string name="handin_address">عنوان المكتب: %1$s</string>
+    <string name="handin_phone">رقم المكتب: %1$s</string>
+    <string name="handin_call">اتصل بالمكتب</string>
+    <string name="handin_none">ما انحطّ عنوان ولا رقم للمكتب بعد — تواصل معنا من القائمة.</string>
+    <string name="handin_close">إغلاق</string>
 </resources>

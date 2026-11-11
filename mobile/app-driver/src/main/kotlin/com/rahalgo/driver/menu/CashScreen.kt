@@ -117,6 +117,11 @@ fun CashScreen(vm: SectionsViewModel) {
                     style = Rahal.type.label,
                 )
             }
+            // **ومن معه نقدٌ يسلّمه من هنا** (٢٠٢٦-١١-١١) — ورقةٌ بالمبلغ وعنوان المكتب ورقمه، بلا حركة مال.
+            if (held > 0) {
+                Spacer(Modifier.height(Rahal.space.md))
+                com.rahalgo.driver.home.HandInButton(held = held)
+            }
         }
 
         // **والتحذيرُ عند الحدّ لا بعده** — من بلغ السقفَ وقف طابورُه.
