@@ -270,6 +270,23 @@ export interface MenuSummary {
   unavailable: number;
   no_photo: number;
   sections: MenuSummarySection[];
+  /** **بوتُ «أضف أصناف بصورة واتساب» شغّالٌ لهذا المتجر؟** المفتاحُ العامّ ومفتاحُه معاً (٢٠٢٦-١١-١١). */
+  wa_items_on?: boolean;
+}
+
+/** **صنفٌ من «الأكتر مبيعاً هالأسبوع»** — الكميةُ المسلَّمةُ في آخر ٧ أيام. */
+export interface TopItem {
+  item_id: string;
+  name: string;
+  qty: number;
+  image_thumb_url?: string | null;
+}
+
+/** **ردُّ `GET …/top-items`** — الأصنافُ ورابطُ صفحة المتجر عند الزبائن (لزرّ «شارك متجرك»). */
+export interface TopItems {
+  days: number;
+  items: TopItem[];
+  share_url: string;
 }
 
 /** **One keyset page of items** — `total` on the first page only (-1 after). */

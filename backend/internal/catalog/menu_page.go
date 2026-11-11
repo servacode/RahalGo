@@ -52,15 +52,23 @@ type MenuSummary struct {
 	// NoPhoto every item of the store without a photo — the same count as GET .../menu/no-photo.
 	NoPhoto  int                  `json:"no_photo"`
 	Sections []MenuSummarySection `json:"sections"`
+	// WaItemsStore the store's own WhatsApp add-items flag (0531). Not sent as is: the handler
+	// combines it with the global switch into WaItemsOn.
+	WaItemsStore bool `json:"-"`
+	// WaItemsOn true only when the global switch (merchants.wa_items_enabled) AND the store's
+	// own flag are both on — the items screen shows the "add items by WhatsApp" hint from it
+	// (owner 2026-11-11: the hint must not show while the bot is off).
+	WaItemsOn bool `json:"wa_items_on"`
 }
 
 // GetMenuSummary the light head of the paged menu. Sections are in market order
 // (sort_order, name, id) — the same order the paged items follow.
 func (s *Service) GetMenuSummary(ctx context.Context, merchantID string) (*MenuSummary, error) {
-	if _, err := s.merchantByID(ctx, merchantID); err != nil {
+	m, err := s.merchantByID(ctx, merchantID)
+	if err != nil {
 		return nil, err
 	}
-	out := &MenuSummary{Sections: []MenuSummarySection{}}
+	out := &MenuSummary{Sections: []MenuSummarySection{}, WaItemsStore: m.WaItemsEnabled}
 	rows, err := s.db.Query(ctx, `
 		SELECT ps.id, ps.name, sm.path, sm.thumb_path, ps.sort_order,
 		       count(*), count(*) FILTER (WHERE NOT i.available)

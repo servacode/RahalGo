@@ -215,9 +215,10 @@ func TestPagedMenu_Merchant(t *testing.T) {
 	}
 	var sum struct {
 		Data struct {
-			Total       int `json:"total"`
-			Unavailable int `json:"unavailable"`
-			NoPhoto     int `json:"no_photo"`
+			Total       int  `json:"total"`
+			Unavailable int  `json:"unavailable"`
+			NoPhoto     int  `json:"no_photo"`
+			WaItemsOn   bool `json:"wa_items_on"`
 			Sections    []struct {
 				ID          string `json:"id"`
 				Name        string `json:"name"`
@@ -229,6 +230,31 @@ func TestPagedMenu_Merchant(t *testing.T) {
 	if err := json.Unmarshal(body, &sum); err != nil {
 		t.Fatal(err)
 	}
+	// the "add items by WhatsApp" hint: on only when the global switch AND the store flag are on
+	// (owner 2026-11-11). The global default is off.
+	if sum.Data.WaItemsOn {
+		t.Fatalf("wa_items_on must be false while the global switch is off")
+	}
+	waOn := func(global, store bool) bool {
+		if _, err := pool.Exec(ctx, `UPDATE merchants SET wa_items_enabled = $2 WHERE id = $1`, f.merchantID, store); err != nil {
+			t.Fatal(err)
+		}
+		f.srv.settings.Set(ctx, "merchants.wa_items_enabled", global, nil)
+		_, b := f.get(t, f.owner, base+"/menu/summary")
+		var r struct {
+			Data struct {
+				WaItemsOn bool `json:"wa_items_on"`
+			} `json:"data"`
+		}
+		_ = json.Unmarshal(b, &r)
+		return r.Data.WaItemsOn
+	}
+	for _, c := range []struct{ g, s, want bool }{{false, true, false}, {true, false, false}, {true, true, true}} {
+		if got := waOn(c.g, c.s); got != c.want {
+			t.Fatalf("wa_items_on(global=%v store=%v) = %v, want %v", c.g, c.s, got, c.want)
+		}
+	}
+	f.srv.settings.Set(ctx, "merchants.wa_items_enabled", false, nil)
 	var wantOff int
 	_ = pool.QueryRow(ctx, `SELECT count(*) FROM menu_items WHERE merchant_id = $1 AND platform_section_id IS NOT NULL AND NOT available`, f.merchantID).Scan(&wantOff)
 	if sum.Data.Total != n || sum.Data.Unavailable != wantOff || sum.Data.NoPhoto != n {

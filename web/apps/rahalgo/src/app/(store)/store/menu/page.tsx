@@ -86,6 +86,7 @@ import type { MenuItem, MenuItemsPage, MenuSummary } from "@/lib/store/types";
 import { dollars, fill } from "@/lib/customer/texts";
 import { itemUsd, priceLine } from "@/lib/store/usd";
 import { useShopToast } from "@/components/customer/toast";
+import { QuickPriceModal } from "@/components/store/QuickPrice";
 
 const m = getMessages(defaultLocale);
 const M = m.store.menu;
@@ -110,7 +111,18 @@ function metaLine(it: MenuItem): string {
  * **بطاقةُ صنف (عرضُ الشبكة)** — صورتُه فوق، ثمّ اسمُه وسعرُه، ثمّ مفتاحُ توفّره.
  * **والبطاقةُ كلُّها تفتح المحرّر، والمفتاحُ وحدَه يبدّل التوفّر.**
  */
-function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: boolean; onToggle: () => void }) {
+function ItemCard({
+  item,
+  disabled,
+  onToggle,
+  onPrice,
+}: {
+  item: MenuItem;
+  disabled: boolean;
+  onToggle: () => void;
+  /** **لمسةُ السعر تفتح «تعديل السعر»** (٢٠٢٦-١١-١١) — و`undefined` لا تعديلَ (الموقوف). */
+  onPrice?: () => void;
+}) {
   // **صورةٌ كاملةٌ طوليّةٌ ٤:٥** (قرار المالك ٢٠٢٦-١١-٠٦): المصغّرةُ ٤٠٠ بكسل فتتشوّش في بطاقةٍ أطول.
   const img = mediaUrl(item.image_url || item.image_thumb_url);
   const [viewing, setViewing] = useState(false);
@@ -145,19 +157,33 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
         </Link>
       )}
       {img && viewing && <ImageViewer src={img} alt={item.name} onClose={() => setViewing(false)} />}
-      <Link href={`/store/menu/${item.id}`} aria-label={`${M.edit} · ${item.name}`} data-testid="store-menu-edit" className="flex flex-1 flex-col">
-        <span className={`flex flex-col gap-rg-xxs px-rg-md pt-rg-md ${dim}`}>
-          <span className="line-clamp-2 min-h-10 text-body font-bold leading-5 text-ink">{item.name}</span>
+      {/* **الاسمُ والسعرُ متلاصقان** (قرارُ المالك ٢٠٢٦-١١-١١: «فراغٌ كبيرٌ بين الاسم والسعر») — لا ارتفاعَ محجوزَ للاسم ولا للوصف. */}
+      <div className={`flex flex-1 flex-col gap-rg-xxs px-rg-md pt-rg-md ${dim}`}>
+        <Link href={`/store/menu/${item.id}`} aria-label={`${M.edit} · ${item.name}`} data-testid="store-menu-edit" className="flex flex-col gap-rg-xxs">
+          <span className="line-clamp-2 text-body font-bold leading-5 text-ink">{item.name}</span>
           {item.created_via === "whatsapp" && (
             <span className="pill self-start" data-tone="brand" data-testid="store-menu-wa-badge">
               {M.fromWhatsapp}
             </span>
           )}
-          <span className="line-clamp-2 min-h-8 text-caption leading-4 text-ink-muted">{desc}</span>
-          <DualPrice usd={itemUsd(item)} syp={item.price} stacked className="mt-rg-xs text-body-lg" />
-          {item.approved === false && item.review_note && <span className="line-clamp-2 text-caption text-danger">{item.review_note}</span>}
-        </span>
-      </Link>
+          {desc && <span className="line-clamp-1 text-caption leading-4 text-ink-muted">{desc}</span>}
+        </Link>
+        {onPrice ? (
+          <button
+            type="button"
+            onClick={onPrice}
+            aria-label={`${M.editPrice} · ${item.name}`}
+            data-testid="store-menu-price"
+            className="flex items-center gap-rg-xs self-start rounded-control text-start hover:bg-field"
+          >
+            <DualPrice usd={itemUsd(item)} syp={item.price} stacked className="text-body-lg" />
+            <IconEdit size={13} className="shrink-0 text-ink-muted" />
+          </button>
+        ) : (
+          <DualPrice usd={itemUsd(item)} syp={item.price} stacked className="text-body-lg" />
+        )}
+        {item.approved === false && item.review_note && <span className="line-clamp-2 text-caption text-danger">{item.review_note}</span>}
+      </div>
       {/* **سطرُ التوفّر كلُّه زرٌّ** (≥ ٤٤) — كان المفتاحُ وحدَه ٢٤ بكسلاً. */}
       <button
         type="button"
@@ -413,6 +439,12 @@ export default function MenuPage() {
     }
   }
 
+  /** **الصنفُ الذي يُعدَّل سعرُه الآن** — نافذةُ «تعديل السعر» (٢٠٢٦-١١-١١). */
+  const [priceItem, setPriceItem] = useState<MenuItem | null>(null);
+  const openPrice = (it: MenuItem) => {
+    if (store?.status !== "suspended") setPriceItem(it);
+  };
+
   async function duplicate(item: MenuItem) {
     if (dupBusy.current) return;
     dupBusy.current = true;
@@ -567,6 +599,17 @@ export default function MenuPage() {
 
   const dialogs = (
     <>
+      {priceItem && (
+        <QuickPriceModal
+          item={priceItem}
+          storeId={id}
+          onClose={() => setPriceItem(null)}
+          onSaved={(fresh) => {
+            setItems((cur) => cur.map((x) => (x.id === fresh.id ? fresh : x)));
+            toast(M.priceSaved, "success");
+          }}
+        />
+      )}
       <Confirm
         open={askDelete}
         title={fill(SH.bulkDeleteQ, { n: fmtNum(picked.size) })}
@@ -648,7 +691,7 @@ export default function MenuPage() {
           }
         />
 
-        {!suspended && <p className="text-caption text-ink-muted" data-testid="store-menu-wa-hint">{M.whatsappHint}</p>}
+        {!suspended && data?.wa_items_on && <p className="text-caption text-ink-muted" data-testid="store-menu-wa-hint">{M.whatsappHint}</p>}
 
         {/* ── التبويبات: الكلّ · غير المتوفر · بلا صورة (كلُّها من الخادم) ── */}
         <LineTabs items={tabs} value={tab} onChange={(k) => setTab(k)} ariaLabel={M.filters} />
@@ -793,13 +836,22 @@ export default function MenuPage() {
                         )}
                       </td>
                       <td className="whitespace-nowrap">
-                        {i.price_currency === "USD" && i.merchant_price_usd != null ? (
-                          <>
+                        {/* **لمسةُ السعر تعدّله** (قرارُ المالك ٢٠٢٦-١١-١١) — نافذةٌ فيها السعرُ وحدَه. */}
+                        <button
+                          type="button"
+                          disabled={suspended}
+                          onClick={() => openPrice(i)}
+                          aria-label={`${M.editPrice} · ${i.name}`}
+                          data-testid="store-menu-price"
+                          className="inline-flex items-center gap-rg-xs rounded-control text-start enabled:hover:bg-field"
+                        >
+                          {i.price_currency === "USD" && i.merchant_price_usd != null ? (
                             <DualPrice usd={i.merchant_price_usd} syp={i.price} />
-                          </>
-                        ) : (
-                          <b>{fmtMoney(i.price)}</b>
-                        )}
+                          ) : (
+                            <b>{fmtMoney(i.price)}</b>
+                          )}
+                          {!suspended && <IconEdit size={13} className="shrink-0 text-ink-muted" />}
+                        </button>
                       </td>
                       <td>
                         <button
@@ -841,7 +893,7 @@ export default function MenuPage() {
         ) : (
           <ul className="grid grid-cols-2 gap-rg-md sm:grid-cols-3 md:grid-cols-4 lg:gap-rg-lg xl:grid-cols-5 2xl:grid-cols-6">
             {items.map((it) => (
-              <ItemCard key={it.id} item={it} disabled={suspended} onToggle={() => void toggle(it)} />
+              <ItemCard key={it.id} item={it} disabled={suspended} onToggle={() => void toggle(it)} onPrice={suspended ? undefined : () => openPrice(it)} />
             ))}
           </ul>
         )}
@@ -875,7 +927,7 @@ export default function MenuPage() {
           )
         }
       />
-      {!suspended && <p className="text-caption text-ink-muted" data-testid="store-menu-wa-hint">{M.whatsappHint}</p>}
+      {!suspended && data?.wa_items_on && <p className="text-caption text-ink-muted" data-testid="store-menu-wa-hint">{M.whatsappHint}</p>}
       <div className="flex gap-rg-md">
         <label className="relative min-w-0 flex-1">
           <span className="pointer-events-none absolute inset-y-0 start-2.5 flex items-center text-ink-muted" aria-hidden>
@@ -934,9 +986,20 @@ export default function MenuPage() {
                   <RowThumb item={i} size={46} />
                   <span className={`min-w-0 flex-1 py-rg-sm ${i.available ? "" : "opacity-60"}`}>
                     <span className="line-clamp-2 block break-words text-body-lg font-bold leading-snug [text-wrap:balance]">{i.name}</span>
-                    <span className="console-meta block [text-wrap:balance]">{metaLine(i)}</span>
+                    <span className="console-meta block [text-wrap:balance]">{i.platform_section_name || M.noSection}</span>
                   </span>
                 </Link>
+                {/* **السعرُ زرٌّ منفصلٌ** (٢٠٢٦-١١-١١) — لمستُه تعدّله، واللمسةُ على الباقي تفتح المحرّر. */}
+                <button
+                  type="button"
+                  disabled={suspended}
+                  onClick={() => openPrice(i)}
+                  aria-label={`${M.editPrice} · ${i.name}`}
+                  data-testid="store-menu-price"
+                  className={`min-h-11 shrink-0 rounded-control px-rg-xs text-start text-caption font-bold ${i.available ? "" : "opacity-60"}`}
+                >
+                  <DualPrice usd={itemUsd(i)} syp={i.price} stacked />
+                </button>
                 <button
                   type="button"
                   role="switch"

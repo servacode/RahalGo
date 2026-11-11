@@ -210,6 +210,17 @@ private fun ItemsList(
     // **Paged** (owner 2026-11-07): the chips and counts come from the summary, the items page by
     // page from the server for the open chip / search — see `MenuViewModel`.
     val byId = vm.items.associateBy { it.id }
+    vm.priceItem?.let { it0 ->
+        com.rahalgo.ui.menu.QuickPriceDialog(
+            itemName = it0.name,
+            usd = it0.priceCurrency == com.rahalgo.ui.menu.CURRENCY_USD,
+            initial = if (it0.priceCurrency == com.rahalgo.ui.menu.CURRENCY_USD) com.rahalgo.ui.menu.usdText(it0.merchantPriceUsd) else it0.price.toString(),
+            busy = vm.priceBusy,
+            error = vm.priceError,
+            onSave = { vm.savePrice(it) },
+            onDismiss = { vm.cancelPrice() },
+        )
+    }
     com.rahalgo.ui.menu.MenuItemsGrid(
         groups = emptyList(),
         paging = com.rahalgo.ui.menu.GridPaging(
@@ -277,8 +288,14 @@ private fun ItemsList(
         onEdit = { g -> byId[g.id]?.let(vm::editItem) },
         imageAspect = 0.8f,
         zoomable = true,
-        // **سطرُ تلميحٍ واحد**: إضافةُ الأصناف بصورةٍ على الواتساب (٢٠٢٦-١١-٠٩).
-        header = if (vm.suspended) null else {
+        // **القائمةُ افتراضاً وزرُّ تبديلٍ للشبكة** (قرارُ المالك ٢٠٢٦-١١-١١).
+        listMode = vm.listMode,
+        onListMode = { vm.chooseListMode(it) },
+        // **ولمسةُ السعر تعدّله** (٢٠٢٦-١١-١١) — والموقوفُ لا يعدّل.
+        onPrice = if (vm.suspended) null else { g -> vm.editPrice(g.id) },
+        // **سطرُ تلميحٍ واحد**: إضافةُ الأصناف بصورةٍ على الواتساب (٢٠٢٦-١١-٠٩) —
+        // **ولا يظهر إلا والبوتُ شغّال** (مفتاحُه العامّ ومفتاحُ المتجر، ٢٠٢٦-١١-١١).
+        header = if (vm.suspended || !vm.summary.waItemsOn) null else {
             {
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                     androidx.compose.material3.Text(

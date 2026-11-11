@@ -98,7 +98,7 @@ export default function StoreTopBar({
       <div className="flex items-center gap-rg-sm text-body text-ink-muted">
         {stores.length > 1 ? (
           <ActionMenu
-            variant="ghost"
+            variant="secondary"
             size="sm"
             chevron={false}
             ariaLabel={SH.switchStore}

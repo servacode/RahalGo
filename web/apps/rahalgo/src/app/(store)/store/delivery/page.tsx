@@ -716,8 +716,9 @@ export default function DeliveryPage() {
             {ask === "waiting" && askReq && (
               <div className="flex flex-col gap-rg-sm rounded-control border border-line bg-field p-rg-md">
                 <p className="text-caption text-ink-muted">{askReq.whatsapp_sent ? D.askLocWaiting : D.askLocNotSent}</p>
-                {!askReq.whatsapp_sent && (
-                  <div className="flex flex-wrap gap-rg-md">
+                {/* **«انسخ الرابط» ظاهرٌ دائماً باسمه ومعه تأكيدٌ «انتسخ الرابط»** (قرارُ المالك ٢٠٢٦-١١-١١). */}
+                <div className="flex flex-wrap gap-rg-md">
+                  {!askReq.whatsapp_sent && (
                     <a
                       className="text-body font-bold text-accent-text"
                       href={askReq.wa_url}
@@ -726,11 +727,11 @@ export default function DeliveryPage() {
                     >
                       {D.askLocShare}
                     </a>
-                    <button type="button" className="inline-action" onClick={() => void copyLink()}>
-                      {copied ? D.askLocCopied : D.askLocCopy}
-                    </button>
-                  </div>
-                )}
+                  )}
+                  <button type="button" className="inline-action" onClick={() => void copyLink()} data-testid="delivery-copy-link">
+                    {copied ? D.askLocCopied : D.askLocCopy}
+                  </button>
+                </div>
               </div>
             )}
             {ask === "received" && (

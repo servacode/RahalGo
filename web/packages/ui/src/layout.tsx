@@ -957,16 +957,21 @@ export function StatTile({
   label,
   value,
   tone = "default",
+  compact = false,
 }: {
   label: string;
   value: string | number;
   tone?: "default" | "success" | "danger";
+  /** **مرصوص** (٢٠٢٦-١١-١١: «مربّعات اليوم طويلةٌ وفيها فراغ») — بلا ارتفاعٍ محجوز للاسم وبحشوةٍ أصغر. */
+  compact?: boolean;
 }) {
   const valueCls = { default: "text-ink", success: "text-success", danger: "text-danger" }[tone];
   return (
-    <div className="flex h-full flex-col items-center justify-center rounded-rg-md bg-primary-tint px-rg-sm py-rg-md text-center">
-      <span className="line-clamp-2 min-h-10 text-caption text-ink-muted">{label}</span>
-      <span className={`mt-rg-xs text-section-title tabular-nums ${valueCls}`}>
+    <div
+      className={`flex h-full flex-col items-center justify-center rounded-rg-md bg-primary-tint px-rg-sm text-center ${compact ? "py-rg-sm" : "py-rg-md"}`}
+    >
+      <span className={`text-caption text-ink-muted ${compact ? "line-clamp-1" : "line-clamp-2 min-h-10"}`}>{label}</span>
+      <span className={`${compact ? "" : "mt-rg-xs "}text-section-title tabular-nums ${valueCls}`}>
         {typeof value === "number" ? fmtNum(value) : value}
       </span>
     </div>

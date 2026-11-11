@@ -93,7 +93,6 @@ fun StoreScreen(
     onUnavailable: () -> Unit = {},
     onOffers: () -> Unit = {},
     onPrices: () -> Unit = {},
-    onDelivery: () -> Unit = {},
     onTodayOrders: () -> Unit = {},
     stores: List<Store> = emptyList(),
     onSwitch: (String) -> Unit = {},
@@ -201,7 +200,31 @@ fun StoreScreen(
                         )
                         // **تغييرُ الأسعار = أوراقٌ نقديّة في كلّ مكان، والنسبةُ للعروض وحدَها** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩).
                         QuickAction(com.rahalgo.ui.R.drawable.ic_banknotes, stringResource(R.string.home_quick_prices), Rahal.colors.brand, Modifier.weight(1f), onClick = onPrices)
-                        QuickAction(com.rahalgo.ui.R.drawable.ic_moto, stringResource(R.string.home_quick_delivery), Rahal.colors.brand, Modifier.weight(1f), onClick = onDelivery)
+                        // **«شارك متجرك» بدل «اطلب توصيلة»** (قرارُ المالك ٢٠٢٦-١١-١١) — «توصيلة» تبويبٌ تحت.
+                        val shareUrl = vm.top?.shareUrl.orEmpty()
+                        val shareMsg = stringResource(R.string.home_share_text, store.name, shareUrl)
+                        val shareTitle = stringResource(R.string.home_quick_share)
+                        val ctx = androidx.compose.ui.platform.LocalContext.current
+                        QuickAction(
+                            com.rahalgo.ui.R.drawable.ic_share,
+                            shareTitle,
+                            Rahal.colors.brand,
+                            Modifier.weight(1f),
+                            enabled = shareUrl.isNotEmpty(),
+                            onClick = {
+                                runCatching {
+                                    ctx.startActivity(
+                                        android.content.Intent.createChooser(
+                                            android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(android.content.Intent.EXTRA_TEXT, shareMsg)
+                                            },
+                                            shareTitle,
+                                        ),
+                                    )
+                                }
+                            },
+                        )
                     }
                 }
 
@@ -227,12 +250,14 @@ fun StoreScreen(
                                 // **ويُضغط فيُريه طلباتِه** (قرارُ المالك ٢٠٢٦-١٠-٢٩): كان يرى «1» ولا يعرف ما يجهّز.
                                 onClick = onTodayOrders,
                                 modifier = Modifier.weight(1f),
+                                compact = true,
                             )
                             com.rahalgo.ui.StatTile(
                                 label = stringResource(R.string.home_delivered_today),
                                 value = r.summary.delivered.toString(),
                                 icon = R.drawable.ic_check,
                                 modifier = Modifier.weight(1f),
+                                compact = true,
                             )
                         }
                         // **والمستحقُّ مبيعاتُه ناقصَ العمولة** (قرارُ المالك ٢٠٢٦-٠٨-١٠).
@@ -245,6 +270,7 @@ fun StoreScreen(
                                 value = com.rahalgo.ui.money(r.summary.sales),
                                 icon = com.rahalgo.ui.R.drawable.ic_chart,
                                 modifier = Modifier.weight(1f),
+                                compact = true,
                             )
                             com.rahalgo.ui.StatTile(
                                 label = stringResource(R.string.reports_due_today),
@@ -252,10 +278,14 @@ fun StoreScreen(
                                 icon = com.rahalgo.ui.R.drawable.ic_wallet,
                                 valueColor = Rahal.colors.success,
                                 modifier = Modifier.weight(1f),
+                                compact = true,
                             )
                         }
                     }
                 }
+
+                // ── (ج٢) «الأكتر مبيعاً هالأسبوع» — أعلى ٥ أصناف بالكمية المسلَّمة (قرارُ المالك ٢٠٢٦-١١-١١) ──
+                vm.top?.let { t -> TopItemsCard(t.items) }
 
                 // ── (د) الإعداداتُ في مجموعتين ──
                 val notSet = stringResource(R.string.home_val_not_set)
@@ -263,7 +293,7 @@ fun StoreScreen(
                     SettingsRow(
                         icon = com.rahalgo.ui.R.drawable.ic_offer,
                         label = stringResource(R.string.store_sections),
-                        value = vm.mySections.joinToString(" · ") { it.name }.ifBlank { notSet },
+                        value = sectionsSummary(vm.mySections.map { it.name }).ifBlank { notSet },
                         warn = vm.sectionsKnown && vm.mySections.isEmpty(),
                     ) { vm.page = StorePage.Sections }
                     val pointSet = store.lat != null && store.lng != null && store.addressText.isNotBlank()
@@ -373,13 +403,14 @@ private fun HomeHeader(
             if (stores.size > 1) {
                 var open by remember { mutableStateOf(false) }
                 androidx.compose.foundation.layout.Box {
-                    Text(
-                        stringResource(R.string.store_switch),
-                        color = Rahal.colors.onBrand,
-                        fontWeight = FontWeight.Bold,
-                        style = Rahal.type.label,
-                        modifier = Modifier.clickable { open = true }.padding(vertical = Rahal.space.xs),
-                    )
+                    // **زرٌّ صغيرٌ لا نصٌّ مجرّد** (قرارُ المالك ٢٠٢٦-١١-١١) — حبرُه على لون الرأس.
+                    com.rahalgo.ui.RahalSmallButton(
+                        onClick = { open = true },
+                        ink = Rahal.colors.onBrand,
+                        modifier = Modifier.padding(top = Rahal.space.xs),
+                    ) {
+                        Text(stringResource(R.string.store_switch), fontWeight = FontWeight.Bold)
+                    }
                     androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
                         stores.forEach { s ->
                             androidx.compose.material3.DropdownMenuItem(
@@ -511,10 +542,11 @@ private fun QuickAction(
     tint: Color,
     modifier: Modifier = Modifier,
     badge: Int = 0,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     Box(modifier.fillMaxHeight()) {
-        com.rahalgo.ui.IconTile(icon = icon, label = label, tint = tint, onClick = onClick)
+        com.rahalgo.ui.IconTile(icon = icon, label = label, tint = tint, enabled = enabled, onClick = onClick)
         if (badge > 0) {
             Text(
                 badge.toString(),
@@ -527,6 +559,71 @@ private fun QuickAction(
                     .background(Rahal.colors.danger)
                     .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
             )
+        }
+    }
+}
+
+/**
+ * **أقسامُ السوق في سطرٍ مختصر** (قرارُ المالك ٢٠٢٦-١١-١١: ٣١ اسماً بفواصل لا تُقرأ) — «٣١ قسم · أوّل ثلاثة …».
+ * وثلاثةٌ فأقلّ تُعرض أسماؤها كلُّها بلا عدّ. والسطرُ كلُّه يفتح محرّرَ الأقسام.
+ */
+@Composable
+private fun sectionsSummary(names: List<String>): String = when {
+    names.isEmpty() -> ""
+    names.size <= 3 -> names.joinToString(" · ")
+    else -> stringResource(R.string.home_sections_many, names.size, names.take(3).joinToString(" · "))
+}
+
+/** **«الأكتر مبيعاً هالأسبوع»** — خمسةٌ بمصغّراتها وكمّياتها، ورسالةٌ لطيفةٌ إن لم يُسلَّم شيء. */
+@Composable
+private fun TopItemsCard(items: List<com.rahalgo.shared.merchant.TopItem>) {
+    Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+        com.rahalgo.ui.SectionHeader(stringResource(R.string.home_top_title))
+        com.rahalgo.ui.RahalCard(padding = Rahal.space.sm) {
+            if (items.isEmpty()) {
+                Text(
+                    stringResource(R.string.home_top_empty),
+                    color = Rahal.colors.inkMuted,
+                    style = Rahal.type.body,
+                    modifier = Modifier.padding(Rahal.space.sm),
+                )
+            } else {
+                items.forEachIndexed { i, it ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = Rahal.space.xs),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            (i + 1).toString(),
+                            color = Rahal.colors.inkMuted,
+                            style = Rahal.type.label,
+                            modifier = Modifier.width(Rahal.space.xl),
+                        )
+                        com.rahalgo.ui.RemoteImage(
+                            url = com.rahalgo.ui.AppCore.get().media(it.imageThumbUrl),
+                            name = it.name.ifBlank { "?" },
+                            modifier = Modifier.size(Rahal.size.iconBox).clip(Rahal.shape.sm),
+                        )
+                        Spacer(Modifier.width(Rahal.space.md))
+                        Text(
+                            it.name,
+                            color = Rahal.colors.ink,
+                            style = Rahal.type.body,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(Modifier.width(Rahal.space.sm))
+                        Text(
+                            stringResource(R.string.home_top_qty, it.qty),
+                            color = Rahal.colors.brand,
+                            fontWeight = FontWeight.Bold,
+                            style = Rahal.type.label,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
         }
     }
 }

@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 708,
+    "routes": 709,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 138,
-    "notify_targeted": 70,
+    "notify_sites": 139,
+    "notify_targeted": 71,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 284,
-    "behaviour_settings": 239,
+    "setting_defs": 285,
+    "behaviour_settings": 240,
     "order_fields": 146,
-    "test_files": 828,
-    "test_funcs": 3191
+    "test_files": 830,
+    "test_funcs": 3194
   },
   "flows": [
     {
@@ -5952,6 +5952,25 @@
         "driver",
         "merchant",
         "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "merchants.photo_nudge_enabled",
+      "group": "merchants",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -21325,6 +21344,18 @@
       "orphan": true
     },
     {
+      "name": "TestPN01_SendsOncePerDayWithCount",
+      "file": "internal/qa/merchant_photo_nudge_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPN02_SkipsZeroSuspendedAndOff",
+      "file": "internal/qa/merchant_photo_nudge_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestMR01_OwnStoreOnly",
       "file": "internal/qa/merchant_recipients_test.go",
       "package": "qa",
@@ -21369,6 +21400,12 @@
     {
       "name": "TestMSU01_SetupStatusAndConfirmations",
       "file": "internal/qa/merchant_setup_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTI01_TopItemsDeliveredLastWeekOwnStoreOnly",
+      "file": "internal/qa/merchant_top_items_test.go",
       "package": "qa",
       "orphan": true
     },

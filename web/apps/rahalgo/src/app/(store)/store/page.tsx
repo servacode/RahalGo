@@ -61,6 +61,7 @@ import {
   IconPromos,
   IconReturn,
   IconRotate,
+  IconShare,
   IconTrendUp,
   IconUser,
   IconUsers,
@@ -79,6 +80,7 @@ import {
   SalesChart,
   Segmented,
   SwitchTrack,
+  Thumb,
   useIsDesktop,
   useLiveData,
   type SalesPoint,
@@ -89,7 +91,7 @@ import { useStoreOrders } from "@/lib/store/orders";
 import { pointSet, useStoreSections } from "@/lib/store/setup";
 import { pctChange, useSalesSeries, type SalesRange, type SalesRow } from "@/lib/store/sales";
 import { groupOf } from "@/lib/store/types";
-import type { DayHours, MenuSummary, MerchantOrder, MerchantStore, StoreReport } from "@/lib/store/types";
+import type { DayHours, MenuSummary, MerchantOrder, MerchantStore, StoreReport, TopItems } from "@/lib/store/types";
 import { backAt, fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
 import { LogoCard, useSaveSettings } from "@/components/store/StoreSettings";
@@ -347,12 +349,64 @@ function NeedsPanel({ needs }: { needs: Need[] }) {
   );
 }
 
-function QuickActions({ unavailable, noPhoto }: { unavailable: number; noPhoto: number }) {
-  const items: { href: string; icon: IconT; label: string; badge?: number }[] = [
+/**
+ * **«شارك متجرك»: يَنسخ رابطَ صفحة المتجر عند الزبائن ويقول «انتسخ الرابط»** (قرارُ المالك ٢٠٢٦-١١-١١) —
+ * والرابطُ يأتي من الخادم (`share_url`) فيَنسخ عنوانَ الموقع الصحيحَ لا عنوانَ اللوحة.
+ */
+function useShareStore(top: TopItems | null) {
+  const toast = useShopToast();
+  return async () => {
+    const url = top?.share_url;
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast(HM.shareCopied, "success");
+    } catch {
+      toast(HM.shareFail, "error");
+    }
+  };
+}
+
+/** **أعلى ٥ أصناف مبيعاً في آخر ٧ أيام** (قرارُ المالك ٢٠٢٦-١١-١١) — بمصغّراتها وكمّياتها. */
+function TopSellers({ top }: { top: TopItems | null }) {
+  if (!top) return null;
+  return (
+    <section className="panel flex flex-col" aria-label={HM.topTitle} data-testid="store-top-items">
+      <div className="panel-head">
+        <h2 className="console-h2">{HM.topTitle}</h2>
+      </div>
+      {top.items.length === 0 ? (
+        <p className="px-rg-lg pb-rg-lg pt-rg-xs text-body text-ink-muted" data-testid="store-top-empty">
+          {HM.topEmpty}
+        </p>
+      ) : (
+        <ol className="flex flex-col px-rg-lg pb-rg-md">
+          {top.items.map((it, i) => (
+            <li key={`${it.item_id}-${i}`} className="flex items-center gap-rg-md py-rg-xs" data-testid="store-top-item">
+              <span className="w-5 text-caption tabular-nums text-ink-muted">{fmtNum(i + 1)}</span>
+              <Thumb src={mediaUrl(it.image_thumb_url)} size={36} />
+              <span className="line-clamp-2 min-w-0 flex-1 text-body">{it.name}</span>
+              <span className="shrink-0 text-caption font-bold text-primary">{fill(HM.topQty, { n: fmtNum(it.qty) })}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+/** **أقسامُ السوق في سطرٍ مختصر** — «٣١ قسم · أوّل ثلاثة …»، وثلاثةٌ فأقلّ بأسمائها. */
+function sectionsSummary(names: string[]): string {
+  if (names.length <= 3) return names.join(" · ");
+  return fill(HM.sectionsMany, { n: fmtNum(names.length), names: names.slice(0, 3).join(" · ") });
+}
+
+function QuickActions({ unavailable, noPhoto, onShare, canShare }: { unavailable: number; noPhoto: number; onShare: () => void; canShare: boolean }) {
+  const items: { href?: string; onClick?: () => void; disabled?: boolean; icon: IconT; label: string; badge?: number }[] = [
     { href: "/store/menu/new", icon: IconAdd, label: HM.quickAdd },
     { href: "/store/menu/photos", icon: IconCamera, label: SH.quickPhotos, badge: noPhoto },
     { href: "/store/offers?new=1", icon: IconPromos, label: HM.quickOffers },
-    { href: "/store/delivery", icon: IconMoto, label: HM.quickDelivery },
+    { onClick: onShare, disabled: !canShare, icon: IconShare, label: HM.quickShare },
     { href: "/store/menu?filter=unavailable", icon: IconViewOff, label: HM.quickUnavailable, badge: unavailable },
     { href: "/store/menu/prices", icon: IconBanknote, label: HM.quickPrices },
   ];
@@ -364,16 +418,23 @@ function QuickActions({ unavailable, noPhoto }: { unavailable: number; noPhoto: 
       <div className="grid grid-cols-2 gap-rg-sm px-rg-lg pb-rg-lg pt-rg-sm">
         {items.map((q) => {
           const Ico = q.icon;
-          return (
-            <Link
-              key={q.href}
-              href={q.href}
-              className="group flex h-11 items-center gap-rg-md rounded-control border border-line-soft bg-field px-rg-md text-body font-bold transition-colors hover:border-primary-edge hover:bg-primary-soft hover:text-primary"
-            >
+          const cls =
+            "group flex h-11 items-center gap-rg-md rounded-control border border-line-soft bg-field px-rg-md text-body font-bold transition-colors hover:border-primary-edge hover:bg-primary-soft hover:text-primary disabled:opacity-50";
+          const body = (
+            <>
               <Ico size={17} className="text-ink-muted group-hover:text-primary" />
               <span className="min-w-0 flex-1 truncate">{q.label}</span>
               {!!q.badge && <span className="text-caption font-bold tabular-nums text-ink-muted">{fmtNum(q.badge)}</span>}
+            </>
+          );
+          return q.href ? (
+            <Link key={q.href} href={q.href} className={cls}>
+              {body}
             </Link>
+          ) : (
+            <button key={q.label} type="button" onClick={q.onClick} disabled={q.disabled} className={cls} data-testid="quick-share">
+              {body}
+            </button>
           );
         })}
       </div>
@@ -510,6 +571,9 @@ function HomeBody({ store }: { store: MerchantStore }) {
   const sec = useStoreSections(id);
   const { saved: hours } = useStoreHours(id);
   const [menu, setMenu] = useState<MenuSummary | null>(null);
+  /** **«الأكتر مبيعاً هالأسبوع» ورابطُ المشاركة** (٢٠٢٦-١١-١١) — و`null` حتّى يُقرأ. */
+  const [top, setTop] = useState<TopItems | null>(null);
+  const shareStore = useShareStore(top);
   /** **أصنافُ الأمين بلا قسم** — من `price-sync/groups`، وللمتجر الذي يستعمل الأمين وحدَه. */
   const [unsorted, setUnsorted] = useState(0);
   const [logoOpen, setLogoOpen] = useState(false);
@@ -523,6 +587,14 @@ function HomeBody({ store }: { store: MerchantStore }) {
     // **The counts from the light summary** (2026-11-07) — not the whole menu of a big mall.
     api<MenuSummary>(`/api/v1/merchant/stores/${id}/menu/summary`)
       .then(setMenu)
+      .catch(() => undefined);
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    setTop(null);
+    api<TopItems>(`/api/v1/merchant/stores/${id}/top-items`)
+      .then(setTop)
       .catch(() => undefined);
   }, [id]);
 
@@ -584,7 +656,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
           icon={IconCatOther}
           tone="info"
           title={HM.rowSections}
-          value={sec.mine.map((s) => s.name).join(" · ") || notSet}
+          value={sectionsSummary(sec.mine.map((s) => s.name)) || notSet}
           valueTone={sec.known && sec.mine.length === 0 ? "danger" : undefined}
           href="/store/settings/sections"
           Link={Link}
@@ -770,8 +842,10 @@ function HomeBody({ store }: { store: MerchantStore }) {
 
         <div className="grid grid-cols-1 items-start gap-rg-lg lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           {needsNode}
-          {!suspended && <QuickActions unavailable={unavailable} noPhoto={noPhoto} />}
+          {!suspended && <QuickActions unavailable={unavailable} noPhoto={noPhoto} onShare={() => void shareStore()} canShare={!!top?.share_url} />}
         </div>
+
+        <TopSellers top={top} />
 
         <div className="grid grid-cols-1 items-start gap-rg-lg lg:grid-cols-2">{settings}</div>
         {emergency.dialog}
@@ -861,13 +935,13 @@ function HomeBody({ store }: { store: MerchantStore }) {
           {/* **أرقامُ اليوم مربّعاتٌ موحّدة** (`StatTile`) — الاسمُ فوق والرقمُ تحت، بلا خطوطٍ فاصلة. */}
           <div className="flex items-stretch gap-rg-sm px-rg-lg pb-rg-lg pt-rg-xs" data-testid="store-today-tiles">
             <div className="min-w-0 flex-1">
-              <StatTile label={HM.todayOrders} value={S0?.orders ?? 0} />
+              <StatTile compact label={HM.todayOrders} value={S0?.orders ?? 0} />
             </div>
             <div className="min-w-0 flex-1">
-              <StatTile label={HM.dueToday} value={fmtNum(due)} tone="success" />
+              <StatTile compact label={HM.dueToday} value={fmtNum(due)} tone="success" />
             </div>
             <div className="min-w-0 flex-1">
-              <StatTile label={HM.cancelledToday} value={S0?.cancelled ?? 0} tone={(S0?.cancelled ?? 0) > 0 ? "danger" : "default"} />
+              <StatTile compact label={HM.cancelledToday} value={S0?.cancelled ?? 0} tone={(S0?.cancelled ?? 0) > 0 ? "danger" : "default"} />
             </div>
           </div>
         </div>
@@ -912,22 +986,36 @@ function HomeBody({ store }: { store: MerchantStore }) {
               { href: "/store/menu/new", icon: IconAdd, label: HM.quickAdd, tone: undefined },
               { href: "/store/menu/photos", icon: IconCamera, label: SH.quickPhotos, tone: "violet" as const },
               { href: "/store/offers?new=1", icon: IconPromos, label: HM.quickOffers, tone: "attention" as const },
-              { href: "/store/delivery", icon: IconMoto, label: HM.quickDelivery, tone: "info" as const },
+              { href: undefined, icon: IconShare, label: HM.quickShare, tone: "info" as const },
             ].map((q) => {
               const Ico = q.icon;
-              return (
-                <Link key={q.href} href={q.href} className="flex flex-col items-center gap-rg-sm text-center text-caption">
+              const inner = (
+                <>
                   <span className="tile" data-size="lg" data-tone={q.tone}>
                     <Ico size={22} />
                   </span>
                   {q.label}
+                </>
+              );
+              const cls = "flex flex-col items-center gap-rg-sm text-center text-caption";
+              return q.href ? (
+                <Link key={q.href} href={q.href} className={cls}>
+                  {inner}
                 </Link>
+              ) : (
+                <button key={q.label} type="button" className={`${cls} disabled:opacity-50`} disabled={!top?.share_url} onClick={() => void shareStore()} data-testid="quick-share">
+                  {inner}
+                </button>
               );
             })}
           </div>
         </IGroup>
         </div>
       )}
+
+      <div className="tab-span">
+        <TopSellers top={top} />
+      </div>
 
       {settings}
       {emergency.dialog}
