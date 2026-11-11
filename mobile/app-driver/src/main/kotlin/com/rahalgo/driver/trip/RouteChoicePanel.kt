@@ -268,7 +268,7 @@ private fun PanelButton(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = label, color = Rahal.colors.onBrand, style = Rahal.type.label)
+        Text(text = label, color = Rahal.colors.onBrand, style = Rahal.type.button)
     }
 }
 
