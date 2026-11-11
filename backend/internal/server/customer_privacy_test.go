@@ -52,10 +52,14 @@ func TestRedactForCustomer_HidesSource(t *testing.T) {
 		t.Fatal("تعذّر بناءُ حمولة الزبون")
 	}
 
-	for _, k := range []string{"merchant_name", "merchant_id", "merchant_logo_thumb_url"} {
+	for _, k := range []string{"merchant_id", "merchant_logo_thumb_url"} {
 		if _, ok := v[k]; ok {
 			t.Errorf("%s خرج إلى الزبون — والمصدرُ محجوب: %v", k, v[k])
 		}
+	}
+	// **واسمُ المتجر وحدَه يصل** (قرارُ المالك ٢٠٢٦-١١-١١، «طلباتي»).
+	if v["merchant_name"] != "مطعم بيت الرقة" {
+		t.Errorf("اسمُ المتجر لم يصل الزبون: %v", v["merchant_name"])
 	}
 
 	// **ولا يُمحى ما ليس مصدراً**: حراسةٌ تمحو الطلبَ نفسَه تُطفأ في أوّل شكوى.
@@ -88,7 +92,7 @@ func TestCustomerOrderJSON_HasNoSource(t *testing.T) {
 		t.Fatalf("ترميز الطلب: %v", err)
 	}
 	body := string(b)
-	for _, leak := range []string{name, "cd6ea11d", "abc_t.png"} {
+	for _, leak := range []string{"cd6ea11d", "abc_t.png"} {
 		if strings.Contains(body, leak) {
 			t.Errorf("خرج في الردّ ما يدلّ على المصدر: %q\nالردّ: %s", leak, body)
 		}
