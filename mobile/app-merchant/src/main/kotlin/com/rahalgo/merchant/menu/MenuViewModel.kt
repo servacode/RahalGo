@@ -251,6 +251,77 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **عرضُ القائمة أو الشبكة** (قرارُ المالك ٢٠٢٦-١١-١١) — القائمةُ افتراضاً، ويُحفظ اختيارُه في الجهاز
+    // ══════════════════════════════════════════════════════════════════
+
+    private fun prefs() = AppCore.get().app.getSharedPreferences("rahalgo", android.content.Context.MODE_PRIVATE)
+
+    /** **صنفٌ بسطرٍ** (الافتراضيّ) أم بطاقتان بالسطر؟ */
+    var listMode by mutableStateOf(runCatching { prefs().getBoolean(LIST_MODE_KEY, true) }.getOrDefault(true))
+        private set
+
+    fun chooseListMode(on: Boolean) {
+        listMode = on
+        runCatching { prefs().edit().putBoolean(LIST_MODE_KEY, on).apply() }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **تعديلُ السعر السريع** (قرارُ المالك ٢٠٢٦-١١-١١) — لمسةٌ على السعر، وحقلُ السعر وحدَه
+    // ══════════════════════════════════════════════════════════════════
+
+    /** **الصنفُ الذي يُعدَّل سعرُه الآن** — وفارغٌ لا نافذة. */
+    var priceItem by mutableStateOf<MenuItem?>(null)
+        private set
+
+    var priceBusy by mutableStateOf(false)
+        private set
+
+    var priceError by mutableStateOf("")
+        private set
+
+    fun editPrice(itemId: String) {
+        if (suspended) return
+        priceError = ""
+        priceItem = items.firstOrNull { it.id == itemId }
+    }
+
+    fun cancelPrice() {
+        priceItem = null
+        priceError = ""
+    }
+
+    /**
+     * **يحفظ السعرَ وحدَه** بنداء تحديث الصنف الموجود (`PATCH`) — الحقولُ الباقيةُ `null` فلا تُمسّ،
+     * **وبعملة الصنف**: دولارٌ يُرسل `price_usd` والخادمُ يحسب الليرة، وليرةٌ تُرسل `price`.
+     */
+    fun savePrice(text: String) {
+        val item = priceItem ?: return
+        if (priceBusy || suspended) return
+        val usd = item.priceCurrency == com.rahalgo.ui.menu.CURRENCY_USD
+        val input = if (usd) {
+            val v = com.rahalgo.ui.menu.parseUsd(text) ?: return
+            MenuItemInput(priceCurrency = com.rahalgo.ui.menu.CURRENCY_USD, priceUsd = v)
+        } else {
+            val v = text.trim().toLongOrNull()?.takeIf { it >= 0 } ?: return
+            MenuItemInput(price = v, priceCurrency = "SYP")
+        }
+        priceBusy = true
+        viewModelScope.launch {
+            runCatching {
+                api.updateItem(item.id, input)
+                // **الصنفُ وحدَه كما يردّه الخادم** — لا القائمةُ كلُّها.
+                api.menuItems(storeId, item = item.id).items.firstOrNull()
+            }.onSuccess { fresh ->
+                if (fresh != null) items = items.map { if (it.id == fresh.id) fresh else it }
+                priceItem = null
+                priceError = ""
+                Flash.ok(getApplication<android.app.Application>().getString(com.rahalgo.merchant.R.string.mn_price_saved))
+            }.onFailure { priceError = err(it) }
+            priceBusy = false
+        }
+    }
+
     /** **المسوّدةُ كما فُتحت** — فيُعرف أفيها ما لم يُحفظ. */
     private var loadedDraft: ItemDraft? = null
 
@@ -674,6 +745,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private companion object {
+        const val LIST_MODE_KEY = "merchant_items_list_mode"
         const val PAGE_SIZE = 60
         const val SEARCH_DEBOUNCE_MS = 350L
     }

@@ -126,6 +126,13 @@ class MerchantApi(private val api: ApiClient) {
         api.call("/api/v1/merchant/stores/$storeId/menu/summary")
 
     /**
+     * **«الأكتر مبيعاً هالأسبوع»** (قرارُ المالك ٢٠٢٦-١١-١١) — أعلى ٥ أصناف بالكمية المسلَّمة في آخر ٧ أيام،
+     * **ومعها رابطُ صفحة المتجر عند الزبائن** لزرّ «شارك متجرك».
+     */
+    suspend fun topItems(storeId: String): TopItems =
+        api.call("/api/v1/merchant/stores/$storeId/top-items")
+
+    /**
      * **One page of the store's items** — filtered on the server by section, search (name or exact
      * Ameen code/barcode) and `filter` ("unavailable"); `item` fetches one item by id. `after` is
      * the previous page's `nextAfter`. Price is the store's own price, as in [menu].
@@ -1018,6 +1025,25 @@ data class MenuSummary(
     val unavailable: Int = 0,
     @SerialName("no_photo") val noPhoto: Int = 0,
     val sections: List<MenuSummarySection> = emptyList(),
+    /** **بوتُ «أضف أصناف بصورة واتساب» شغّالٌ لهذا المتجر؟** المفتاحُ العامّ ومفتاحُه معاً (٢٠٢٦-١١-١١). محرّكٌ قديمٌ لا يرسله ⇒ لا. */
+    @SerialName("wa_items_on") val waItemsOn: Boolean = false,
+)
+
+/** **صنفٌ من الأكثر مبيعاً** — الاسمُ والكميةُ المسلَّمةُ ومصغّرتُه. */
+@Serializable
+data class TopItem(
+    @SerialName("item_id") val itemId: String = "",
+    val name: String = "",
+    val qty: Int = 0,
+    @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
+)
+
+/** **ردُّ `GET .../top-items`** — الأصنافُ ورابطُ صفحة المتجر عند الزبائن. */
+@Serializable
+data class TopItems(
+    val days: Int = 7,
+    val items: List<TopItem> = emptyList(),
+    @SerialName("share_url") val shareUrl: String = "",
 )
 
 /** **One keyset page of items** — `total` on the first page only (-1 after). */

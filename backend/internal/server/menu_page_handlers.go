@@ -34,6 +34,7 @@ func (s *Server) handleMerchantMenuSummary(w http.ResponseWriter, r *http.Reques
 		s.respondErr(w, err)
 		return
 	}
+	sum.WaItemsOn = sum.WaItemsStore && s.settings.GetBool(r.Context(), "merchants.wa_items_enabled")
 	httpx.JSON(w, http.StatusOK, sum)
 }
 

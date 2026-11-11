@@ -157,6 +157,15 @@ fun MenuItemsGrid(
     zoomable: Boolean = false,
     /** **Paged from the server** (2026-11-07) — then [groups] is ignored and [openName] is a chip key. */
     paging: GridPaging? = null,
+    /**
+     * **عرضُ قائمةٍ: صنفٌ بسطرٍ** (قرارُ المالك ٢٠٢٦-١١-١١: «البطاقاتُ كبيرةٌ، اثنتان بالشاشة») —
+     * مصغّرةٌ صغيرةٌ واسمٌ وسعرٌ ومفتاحُ التوفّر. `false` شبكةُ البطاقات كما كانت.
+     */
+    listMode: Boolean = false,
+    /** **زرُّ التبديل بين القائمة والشبكة** بجانب البحث — و`null` لا زرّ (المندوب). */
+    onListMode: ((Boolean) -> Unit)? = null,
+    /** **لمسةُ السعر تفتح «تعديل السعر»** (٢٠٢٦-١١-١١) — و`null` لا تعديلَ سريع (المندوب). */
+    onPrice: ((GridItem) -> Unit)? = null,
 ) {
     var zoom by remember { mutableStateOf<String?>(null) }
     zoom?.let { ImageViewer(url = it, onClose = { zoom = null }) }
@@ -174,7 +183,7 @@ fun MenuItemsGrid(
     }
     val full: (LazyGridItemSpanScope.() -> GridItemSpan) = { GridItemSpan(maxLineSpan) }
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(if (listMode) 1 else 2),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = Rahal.space.lg, end = Rahal.space.lg, top = Rahal.space.lg, bottom = Rahal.space.xl),
         horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
@@ -220,6 +229,16 @@ fun MenuItemsGrid(
                     ),
                     modifier = Modifier.weight(1f),
                 )
+                if (onListMode != null) {
+                    Spacer(Modifier.width(Rahal.space.xs))
+                    IconButton(onClick = { onListMode(!listMode) }) {
+                        Icon(
+                            painterResource(if (listMode) R.drawable.ic_view_grid else R.drawable.ic_view_list),
+                            contentDescription = stringResource(if (listMode) R.string.grid_view_grid else R.string.grid_view_list),
+                            tint = Rahal.colors.brand,
+                        )
+                    }
+                }
                 if (showTools && onAdd != null) {
                     Spacer(Modifier.width(Rahal.space.sm))
                     RahalButton(
@@ -299,12 +318,23 @@ fun MenuItemsGrid(
                 )
             }
             else -> items(shown, key = { it.id }) { item ->
-                ItemCard(
-                    item, toggleEnabled, imageAspect,
-                    onZoom = if (zoomable) item.fullImageUrl?.let { u -> { zoom = u } } else null,
-                    onToggle = { onToggle(item) },
-                    onEdit = { onEdit(item) },
-                )
+                val onPriceTap = onPrice?.let { f -> { f(item) } }
+                if (listMode) {
+                    ItemRow(
+                        item, toggleEnabled,
+                        onToggle = { onToggle(item) },
+                        onEdit = { onEdit(item) },
+                        onPrice = onPriceTap,
+                    )
+                } else {
+                    ItemCard(
+                        item, toggleEnabled, imageAspect,
+                        onZoom = if (zoomable) item.fullImageUrl?.let { u -> { zoom = u } } else null,
+                        onToggle = { onToggle(item) },
+                        onEdit = { onEdit(item) },
+                        onPrice = onPriceTap,
+                    )
+                }
             }
         }
         // ── ٥ · the next page when the end comes into view ──
@@ -388,6 +418,119 @@ private fun SectionChip(text: String, count: Int, selected: Boolean, onClick: ()
 }
 
 /**
+ * **سعرُ الصنف** — بالدولار والليرة (`DualPrice`) أو نصّاً، **وبلمسته يُعدَّل** إن مُرِّر [onPrice]
+ * (قرارُ المالك ٢٠٢٦-١١-١١): قلمٌ صغيرٌ بجانبه يدلّ على ذلك.
+ */
+@Composable
+private fun PriceLine(item: GridItem, onPrice: (() -> Unit)?, stacked: Boolean) {
+    Row(
+        Modifier
+            .then(if (onPrice != null) Modifier.clip(Rahal.shape.sm).clickable(onClick = onPrice) else Modifier)
+            .padding(vertical = Rahal.space.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.weight(1f, fill = false)) {
+            if (item.priceUsd != null) {
+                DualPrice(item.priceUsd, item.priceSyp, stacked = stacked)
+            } else {
+                Text(
+                    item.price,
+                    color = Rahal.colors.brand,
+                    fontWeight = FontWeight.Bold,
+                    style = Rahal.type.body,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (onPrice != null) {
+            Spacer(Modifier.width(Rahal.space.xs))
+            Icon(
+                painterResource(R.drawable.ic_edit),
+                contentDescription = stringResource(R.string.price_quick_title),
+                tint = Rahal.colors.inkMuted,
+                modifier = Modifier.size(Rahal.icon.xs),
+            )
+        }
+    }
+}
+
+/**
+ * **صنفٌ بسطرٍ واحد — عرضُ القائمة** (قرارُ المالك ٢٠٢٦-١١-١١): مصغّرةٌ مربّعةٌ صغيرة · الاسمُ (سطران
+ * على الأكثر) · السعرُ (يُعدَّل بلمسته) · مفتاحُ التوفّر. **والسطرُ كلُّه يفتح المحرّر.**
+ */
+@Composable
+private fun ItemRow(
+    item: GridItem,
+    toggleEnabled: Boolean,
+    onToggle: () -> Unit,
+    onEdit: () -> Unit,
+    onPrice: (() -> Unit)?,
+) {
+    val dim = if (item.available) 1f else 0.5f
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.md)
+            .background(Rahal.colors.canvas)
+            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+            .clickable(onClick = onEdit)
+            .padding(Rahal.space.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RemoteImage(
+            url = item.imageUrl,
+            name = item.name.ifBlank { "?" },
+            modifier = Modifier.size(RowThumb).clip(Rahal.shape.sm).alpha(dim),
+        )
+        Spacer(Modifier.width(Rahal.space.md))
+        Column(Modifier.weight(1f)) {
+            Column(Modifier.alpha(dim)) {
+                Text(
+                    item.name,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.Bold,
+                    color = Rahal.colors.ink,
+                    style = Rahal.type.body,
+                )
+            }
+            val note = when {
+                item.rejected -> stringResource(R.string.grid_rejected)
+                !item.approved -> stringResource(R.string.mn_pending_review)
+                item.closedNow -> stringResource(R.string.grid_closed_now)
+                item.fromWhatsapp -> stringResource(R.string.grid_from_whatsapp)
+                else -> null
+            }
+            if (note != null) {
+                Text(
+                    note,
+                    color = if (item.rejected) Rahal.colors.danger else Rahal.colors.accentInk,
+                    style = Rahal.type.badge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                )
+            }
+            Box(Modifier.alpha(dim)) { PriceLine(item, onPrice, stacked = false) }
+        }
+        Spacer(Modifier.width(Rahal.space.sm))
+        Switch(
+            checked = item.available,
+            enabled = toggleEnabled,
+            onCheckedChange = { onToggle() },
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = Rahal.colors.success,
+                checkedThumbColor = Rahal.colors.onPanel,
+                checkedBorderColor = Rahal.colors.success,
+            ),
+        )
+    }
+}
+
+/** **مصغّرةُ سطر القائمة.** */
+private val RowThumb = 56.dp
+
+/**
  * **بطاقةُ صنف** — صورتُه فوق، ثمّ اسمُه ووصفُه وسعرُه، ثمّ مفتاحُ توفّره.
  * **والبطاقةُ كلُّها تفتح المحرّر، والمفتاحُ وحدَه يبدّل التوفّر. وغيرُ المتوفّر باهت.**
  */
@@ -399,6 +542,7 @@ private fun ItemCard(
     onZoom: (() -> Unit)?,
     onToggle: () -> Unit,
     onEdit: () -> Unit,
+    onPrice: (() -> Unit)? = null,
 ) {
     val dim = if (item.available) 1f else 0.5f
     Column(
@@ -443,36 +587,26 @@ private fun ItemCard(
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm)) {
             Column(Modifier.alpha(dim)) {
+                // **الاسمُ والسعرُ متلاصقان** (قرارُ المالك ٢٠٢٦-١١-١١: «فراغٌ كبيرٌ بين الاسم والسعر») —
+                // لا `minLines`، والوصفُ سطرٌ واحدٌ ولا يُحجز له مكانٌ إن غاب.
                 Text(
                     item.name,
-                    minLines = 2,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = FontWeight.Bold,
                     color = Rahal.colors.ink,
                     style = Rahal.type.body,
                 )
-                Text(
-                    item.description,
-                    minLines = 2,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = Rahal.colors.inkMuted,
-                    style = Rahal.type.caption,
-                )
-                Spacer(Modifier.height(Rahal.space.xs))
-                if (item.priceUsd != null) {
-                    DualPrice(item.priceUsd, item.priceSyp, stacked = true)
-                } else {
+                if (item.description.isNotBlank()) {
                     Text(
-                        item.price,
-                        color = Rahal.colors.brand,
-                        fontWeight = FontWeight.Bold,
-                        style = Rahal.type.body,
-                        maxLines = 2,
+                        item.description,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        color = Rahal.colors.inkMuted,
+                        style = Rahal.type.caption,
                     )
                 }
+                PriceLine(item, onPrice, stacked = true)
                 if (item.customerPrice != null) {
                     Text(
                         "← " + item.customerPrice,

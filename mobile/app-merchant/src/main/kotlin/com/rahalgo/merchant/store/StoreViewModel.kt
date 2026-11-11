@@ -69,6 +69,10 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
     var report by mutableStateOf<StoreReport?>(null)
         private set
 
+    /** **«الأكتر مبيعاً هالأسبوع» ورابطُ صفحة المتجر للمشاركة** (٢٠٢٦-١١-١١) — و`null` حتّى يُقرأ. */
+    var top by mutableStateOf<com.rahalgo.shared.merchant.TopItems?>(null)
+        private set
+
     var loading by mutableStateOf(true)
         private set
 
@@ -233,6 +237,8 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
                     val today = java.time.LocalDate.now().toString()
                     report = api.reports(mine.id, from = today, to = today)
                 }
+                // **والأكثرُ مبيعاً زينةٌ كذلك** — يسقط وحدَه.
+                runCatching { top = api.topItems(mine.id) }
                 error = ""
             }.onFailure { error = err(it) }
             loading = false

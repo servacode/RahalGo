@@ -11176,6 +11176,32 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/top-items",
+      "handler": "handleMerchantTopItems",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "days",
+          "type": "int"
+        },
+        {
+          "name": "items",
+          "type": "unknown"
+        },
+        {
+          "name": "share_url",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/merchant/warnings",
       "handler": "handleMerchantWarnings",
       "auth": true,

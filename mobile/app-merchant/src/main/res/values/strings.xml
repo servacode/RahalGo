@@ -266,7 +266,7 @@
     <string name="ok_address_saved">حُفظ عنوانك</string>
     <string name="ok_store_closed">أُغلق متجرك — والإدارة تعلم</string>
     <string name="ok_report_sent">وصل بلاغُك — والإدارة تنظر فيه</string>
-    <string name="st_cancelled">أُلغي</string>
+    <string name="st_cancelled">ملغى</string>
     <string name="st_rejected">اعتُذر عنه</string>
     <string name="st_failed">تعذّر تسليمه</string>
     <string name="st_refunded">استُرجع</string>
@@ -283,7 +283,7 @@
     <string name="os_picked_up">استلمه السائق</string>
     <string name="os_at_dropoff">وصل الزبون</string>
     <string name="os_rejected">اعتذرت عنه</string>
-    <string name="os_cancelled">أُلغي</string>
+    <string name="os_cancelled">ملغى</string>
     <string name="os_failed">تعذّر تسليمه</string>
     <string name="os_refunded">استُرجع</string>
 
@@ -293,6 +293,13 @@
     <string name="ok_prep_saved">✓ حُفظت مدة التحضير</string>
     <string name="ok_name_saved">✓ حُفظ اسم المتجر</string>
     <string name="mn_item_deleted">✓ حُذف الصنف</string>
+    <string name="mn_price_saved">✓ حُفظ السعر</string>
+    <string name="home_quick_share">شارك متجرك</string>
+    <string name="home_share_text">تسوّق من %1$s على رحّال غو واطلب بتوصيل لباب بيتك:\n%2$s</string>
+    <string name="home_sections_many">%1$d قسم · %2$s …</string>
+    <string name="home_top_title">الأكتر مبيعاً هالأسبوع</string>
+    <string name="home_top_empty">ما في مبيعات هالأسبوع لسا — أول ما تنسلّم طلبات بتظهر هون أكتر أصنافك مبيعاً</string>
+    <string name="home_top_qty">بيع %1$d</string>
     <string name="menu_deliveries">سجل التوصيلات</string>
     <string name="md_more">عرض المزيد</string>
     <string name="md_pay_me_cash">أنا (نقداً للسائق)</string>
@@ -375,6 +382,9 @@
     <string name="md_link_hint_fetch">الصق هنا رابط موقع مكان الاستلام</string>
     <string name="md_link_not_found_fetch">هذا الرابط لا يحتوي على موقع — اطلب من الشخص في مكان الاستلام أن يرسل لك موقعه من واتساب</string>
     <string name="md_ask_loc">اطلب الموقع من المستلم</string>
+    <string name="md_paste_link">لصق رابط</string>
+    <string name="md_copy_link">انسخ الرابط</string>
+    <string name="md_link_copied">انتسخ الرابط</string>
     <string name="md_ask_loc_fetch">اطلب الموقع من الشخص في مكان الاستلام</string>
     <string name="md_ask_need_phone">اكتب الرقم أولاً ثم اطلب الموقع</string>
     <string name="md_ask_sending">جاري إرسال الطلب…</string>
@@ -592,14 +602,13 @@
     <string name="wz_returns_no">لا أقبل</string>
     <string name="home_quick_unavailable">غير المتوفر</string>
     <string name="home_quick_prices">تغيير الأسعار</string>
-    <string name="home_quick_delivery">اطلب توصيلة</string>
     <string name="home_closed">مغلق</string>
     <string name="home_closed_until">مغلق — يفتح الساعة %1$s</string>
     <string name="home_temp_closed_sub">أغلقته إغلاقاً طارئاً، ولا يستقبل طلبات حتى تعيد فتحه</string>
     <string name="home_suspended_sub">لا يستقبل طلبات. تواصل مع إدارة المنصة</string>
     <string name="home_today">اليوم</string>
     <string name="home_delivered_today">سُلّم اليوم</string>
-    <string name="home_cancelled_sub">أُلغي %1$s</string>
+    <string name="home_cancelled_sub">ملغى %1$s</string>
     <string name="home_quick_offers">العروض</string>
     <string name="home_group_store">المتجر</string>
     <string name="home_group_hours_money">الدوام والمال</string>

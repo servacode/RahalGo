@@ -1153,24 +1153,19 @@ private fun AskLocationCard(vm: DeliveryViewModel, fetch: Boolean, linkOpen: Boo
             )
         }
         Spacer(Modifier.width(Rahal.space.sm))
-        // **«لصق رابط» أيقونةٌ بجانب الزرّ** — تفتح حقلَ الرابط وقتَ الحاجة.
-        androidx.compose.foundation.layout.Box(
-            Modifier
-                .size(Rahal.size.touch)
-                .clip(Rahal.shape.md)
-                .background(if (linkOpen) Rahal.colors.brand.copy(alpha = 0.10f) else Rahal.colors.canvas)
-                .border(
-                    if (linkOpen) Rahal.stroke.focus else Rahal.stroke.hair,
-                    if (linkOpen) Rahal.colors.brand else Rahal.colors.line,
-                    Rahal.shape.md,
-                )
-                .clickable(enabled = !vm.busy) { onLink() },
-            contentAlignment = Alignment.Center,
+        // **«لصق رابط» زرٌّ باسمه بجانب الزرّ** (قرارُ المالك ٢٠٢٦-١١-١١: «الأيقونةُ بلا اسم») — يفتح
+        // حقلَ الرابط وقتَ الحاجة، **ومختارُه يبقى بحدٍّ ثخين** كما كان.
+        RahalOutlineButton(
+            onClick = onLink,
+            enabled = !vm.busy,
+            compact = true,
+            modifier = Modifier.height(Rahal.size.touch),
         ) {
-            Icon(
-                painterResource(com.rahalgo.ui.R.drawable.ic_copy),
-                contentDescription = stringResource(if (fetch) R.string.md_link_fetch else R.string.md_link),
-                tint = Rahal.colors.brand,
+            Icon(painterResource(com.rahalgo.ui.R.drawable.ic_copy), contentDescription = null, tint = Rahal.colors.brand)
+            Spacer(Modifier.width(Rahal.space.xs))
+            Text(
+                stringResource(R.string.md_paste_link),
+                fontWeight = if (linkOpen) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
             )
         }
     }
@@ -1188,6 +1183,19 @@ private fun AskLocationCard(vm: DeliveryViewModel, fetch: Boolean, linkOpen: Boo
                 if (!req.whatsappSent && req.waUrl.isNotEmpty()) {
                     RahalTextButton(onClick = { runCatching { uri.openUri(req.waUrl) } }) {
                         Text(stringResource(R.string.md_ask_share))
+                    }
+                }
+                // **«انسخ الرابط» ظاهرٌ باسمه ومعه تأكيد** (قرارُ المالك ٢٠٢٦-١١-١١، كالويب).
+                if (req.link.isNotEmpty()) {
+                    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+                    val copied = stringResource(R.string.md_link_copied)
+                    RahalTextButton(onClick = {
+                        clipboard.setText(androidx.compose.ui.text.AnnotatedString(req.link))
+                        com.rahalgo.ui.Flash.ok(copied)
+                    }) {
+                        Icon(painterResource(com.rahalgo.ui.R.drawable.ic_copy), contentDescription = null, tint = Rahal.colors.brand)
+                        Spacer(Modifier.width(Rahal.space.xs))
+                        Text(stringResource(R.string.md_copy_link))
                     }
                 }
             }

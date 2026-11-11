@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -150,9 +151,48 @@ fun StatTile(
     valueColor: Color = Rahal.colors.ink,
     @androidx.annotation.DrawableRes icon: Int? = null,
     onClick: (() -> Unit)? = null,
-    /** **مربّعٌ مضغوط** — خطٌّ أصغر وحشوٌ أقلّ، لأربعةٍ في سطرٍ واحد (بطاقة العميل، ٢٠٢٦-١١-١١). */
+    /**
+     * **مربّعٌ مرصوص** (قرارُ المالك ٢٠٢٦-١١-١١: «مربّعات اليوم طويلةٌ وفيها فراغ») — الأيقونةُ والاسمُ
+     * في سطرٍ واحد، والرقمُ تحتهما، وحشواتٌ أصغر. `false` الشكلُ القديم لمن لا يزال يعتمد عليه.
+     */
     compact: Boolean = false,
 ) {
+    if (compact && icon != null) {
+        Column(
+            modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .clip(Rahal.shape.md)
+                .background(Rahal.colors.brand.copy(alpha = 0.07f))
+                .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+                .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.sm),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (icon != null) {
+                    Icon(painterResource(icon), contentDescription = null, tint = Rahal.colors.brand, modifier = Modifier.size(Rahal.icon.xs))
+                    androidx.compose.foundation.layout.Spacer(Modifier.size(Rahal.space.xs))
+                }
+                // **يصغر ولا تنكسر كلمتُه** — سطرٌ واحد.
+                FitText(
+                    label,
+                    color = Rahal.colors.inkMuted,
+                    style = Rahal.type.caption,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                )
+            }
+            Text(
+                text = value,
+                color = valueColor,
+                style = Rahal.type.sectionTitle,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+            )
+        }
+        return
+    }
     Column(
         modifier
             // **ويملأ خانتَه عرضاً** كـ`IconTile` (الفحصُ البصريّ ٢٠٢٦-١١-١١): كان في `ActionRow`

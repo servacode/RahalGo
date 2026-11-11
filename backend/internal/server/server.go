@@ -1161,6 +1161,7 @@ func (s *Server) Router() http.Handler {
 			r.Get("/stores/{id}/menu/summary", s.handleMerchantMenuSummary)
 			r.Get("/stores/{id}/menu/items", s.handleMerchantMenuItems)
 			r.Get("/stores/{id}/reports", s.handleMerchantReports)
+			r.Get("/stores/{id}/top-items", s.handleMerchantTopItems)
 			r.Post("/stores/{id}/emergency", s.handleMerchantEmergency)
 			r.Get("/orders/{id}", s.handleMerchantGetOrder)
 			r.Post("/orders/{id}/transition", s.handleMerchantTransition)

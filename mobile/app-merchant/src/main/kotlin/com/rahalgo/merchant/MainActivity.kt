@@ -787,7 +787,6 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         // **الأزرارُ السريعة** (ملاحظةُ المالك ٦ب).
                         onOffers = { overlay.show(Overlay.Menu(MerchantItems.OFFERS)) },
                         onPrices = { menuVm.cancelEdit(); menuVm.bulk.show(); tab = Tab.Menu },
-                        onDelivery = { overlay.clear(); tab = Tab.Delivery },
                         onTodayOrders = { overlay.show(Overlay.Menu(MerchantItems.HISTORY)) },
                         stores = storeVm.stores,
                         onSwitch = { id ->

@@ -380,8 +380,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// **و٢٣٨ مع** `finance.goods_outside` (البضاعةُ خارجَ الحسابات — خطّةُ المال ٢٠٢٦-١١-١٠، B1).
 	//
 	// **و٢٣٩ مع** `whatsapp.live_location_only` (المباشرُ وحدَه بالواتساب — قرارُ المالك ٢٠٢٦-١١-١١).
-	if d.BehaviourSettings != 239 {
-		t.Errorf("إعداداتُ السلوك = %d لا 239 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	//
+	// **و٢٤٠ مع** `merchants.photo_nudge_enabled` (تذكيرُ الصباح بالأصناف بلا صور — قرارُ المالك ٢٠٢٦-١١-١١).
+	if d.BehaviourSettings != 240 {
+		t.Errorf("إعداداتُ السلوك = %d لا 240 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.
