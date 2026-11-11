@@ -82,7 +82,7 @@ fun OrdersScreen(
         onBrowse = if (showHistory) null else onBrowse,
         tabs = {
             // **مفتاحٌ مقسومٌ بعرض الشاشة** (إعادةُ التصميم ٢٠٢٦-١١-١١) — `Segmented` نفسُه في الطلب الخاصّ.
-            com.rahalgo.customer.Segmented(
+            com.rahalgo.ui.SegmentedToggle(
                 options = listOf(
                     stringResource(R.string.ord_tab_open, vm.open.size.toString()),
                     stringResource(

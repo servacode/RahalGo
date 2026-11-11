@@ -193,7 +193,7 @@ fun CustomScreen(
         Spacer(Modifier.height(Rahal.space.md))
         // **اختيارٌ لا فعلان** (إعادةُ التصميم ٢٠٢٦-١١-١١): كان زرّاً مملوءاً وآخرَ محدَّداً فيُقرآن
         // زرّين يفعلان شيئاً. **والمفتاحُ المقسومُ نفسُه الذي في «طلباتي».**
-        com.rahalgo.customer.Segmented(
+        com.rahalgo.ui.SegmentedToggle(
             options = listOf(stringResource(R.string.cst_mode_purchase), stringResource(R.string.cst_mode_amanah)),
             selected = if (mode == "amanah") 1 else 0,
             onSelect = { mode = if (it == 1) "amanah" else "purchase" },
