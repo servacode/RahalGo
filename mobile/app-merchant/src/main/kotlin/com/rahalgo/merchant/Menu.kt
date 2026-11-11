@@ -38,6 +38,8 @@ object MerchantItems {
     const val ORDER_PHONES = "OrderPhones"
     /** **موظّفو المتجر** — لصاحب الحساب وحدَه (`notStaff`). */
     const val STAFF = "Staff"
+    /** **«أضف فرع»** — طلبُ فرعٍ جديدٍ يوافق عليه المكتب (قرارُ المالك ٢٠٢٦-١١-١٠). */
+    const val BRANCH = "Branch"
     /** **شرحُ التطبيق بالفيديو** — يفتح يوتيوب لا شاشة (طلبُ المالك ٢٠٢٦-١٠-٠٨). */
     const val TUTORIAL = "Tutorial"
 }
@@ -84,6 +86,12 @@ val MERCHANT_ITEMS: List<DrawerItem> = listOf(
         com.rahalgo.ui.R.string.menu_mine,
         R.string.menu_staff,
         com.rahalgo.ui.R.drawable.ic_user,
+    ),
+    DrawerItem(
+        MerchantItems.BRANCH,
+        com.rahalgo.ui.R.string.menu_mine,
+        com.rahalgo.ui.R.string.branch_add,
+        com.rahalgo.ui.R.drawable.ic_store,
     ),
     // **ورقمُ الطلبات حسب الدوام وموظّفوه** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — كلوحة المتجر
     // بالويب، **والموظّفُ لا يرى بابَ الموظّفين** (`TeamAccess`).

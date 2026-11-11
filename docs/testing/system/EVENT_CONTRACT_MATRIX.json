@@ -11,7 +11,7 @@
     "InApp": 8
   },
   "derived": {
-    "emit_sites": 132,
+    "emit_sites": 134,
     "realtime_publishers": 32,
     "rooms": 5,
     "untargeted_user_sites": 38
@@ -488,7 +488,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 769,
+      "line": 869,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -497,7 +497,16 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 846,
+      "line": 936,
+      "call": "NotifyOps",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/whatsapp_order.go",
+      "line": 1024,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -668,6 +677,15 @@
       "kind": "Account",
       "entity": "user",
       "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/branch_requests.go",
+      "line": 489,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "branch_request",
+      "has_app_targeting": true,
       "has_entity_id": true
     },
     {
@@ -1578,7 +1596,7 @@
     },
     {
       "file": "internal/orders/board.go",
-      "line": 336,
+      "line": 351,
       "room": "ops"
     },
     {
@@ -1678,12 +1696,12 @@
     },
     {
       "file": "internal/orders/watchdog.go",
-      "line": 378,
+      "line": 379,
       "room": "ops"
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 852,
+      "line": 1030,
       "room": "driver:*"
     },
     {

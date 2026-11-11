@@ -948,6 +948,9 @@ func (s *Server) Router() http.Handler {
 			r.Get("/merchants", s.handleRepMerchants)
 			// تفاصيل عميل: طلباته وعمولة المندوب عن كلٍّ منها — شفافية العمولة
 			r.Get("/merchants/{id}", s.handleRepMerchantDetail)
+			// **«أضف فرع» لعميله** (قرارُ المالك ٢٠٢٦-١١-١٠) — `branch_requests.go`.
+			r.Get("/merchants/{id}/branch-requests", s.handleRepBranchList)
+			r.Post("/merchants/{id}/branch-requests", s.handleRepBranchCreate)
 			r.Get("/wallet", s.handleRepWallet)
 			r.Get("/leads", s.handleRepLeads)
 			// يسجّل عميلاً باسمه من الميدان — يبقى معلّقاً حتى موافقة الإدارة
@@ -1141,6 +1144,9 @@ func (s *Server) Router() http.Handler {
 			// ٢٠٢٦-٠٨-٠٧.) والأنواعُ محصورةٌ في `merchantKinds`.
 			r.Post("/media", s.handleMerchantUploadMedia)
 			r.Get("/stores", s.handleMerchantStores)
+			// **«أضف فرع»** (قرارُ المالك ٢٠٢٦-١١-١٠) — `branch_requests.go`.
+			r.Get("/branch-requests", s.handleMerchantBranchList)
+			r.Post("/stores/{id}/branch-requests", s.handleMerchantBranchCreate)
 			// **ومن أُنذر يرى إنذارَه.** إشعارٌ يمرّ في الشريط يُقرأ مرّةً
 			// ويُنسى، **ثمّ يُحظر المتجرُ ولم يعلم أنّ عليه شيئاً.**
 			r.Get("/warnings", s.handleMerchantWarnings)
@@ -1794,6 +1800,11 @@ func (s *Server) Router() http.Handler {
 			r.Get("/salesreps", s.handleListSalesReps)
 			r.Get("/leads", s.handleAdminLeads)
 			r.Post("/leads/{id}/status", s.handleAdminLeadStatus)
+			// **«أضف فرع»** (قرارُ المالك ٢٠٢٦-١١-١٠) — طابورُ طلبات الفروع، `branch_requests.go`.
+			r.Get("/branch-requests", s.handleAdminBranchList)
+			r.Get("/branch-requests/count", s.handleAdminBranchCount)
+			r.Post("/branch-requests/{id}/approve", s.handleAdminBranchApprove)
+			r.Post("/branch-requests/{id}/reject", s.handleAdminBranchReject)
 
 			// طلبات سحب الرصيد: القراءة لمكتب المنصة، والصرف للأدمن والمالية
 			r.Get("/payouts", s.handleAdminPayouts)

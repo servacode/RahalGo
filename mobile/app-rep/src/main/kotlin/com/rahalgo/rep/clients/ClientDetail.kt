@@ -231,6 +231,13 @@ fun ClientDetail(
                     compact = true,
                 ) { ActionLabel(com.rahalgo.ui.R.drawable.ic_offer, stringResource(R.string.mn_make_offer)) }
             }
+            // **«أضف فرع» لعميله** (قرارُ المالك ٢٠٢٦-١١-١٠) — طلبٌ يوافق عليه المكتب.
+            Spacer(Modifier.height(Rahal.space.sm))
+            RahalOutlineButton(
+                onClick = { vm.branchOpen = true },
+                modifier = Modifier.fillMaxWidth().height(Rahal.size.action),
+                compact = true,
+            ) { ActionLabel(com.rahalgo.ui.R.drawable.ic_store, stringResource(com.rahalgo.ui.R.string.branch_add)) }
         }
 
         // ══════════════════════════════════════════════════════════════

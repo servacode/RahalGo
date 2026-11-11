@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 700,
+    "routes": 708,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 137,
-    "notify_targeted": 69,
+    "notify_sites": 138,
+    "notify_targeted": 70,
     "publish_rooms": [
       "customer",
       "driver",
@@ -33,8 +33,8 @@
     "setting_defs": 284,
     "behaviour_settings": 239,
     "order_fields": 146,
-    "test_files": 827,
-    "test_funcs": 3186
+    "test_files": 828,
+    "test_funcs": 3191
   },
   "flows": [
     {
@@ -15008,6 +15008,36 @@
     {
       "name": "TestBatch4_SignupRetryDoesNotLockLogin",
       "file": "internal/qa/batch4_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBranchRequest_ApproveCreatesLinkedStoreWithCommission",
+      "file": "internal/qa/branch_requests_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBranchRequest_ApproveDefaultsToParentCommission",
+      "file": "internal/qa/branch_requests_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBranchRequest_MerchantCreateAndForbidden",
+      "file": "internal/qa/branch_requests_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBranchRequest_Reject",
+      "file": "internal/qa/branch_requests_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBranchRequest_RepOnlyForOwnClient",
+      "file": "internal/qa/branch_requests_test.go",
       "package": "qa",
       "orphan": true
     },

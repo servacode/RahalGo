@@ -718,6 +718,24 @@
          لا يعدّل قائمتَه ولا إتاحتَه ولا عروضَه ولا ساعاتِه حتى يُرفع
          الإيقاف. **وتقول السببَ لا المنعَ وحدَه** كي يعرف أنّ الحلَّ عند
          الإدارة لا في جهازه. -->
+    <string name="err_branch_request_pending">عندك طلب فرع مفتوح بنفس الاسم، أو وصلت الحد الأقصى للطلبات المفتوحة</string>
+    <string name="err_branch_request_decided">تم البتّ بهذا الطلب من قبل</string>
+    <string name="branch_add">أضف فرع</string>
+    <string name="branch_title">أضف فرع</string>
+    <string name="branch_name">اسم الفرع</string>
+    <string name="branch_phone">رقم الفرع (اختياري)</string>
+    <string name="branch_point">موقع الفرع على الخريطة</string>
+    <string name="branch_send">أرسل الطلب</string>
+    <string name="branch_sent">أُرسل الطلب، بانتظار موافقة الإدارة</string>
+    <string name="branch_mine">طلباتي</string>
+    <string name="branch_none">لا يوجد طلبات فروع بعد</string>
+    <string name="branch_of">للمتجر: %1$s</string>
+    <string name="branch_st_pending">بانتظار الموافقة</string>
+    <string name="branch_st_approved">تمت الموافقة</string>
+    <string name="branch_st_rejected">مرفوض</string>
+    <string name="branch_reason">السبب: %1$s</string>
+    <string name="branch_need_point">حدّد موقع الفرع على الخريطة</string>
+    <string name="branch_need_name">اكتب اسم الفرع</string>
     <string name="err_store_suspended">متجرك موقوف حالياً — يمكنك العرض دون التعديل حتى يُرفع الإيقاف</string>
     <!-- **وتقول البديلَ لا المنعَ وحدَه** — (٢٠٢٦-٠٨-٢٣): من قرأ
          «مرفوض» أغلق التطبيق، **ومن قرأ «ادفع من محفظتك» أكمل طلبَه.**

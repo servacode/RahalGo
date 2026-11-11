@@ -103,6 +103,21 @@ fun ClientsScreen(
             ClientSections(vm)
             return
         }
+        if (vm.branchOpen) {
+            BackHandler { vm.branchOpen = false }
+            val branchVm: com.rahalgo.ui.RepBranchViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+            com.rahalgo.ui.BranchRequestScreen(
+                vm = branchVm,
+                parentId = vm.openId,
+                onBack = { vm.branchOpen = false },
+                pointCard = { la, ln, enabled, onPoint ->
+                    com.rahalgo.map.PointMapCard(
+                        lat = la, lng = ln, pending = false, enabled = enabled, onPoint = onPoint,
+                    )
+                },
+            )
+            return
+        }
         BackHandler { vm.closeDetail() }
         ClientDetail(vm, onOpenMenu, onOpenOffers, onOpenItems)
         return

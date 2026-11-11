@@ -418,7 +418,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     profile = com.rahalgo.ui.drawerProfile(accountVm, com.rahalgo.ui.R.string.drawer_role_merchant),
                     // **والموظّفُ لا يرى بابَ الموظّفين** — المحرّكُ يردّه (`notStaff`).
                     items = MERCHANT_ITEMS.filter {
-                        !(it.key == MerchantItems.STAFF && com.rahalgo.merchant.store.TeamAccess.isStaff)
+                        !((it.key == MerchantItems.STAFF || it.key == MerchantItems.BRANCH) &&
+                            com.rahalgo.merchant.store.TeamAccess.isStaff)
                     } + PlatformPages.items,
                     onPick = { item ->
                         if (item.key == MerchantItems.TUTORIAL) {
@@ -675,6 +676,21 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                                 onBack = { overlay.clear() },
                             )
                         }
+                    }
+
+                    // **«أضف فرع»** — نموذجٌ مشتركٌ مع المندوب، والخريطةُ الصغيرةُ نفسُها التي في المعالج.
+                    over is Overlay.Menu && over.key == MerchantItems.BRANCH -> {
+                        val branchVm: com.rahalgo.ui.MerchantBranchViewModel = viewModel()
+                        com.rahalgo.ui.BranchRequestScreen(
+                            vm = branchVm,
+                            parentId = com.rahalgo.merchant.SelectedStore.id.ifEmpty { storeVm.stores.firstOrNull()?.id ?: "" },
+                            onBack = { overlay.clear() },
+                            pointCard = { la, ln, enabled, onPoint ->
+                                com.rahalgo.map.PointMapCard(
+                                    lat = la, lng = ln, pending = false, enabled = enabled, onPoint = onPoint,
+                                )
+                            },
+                        )
                     }
 
                     over is Overlay.Menu && over.key == MerchantItems.STAFF -> {

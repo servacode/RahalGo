@@ -611,6 +611,9 @@ private val CODES: Map<String, Int> = mapOf(
     // `store_suspended` فيُقرأ عربيّاً لا خامّاً. وهو غيرُ «موقوف الحساب»
     // (`user_suspended`): إيقافُ متجرٍ واحدٍ لا صاحبِه.
     "store_suspended" to R.string.err_store_suspended,
+    // **«أضف فرع»** (٢٠٢٦-١١-١٠) — طلبٌ مفتوحٌ بالاسم نفسِه أو بلغنا الحدَّ، وطلبٌ قُرّر فيه.
+    "branch_request_pending" to R.string.err_branch_request_pending,
+    "branch_request_decided" to R.string.err_branch_request_decided,
     // **والدفعُ نقداً موقوفٌ مؤقّتاً** — (٢٠٢٦-٠٨-٢٣). **والرسالةُ
     // تقول البديل**: المحفظةُ مفتوحةٌ له.
     "cash_blocked" to R.string.err_cash_blocked,

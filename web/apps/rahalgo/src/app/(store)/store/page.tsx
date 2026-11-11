@@ -46,6 +46,7 @@ import {
   IconCamera,
   IconCash,
   IconCatOther,
+  IconStore,
   IconCheck,
   IconClose,
   IconDate,
@@ -589,6 +590,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
           Link={Link}
         />
         <IRow icon={IconLocation} tone="danger" title={HM.rowAddress} value={point ? store.address_text : notSet} valueTone={!point ? "danger" : undefined} href="/store/settings/address" Link={Link} />
+        <IRow icon={IconStore} tone="info" title={HM.rowBranch} href="/store/settings/branch" Link={Link} />
         <IRow
           icon={IconCamera}
           tone="violet"

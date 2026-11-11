@@ -116,6 +116,7 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
         detail = null
         hoursOpen = false
         sectionsOpen = false
+        branchOpen = false
         mySections = emptyList()
         loadHours(id)
         busy = true
@@ -267,6 +268,7 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
         detail = null
         hoursOpen = false
         sectionsOpen = false
+        branchOpen = false
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -342,6 +344,9 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
     // **والمسوّدةُ محلّيّةٌ حتّى يُضغط «حفظ»**، والمحرّكُ يستبدل القائمةَ كلَّها.
 
     var sectionsOpen by mutableStateOf(false)
+
+    /** **صفحةُ «أضف فرع» فوق التفصيل** (قرارُ المالك ٢٠٢٦-١١-١٠) — والرجوعُ منها إليه. */
+    var branchOpen by mutableStateOf(false)
 
     /** **أقسامُ السوق الفعّالة للاختيار.** */
     var allSections by mutableStateOf<List<com.rahalgo.shared.rep.PlatformSection>>(emptyList())

@@ -325,6 +325,7 @@ const PAGE_CAPS: [string, string[]][] = [
   ["/dashboard/shamcash", ["finance.read"]],
   ["/dashboard/incentives", ["finance.read"]],
   ["/dashboard/leads", ["merchants.verify"]],
+  ["/dashboard/branch-requests", ["merchants.verify"]],
   ["/dashboard/sections", ["market.manage"]],
   ["/dashboard/promos", ["offers.manage"]],
 ];
