@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 283,
-    "behaviour_settings": 238,
+    "setting_defs": 284,
+    "behaviour_settings": 239,
     "order_fields": 146,
-    "test_files": 826,
-    "test_funcs": 3183
+    "test_files": 827,
+    "test_funcs": 3185
   },
   "flows": [
     {
@@ -7853,6 +7853,24 @@
       "key": "support.late_reply_hours",
       "group": "platform",
       "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "whatsapp.live_location_only",
+      "group": "platform",
+      "kind": "bool",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -28458,6 +28476,18 @@
     {
       "name": "TestBOOK06_TotalCardMatchesUnfilteredList",
       "file": "internal/qa/user_counts_match_list_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWALiveOnly_FixedRefusedLiveAccepted",
+      "file": "internal/qa/wa_live_location_only_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWALiveOnly_SwitchOffAcceptsFixed",
+      "file": "internal/qa/wa_live_location_only_test.go",
       "package": "qa",
       "orphan": true
     },

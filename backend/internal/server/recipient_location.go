@@ -93,7 +93,10 @@ func (s *Server) locReqLink(token string) string {
 // و«دائما لديك امانة او طلب من تطبيق رحال غو … مشان اي شخص جديد يسال شو هو رحال غو». فالمستلِمُ
 // يردّ على المحادثة بموقعه الحاليّ أو المباشر من زرّ المشبك، **والبوتُ يلتقطه** (`HandleWALocation`).
 // **وصفحةُ `/loc` باقيةٌ لرسائلَ وصلت قبل القرار** — لكنّ رابطَها لا يُكتب في رسالةٍ جديدة.
-func locReqText(mode string) string {
+//
+// **والمباشرُ وحدَه** (قرارُ المالك ٢٠٢٦-١١-١١: «نطلب من الشخص الموقع المباشر وليس الحالي»)
+// يغيّر السطرَ الأخير — `whatsapp.live_location_only`، وإطفاؤه يرجع للنصّ القديم.
+func locReqText(mode string, liveOnly bool) string {
 	what := "لديك طلب"
 	if mode == "amanah" {
 		what = "لديك أمانة"
@@ -101,10 +104,26 @@ func locReqText(mode string) string {
 	text := "السلام عليكم ورحمة الله وبركاته\n" +
 		what + " من تطبيق رحّال غو للتسوق وطلبات التوصيل بالرقة\n" +
 		"ياريت تشارك موقعك أو ترسله عبر الواتساب لنقدر نوصل إليك بسهولة:\n" +
-		"ردّ على هالرسالة بموقعك: اضغط 📎 ← الموقع ← أرسل موقعك الحالي أو المباشر"
+		locReqHowTo(liveOnly)
 	// **والموقعُ وحدَه لكلّ الأنواع** (قرارُ المالك ٢٠٢٦-١١-٠٨: «فقط الموقع وبس») — لا سطرَ عنوانٍ
 	// مكتوب ولا التقاطَ له؛ والمكتبُ يكتب العنوانَ بيده إن لزم.
 	return text
+}
+
+// locReqHowTo **سطرُ «كيف ترسل موقعك»** — المباشرُ وحدَه أو الاثنان.
+func locReqHowTo(liveOnly bool) string {
+	if liveOnly {
+		return "ردّ على هالرسالة بموقعك المباشر: اضغط 📎 ← الموقع ← شارك الموقع المباشر"
+	}
+	return "ردّ على هالرسالة بموقعك: اضغط 📎 ← الموقع ← أرسل موقعك الحالي أو المباشر"
+}
+
+// waLiveOnlyReply **ردُّ البوت على موقعٍ ثابت** حين لا يُقبل إلّا المباشر — والطلبُ يبقى ينتظر.
+const waLiveOnlyReply = "وصلنا موقع ثابت 🌷 ابعتلنا الموقع المباشر لو سمحت: اضغط 📎 ← الموقع ← شارك الموقع المباشر"
+
+// liveLocationOnly **لا يُقبل بالواتساب إلّا الموقعُ المباشر** (قرارُ المالك ٢٠٢٦-١١-١١).
+func (s *Server) liveLocationOnly(ctx context.Context) bool {
+	return s.settings.GetBool(ctx, "whatsapp.live_location_only")
 }
 
 // locReqAcc **تُنظّف الدقّة** — اختياريّة، وما خرج عن المعقول يُهمَل.
@@ -162,9 +181,27 @@ func (s *Server) locReqReceived(ctx context.Context, ownerID, customerID, orderI
 // **أوّلُ نقطةٍ تملأ الطلب**، وتحديثاتُه اللاحقة لا تجد طلباً مفتوحاً (`received_at IS NULL`)
 // فلا ردَّ ولا نبضةَ ولا نقطةً جديدةً للسائق.
 func (s *Server) HandleWALocation(ctx context.Context, from string, lat, lng, accuracy float64) string {
+	return s.HandleWALocationKind(ctx, from, lat, lng, accuracy, true)
+}
+
+// HandleWALocationKind **كـ`HandleWALocation` ومعه نوعُ الموقع** — والبوتُ يناديه.
+//
+// **والثابتُ مرفوضٌ إن لم يُقبل إلّا المباشر** (قرارُ المالك ٢٠٢٦-١١-١١): لا يُكتب، ويُردّ على
+// صاحبه بطلب المباشر إن كان له طلبُ موقعٍ مفتوح — **وإلّا لا ردّ** (رسالةٌ عاديّةٌ لا تخصّنا).
+func (s *Server) HandleWALocationKind(ctx context.Context, from string, lat, lng, accuracy float64, live bool) string {
 	phone, ok := identity.NormalizePhone(from)
 	if !ok || !orders.ValidPoint(lat, lng) {
 		return ""
+	}
+	if !live && s.liveLocationOnly(ctx) {
+		var open bool
+		if err := s.pg.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM recipient_location_requests
+			                WHERE phone = $1 AND received_at IS NULL AND expires_at > now())`,
+			phone).Scan(&open); err != nil || !open {
+			return ""
+		}
+		return waLiveOnlyReply
 	}
 	var ownerID, customerID, orderID, mode string
 	err := s.pg.QueryRow(ctx, `
@@ -263,7 +300,7 @@ func (s *Server) handleMerchantRequestLocation(w http.ResponseWriter, r *http.Re
 // **والإرسالُ بانتظاره** — الشاشةُ تقول «وصلت الرسالة» أو تعرض زرَّ المشاركة.
 func (s *Server) locReqSend(ctx context.Context, id, phone, mode, token string, expires time.Time) map[string]any {
 	link := s.locReqLink(token)
-	text := locReqText(mode)
+	text := locReqText(mode, s.liveLocationOnly(ctx))
 	sendCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 	defer cancel()
 	sent := s.sendText(sendCtx, phone, text)

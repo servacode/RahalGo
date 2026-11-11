@@ -407,7 +407,7 @@ func run(logger *slog.Logger) error {
 				waBot.SetSelfCommand(srv.ReportForSelf)
 				// **«ردّ بموقعك»** (٢٠٢٦-١١-٠٣): موقعٌ وارد يملأ أحدثَ طلبٍ مفتوحٍ لرقمه.
 				waBot.SetInboundLocation(func(c context.Context, from string, l notify.InboundLocation) string {
-					return srv.HandleWALocation(c, from, l.Lat, l.Lng, l.AccuracyM)
+					return srv.HandleWALocationKind(c, from, l.Lat, l.Lng, l.AccuracyM, l.Live)
 				})
 				// **«صورة + اسم وسعر»** (٢٠٢٦-١١-٠٩): صاحبُ المتجر أو موظّفه يضيف صنفاً من الواتساب.
 				waItems := srv.NewWAItems(waBot.SendText)

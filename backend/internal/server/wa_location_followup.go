@@ -36,7 +36,11 @@ import (
 
 // waLocFollowUpText **تذكيرٌ بالموقع وحدَه** — كان يطلب العنوانَ مكتوباً (٢٠٢٦-١١-٠٥)، **وقرارُ المالك
 // ٢٠٢٦-١١-٠٨: «فقط الموقع وبس».**
-const waLocFollowUpText = "ما وصلنا موقعك لسّا 🌷 ردّ على هالرسالة بموقعك: اضغط 📎 ← الموقع ← أرسل موقعك الحالي أو المباشر"
+//
+// **والمباشرُ وحدَه** إن كان هو المقبول (`whatsapp.live_location_only`، ٢٠٢٦-١١-١١).
+func waLocFollowUpText(liveOnly bool) string {
+	return "ما وصلنا موقعك لسّا 🌷 " + locReqHowTo(liveOnly)
+}
 
 // waLocFollowUpWindow **أقدمُ طلبٍ يُتابَع** — ساعتان.
 const waLocFollowUpWindow = 2 * time.Hour
@@ -189,7 +193,7 @@ func (s *Server) SweepWALocationFollowUp(ctx context.Context) int {
 			continue
 		}
 		sendCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
-		ok := s.sendText(sendCtx, c.phone, waLocFollowUpText)
+		ok := s.sendText(sendCtx, c.phone, waLocFollowUpText(s.liveLocationOnly(ctx)))
 		cancel()
 		if !ok {
 			s.logger.Warn("متابعةُ طلب الموقع: الرسالةُ لم تصل — لا إعادة", "request", c.id)
