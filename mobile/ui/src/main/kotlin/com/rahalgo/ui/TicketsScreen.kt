@@ -9,9 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -113,18 +110,12 @@ fun TicketsScreen(
     Screen {
         ScreenTitle(title, hint)
         if (againstMe != null) {
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                SegmentedButton(
-                    selected = showAgainst,
-                    onClick = { showAgainst = true },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                ) { Text(stringResource(R.string.tik_on_me)) }
-                SegmentedButton(
-                    selected = !showAgainst,
-                    onClick = { showAgainst = false },
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                ) { Text(stringResource(R.string.tik_mine)) }
-            }
+            // **المفتاحُ المقسومُ الموحَّد** — الشكلُ نفسُه في «جارية/منتهية» و«مشتريات/أمانة».
+            SegmentedToggle(
+                options = listOf(stringResource(R.string.tik_on_me), stringResource(R.string.tik_mine)),
+                selected = if (showAgainst) 0 else 1,
+                onSelect = { showAgainst = it == 0 },
+            )
             Spacer(Modifier.height(Rahal.space.md))
         }
 

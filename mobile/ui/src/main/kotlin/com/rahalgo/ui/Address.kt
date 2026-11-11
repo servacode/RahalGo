@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -351,7 +352,7 @@ private fun EmptyAddresses() {
             fontWeight = FontWeight.Bold,
             style = Rahal.type.sectionTitle,
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Text(
             stringResource(R.string.addr_sheet_empty_hint),
             color = Rahal.colors.inkMuted,
@@ -361,28 +362,32 @@ private fun EmptyAddresses() {
     }
 }
 
-/** **عنوانٌ يُختار** — والمختارُ يُعرف بلونه لا بعلامةٍ ثانية. */
+/** **عنوانٌ يُختار** — والمختارُ يُعرف بأرضه الملوّنة وعلامة ✓ معاً (D18). */
 @Composable
 private fun AddressChoice(a: Address, busy: Boolean, onPick: (Address) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
+            .heightIn(min = Rahal.size.touch)
+            .clip(Rahal.shape.md)
+            // **والمختارُ على أرضٍ خفيفةٍ من لون العلامة** (D18) — يُرى من بعيد قبل قراءة السطر.
+            .then(if (a.isDefault) Modifier.background(Rahal.colors.brand.copy(alpha = 0.08f)) else Modifier)
             .clickable(enabled = !busy) { onPick(a) }
-            .padding(vertical = Rahal.space.md),
+            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_pin),
             contentDescription = null,
-            tint = if (a.isDefault) Rahal.colors.accent else Rahal.colors.inkMuted,
-            modifier = Modifier.size(22.dp),
+            tint = if (a.isDefault) Rahal.colors.brand else Rahal.colors.inkMuted,
+            modifier = Modifier.size(Rahal.icon.sm),
         )
         Spacer(Modifier.size(Rahal.space.md))
         Column(Modifier.weight(1f)) {
             Text(
                 text = stringResource(addressKindLabel(a.kind)),
-                fontWeight = FontWeight.Medium,
-                style = Rahal.type.body,
+                style = if (a.isDefault) Rahal.type.bodyStrong else Rahal.type.body,
+                color = Rahal.colors.ink,
             )
             Text(
                 text = a.text,
@@ -395,12 +400,21 @@ private fun AddressChoice(a: Address, busy: Boolean, onPick: (Address) -> Unit) 
         // **علامةُ صحٍّ واضحة على المختار (تدقيق D18)** — اللونُ وحدَه لا يُقرأ لمن لا يميّز الألوان.
         if (a.isDefault) {
             Spacer(Modifier.size(Rahal.space.sm))
-            Icon(
-                painter = painterResource(R.drawable.ic_check_mark),
-                contentDescription = stringResource(R.string.addr_selected),
-                tint = Rahal.colors.success,
-                modifier = Modifier.size(Rahal.icon.md),
-            )
+            // **دائرةٌ مملوءةٌ بلون العلامة وفيها ✓ أبيض** — علامةُ «المختار» الواحدة في كلّ التطبيقات.
+            Box(
+                Modifier
+                    .size(Rahal.icon.md)
+                    .clip(CircleShape)
+                    .background(Rahal.colors.brand),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_check_mark),
+                    contentDescription = stringResource(R.string.addr_selected),
+                    tint = Rahal.colors.onBrand,
+                    modifier = Modifier.size(Rahal.icon.xs),
+                )
+            }
         }
     }
     RahalDivider()

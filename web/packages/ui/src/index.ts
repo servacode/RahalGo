@@ -169,6 +169,7 @@ export {
   type EntityStat,
 } from "./layout";
 export { Checkbox } from "./components";
+export { SegmentedToggle } from "./SegmentedToggle";
 export {
   CategoryIcon,
   CategoryIconPicker,
