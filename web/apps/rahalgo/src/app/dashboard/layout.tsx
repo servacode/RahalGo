@@ -124,6 +124,9 @@ const ALL_NAV: NavItem[] = [
     caps: ["emergencies.manage"] },
   { href: "/dashboard/leads", label: m.terms.leads, icon: IconSignup,
     caps: ["merchants.verify"] },
+  // **طلباتُ الفروع** — «أضف فرع» من صاحب المتجر أو المندوب، بقدرة طلبات الانضمام نفسِها، وشارتُها عددُ المنتظر.
+  { href: "/dashboard/branch-requests", label: m.admin.nav.branchRequests, icon: IconStore,
+    caps: ["merchants.verify"] },
   // ══════════════════════════════════════════════════════════════════
   // **خريطةُ العمليات — «أين» لا «كم»**
   // ══════════════════════════════════════════════════════════════════
@@ -319,12 +322,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ["landmark"],
     [canLandmarks],
   );
+  // **طلباتُ الفروع بانتظار الموافقة** — شارةُ بندها، وتتحدّث مع كلّ طلبٍ يصل.
+  const canBranches = capabilities.includes("merchants.verify");
+  const { data: branchCount } = useLiveData<{ pending: number }>(
+    () =>
+      canBranches
+        ? api("/api/v1/admin/branch-requests/count")
+        : Promise.resolve({ pending: 0 }),
+    ["branch_request"],
+    [canBranches],
+  );
   const navShown = useMemo(
     () =>
       nav.map((i) => {
         if (i.href === "/dashboard/sections")
           return { ...i, badge: inMarket ? 0 : (marketNew?.count ?? 0) };
         if (i.href === "/dashboard/map-learning") return { ...i, badge: landmarkCount?.pending ?? 0 };
+        if (i.href === "/dashboard/branch-requests") return { ...i, badge: branchCount?.pending ?? 0 };
         if (i.href === "/dashboard/emergencies")
           return {
             ...i,
@@ -333,7 +347,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           };
         return i;
       }),
-    [nav, marketNew, inMarket, emergencyCount, landmarkCount],
+    [nav, marketNew, inMarket, emergencyCount, landmarkCount, branchCount],
   );
 
   useEffect(() => {

@@ -18,6 +18,7 @@ import { useStoreSections } from "@/lib/store/setup";
 import HoursEditor from "@/components/store/HoursEditor";
 import SectionsEditor from "@/components/store/SectionsEditor";
 import AddressEditor from "@/components/store/AddressEditor";
+import BranchRequest from "@/components/store/BranchRequest";
 import { AmeenCard, PrepCard, RateCard, ReturnsCard, SettlementCard } from "@/components/store/StoreSettings";
 import { PageHeader } from "@/components/store/SetupParts";
 
@@ -29,6 +30,7 @@ const TITLES = {
   hours: HM.rowHours,
   sections: HM.rowSections,
   address: HM.rowAddress,
+  branch: HM.rowBranch,
   settlement: HM.rowSettlement,
   returns: HM.rowReturns,
   rate: HM.rowRate,
@@ -89,6 +91,7 @@ export default function StoreSettingsPage() {
           {page === "hours" && <HoursEditor />}
           {page === "sections" && <Sections />}
           {page === "address" && <AddressEditor />}
+          {page === "branch" && <BranchRequest />}
           {page === "settlement" && <SettlementCard />}
           {page === "returns" && <ReturnsCard />}
           {page === "rate" && <RateCard />}

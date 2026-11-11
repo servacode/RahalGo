@@ -274,6 +274,98 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/branch-requests",
+      "handler": "handleAdminBranchList",
+      "auth": true,
+      "capability": "merchants.verify",
+      "response": [
+        {
+          "name": "general_commission_percent",
+          "type": "unknown"
+        },
+        {
+          "name": "requests",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/branch-requests/count",
+      "handler": "handleAdminBranchCount",
+      "auth": true,
+      "capability": "merchants.verify",
+      "response": [
+        {
+          "name": "pending",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/branch-requests/{id}/approve",
+      "handler": "handleAdminBranchApprove",
+      "auth": true,
+      "capability": "merchants.verify",
+      "request": [
+        {
+          "name": "commission_percent",
+          "type": "?pricing.Percent2"
+        }
+      ],
+      "response": [
+        {
+          "name": "branch_merchant_id",
+          "type": "unknown"
+        },
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/branch-requests/{id}/reject",
+      "handler": "handleAdminBranchReject",
+      "auth": true,
+      "capability": "merchants.verify",
+      "request": [
+        {
+          "name": "reason",
+          "type": "?string"
+        }
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/broadcast",
       "handler": "handleBroadcast",
@@ -9625,6 +9717,24 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/merchant/branch-requests",
+      "handler": "handleMerchantBranchList",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "requests",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/merchant/deliveries/{id}",
       "handler": "handleMerchantDelivery",
       "auth": true,
@@ -10062,6 +10172,15 @@
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/branch-requests",
+      "handler": "handleMerchantBranchCreate",
+      "auth": true,
+      "roles": [
+        "merchant"
       ]
     },
     {
@@ -12933,6 +13052,33 @@
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/merchants/{id}/branch-requests",
+      "handler": "handleRepBranchList",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "requests",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rep/merchants/{id}/branch-requests",
+      "handler": "handleRepBranchCreate",
+      "auth": true,
+      "roles": [
+        "sales"
       ]
     },
     {

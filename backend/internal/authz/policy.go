@@ -202,6 +202,11 @@ var adminPolicy = []Rule{
 	{"GET", "/merchants/{id}/warnings", SafetyManage},
 	{"POST", "/leads/{id}/status", MerchantsVerify},
 	{"GET", "/leads", MerchantsVerify},
+	// **«أضف فرع»** (قرارُ المالك ٢٠٢٦-١١-١٠) — موافقةُ الفروع بقدرة التحقّق من المتاجر كالمرشَّحين.
+	{"GET", "/branch-requests", MerchantsVerify},
+	{"GET", "/branch-requests/count", MerchantsVerify},
+	{"POST", "/branch-requests/{id}/approve", MerchantsVerify},
+	{"POST", "/branch-requests/{id}/reject", MerchantsVerify},
 	{"POST", "/merchants", MerchantsManage},
 	{"PATCH", "/merchants/{id}", MerchantsManage},
 	{"DELETE", "/merchants/{id}", MerchantsManage},

@@ -837,6 +837,8 @@
     }
   },
   "errors": {
+    "branch_request_pending": "عندك طلب فرع مفتوح بنفس الاسم، أو وصلت الحد الأقصى للطلبات المفتوحة",
+    "branch_request_decided": "تم البتّ بهذا الطلب من قبل",
     "promo_code_invalid": "الكود لازم يكون من 3 لـ 32 حرف إنكليزي أو رقم، بلا فراغات",
     "promo_kind_invalid": "نوع الكود غير معروف",
     "promo_percent_range": "نسبة الخصم لازم تكون من 1 لـ 90",
@@ -1907,6 +1909,7 @@
       "opsMap": "خريطة العمليات",
       "driverMonitor": "مراقبة السائقين",
       "mapLearning": "الخريطة من السائقين",
+      "branchRequests": "طلبات الفروع",
       "expansion": "طلبات التوسع",
       "problems": "المشاكل والتعويضات",
       "problemsHint": "الشكاوى والتقييمات، والطلبات الفاشلة والنزاعات وتعويض البضاعة — بمكان واحد"
@@ -5602,6 +5605,9 @@
         "admin.logout_all": "إنهاء كل الجلسات",
         "admin.menu_reviewed": "مراجعة قائمة متجر",
         "admin.merchant_create": "إنشاء متجر",
+        "branch.request": "طلب فرع جديد",
+        "branch.approve": "الموافقة على فرع",
+        "branch.reject": "رفض طلب فرع",
         "admin.merchant_update": "تعديل متجر",
         "admin.merchant_featured": "تعديل المتجر المميّز",
         "admin.password_reset": "إعادة ضبط كلمة مرور",
@@ -7004,6 +7010,51 @@
       "signals": "مرّات",
       "unresolved": "غير محدَّد إداريّاً",
       "empty": "لا طلبَ توسّعٍ بعد."
+    },
+    "branchRequests": {
+      "title": "طلبات الفروع",
+      "filter": {
+        "pending": "بانتظار الموافقة",
+        "approved": "تمت الموافقة",
+        "rejected": "مرفوض",
+        "all": "الكل"
+      },
+      "status": {
+        "pending": "بانتظار الموافقة",
+        "approved": "تمت الموافقة",
+        "rejected": "مرفوض"
+      },
+      "role": {
+        "merchant": "صاحب المتجر",
+        "sales": "المندوب"
+      },
+      "cols": {
+        "branch": "الفرع",
+        "parent": "المتجر الأم",
+        "owner": "صاحب المتجر",
+        "by": "طلبه",
+        "phone": "الهاتف",
+        "address": "العنوان",
+        "at": "وقت الطلب",
+        "commission": "العمولة",
+        "reason": "سبب الرفض"
+      },
+      "approve": "موافقة",
+      "reject": "رفض",
+      "onMap": "على الخريطة",
+      "approveTitle": "الموافقة على الفرع",
+      "rejectTitle": "رفض طلب الفرع",
+      "commission": "عمولة الفرع %",
+      "commissionHint": "عمولة المتجر الأم الآن {n}%. اتركها كما هي أو غيّرها.",
+      "commissionHintGeneral": "العمولة العامة {n}%. اتركها كما هي أو غيّرها.",
+      "percentBad": "اكتب نسبة من 0 إلى 100",
+      "reasonLabel": "سبب الرفض (اختياري)",
+      "approved": "تمت الموافقة وأُنشئ الفرع",
+      "rejected": "تم رفض الطلب",
+      "empty": "لا توجد طلبات فروع.",
+      "loadFailed": "تعذّر تحميل طلبات الفروع",
+      "viewTable": "جدول",
+      "viewCards": "بطاقات"
     },
     "mapLearning": {
       "title": "الخريطة من السائقين",
@@ -12046,6 +12097,24 @@
       "pointChange": "غيّر الموقع",
       "saved": "حُفظ عنوانك"
     },
+    "branch": {
+      "formTitle": "طلب فرع جديد",
+      "hint": "اكتب اسم الفرع وحدّد مكانه على الخريطة. يصل الطلب للمكتب وبعد الموافقة يصير الفرع متجراً مستقلاً.",
+      "name": "اسم الفرع",
+      "phone": "رقم هاتف الفرع (اختياري)",
+      "point": "موقع الفرع على الخريطة",
+      "submit": "إرسال الطلب",
+      "sent": "وصل طلبك للمكتب وينتظر الموافقة",
+      "listTitle": "طلباتي",
+      "empty": "ما أرسلت أي طلب فرع بعد",
+      "loadFailed": "تعذّر تحميل طلباتك",
+      "rejectReason": "سبب الرفض:",
+      "status": {
+        "pending": "بانتظار الموافقة",
+        "approved": "تمت الموافقة",
+        "rejected": "مرفوض"
+      }
+    },
     "offers": {
       "title": "العروض",
       "newButton": "＋ عرض جديد",
@@ -12426,6 +12495,7 @@
       "groupHoursMoney": "الدوام والمال",
       "rowSections": "أقسام السوق",
       "rowAddress": "العنوان والموقع",
+      "rowBranch": "أضف فرع",
       "rowLogo": "الشعار",
       "rowStaff": "موظفو المتجر",
       "rowOrderPhones": "رقم الطلبات حسب الدوام",
