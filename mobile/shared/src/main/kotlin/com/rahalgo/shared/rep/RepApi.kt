@@ -427,6 +427,8 @@ data class RepMerchant(
     @SerialName("has_location") val hasLocation: Boolean = false,
     @SerialName("photo_items") val photoItems: Int = 0,
     @SerialName("min_items") val minItems: Int = 0,
+    /** **نسبةُ عمولة المنصّة من المتجر** (قراءةٌ فقط، ٢٠٢٦-١١-١١) — كالتي في التفصيل. */
+    @SerialName("store_commission_percent") val storeCommissionPercent: Double = 0.0,
 )
 
 @Serializable

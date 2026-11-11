@@ -170,6 +170,8 @@ fun ClientDetail(
                             description = stringResource(com.rahalgo.ui.R.string.contact_whatsapp),
                             tint = Rahal.colors.success,
                         ) { openWhatsapp(context, wa) }
+                        // **وفراغٌ بين الزرّين** (ملاحظةُ المالك ٢٠٢٦-١١-١١: «لاصقين ببعض»).
+                        Spacer(Modifier.size(Rahal.space.sm))
                     }
                     IconAction(
                         icon = com.rahalgo.ui.R.drawable.ic_phone,

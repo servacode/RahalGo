@@ -444,6 +444,8 @@ private fun MerchantCard(
                         description = stringResource(com.rahalgo.ui.R.string.contact_whatsapp),
                         tint = Rahal.colors.success,
                     ) { openWhatsapp(context, wa) }
+                    // **وفراغٌ بين الزرّين** (ملاحظةُ المالك ٢٠٢٦-١١-١١: «لاصقين ببعض»).
+                    Spacer(Modifier.size(Rahal.space.sm))
                 }
                 com.rahalgo.ui.IconAction(
                     icon = com.rahalgo.ui.R.drawable.ic_phone,
@@ -465,7 +467,8 @@ private fun MerchantCard(
             Bar(ratio = m.activationDone.toFloat() / needed.toFloat(), color = Rahal.colors.accent)
         }
 
-        // **ورقما «سُلّم» و«عمولتي» مربّعان** (قرارُ المالك ٢٠٢٦-١١-١١) — `StatTile` المشترك.
+        // **أربعةُ مربّعاتٍ في سطرين** (قرارُ المالك ٢٠٢٦-١١-١١) — «سُلّم» و«عمولتي»، ثمّ «شقد النا نسبة
+        // عمولة عنده» و«عدد الاصناف الي منزلها». `StatTile` المشترك.
         Spacer(Modifier.height(Rahal.space.md))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
             com.rahalgo.ui.StatTile(
@@ -477,6 +480,20 @@ private fun MerchantCard(
                 label = stringResource(R.string.cl_s_commission),
                 value = money(m.myCommission),
                 valueColor = Rahal.colors.brand,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(Rahal.space.sm))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+            com.rahalgo.ui.StatTile(
+                label = stringResource(R.string.cd_commission_tile),
+                value = pctLabel(m.storeCommissionPercent),
+                modifier = Modifier.weight(1f),
+            )
+            com.rahalgo.ui.StatTile(
+                label = stringResource(R.string.cl_s_items),
+                value = m.itemsCount.toString(),
+                valueColor = if (m.itemsCount == 0) Rahal.colors.accentInk else Rahal.colors.ink,
                 modifier = Modifier.weight(1f),
             )
         }

@@ -7,6 +7,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
 // لوحة المندوب: كوده للدعوة، متاجره، عمولاته — قراءة فقط (الترويج يتم ميدانياً).
@@ -195,7 +196,10 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		       m.location IS NOT NULL,
 		       (SELECT count(*) FROM menu_items mi3
 		        WHERE mi3.merchant_id = m.id AND mi3.available AND mi3.approved
-		          AND mi3.image_media_id IS NOT NULL)
+		          AND mi3.image_media_id IS NOT NULL),
+		       -- **ونسبةُ عمولة المنصّة من المتجر** (طلبُ المالك ٢٠٢٦-١١-١١: «حطلي شقد النا نسبة عمولة عنده
+		       -- الكرت كمان») — خاصّتُه أو فارغٌ فتُحسب العامّة في حزمة pricing لا هنا.
+		       m.commission_percent
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN users ou ON ou.id = m.owner_user_id
@@ -241,8 +245,10 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		HasLocation bool   `json:"has_location"`
 		PhotoItems  int    `json:"photo_items"`
 		MinItems    int64  `json:"min_items"`
-		opener      bool
-		counted     bool
+		// StoreCommissionPercent نسبةُ ما تقتطعه المنصّةُ من المتجر الآن (قراءةٌ فقط) — كما في التفصيل.
+		StoreCommissionPercent pricing.Percent2 `json:"store_commission_percent"`
+		opener                 bool
+		counted                bool
 	}
 	// **العتبةُ تُقرأ مرّةً لا لكل متجر** — وهي إعدادُ منصةٍ لا خاصّيةُ متجر.
 	//
@@ -253,14 +259,16 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 	out := []repMerchant{}
 	for rows.Next() {
 		var m repMerchant
+		var override *pricing.Percent2
 		if err := rows.Scan(&m.ID, &m.Name, &m.CategoryIcon, &m.CategoryName, &m.LogoThumbURL,
 			&m.Status, &m.JoinedAt, &m.OwnerPhone, &m.OwnerName, &m.Delivered, &m.Cancelled,
 			&m.MyCommission, &m.LastOrderAt, &m.ActivationDone,
 			&m.ItemsCount, &m.OffersCount, &m.opener, &m.counted,
-			&m.HasHours, &m.HasLocation, &m.PhotoItems); err != nil {
+			&m.HasHours, &m.HasLocation, &m.PhotoItems, &override); err != nil {
 			s.respondErr(w, err)
 			return
 		}
+		m.StoreCommissionPercent = pricing.MerchantCommission(r.Context(), s.settings, override).Percent()
 		m.ActivationNeeded = activationNeeded
 		m.MinItems = minItems
 		switch {
