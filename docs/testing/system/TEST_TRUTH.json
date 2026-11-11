@@ -34,7 +34,7 @@
     "behaviour_settings": 239,
     "order_fields": 146,
     "test_files": 827,
-    "test_funcs": 3185
+    "test_funcs": 3186
   },
   "flows": [
     {
@@ -10617,6 +10617,12 @@
     },
     {
       "name": "TestBoard_PriorityOrder",
+      "file": "internal/orders/board_rules_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestBoard_WaAmanahWaitingPickupIsNotNotSent",
       "file": "internal/orders/board_rules_test.go",
       "package": "orders_test",
       "orphan": true

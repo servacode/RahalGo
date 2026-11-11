@@ -345,6 +345,7 @@ type capNotifier interface {
 var alertTitles = map[string]string{
 	StuckNoAccept: "طلبٌ ينتظر قبولَ المكتب",
 	StuckNotSent:  "طلبٌ مقبولٌ لم يُرسَل للمتجر",
+	StuckWaPickup: "أمانةُ واتساب تنتظر موقعَ صاحبها",
 	StuckNoDriver: "طلبٌ بلا سائق",
 	StuckTooLong:  "طلبٌ تأخّر عن موعده",
 }

@@ -371,3 +371,38 @@ func TestAutoAccept_CustomGoesToDispatching(t *testing.T) {
 		t.Fatalf("**الطلبُ الخاصُّ لم يُعرَض بعد المهلة** — %s", st)
 	}
 }
+
+// TestBoard_WaAmanahWaitingPickupIsNotNotSent **أمانةُ واتساب تنتظر موقعَ صاحبها لا متجرَ لها** —
+// فسببُها wa_pickup لا not_sent («مقبول ولم يُرسَل للمتجر» كذبٌ عنها)، فإن وصل الموقعُ خرجت من العلوق.
+func TestBoard_WaAmanahWaitingPickupIsNotNotSent(t *testing.T) {
+	f := setup(t, "pending", 10_000, 1_000, 0)
+	ctx := context.Background()
+	waiting := f.boardOrder(t, "accepted", 30, false, "origin = 'whatsapp', wa_amanah = true, kind = 'merchant_delivery', merchant_id = NULL, customer_id = NULL, fee_payer = 'recipient', delivery_mode = 'send', subtotal = 0, wallet_paid = 0, pickup_name = 'x', recipient_name = 'r', recipient_phone = '0933000000'")
+	plain := f.boardOrder(t, "accepted", 30, false, "")
+	reasons := func() map[string]string {
+		alerts, err := f.svc.Alerts(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		m := map[string]string{}
+		for _, a := range alerts {
+			m[a.OrderID] = a.Reason
+		}
+		return m
+	}
+	r := reasons()
+	if r[waiting] != orders.StuckWaPickup {
+		t.Errorf("أمانةٌ تنتظر الموقع سببُها %q والمتوقّع wa_pickup", r[waiting])
+	}
+	if r[plain] != orders.StuckNotSent {
+		t.Errorf("الطلبُ العاديّ سببُه %q والمتوقّع not_sent", r[plain])
+	}
+	// وصل الموقع ⇒ تعود إلى القاعدة العامّة (لها نقطةُ استلام).
+	if _, err := f.pool.Exec(ctx, `UPDATE orders SET pickup_override =
+		ST_SetSRID(ST_MakePoint(39.0, 35.9), 4326)::geography WHERE id = $1`, waiting); err != nil {
+		t.Fatalf("تعذّر ضبطُ نقطةِ الاستلام: %v", err)
+	}
+	if got := reasons()[waiting]; got == orders.StuckWaPickup {
+		t.Errorf("وصل الموقعُ والسببُ ما زال wa_pickup")
+	}
+}
