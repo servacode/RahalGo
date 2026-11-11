@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -400,11 +399,11 @@ private fun AddressChoice(a: Address, busy: Boolean, onPick: (Address) -> Unit) 
                 painter = painterResource(R.drawable.ic_check_mark),
                 contentDescription = stringResource(R.string.addr_selected),
                 tint = Rahal.colors.success,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(Rahal.icon.md),
             )
         }
     }
-    HorizontalDivider()
+    RahalDivider()
 }
 
 /**

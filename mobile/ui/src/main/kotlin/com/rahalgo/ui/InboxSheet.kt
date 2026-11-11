@@ -129,7 +129,7 @@ fun InboxSheet(
                         .cardSurface(
                             Rahal.shape.md,
                             tone = if (notice.read) null else Rahal.colors.brand,
-                            elevation = if (notice.read) 1.dp else 3.dp,
+                            elevation = if (notice.read) Rahal.elevation.low else Rahal.elevation.card,
                         )
                         .clickable { onOpen(notice) }
                         .padding(Rahal.space.md),
@@ -138,7 +138,7 @@ fun InboxSheet(
                     IconBox(
                         icon = noticeIcon(notice.kind),
                         tint = if (notice.read) Rahal.colors.inkMuted else noticeTint(notice.kind),
-                        size = 40.dp,
+                        size = Rahal.size.iconBox,
                     )
                     Spacer(Modifier.size(Rahal.space.md))
                     Column(Modifier.weight(1f)) {
@@ -155,7 +155,7 @@ fun InboxSheet(
                             }
                             Text(
                                 BidiText.isolateNumbers(BidiText.fixArrows(notice.title)),
-                                fontWeight = if (notice.read) FontWeight.Normal else FontWeight.Bold,
+                                style = if (notice.read) Rahal.type.body else Rahal.type.bodyStrong,
                                 color = Rahal.colors.ink,
                                 modifier = Modifier.weight(1f),
                             )
@@ -165,7 +165,7 @@ fun InboxSheet(
                             Text(
                                 BidiText.isolateNumbers(BidiText.fixArrows(notice.body)),
                                 color = Rahal.colors.inkMuted,
-                                style = Rahal.type.body,
+                                style = Rahal.type.caption,
                             )
                         }
                     }
@@ -178,7 +178,7 @@ fun InboxSheet(
 private val HeadHeight = 56.dp
 
 /** **نقطةُ غير المقروء.** */
-private val Dot = 8.dp
+private val Dot = Rahal.size.dot
 
 @Composable
 private fun Box(modifier: Modifier, content: @Composable () -> Unit = {}) {

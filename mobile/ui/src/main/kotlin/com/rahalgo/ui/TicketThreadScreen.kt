@@ -84,7 +84,7 @@ fun TicketThreadScreen(
         RahalTextButton(onClick = onBack) {
             Text("‹ " + stringResource(R.string.act_back))
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
 
         Row(
             Modifier.fillMaxWidth(),
@@ -108,7 +108,7 @@ fun TicketThreadScreen(
                 style = Rahal.type.caption,
             )
         }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(Rahal.space.lg))
 
         // ── الخيطُ — أو فراغٌ يقول إنّه فراغ ─────────────────────────────
         if (messages.isEmpty()) {
@@ -120,7 +120,7 @@ fun TicketThreadScreen(
             }
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.md))
 
         // ── الردُّ — إن كانت مفتوحة ──────────────────────────────────────
         if (canReply) {
@@ -138,7 +138,7 @@ fun TicketThreadScreen(
                 minLines = 2,
                 enabled = !sending,
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             RahalButton(
                 onClick = onSend,
                 modifier = Modifier.fillMaxWidth(),
@@ -169,7 +169,7 @@ private fun TicketBubble(m: TicketMessage) {
                 .widthIn(max = 300.dp)
                 .clip(Rahal.shape.md)
                 .background(if (m.mine) Rahal.colors.brand else Rahal.colors.bubble)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
         ) {
             Text(
                 text = stringResource(if (m.mine) R.string.tik_you else R.string.tik_support),
@@ -177,14 +177,14 @@ private fun TicketBubble(m: TicketMessage) {
                 style = Rahal.type.badge,
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.height(3.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Text(
                 text = m.body,
                 color = if (m.mine) Rahal.colors.onBrand else Rahal.colors.ink,
             )
             val at = chatTime(m.at)
             if (at.isNotBlank()) {
-                Spacer(Modifier.height(3.dp))
+                Spacer(Modifier.height(Rahal.space.xs))
                 Text(
                     text = at,
                     color = if (m.mine) Rahal.colors.onBrand.copy(alpha = 0.75f) else Rahal.colors.inkMuted,

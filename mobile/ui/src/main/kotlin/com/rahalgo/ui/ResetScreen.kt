@@ -53,12 +53,12 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
 
     AuthPage {
         // **شعارُ الهويّة المشترك** (Batch 5) — مُصغَّرٌ فلا يزحم حقولَ الاستعادة.
-        AuthHeader(logoSize = 100.dp, topSpace = 24.dp, bottomSpace = 10.dp)
+        AuthHeader(logoSize = 100.dp, topSpace = Rahal.space.xl, bottomSpace = Rahal.space.sm)
         Text(
             text = stringResource(R.string.reset_title),
             style = Rahal.type.headline,
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Text(
             text = stringResource(
                 when (state.step) {
@@ -68,6 +68,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
                 },
             ),
             color = Rahal.colors.inkMuted,
+            style = Rahal.type.body,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(Rahal.space.xl))
@@ -113,7 +114,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
         }
 
         if (state.error.isNotEmpty()) {
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Text(
                 text = state.error,
                 color = Rahal.colors.danger,
@@ -139,7 +140,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (state.busy) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(Modifier.size(Rahal.icon.xs), strokeWidth = Rahal.stroke.focus)
             } else {
                 Text(
                     stringResource(
@@ -154,7 +155,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
         }
         } // AuthCard
 
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
         RahalTextButton(onClick = actions.cancel, enabled = !state.busy) {
             Text(stringResource(R.string.reset_back), color = Rahal.colors.inkMuted)
         }

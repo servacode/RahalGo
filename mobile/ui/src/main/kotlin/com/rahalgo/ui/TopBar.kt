@@ -34,7 +34,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 
 /** **أدنى هدف لمس** — ومكانُ زرّ القائمة إن غاب بمقاسه. */
-private val TouchMin = 48.dp
+private val TouchMin = Rahal.size.touch
 
 /**
  * ══════════════════════════════════════════════════════════════════════

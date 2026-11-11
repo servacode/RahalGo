@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 
 /** **لمسةُ سهم الرجوع** — ٤٨ كاملة. */
-private val BackTouch = 48.dp
+private val BackTouch = Rahal.size.touch
 
 /**
  * ══════════════════════════════════════════════════════════════════════

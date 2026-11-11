@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -134,7 +135,7 @@ fun TicketsScreen(
         }
         // **كلُّ بلاغٍ بطاقتُه** (مراجعةُ التصميم ٢٠٢٦-١١-٠٩) لا شريحةٌ بفواصل.
         list.forEach { row ->
-            Card { TicketLine(row, onOpen) }
+            RahalCard(padding = Rahal.space.none) { TicketLine(row, onOpen) }
             Spacer(Modifier.height(Rahal.space.md))
         }
     }
@@ -144,36 +145,40 @@ fun TicketsScreen(
 private fun TicketLine(row: TicketRow, onOpen: ((TicketRow) -> Unit)?) {
     // **ويُفتَح إن كان له معرّفٌ ومُستقبِل** — وإلّا بقي سطراً يُقرأ (المتجر/السائق).
     val open = if (onOpen != null && row.id.isNotBlank()) ({ onOpen(row) }) else null
+    // **الموضوعُ أوّلاً وحالُه في طرفه** (إعادةُ التصميم ٢٠٢٦-١١-١١) — ثمّ رقمُ البلاغ
+    // والطلبُ والتاريخ سطراً خافتاً: **ما يُبحث عنه يُقرأ أوّلا، وما يُرجَع إليه يُقرأ ثانيا.**
     Column(
         Modifier
             .fillMaxWidth()
-            .then(if (open != null) Modifier.clickable(onClick = open) else Modifier),
+            .then(if (open != null) Modifier.clickable(onClick = open) else Modifier)
+            .padding(Rahal.space.md),
+        verticalArrangement = Arrangement.spacedBy(Rahal.space.xs),
     ) {
         Row(
             Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(row.key, style = Rahal.type.label, color = Rahal.colors.inkMuted)
+            Text(
+                row.title,
+                style = Rahal.type.cardTitle,
+                color = Rahal.colors.ink,
+                modifier = Modifier.weight(1f),
+            )
             Chip(ticketStatusText(row.status), ticketStatusColor(row.status))
         }
-        Spacer(Modifier.height(Rahal.space.xs))
-        Text(row.title, fontWeight = FontWeight.Bold, style = Rahal.type.body)
-        if (row.orderNumber.isNotBlank()) {
-            Text(
-                stringResource(R.string.tik_on_order, row.orderNumber),
-                style = Rahal.type.caption,
-                color = Rahal.colors.inkMuted,
-            )
+        val meta = buildList {
+            add(row.key)
+            if (row.orderNumber.isNotBlank()) add(stringResource(R.string.tik_on_order, row.orderNumber))
+            if (row.date.isNotBlank()) add(row.date)
+        }.filter { it.isNotBlank() }.joinToString("  ·  ")
+        if (meta.isNotEmpty()) {
+            Text(meta, style = Rahal.type.meta, color = Rahal.colors.inkMuted)
         }
         // **والحلُّ يُقرأ** — ومن أبلغ ولم يُقَل له ما وقع يظنّ بلاغَه أُهمل.
         if (row.resolution.isNotBlank()) {
-            Spacer(Modifier.height(Rahal.space.xs))
+            Spacer(Modifier.height(Rahal.space.xxs))
             Note(row.resolution, Rahal.colors.inkMuted)
         }
-        if (row.date.isNotBlank()) {
-            Text(row.date, style = Rahal.type.badge, color = Rahal.colors.inkMuted)
-        }
-        Spacer(Modifier.height(Rahal.space.sm))
     }
 }

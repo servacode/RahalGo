@@ -211,7 +211,7 @@ private fun ThreadCard(
     thread: ChatThread?,
     onPick: () -> Unit,
 ) {
-    Card(modifier = Modifier.clickable(onClick = onPick)) {
+    RahalCard(onClick = onPick) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -227,7 +227,7 @@ private fun ThreadCard(
                     // **وما ينتظره في هذا الحديث وحدَه** — **ولا مجموعٌ
                     // لا يقول أيَّ طلبٍ ينتظر** (`CU-CHAT-04`).
                     if (row.unread > 0) {
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(Rahal.space.sm))
                         Text(
                             text = stringResource(R.string.chat_unread_badge, row.unread),
                             color = Rahal.colors.accent,
@@ -268,7 +268,7 @@ private fun ThreadCard(
 
         // **ورسائلُ الحديث تحته حين يُفتح** — بالفقاعة نفسِها التي في
         // الرحلة: **فقاعتان تفترقان تجعلان الحديثَ الواحدَ حديثين.**
-        if (!open) return@Card
+        if (!open) return@RahalCard
         Spacer(Modifier.height(Rahal.space.sm))
         val msgs = thread?.messages.orEmpty()
         if (msgs.isEmpty()) {
@@ -277,7 +277,7 @@ private fun ThreadCard(
                 color = Rahal.colors.inkMuted,
                 style = Rahal.type.caption,
             )
-            return@Card
+            return@RahalCard
         }
         msgs.forEach { m ->
             ChatBubble(m)

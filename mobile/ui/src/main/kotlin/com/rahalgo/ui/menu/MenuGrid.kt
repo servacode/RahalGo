@@ -27,7 +27,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.HorizontalDivider
+import com.rahalgo.ui.RahalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -491,7 +491,7 @@ private fun ItemCard(
                 }
             }
             Spacer(Modifier.height(Rahal.space.xs))
-            HorizontalDivider(color = Rahal.colors.line, thickness = Rahal.stroke.hair)
+            RahalDivider()
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     stringResource(if (item.available) R.string.mn_available else R.string.mn_unavailable),

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
@@ -185,16 +184,16 @@ fun AccountScreen(
 
         // **كلُّ قسمٍ بطاقة** (مراجعةُ التصميم ٢٠٢٦-١١-٠٩) — بدل فواصلَ خطّيّةٍ بين كتلٍ عارية.
         if (profileHeader) {
-            Card { ProfileHeader(vm, s) }
+            RahalCard { ProfileHeader(vm, s) }
             Gap()
         }
-        Card { Identity(vm, s, worker, whatsapp, polished = profileHeader) }
+        RahalCard { Identity(vm, s, worker, whatsapp, polished = profileHeader) }
         Gap()
-        Card { if (profileHeader) CollapsedPassword(vm, s) else PasswordSection(vm, s) }
+        RahalCard { if (profileHeader) CollapsedPassword(vm, s) else PasswordSection(vm, s) }
         Gap()
         // **ولا عناوينَ في حساب السائق** — انظر `showAddresses`.
         if (showAddresses) {
-            Card { AddressesSection(vm, s, picker, onEditAddress) }
+            RahalCard { AddressesSection(vm, s, picker, onEditAddress) }
             Gap()
         }
         // ══════════════════════════════════════════════════════════════
@@ -214,7 +213,7 @@ fun AccountScreen(
         // **والبابُ في المحرّك باقٍ** — يُنادى من لوحة الإدارة يومَ
         // يُشكّ في جهاز.
         // **والخطرُ آخرا** — بأمر المالك.
-        Card(tone = Rahal.colors.danger) { DangerSection(vm, s) }
+        RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Danger) { DangerSection(vm, s) }
         Spacer(Modifier.height(Rahal.space.xl))
         // ══════════════════════════════════════════════════════════════
         // **وذكرُ مصدر الخرائط — يُؤدَّى هنا لا فوق الطريق**
@@ -276,12 +275,10 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean, wha
     }
 
     Spacer(Modifier.height(Rahal.space.md))
-    OutlinedTextField(
+    LabeledField(
+        label = stringResource(R.string.acc_name),
         value = draft,
         onValueChange = { draft = it },
-        label = { Text(stringResource(R.string.acc_name)) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.height(Rahal.space.sm))
     SaveButton(
@@ -290,7 +287,7 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean, wha
         polished = polished,
     )
 
-    Spacer(Modifier.height(14.dp))
+    Spacer(Modifier.height(Rahal.space.md))
     // ══════════════════════════════════════════════════════════════════
     // **ورقمُه حقلٌ يقرؤه لا سطرٌ رماديّ**
     // ══════════════════════════════════════════════════════════════════
@@ -366,7 +363,7 @@ private fun WhatsAppVerify(
     // «لم ينجح».
     if (verified && !waiting) return
 
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(Rahal.space.xs))
     if (!waiting) {
         // **ولا شرحَ قبل الزرّ** — **كان يصف ما سيراه بعد ضغطةٍ واحدة**
         // («سيفتح واتساب برسالة جاهزة…»)، **وشرحُ ما يُرى بعد ثانيةٍ
@@ -381,15 +378,11 @@ private fun WhatsAppVerify(
         return
     }
 
-    OutlinedTextField(
+    LabeledField(
+        label = stringResource(R.string.acc_wa_code),
         value = code,
         onValueChange = { code = it },
-        label = { Text(stringResource(R.string.acc_wa_code)) },
-        singleLine = true,
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword,
-        ),
-        modifier = Modifier.fillMaxWidth(),
+        keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword,
     )
     // **ومن لم يصله ردُّ البوت يطلب تذكرةً جديدة** — فيُفتح واتساب من
     // جديد (`askWhatsApp`)، **والحقلُ يُمحى قبله.**
@@ -473,15 +466,11 @@ private fun PhoneChange(vm: AccountViewModel, s: AccountState) {
         return
     }
 
-    OutlinedTextField(
+    LabeledField(
+        label = stringResource(R.string.acc_phone_code),
         value = code,
         onValueChange = { code = it },
-        label = { Text(stringResource(R.string.acc_phone_code)) },
-        singleLine = true,
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword,
-        ),
-        modifier = Modifier.fillMaxWidth(),
+        keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword,
     )
     Spacer(Modifier.height(Rahal.space.sm))
     Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
@@ -523,7 +512,7 @@ private fun PasswordSection(vm: AccountViewModel, s: AccountState) {
     // **والتطابقُ يُقال قبل الإرسال لا بعده** — نداءٌ يذهب ليعود بخطأٍ
     // يعرفه الجهازُ نفسُه **يُضيّع ثانيتين ويستهلك حزمة.**
     if (mismatch) {
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
         Text(stringResource(R.string.acc_pw_mismatch), color = Rahal.colors.danger)
     }
     Spacer(Modifier.height(Rahal.space.sm))
@@ -533,7 +522,7 @@ private fun PasswordSection(vm: AccountViewModel, s: AccountState) {
         modifier = Modifier.fillMaxWidth(),
     ) { Text(stringResource(R.string.acc_pw_change)) }
     if (s.pwError.isNotEmpty()) {
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
         Text(s.pwError, color = Rahal.colors.danger)
     }
 }
@@ -627,13 +616,13 @@ private fun AddressRow(
     //
     // **والحذفُ محدَّدٌ بالأحمر لا نصّاً أحمر**: **فعلٌ لا يُستدرَك
     // خلفَ نصٍّ عارٍ يُضغط بالخطأ.**
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(Rahal.space.md))
     Column(
         Modifier
             .fillMaxWidth()
             .clip(Rahal.shape.md)
-            .border(1.dp, Rahal.colors.line, Rahal.shape.md)
-            .padding(14.dp),
+            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+            .padding(Rahal.space.md),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -717,7 +706,7 @@ private fun DangerSection(vm: AccountViewModel, s: AccountState) {
         color = Rahal.colors.inkMuted,
         style = Rahal.type.caption,
     )
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(Rahal.space.md))
 
     if (!s.deleteAsked) {
         // **وأحمرُ ممتلئٌ لا إطارٌ بنصٍّ أحمر** — (قرارُ المالك
@@ -735,15 +724,11 @@ private fun DangerSection(vm: AccountViewModel, s: AccountState) {
         return
     }
 
-    OutlinedTextField(
+    LabeledField(
+        label = stringResource(R.string.acc_delete_code),
         value = code,
         onValueChange = { code = it },
-        label = { Text(stringResource(R.string.acc_delete_code)) },
-        singleLine = true,
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword,
-        ),
-        modifier = Modifier.fillMaxWidth(),
+        keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword,
     )
     Spacer(Modifier.height(Rahal.space.sm))
     Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
@@ -781,7 +766,7 @@ private fun MapCredit() {
 @Composable
 private fun SectionTitle(text: String, color: androidx.compose.ui.graphics.Color = Rahal.colors.accentInk) {
     Text(text, style = Rahal.type.sectionTitle, color = color)
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(Rahal.space.md))
 }
 
 @Composable
@@ -838,11 +823,11 @@ fun ClearStateButton(
     }
     Row(
         modifier
-            .heightIn(min = 48.dp)
+            .heightIn(min = Rahal.size.touch)
             .clip(Rahal.shape.md)
             .background(Rahal.colors.field)
             .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
-            .padding(horizontal = Rahal.space.lg, vertical = 10.dp),
+            .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -856,38 +841,41 @@ fun ClearStateButton(
 
 /**
  * **رأسُ الحساب: صورةٌ واسمٌ ورقم** (تدقيق D4) — كان الحسابُ نموذجاً طويلاً مفتوحاً بلا
- * «من أنا». **والرقمُ نصٌّ عاديّ؛ ترتيبُ اتّجاهه (bidi) من مساعدٍ آخر.**
+ * «من أنا». **والرقمُ معزولٌ بـ`phoneText` فلا ينقلب اتّجاهُه في سطرٍ عربيّ.**
+ * (إعادةُ التصميم ٢٠٢٦-١١-١١: صورةٌ بكاميرا عليها، واسمٌ وتحته الرقم، و«إزالة الصورة» سطرٌ صغير.)
  */
 @Composable
 private fun ProfileHeader(vm: AccountViewModel, s: AccountState) {
     val me = s.me ?: return
     val picker = rememberImagePicker { bytes -> vm.setAvatarBytes(bytes) }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Avatar(url = AppCore.get().media(me.avatarThumbUrl), name = me.fullName, size = 72)
-        Spacer(Modifier.size(14.dp))
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
+    ) {
+        AvatarWithEdit(
+            url = AppCore.get().media(me.avatarThumbUrl),
+            name = me.fullName,
+            description = stringResource(R.string.acc_photo_pick),
+            enabled = !s.busy,
+            onPick = picker,
+        )
         Column(Modifier.weight(1f)) {
             Text(
                 text = me.fullName,
                 style = Rahal.type.screenTitle,
-                fontWeight = FontWeight.Bold,
                 color = Rahal.colors.ink,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
             Text(
-                text = me.phone,
+                text = phoneText(me.phone),
                 style = Rahal.type.body,
                 color = Rahal.colors.inkMuted,
                 maxLines = 1,
             )
-            Row {
-                RahalTextButton(onClick = picker, enabled = !s.busy) {
-                    Text(stringResource(R.string.acc_photo_pick))
-                }
-                if (!me.avatarThumbUrl.isNullOrEmpty()) {
-                    RahalTextButton(onClick = vm::removeAvatar, enabled = !s.busy) {
-                        Text(stringResource(R.string.acc_photo_remove), color = Rahal.colors.inkMuted)
-                    }
+            if (!me.avatarThumbUrl.isNullOrEmpty()) {
+                RahalTextButton(onClick = vm::removeAvatar, enabled = !s.busy) {
+                    Text(stringResource(R.string.acc_photo_remove), color = Rahal.colors.inkMuted)
                 }
             }
         }
@@ -902,29 +890,24 @@ private fun ProfileHeader(vm: AccountViewModel, s: AccountState) {
 private fun CollapsedPassword(vm: AccountViewModel, s: AccountState) {
     var open by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(s.pwDone) { if (s.pwDone > 0) open = false }
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable { open = !open },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(R.string.acc_pw_change),
-            style = Rahal.type.sectionTitle,
-            color = Rahal.colors.accentInk,
-            modifier = Modifier.weight(1f),
-        )
-        Icon(
-            painter = painterResource(R.drawable.ic_chevron_down),
-            contentDescription = null,
-            tint = Rahal.colors.inkMuted,
-            modifier = Modifier
-                .size(22.dp)
-                .rotate(if (open) 180f else 0f),
-        )
-    }
+    ListRow(
+        title = stringResource(R.string.acc_pw_change),
+        icon = R.drawable.ic_lock,
+        trailing = {
+            Icon(
+                painter = painterResource(R.drawable.ic_chevron_down),
+                contentDescription = null,
+                tint = Rahal.colors.inkMuted,
+                modifier = Modifier
+                    .size(Rahal.icon.sm)
+                    .rotate(if (open) 180f else 0f),
+            )
+        },
+        onClick = { open = !open },
+    )
     if (open) {
-        Spacer(Modifier.height(10.dp))
+        RahalDivider()
+        Spacer(Modifier.height(Rahal.space.md))
         PasswordSection(vm, s)
     }
 }

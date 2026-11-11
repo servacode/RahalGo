@@ -119,8 +119,8 @@ fun ContactSection(p: Platform) {
         // **صفٌّ واحدٌ في الوسط** — والاتّصالُ أوّلاً في جهة البداية،
         // **وهو ما يُطلب أكثر.**
         Row(
-            Modifier.fillMaxWidth().padding(vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
+            Modifier.fillMaxWidth().padding(vertical = Rahal.space.sm),
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.md, Alignment.CenterHorizontally),
         ) {
             ways.forEach { w -> RoundIcon(w) { openUrl(context, w.url) } }
         }
@@ -159,7 +159,7 @@ private fun RoundIcon(w: Way, onClick: () -> Unit) {
     val label = stringResource(w.label)
     Box(
         Modifier
-            .size(52.dp)
+            .size(Rahal.size.touch + Rahal.space.xs)
             .clip(CircleShape)
             .background(Rahal.colors.brand.copy(alpha = 0.12f))
             .clickable(onClickLabel = label, role = Role.Button, onClick = onClick),
@@ -169,7 +169,7 @@ private fun RoundIcon(w: Way, onClick: () -> Unit) {
             painter = painterResource(w.icon),
             contentDescription = label,
             tint = Rahal.colors.brand,
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(Rahal.icon.md),
         )
     }
 }
@@ -181,7 +181,7 @@ private fun AddressCard(address: String) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier
-                    .size(40.dp)
+                    .size(Rahal.size.iconBox)
                     .clip(CircleShape)
                     .background(Rahal.colors.brand.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center,
@@ -190,7 +190,7 @@ private fun AddressCard(address: String) {
                     painter = painterResource(R.drawable.ic_pin),
                     contentDescription = null,
                     tint = Rahal.colors.brand,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(Rahal.icon.sm),
                 )
             }
             Spacer(Modifier.width(Rahal.space.md))
@@ -269,14 +269,14 @@ private fun MapPreview(onClick: () -> Unit) {
             }
         }
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = Rahal.space.md),
+            Modifier.fillMaxWidth().padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_map),
                 contentDescription = null,
                 tint = Rahal.colors.brand,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(Rahal.icon.sm),
             )
             Spacer(Modifier.width(Rahal.space.sm))
             Text(

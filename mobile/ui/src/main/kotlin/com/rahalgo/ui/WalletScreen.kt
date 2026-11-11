@@ -15,9 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -283,13 +281,13 @@ fun WalletScreen(
             Modifier
                 .fillMaxWidth()
                 // **بطاقةُ الرصيد بلون العلامة** (مراجعةُ التصميم ٢٠٢٦-١١-٠٩) — أوّلُ ما تقع عليه العين.
-                .shadow(6.dp, Rahal.shape.lg)
+                .shadow(Rahal.elevation.raised, Rahal.shape.lg)
                 .clip(Rahal.shape.lg)
                 .background(Rahal.colors.brand)
                 .padding(vertical = Rahal.space.xl),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(stringResource(R.string.wal_balance), color = Rahal.colors.onBrand.copy(alpha = 0.8f))
+            Text(stringResource(R.string.wal_balance), color = Rahal.colors.onBrand.copy(alpha = 0.8f), style = Rahal.type.label)
             Spacer(Modifier.height(Rahal.space.sm))
             Text(
                 text = money(st.balance),
@@ -357,22 +355,27 @@ fun WalletScreen(
         }
 
         if (payouts && s.payouts.isNotEmpty()) {
-            Spacer(Modifier.height(Rahal.space.xl))
-            Text(
-                stringResource(R.string.wal_payouts),
-                style = Rahal.type.sectionTitle,
-            )
-            Spacer(Modifier.height(Rahal.space.sm))
-            s.payouts.forEach { PayoutRow(it) }
+            SectionHeader(stringResource(R.string.wal_payouts))
+            // **مجموعةٌ واحدةٌ بفواصل** — لا بطاقةٌ لكلّ سطر: القائمةُ تُقرأ قائمة.
+            RahalCard(padding = Rahal.space.none) {
+                s.payouts.forEachIndexed { i, p ->
+                    if (i > 0) RahalDivider(inset = Rahal.space.lg)
+                    PayoutRow(p)
+                }
+            }
         }
 
-        Spacer(Modifier.height(Rahal.space.xl))
-        Text(stringResource(R.string.wal_txs), style = Rahal.type.sectionTitle)
-        Spacer(Modifier.height(Rahal.space.sm))
+        SectionHeader(stringResource(R.string.wal_txs))
         if (st.transactions.isEmpty()) {
             Empty(stringResource(R.string.wal_no_txs), icon = R.drawable.ic_wallet)
+        } else {
+            RahalCard(padding = Rahal.space.none) {
+                st.transactions.forEachIndexed { i, t ->
+                    if (i > 0) RahalDivider(inset = Rahal.space.lg)
+                    TxRow(t)
+                }
+            }
         }
-        st.transactions.forEach { TxRow(it) }
 
         // **وناقصٌ يقول إنّه ناقص** — كشفٌ قُصّ عند السقف ولا يقول
         // **يُقرأ كاملا**، فيُجمع فلا يساوي الرصيد.
@@ -394,15 +397,12 @@ private fun PayoutForm(vm: WalletViewModel, s: WalletState, max: Long, reserved:
     var note by remember { mutableStateOf("") }
     val value = amount.trim().toLongOrNull() ?: 0
 
-    OutlinedTextField(
+    LabeledField(
+        label = stringResource(R.string.wal_amount),
         value = amount,
         onValueChange = { amount = it.filter(Char::isDigit) },
-        label = { Text(stringResource(R.string.wal_amount)) },
-        singleLine = true,
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
-        ),
-        modifier = Modifier.fillMaxWidth(),
+        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+        leadingIcon = R.drawable.ic_banknotes,
     )
     Spacer(Modifier.height(Rahal.space.sm))
     // **وسقفُه المتاحُ للسحب** — ويُقال قبل الإرسال: نداءٌ يذهب ليعود بخطأٍ
@@ -421,11 +421,12 @@ private fun PayoutForm(vm: WalletViewModel, s: WalletState, max: Long, reserved:
         )
     }
     Spacer(Modifier.height(Rahal.space.sm))
-    OutlinedTextField(
+    LabeledField(
+        label = stringResource(R.string.wal_note),
         value = note,
         onValueChange = { note = it },
-        label = { Text(stringResource(R.string.wal_note)) },
-        modifier = Modifier.fillMaxWidth(),
+        singleLine = false,
+        minLines = 2,
     )
     Spacer(Modifier.height(Rahal.space.md))
     Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
@@ -450,7 +451,7 @@ private fun PayoutRow(p: Payout) {
     Column(WalletRowModifier) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(money(p.amount), style = Rahal.type.cardTitle)
-            Text(payoutStatus(p.status), color = color)
+            Text(payoutStatus(p.status), color = color, style = Rahal.type.label)
         }
         // **وقرارُ المالية يُقال** — من رُدّ طلبُه يسأل لماذا، **وصمتٌ
         // هنا يُرسله إلى المكتب ليسأل عمّا هو مكتوبٌ عندهم.**
@@ -461,13 +462,14 @@ private fun PayoutRow(p: Payout) {
     }
 }
 
-/** **سطرُ الحركة بطاقةٌ صغيرةٌ** لا شريحةٌ بفاصل — ومسافةٌ بين البطاقات. */
+/**
+ * **سطرُ الحركة داخل بطاقةٍ واحدة** (إعادةُ التصميم ٢٠٢٦-١١-١١) — والفاصلُ بين الأسطر
+ * لا بطاقةٌ لكلّ حركة: **عشرون بطاقةً متراصّةً تُقرأ ضجيجا**، والقائمةُ المجمّعةُ تُقرأ كشفا.
+ */
 private val WalletRowModifier: Modifier
     @Composable get() = Modifier
         .fillMaxWidth()
-        .padding(vertical = Rahal.space.xs)
-        .cardSurface(Rahal.shape.md, elevation = 2.dp)
-        .padding(Rahal.space.md)
+        .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md)
 
 @Composable
 private fun payoutStatus(status: String): String =
@@ -476,41 +478,39 @@ private fun payoutStatus(status: String): String =
 @Composable
 private fun TxRow(t: WalletTx) {
     val positive = t.amount >= 0
-    Column(WalletRowModifier) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+    // **اسمُ الحركة وتاريخُها في البداية، ومبلغُها في الطرف** (إعادةُ التصميم ٢٠٢٦-١١-١١) —
+    // كشفُ حسابٍ يُقرأ كما يُقرأ في كلّ تطبيقِ مال: ما هي ← كم.
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «والسحبُ يكون مكتوباً: تمّ سحب الرصيد، والتاريخ أيضا».)
+    // **والمحرّكُ يرسل `payout` و`driver_earning`** — مفاتيحُ آلةٍ لا تُعرض لعربيّ،
+    // **والملاحظةُ تحت الاسم تقول لماذا**، والتاريخُ مع كلّ حركةٍ بأمر المالك.
+    Row(
+        WalletRowModifier,
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(kindLabel(t.kind), style = Rahal.type.bodyStrong, color = Rahal.colors.ink)
+            if (t.note.isNotEmpty()) {
+                Text(t.note, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
+            }
+            Text(
+                text = fmtWhen(t.createdAt),
+                color = Rahal.colors.inkMuted,
+                style = Rahal.type.meta,
+            )
+        }
+        Column(horizontalAlignment = Alignment.End) {
             // **والإشارةُ قبل الرقم** — «‎+٣٠٠» تُقرأ ربحاً بنظرة.
             Text(
                 text = (if (positive) "+" else "−") + money(kotlin.math.abs(t.amount)),
                 color = if (positive) Rahal.colors.success else Rahal.colors.danger,
-                style = Rahal.type.cardTitle,
+                style = Rahal.type.price,
             )
             t.orderNumber?.let {
-                Text("#$it", color = Rahal.colors.inkMuted, style = Rahal.type.caption)
+                Text("#$it", color = Rahal.colors.inkMuted, style = Rahal.type.meta)
             }
         }
-        // ══════════════════════════════════════════════════════════════
-        // **واسمُ الحركة بالعربيّة — لا مفتاحُ آلة**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «والسحبُ يكون مكتوباً: تمّ سحب
-        //  الرصيد، والتاريخ أيضا».)
-        //
-        // **والمحرّكُ يرسل `payout` و`driver_earning`** — وهي مفاتيحُ
-        // آلةٍ لا تُعرض لعربيّ. **ومن قرأها ظنّ العطبَ في التطبيق.**
-        //
-        // **والملاحظةُ تحتها إن وُجدت** — الاسمُ يقول ما هي، **والملاحظةُ
-        // تقول لماذا**: «تسوية من الإدارة» ثمّ «تصحيح نقص يوم الثلاثاء».
-        Text(kindLabel(t.kind), style = Rahal.type.body)
-        if (t.note.isNotEmpty()) {
-            Text(t.note, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
-        }
-        // **والتاريخُ مع كلّ حركة** — بأمر المالك. **ومن رأى «‎−٥٠٠» لا
-        // يعرف أهي اليومَ أم الشهرَ الماضي.**
-        Text(
-            text = fmtWhen(t.createdAt),
-            color = Rahal.colors.inkMuted,
-            style = Rahal.type.caption,
-        )
     }
 }
 
@@ -655,7 +655,7 @@ private fun StatementView(vm: WalletViewModel, st: WalletStatement, onBack: () -
         }
 
         Spacer(Modifier.height(Rahal.space.md))
-        HorizontalDivider()
+        RahalDivider()
         Spacer(Modifier.height(Rahal.space.md))
         if (st.transactions.isEmpty()) {
             Empty(stringResource(R.string.wal_no_txs), icon = R.drawable.ic_wallet)

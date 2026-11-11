@@ -189,7 +189,7 @@ fun GuideBubble(text: String, onSkip: () -> Unit, modifier: Modifier = Modifier)
             contentDescription = null,
             tint = fill,
             modifier = Modifier
-                .size(22.dp)
+                .size(Rahal.icon.md)
                 .graphicsLayer { translationY = bob * density },
         )
     }

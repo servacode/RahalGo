@@ -53,7 +53,7 @@ fun ChatBubble(message: ChatMessage) {
                 .widthIn(max = 300.dp)
                 .clip(if (mine) Rahal.shape.bubbleMine else Rahal.shape.bubbleTheirs)
                 .background(if (mine) Rahal.colors.brand else Rahal.colors.bubble)
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
             horizontalAlignment = Alignment.End,
         ) {
             Text(
@@ -68,7 +68,7 @@ fun ChatBubble(message: ChatMessage) {
                     style = Rahal.type.badge,
                 )
                 if (mine) {
-                    Spacer(Modifier.size(5.dp))
+                    Spacer(Modifier.size(Rahal.space.xs))
                     Text(
                         text = if (message.readAt != null) "✓✓" else "✓",
                         color = Rahal.colors.onBrand.copy(
