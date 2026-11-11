@@ -83,7 +83,7 @@ func TestEXTSTORE_RefusedAfterPickupRedispatch(t *testing.T) {
 
 	w := f.call(f.srv.handleOrderExternalStore, http.MethodPost,
 		"/admin/orders/"+orderID+"/external-store", orderID, ops, []string{"ops"},
-		`{"reason":"المتجر ما عنده"}`)
+		`{"reason":"المتجر ما عنده","store_name":"متجر الاختبار"}`)
 	if w.Code != http.StatusConflict {
 		t.Fatalf("القلبُ لمتجرٍ غير تابع بعد الاستلام ردّ %d: %s — المنتظَر 409", w.Code, w.Body.String())
 	}

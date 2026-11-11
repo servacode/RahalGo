@@ -1940,7 +1940,12 @@ private fun TripCard(
                             } else {
                                 // **ولا اسمَ متجرٍ في الخاصّ** — فيُقال ما هو: أمانةٌ أم مشتريات.
                                 order.merchantName.takeIf { it.isNotBlank() }
-                                    ?.let { stringResource(R.string.trip_head_pickup, com.rahalgo.driver.Bidi.isolate(it)) }
+                                    ?.let {
+                                        stringResource(
+                                            if (order.kind == "custom") R.string.trip_head_buy else R.string.trip_head_pickup,
+                                            com.rahalgo.driver.Bidi.isolate(it),
+                                        )
+                                    }
                                     ?: stringResource(kindLabel(order))
                             },
                             style = Rahal.type.sectionTitle,
@@ -2434,7 +2439,23 @@ private fun TripCard(
 
                         // ── صفُّ التواصل: أزرارٌ متساوية ────────────────────────────
                         val ctx = LocalContext.current
-                        val storePhone = order.merchantPhone?.takeIf { it.isNotBlank() && !pickedUp && order.kind != "custom" }
+                        val storePhone = order.merchantPhone?.takeIf {
+                            it.isNotBlank() && !pickedUp && (order.kind != "custom" || isOutsideShop(order))
+                        }
+                        // **متجرٌ غيرُ تابعٍ: اسمُه وعنوانُه بكتلةٍ واحدة** (قرارُ المالك ٢٠٢٦-١١-١٢) —
+                        // مشترياتُ «من متجرٍ غير تابع لنا» وطلبُ الواتساب يشتركان فيها؛ والملاحةُ
+                        // بزرّ الخريطة من نقطته، والاتّصالُ بالزرّ أدناه.
+                        if (isOutsideShop(order) && !pickedUp) {
+                            InfoBox(
+                                icon = com.rahalgo.ui.R.drawable.ic_cart,
+                                text = stringResource(
+                                    if (order.kind == "custom") R.string.trip_buy_from else R.string.trip_shop_pickup_from,
+                                    com.rahalgo.driver.Bidi.isolate(order.merchantName),
+                                ) + (order.pickupAddress.takeIf { it.isNotBlank() }?.let { "\n" + it } ?: ""),
+                                tint = Rahal.colors.brand,
+                                bold = true,
+                            )
+                        }
                         // **ورقمُ المستلم بعد الاستلام وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «الاتصال ما لازم يطلع… إلا بعد ما
                         // نستلم الطلب من المتجر») — **ولا رقمَ في طلب الواتساب أبداً** (٢٠٢٦-١١-٠٥، البند ٧).
                         val recipient = recipientContactPhone(order, pickedUp)
@@ -2677,6 +2698,15 @@ private fun openWhatsApp(ctx: android.content.Context, phone: String, text: Stri
         )
     }
 }
+
+/**
+ * **متجرٌ غيرُ تابعٍ يعرف السائقُ اسمَه** — مشترياتُ «من متجرٍ غير تابع لنا» (خاصٌّ بوضع المشتريات)
+ * وطلبُ الواتساب (توصيلةٌ بلا متجرٍ مربوط). الاسمُ من `pickup_name` وعنوانُه ورقمُه ونقطتُه كذلك.
+ */
+internal fun isOutsideShop(order: DriverOrder): Boolean =
+    order.merchantName.isNotBlank() &&
+        ((order.kind == "custom" && order.customMode == "purchase" && order.partnerMerchantName.isBlank()) ||
+            (order.kind == "merchant_delivery" && order.origin == "whatsapp"))
 
 private fun dial(ctx: android.content.Context, phone: String) {
     runCatching {

@@ -34,10 +34,15 @@ var extStoreErrors = []struct {
 	{orders.ErrExtStoreAfterPickup, errTransferAfterPickup},
 }
 
-// handleOrderExternalStore `POST /admin/orders/{id}/external-store` — `{"reason": "…"}`.
+// handleOrderExternalStore `POST /admin/orders/{id}/external-store` — `{"reason", "store_name"، اختياريّاً store_phone · store_address · lat · lng}`.
 func (s *Server) handleOrderExternalStore(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
-		Reason string `json:"reason"`
+		Reason    string   `json:"reason"`
+		StoreName string   `json:"store_name"`
+		Phone     string   `json:"store_phone"`
+		Address   string   `json:"store_address"`
+		Lat       *float64 `json:"lat"`
+		Lng       *float64 `json:"lng"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -45,6 +50,7 @@ func (s *Server) handleOrderExternalStore(w http.ResponseWriter, r *http.Request
 	}
 	orderID := chi.URLParam(r, "id")
 	o, _, err := s.orders.ConvertToExternalStore(r.Context(), userIDFrom(r), orderID, req.Reason,
+		orders.ExtStoreTarget{Name: req.StoreName, Phone: req.Phone, Address: req.Address, Lat: req.Lat, Lng: req.Lng},
 		func(ctx context.Context, q dbtx.Querier, ch orders.ExtStoreChange) error {
 			return s.auditTx(ctx, q, r, "ops.order_external_store", "order", orderID, map[string]any{
 				"from_merchant":      ch.FromMerchantID,
@@ -53,6 +59,8 @@ func (s *Server) handleOrderExternalStore(w http.ResponseWriter, r *http.Request
 				"from_status":        ch.FromStatus,
 				"to_status":          ch.ToStatus,
 				"reason":             ch.Reason,
+				"store_name":         ch.StoreName,
+				"has_point":          ch.HasPoint,
 				"released_promo":     ch.ReleasedPromo,
 				"fee_snapshot":       ch.FeeSnapshot,
 			})

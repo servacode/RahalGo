@@ -291,6 +291,8 @@ function pickupParty(o: CardOrder): { title: string; name: string; phone?: strin
       return { title: C.holder, name: o.holder_name || "—", phone: o.holder_phone, store: false };
     }
     if (o.partner_merchant_name) return { title: C.pickupParty, name: o.partner_merchant_name, store: false };
+    // **متجرٌ غيرُ تابعٍ سمّاه المكتبُ عند القلب** (٢٠٢٦-١١-١٢) — اسمُه وهاتفُه وعنوانُه ونقطتُه.
+    if (o.merchant_name) return { title: C.buyFrom, name: o.merchant_name, phone: o.merchant_phone, store: false };
     return null;
   }
   const md = o.kind === "merchant_delivery";

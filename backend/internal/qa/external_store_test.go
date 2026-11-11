@@ -56,7 +56,11 @@ func extStoreOrder(t *testing.T, h *Harness, status string, body map[string]any,
 }
 
 func extStorePost(h *Harness, tok, oid, reason string) Res {
-	return h.POST("/api/v1/admin/orders/"+oid+"/external-store", tok, map[string]any{"reason": reason})
+	return extStorePostBody(h, tok, oid, map[string]any{"reason": reason, "store_name": "متجر الاختبار"})
+}
+
+func extStorePostBody(h *Harness, tok, oid string, body map[string]any) Res {
+	return h.POST("/api/v1/admin/orders/"+oid+"/external-store", tok, body)
 }
 
 // TestEXTSTORE_001_EachAllowedStatusConverts **كلُّ حالٍ مسموحةٍ تُقلب بأعمدتها الصحيحة.**

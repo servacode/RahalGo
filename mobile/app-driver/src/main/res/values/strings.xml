@@ -683,6 +683,10 @@
     <string name="stop_arrive_named">وصلت %1$s</string>
     <string name="stop_pick_named">استلمت من %1$s</string>
     <string name="stop_handover_named">استلم بضاعة %1$s من السائق السابق</string>
+    <string name="trip_buy_from">اشترِ من: %1$s</string>
+    <string name="trip_head_buy">اشترِ من: %1$s</string>
+    <string name="trip_shop_pickup_from">استلم من: %1$s</string>
+    <string name="card_buy_from">اشترِ من: %1$s</string>
     <string name="trip_partner_store">اشترِ من متجر: %1$s</string>
     <string name="trip_goods_line">المشتريات: %1$s</string>
     <string name="trip_fee_line">أجرة التوصيل: %1$s</string>
