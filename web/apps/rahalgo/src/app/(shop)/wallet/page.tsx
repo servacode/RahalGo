@@ -8,7 +8,7 @@
  */
 
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { LoadingState, WalletPage } from "@rahalgo/ui";
+import { Alert, LoadingState, WalletPage } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { NeedLogin } from "@/components/customer/NeedLogin";
@@ -24,6 +24,10 @@ export default function WalletRoute() {
   return (
     <div className="mx-auto flex w-full flex-col gap-4 max-w-none">
       <ShopPageHeader title={W.title} />
+      {/* **كيف تُشحن المحفظة** (قرارُ المالك ٢٠٢٦-١١-١١) — لا زرَّ شحنٍ للزبون: الشحنُ عند فريق المنصة. */}
+      <Alert tone="info" title={W.topUpTitle}>
+        {W.topUpBody}
+      </Alert>
       <WalletPage
         api={api}
         path="/api/v1/my/wallet"

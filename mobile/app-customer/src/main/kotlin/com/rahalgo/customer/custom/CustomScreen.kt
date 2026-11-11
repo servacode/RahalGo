@@ -6,6 +6,7 @@ import android.app.Application
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -223,6 +224,13 @@ fun CustomScreen(
             modifier = Modifier.fillMaxWidth(),
         )
 
+        // **وصورةُ القائمة أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١) — للمشتريات، اختياريّة، لحدّ ثلاث،
+        // **وتغني عن الكتابة.**
+        if (mode != "amanah") {
+            Spacer(Modifier.height(Rahal.space.md))
+            PhotosSection(vm)
+        }
+
         // ══════════════════════════════════════════════════════════════
         // **والعنوانُ من حسابه لا من حقلٍ يُملأ كلَّ مرّة**
         // ══════════════════════════════════════════════════════════════
@@ -400,7 +408,9 @@ fun CustomScreen(
                 }
             },
             // **والإغلاقُ يُطفئ الزرَّ والسببُ فوقُ مكتوب** — لا يُرَدّ بعد الكتابة.
-            enabled = !vm.busy && request.isNotBlank() && address != null && !needHolder &&
+            enabled = !vm.busy && !vm.uploadingPhoto &&
+                (request.isNotBlank() || (mode != "amanah" && vm.photos.isNotEmpty())) &&
+                address != null && !needHolder &&
                 Serving.available && Serving.customOrdersOpen,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -424,6 +434,33 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
     var draftHolderPhone by mutableStateOf("")
 
     private val api = CustomerApi(AppCore.get().api)
+
+    // ══════════════════════════════════════════════════════════════════
+    // **صورُ القائمة أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١) — ١ إلى ٣، اختياريّة
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **تُرفع حين تُختار** (لا عند الإرسال) فيُرسَل معرّفاتُها وحدَها مع الطلب، **وتبقى مع المسوّدة**
+    // إن خرجت الشاشةُ لاختيار عنوان. **والنصُّ لا يلزم إن وُجدت صورة.**
+    val photos = androidx.compose.runtime.mutableStateListOf<com.rahalgo.shared.customer.CustomPhoto>()
+    var uploadingPhoto by mutableStateOf(false)
+        private set
+
+    fun addPhoto(bytes: ByteArray) {
+        if (uploadingPhoto || photos.size >= MAX_PHOTOS) return
+        uploadingPhoto = true
+        viewModelScope.launch {
+            try {
+                photos.add(api.uploadCustomPhoto("custom_" + System.currentTimeMillis() + ".jpg", bytes))
+            } catch (e: Exception) {
+                Flash.fail(apiError(getApplication(), e, mapOf("validation" to R.string.cst_photos_failed)))
+            }
+            uploadingPhoto = false
+        }
+    }
+
+    fun removePhoto(id: String) {
+        photos.removeAll { it.id == id }
+    }
 
     // ══════════════════════════════════════════════════════════════════
     // **«اطلب الموقع منه»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `DeliveryViewModel.askLocation`
@@ -574,7 +611,7 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
         holderName: String? = null,
         holderPhone: String? = null,
     ) {
-        if (busy) return
+        if (busy || uploadingPhoto) return
         busy = true
         error = ""
         done = ""
@@ -588,6 +625,7 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
                 val ref = api.createCustom(
                     NewCustom(
                         request, address, lat, lng, notes, payment, customMode = mode,
+                        photoIds = photos.map { it.id }.takeIf { it.isNotEmpty() && mode != "amanah" },
                         holderName = holderName, holderPhone = holderPhone,
                         locationRequestId = if (mode == "amanah") linkedRequestId() else null,
                     ),
@@ -600,6 +638,7 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
                         .getString(R.string.cst_done, ref.number.toString()),
                 )
                 // **والرقمُ نفسُه الذي يراه السائقُ والمكتبُ والمتجر.**
+                photos.clear()
                 sent += 1
                 Refresh.bump()
             } catch (e: Exception) {
@@ -642,6 +681,63 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 /** **حالُ «اطلب الموقع منه»** — مرآةُ `AskState` في تطبيق المتجر. */
+private const val MAX_PHOTOS = 3
+
+/** **قسمُ صور القائمة** — مصغّراتٌ بزرّ إزالة، وزرُّ إضافةٍ حتّى ثلاث. */
+@Composable
+private fun PhotosSection(vm: CustomViewModel) {
+    val pick = com.rahalgo.ui.rememberImagePicker { bytes -> vm.addPhoto(bytes) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val media = { path: String? -> com.rahalgo.customer.Backend.of(context).media(path) }
+    androidx.compose.foundation.layout.Column(Modifier.fillMaxWidth()) {
+        Text(
+            stringResource(R.string.cst_photos_title),
+            color = Rahal.colors.ink,
+            style = Rahal.type.label,
+        )
+        Text(
+            stringResource(R.string.cst_photos_hint),
+            color = Rahal.colors.inkMuted,
+            style = Rahal.type.caption,
+            modifier = Modifier.padding(top = Rahal.space.xs),
+        )
+        Spacer(Modifier.height(Rahal.space.sm))
+        androidx.compose.foundation.layout.Row(
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Rahal.space.sm),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            vm.photos.forEach { p ->
+                androidx.compose.foundation.layout.Box {
+                    com.rahalgo.ui.RemoteImage(
+                        url = media(p.thumbUrl.ifEmpty { p.url }),
+                        name = "",
+                        modifier = Modifier
+                            .size(Rahal.size.thumb)
+                            .clip(Rahal.shape.sm),
+                    )
+                    androidx.compose.material3.Icon(
+                        painter = androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_close),
+                        contentDescription = stringResource(R.string.cst_photos_remove),
+                        tint = Rahal.colors.onBrand,
+                        modifier = Modifier
+                            .align(androidx.compose.ui.Alignment.TopEnd)
+                            .size(Rahal.icon.md)
+                            .clip(Rahal.shape.pill)
+                            .background(Rahal.colors.ink.copy(alpha = 0.6f))
+                            .clickable { vm.removePhoto(p.id) }
+                            .padding(Rahal.space.xs),
+                    )
+                }
+            }
+            if (vm.uploadingPhoto) {
+                CircularProgressIndicator(Modifier.size(Rahal.icon.md), strokeWidth = Rahal.stroke.focus)
+            } else if (vm.photos.size < MAX_PHOTOS) {
+                com.rahalgo.ui.RahalOutlineButton(onClick = pick) { Text(stringResource(R.string.cst_photos_add)) }
+            }
+        }
+    }
+}
+
 enum class HolderAsk { Idle, Sending, Waiting, Received, Expired }
 
 /**

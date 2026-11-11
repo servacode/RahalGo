@@ -488,6 +488,14 @@ private fun OrderCard(
             Spacer(Modifier.height(Rahal.space.md))
             WhatBox(stringResource(R.string.card_custom_what), order.customRequest)
         }
+        // **وصورُ قائمة الزبون أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١) — تحت وصف الطلب.
+        if (custom && order.customPhotos.isNotEmpty()) {
+            Spacer(Modifier.height(Rahal.space.sm))
+            com.rahalgo.ui.CustomPhotoStrip(
+                urls = order.customPhotos,
+                media = { p -> com.rahalgo.ui.AppCore.get().media(p) },
+            )
+        }
 
         // **وفاصلٌ واحدٌ لا اثنان** — كان `Spacer(12)` مكرَّراً سطرين
         // متتاليين فصار الفراغُ فوق الطرفين ٢٤dp بينما سائرُ البطاقة ١٠–١٢

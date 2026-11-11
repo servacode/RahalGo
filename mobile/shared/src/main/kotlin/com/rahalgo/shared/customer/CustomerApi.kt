@@ -262,6 +262,13 @@ class CustomerApi(private val api: ApiClient) {
         api.call("/api/v1/orders/custom", HttpMethod.Post, input, idempotencyKey = attemptKey)
 
     /**
+     * **يرفع صورةَ قائمة المشتريات أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١) — قبل الطلب، ويُرسَل معرّفُها
+     * مع `createCustom` في `photoIds`. **والرفعُ نفسُه نقطةُ الصور الشخصيّة** (`POST /me/custom-photo`).
+     */
+    suspend fun uploadCustomPhoto(fileName: String, bytes: ByteArray): CustomPhoto =
+        photoJson.decodeFromString(CustomPhoto.serializer(), api.upload("/api/v1/me/custom-photo", fileName, bytes))
+
+    /**
      * **«اطلب الموقع منه» في الأمانة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كـ«إحضار» المتجر: يصل صاحبَ
      * الأمانة رابطُ «أرسل موقعي» بالواتساب، **وإن لم تصل الرسالةُ** (`whatsappSent=false`)
      * يشاركه الزبونُ بنفسه (`waUrl`).
@@ -547,6 +554,16 @@ data class NewOrder(
     val notes: String = "",
 )
 
+private val photoJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+
+/** **صورةٌ رُفعت للطلب الخاصّ** — المعرّفُ يُرسَل مع الطلب، والرابطُ موقَّعٌ للمعاينة. */
+@Serializable
+data class CustomPhoto(
+    val id: String,
+    val url: String = "",
+    @SerialName("thumb_url") val thumbUrl: String = "",
+)
+
 @Serializable
 data class NewCustom(
     /** **ما يريده بلفظه** — لا اختيارٌ من قائمة. */
@@ -564,6 +581,8 @@ data class NewCustom(
      * الآن، والحظرُ النقديُّ يحرسه المحرّك.
      */
     @SerialName("payment_method") val paymentMethod: String = "cash",
+    /** **صورُ القائمة أو الغرض** (٢٠٢٦-١١-١١) — معرّفاتُ `uploadCustomPhoto`، ١–٣؛ وفارغٌ لا يُرسَل. */
+    @SerialName("photo_ids") val photoIds: List<String>? = null,
     /** **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — `amanah` بلا ثمنِ بضاعة. */
     @SerialName("custom_mode") val customMode: String = "purchase",
     /**
@@ -780,6 +799,8 @@ data class MyOrder(
     @SerialName("address_text") val addressText: String = "",
     val notes: String = "",
     @SerialName("custom_request") val customRequest: String = "",
+    /** **صورُ قائمة الزبون أو الغرض** (٢٠٢٦-١١-١١) — روابطُ موقَّعة، وفارغٌ من خادمٍ قديم. */
+    @SerialName("custom_photos") val customPhotos: List<String> = emptyList(),
     // ── عرضُ سعر الطلب المخصَّص وتأكيدُه (Batch 2c) ──────────────────
     //
     // **`customGoodsAmount == null` تعني «لم يُتّفق بعد»** — فتُعرَض حالُ

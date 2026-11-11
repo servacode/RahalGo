@@ -227,6 +227,9 @@ type Order struct {
 	Kind string `json:"kind"`
 	// CustomRequest ما طلبه الزبونُ بلفظه — في الخاصّ وحدَه.
 	CustomRequest string `json:"custom_request"`
+	// CustomPhotos **صورُ قائمة المشتريات أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١، هجرة ٠٥٤١) —
+	// روابطُ موقَّعةٌ من ١ إلى ٣، **و`[]` لا `null` حين لا صور.** (`order_custom_photos`)
+	CustomPhotos []string `json:"custom_photos"`
 	// CustomGoodsAmount وCustomFee **ما وُثّق ولم يُحاسَب** — خدمةُ السائق.
 	// CustomAgreedAt **متى وثّق السائقُ المبلغَ والأجرة.**
 	//

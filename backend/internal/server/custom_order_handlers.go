@@ -61,6 +61,9 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 		// LocationRequestID **«اطلب الموقع منه»** — طلبُ موقعٍ أنشأه قبل الإرسال
 		// (`POST /my/location-requests`)، **فيُربط بالطلب**: نقطتُه نقطةُ الاستلام الآن أو حين تصل.
 		LocationRequestID string `json:"location_request_id"`
+		// PhotoIDs **صورُ القائمة أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١) — ١ إلى ٣ معرّفاتٍ رفعها
+		// صاحبُ الطلب قبله (`POST /me/custom-photo`). **اختياريّةٌ، والنصُّ لا يلزم معها.**
+		PhotoIDs []string `json:"photo_ids"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -75,6 +78,10 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 	); err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **والصورةُ تغني عن النصّ** (٢٠٢٦-١١-١١): طلبٌ بلا نصٍّ وبصورةٍ يأخذ نصّاً ثابتاً.
+	if strings.TrimSpace(req.Request) == "" && len(req.PhotoIDs) > 0 {
+		req.Request = orders.CustomPhotoOnlyRequest
 	}
 	// **والأمانةُ بلا صاحبها ورقمه لا تُرسَل** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — السائقُ يتّصل به.
 	// **والرقمُ يُفحص كبقيّة الأرقام** ويُخزَّن دوليّاً.
@@ -100,6 +107,17 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 			req.AddressText, req.Payment, req.Notes, req.Lat, req.Lng)
 		if err != nil {
 			return IdempotentBody{}, err
+		}
+		// **وصورُه تُربط في المعاملة نفسِها** — فلا طلبَ بصورةٍ غريبة.
+		if err := s.orders.AttachCustomPhotosTx(ctx, q, o.ID, userIDFrom(r), req.PhotoIDs); err != nil {
+			return IdempotentBody{}, err
+		}
+		if len(req.PhotoIDs) > 0 {
+			urls, err := s.orders.CustomPhotoURLsTx(ctx, q, o.ID)
+			if err != nil {
+				return IdempotentBody{}, err
+			}
+			o.CustomPhotos = urls
 		}
 		// **والأمانةُ تُكتب في معاملة الإنشاء نفسِها** — فلا يراها سائقٌ مشترياتٍ لحظة.
 		if req.Mode == orders.CustomModeAmanah {

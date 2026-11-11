@@ -523,6 +523,8 @@ type driverOrder struct {
 	// CustomRequest ما طلبه الزبونُ بلفظه — **وهو كلُّ ما يعرفه السائقُ قبل
 	// أن يتّفقا في المحادثة.**
 	CustomRequest string `json:"custom_request"`
+	// CustomPhotos **صورُ قائمة الزبون أو الغرض** (٢٠٢٦-١١-١١، هجرة ٠٥٤١) — روابطُ موقَّعة، و`[]` إن لا صور.
+	CustomPhotos []string `json:"custom_photos"`
 	// CustomGoodsAmount وCustomFee ما وُثّق — **و`nil` تعني «لم يُوثَّق بعد».**
 	CustomGoodsAmount *int64 `json:"custom_goods_amount"`
 	CustomFee         *int64 `json:"custom_fee"`
@@ -840,6 +842,9 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 	if err := s.attachDriverItems(r.Context(), out); err != nil {
 		return nil, err
 	}
+	if err := s.attachCustomPhotos(r.Context(), out); err != nil {
+		return nil, err
+	}
 	if err := s.attachPayMerchants(r.Context(), out); err != nil {
 		return nil, err
 	}
@@ -847,6 +852,27 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 		return nil, err
 	}
 	return out, nil
+}
+
+// attachCustomPhotos **صورُ الطلب الخاصّ للسائق** (٢٠٢٦-١١-١١) — استعلامٌ واحدٌ لكلّ القائمة.
+func (s *Server) attachCustomPhotos(ctx context.Context, list []driverOrder) error {
+	ids := []string{}
+	for i := range list {
+		list[i].CustomPhotos = []string{}
+		if list[i].Kind == "custom" {
+			ids = append(ids, list[i].ID)
+		}
+	}
+	got, err := s.orders.CustomPhotoURLs(ctx, ids)
+	if err != nil {
+		return err
+	}
+	for i := range list {
+		if p, ok := got[list[i].ID]; ok {
+			list[i].CustomPhotos = p
+		}
+	}
+	return nil
 }
 
 // attachPayMerchants **يُلحق بكلّ طلبٍ ما يدفعه السائقُ للمتاجر عند الاستلام** —

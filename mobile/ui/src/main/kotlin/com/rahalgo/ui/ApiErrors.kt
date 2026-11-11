@@ -374,6 +374,7 @@ private val CODES: Map<String, Int> = mapOf(
     // **الأمانة: صاحبُها ورقمُه وطلبُ موقعه** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
     "amanah_holder_required" to R.string.err_amanah_holder_required,
     "location_request_invalid" to R.string.err_location_request_invalid,
+    "custom_photos_invalid" to R.string.err_custom_photos_invalid,
     "live_request_stage" to R.string.err_live_request_stage,
     "too_many_attempts" to R.string.err_rate_limited,
     "validation" to R.string.err_validation,

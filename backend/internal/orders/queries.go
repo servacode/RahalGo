@@ -163,7 +163,11 @@ const orderSelect = `
 	       COALESCE((SELECT NULLIF(cb.full_name, '') FROM users cb WHERE cb.id = o.created_by), ''),
 	       COALESCE(o.pickup_merchant_id::text, ''),
 	       -- **وعددُ متاجر الطلب** (هجرة ٠٥٠٢) — داخليٌّ لا يُرسَل (Order.Stops).
-	       o.stops
+	       o.stops,
+	       -- **وصورُ الطلب الخاصّ** (هجرة ٠٥٤١) — مساراتٌ تصير روابطَ موقَّعةً عند القراءة.
+	       COALESCE((SELECT array_agg(cpm.path ORDER BY cp.position)
+	                   FROM order_custom_photos cp JOIN media cpm ON cpm.id = cp.media_id
+	                  WHERE cp.order_id = o.id), '{}'::text[])
 	FROM orders o
 	LEFT JOIN LATERAL (
 		SELECT ST_Y(a.entrance::geometry) AS lat, ST_X(a.entrance::geometry) AS lng
@@ -224,7 +228,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.AmountCurrency, &o.NearLandmark, &o.LiveRequestedAt, &o.LiveRequestCount,
 		&o.EntranceLat, &o.EntranceLng, &o.DropoffSuggestLat, &o.DropoffSuggestLng,
 		&o.HolderName, &o.HolderPhone, &o.PickupAddress,
-		&o.Origin, &o.CreatedByName, &o.PickupMerchantID, &o.Stops)
+		&o.Origin, &o.CreatedByName, &o.PickupMerchantID, &o.Stops, &o.CustomPhotos)
 	if err != nil {
 		return nil, err
 	}
@@ -248,6 +252,8 @@ func scanOrder(row pgx.Row) (*Order, error) {
 	o.MerchantLogoThumb = media.URLForPtr(o.MerchantLogoThumb)
 	// **ومسارُ صورة الإثبات يصير رابطاً** — كسائر الوسائط.
 	o.ProofURL = media.SignedURLPtr(o.ProofURL)
+	// **وصورُ الطلب الخاصّ روابطُ موقَّعة** (صنفٌ محميّ) — و`[]` لا `null`.
+	o.CustomPhotos = SignPhotoPaths(o.CustomPhotos)
 	// **وأسُنِد سائق؟** — يُشتقّ هنا **قبل أن تُمحى هويّتُه لبوّابة المتجر**،
 	// فيبقى الجوابُ صحيحاً لكلّ قارئ.
 	o.DriverAssigned = o.DriverID != nil

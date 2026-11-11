@@ -87,6 +87,7 @@ var audienceAllow = map[Audience]map[string]bool{
 		// **وثمنُ البضاعة بالدولار يراه كما كُتب** (قرارُ المالك ٢٠٢٦-١١-٠٩).
 		"custom_goods_usd":         true,
 		"custom_request":           true,
+		"custom_photos":            true,
 		"quote_confirmed_at":       true,
 		"quote_confirmed_total":    true,
 		"quote_confirmed_version":  true,
@@ -204,6 +205,7 @@ var audienceAllow = map[Audience]map[string]bool{
 		"custom_goods_amount":          true,
 		"custom_goods_usd":             true,
 		"custom_request":               true,
+		"custom_photos":                true,
 		// **«لدي توصيلة»** — ما يحمله · ومن يقبض منه · وأتُتبَع النقطة.
 		"parcel_note": true,
 		// **وأين البضاعةُ بعد طارئ** — للسائق التالي (٢٠٢٦-١٠-٠٢).
@@ -357,6 +359,7 @@ var audienceAllow = map[Audience]map[string]bool{
 		"custom_goods_amount":          true,
 		"custom_goods_usd":             true,
 		"custom_request":               true,
+		"custom_photos":                true,
 		"quote_confirmed_at":           true,
 		"quote_confirmed_total":        true,
 		"quote_confirmed_version":      true,

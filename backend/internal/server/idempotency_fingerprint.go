@@ -123,6 +123,8 @@ type fpCustomOrder struct {
 	HolderName        string `json:"holder_name,omitempty"`
 	HolderPhone       string `json:"holder_phone,omitempty"`
 	LocationRequestID string `json:"location_request_id,omitempty"`
+	// صورُ القائمة (٢٠٢٦-١١-١١) — بـ`omitempty` فبصمةُ ما قبله لا تتبدّل.
+	PhotoIDs []string `json:"photo_ids,omitempty"`
 }
 
 func fingerprintCustomOrder(body []byte) []byte {

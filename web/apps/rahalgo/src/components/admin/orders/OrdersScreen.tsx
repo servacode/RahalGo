@@ -112,6 +112,7 @@ import {
 } from "./BoardWidgets";
 import { PartsSection } from "./PartsBoxes";
 import { SHAMCASH_LABEL, shamcashText, type ShamcashBoard } from "./ShamcashLine";
+import { CustomPhotoGrid } from "@/components/CustomPhotos";
 
 const m = getMessages(defaultLocale);
 
@@ -175,6 +176,8 @@ interface OrderRow {
   kind?: string;
   /** ما طلبه الزبونُ بلفظه — في الخاصّ وحدَه. */
   custom_request?: string;
+  /** صورُ قائمة الزبون أو الغرض (٢٠٢٦-١١-١١) — روابطُ موقَّعة. */
+  custom_photos?: string[];
   /** **«لدي توصيلة»**: ما يحمله السائق، ومن يدفع الأجرة (٢٠٢٦-١٠-١٢). */
   parcel_note?: string;
   fee_payer?: string;
@@ -4712,6 +4715,7 @@ function InvoiceList({
         <div className="rounded-control bg-field px-3 py-2">
           <p className="text-2xs text-ink-muted">{OP.customWhat}</p>
           <p className="whitespace-pre-wrap text-sm font-medium">{o.custom_request || "—"}</p>
+          <CustomPhotoGrid urls={o.custom_photos} label={false} />
         </div>
         <ul className="space-y-1.5 text-sm">
           {!amanah && (

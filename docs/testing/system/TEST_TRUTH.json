@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 708,
+    "routes": 709,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -32,9 +32,9 @@
     ],
     "setting_defs": 284,
     "behaviour_settings": 239,
-    "order_fields": 146,
-    "test_files": 828,
-    "test_funcs": 3191
+    "order_fields": 147,
+    "test_files": 830,
+    "test_funcs": 3193
   },
   "flows": [
     {
@@ -10976,6 +10976,12 @@
       "orphan": true
     },
     {
+      "name": "TestCustomPhotos_AttachRules",
+      "file": "internal/orders/custom_photos_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestCustomShare_CancelAfterQuoteLeavesNoMoney",
       "file": "internal/orders/custom_platform_share_test.go",
       "package": "orders_test",
@@ -16651,6 +16657,12 @@
         "payload"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestCUSTPHOTO_UploadAttachShowOnce",
+      "file": "internal/qa/custom_photos_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestCustomReservation_StaleAggregateFailsFININV",

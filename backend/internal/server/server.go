@@ -895,6 +895,8 @@ func (s *Server) Router() http.Handler {
 			r.Patch("/me/name", s.notStaff(s.handleSetMyName))
 			r.Post("/me/avatar", s.notStaff(s.handleMyAvatar))
 			r.Delete("/me/avatar", s.notStaff(s.handleDeleteMyAvatar))
+			// صورةُ قائمة الطلب الخاصّ (٢٠٢٦-١١-١١) — تُرفع قبل الطلب ويُرسل معرّفُها معه.
+			r.Post("/me/custom-photo", s.notStaff(s.handleMyCustomPhoto))
 			r.Get("/my/ratings", s.handleMyRatings)
 			// **شكاواه هو** — والتذاكرُ كلُّها كانت تحت /admin، فلا يرى صاحبُها حالَها
 			r.Get("/my/tickets", s.handleMyTickets)
