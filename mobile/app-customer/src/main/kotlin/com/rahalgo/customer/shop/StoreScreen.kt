@@ -31,7 +31,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -79,20 +78,20 @@ internal fun FeaturedStrip(
             text = stringResource(R.string.shop_featured_stores),
             color = Rahal.colors.ink,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.padding(horizontal = 14.dp),
+            style = Rahal.type.cardTitle,
+            modifier = Modifier.padding(horizontal = Rahal.space.md),
         )
         Spacer(Modifier.height(Rahal.space.sm))
-        val nameSize = rememberFeaturedNameSize(stores.map { it.name }, 76.dp)
+        val nameSize = rememberFeaturedNameSize(stores.map { it.name }, Rahal.size.avatarLg + Rahal.space.xs)
         LazyRow(
-            contentPadding = PaddingValues(horizontal = 14.dp),
+            contentPadding = PaddingValues(horizontal = Rahal.space.md),
             horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
         ) {
             items(stores, key = { it.id }) { s ->
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .width(76.dp)
+                        .width(Rahal.size.avatarLg + Rahal.space.xs)
                         .clip(Rahal.shape.md)
                         .clickable { onOpen(s.id) },
                 ) {
@@ -100,7 +99,7 @@ internal fun FeaturedStrip(
                         url = media(s.logoThumbUrl ?: s.logoUrl),
                         name = s.name,
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(Rahal.size.avatarLg)
                             .clip(Rahal.shape.md)
                             .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
                             // **والمغلقُ أخفت** — يُفتح ويُتصفّح، **ولا يُوهِم أنّه يستقبل.**
@@ -121,7 +120,7 @@ internal fun FeaturedStrip(
  */
 @Composable
 private fun rememberFeaturedNameSize(names: List<String>, tile: androidx.compose.ui.unit.Dp): androidx.compose.ui.unit.TextUnit {
-    val base = MaterialTheme.typography.labelMedium
+    val base = Rahal.type.label
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
     val density = androidx.compose.ui.platform.LocalDensity.current
     return remember(names, tile, density, base) {
@@ -152,7 +151,7 @@ private const val FEATURED_MIN_SP = 9f
 private fun FeaturedName(name: String, size: androidx.compose.ui.unit.TextUnit) {
     BasicText(
         text = name,
-        style = MaterialTheme.typography.labelMedium.copy(
+        style = Rahal.type.label.copy(
             color = Rahal.colors.ink,
             textAlign = TextAlign.Center,
             fontSize = size,
@@ -237,21 +236,21 @@ internal fun StoreScreen(
                 modifier = Modifier
                     .clip(Rahal.shape.md)
                     .clickable(onClick = onBack)
-                    .heightIn(min = 48.dp)
+                    .heightIn(min = Rahal.size.touch)
                     .padding(horizontal = Rahal.space.sm),
             ) {
                 Icon(
                     painter = painterResource(com.rahalgo.ui.R.drawable.ic_arrow_back),
                     contentDescription = null,
                     tint = Rahal.colors.brand,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(Rahal.icon.md),
                 )
                 Spacer(Modifier.width(Rahal.space.xs))
                 Text(
                     text = stringResource(R.string.store_back),
                     color = Rahal.colors.brand,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = Rahal.type.label,
                 )
             }
         }
@@ -260,24 +259,44 @@ internal fun StoreScreen(
             vm.storeError.isNotEmpty() ->
                 LoadState(loading = false, error = vm.storeError, onRetry = vm::loadStore)
 
-            page == null ->
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { RahalLoader() }
+            // **هيكلٌ ينبض لا دوّارةٌ في فراغ** (D11).
+            page == null -> com.rahalgo.ui.SkeletonList(count = 4)
 
             else -> {
                 val h = page.store
-                // **بطاقةُ الرأس: الشعارُ والاسمُ وشارةُ «مفتوح/مسكّر» والدوامُ تحتها.**
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Rahal.space.md)
-                        .clip(Rahal.shape.md)
-                        .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
-                        .padding(Rahal.space.md),
+                // **Sections with counts from the summary, items page by page** (owner 2026-11-07:
+                // «ما يصير يكون بطيء») — see `StoreList`.
+                val sections = page.sections.filter { it.count > 0 }
+                val list = vm.storeList
+                // ══════════════════════════════════════════════════════════
+                // **الرأسُ يمشي مع الشبكة — كالسوق** (إعادةُ التصميم ٢٠٢٦-١١-١١، مرآةُ D1)
+                // ══════════════════════════════════════════════════════════
+                //
+                // **كان الرأسُ والبحثُ والأقسامُ ثابتةً فوق الشبكة** فيبقى للأصناف شريطٌ على ٣٦٠ بخطٍّ
+                // ١٫٣. **والآن عنصرٌ بعرض الشبكة كلِّها في أعلاها** يمرّ مع التمرير، **وحشوتُها تُلغى
+                // عنه** (`bleed`) كي لا يضيق. (الشريطُ يختار القسمَ ولا يتبع التمرير، فلا حاجةَ لتثبيته.)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(ShopCols),
+                    contentPadding = PaddingValues(
+                        start = Rahal.space.md, end = Rahal.space.md,
+                        bottom = Rahal.space.lg + com.rahalgo.ui.LocalChatFabInset.current,
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+                    verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
                 ) {
+                    item(key = "store-head", span = { GridItemSpan(maxLineSpan) }) {
+                    Column(Modifier.bleed(Rahal.space.md)) {
+                // **بطاقةُ الرأس: سهمُ الرجوع والشعارُ والاسمُ والدوامُ تحته** — بطاقةٌ محدّدةٌ بلا ظلّ
+                // (معلومةٌ لا زرّ)، بالقطعة الموحّدة.
+                com.rahalgo.ui.RahalCard(
+                    variant = com.rahalgo.ui.CardVariant.Outlined,
+                    modifier = Modifier.padding(start = Rahal.space.md, end = Rahal.space.md, top = Rahal.space.sm),
+                    padding = Rahal.space.sm,
+                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier
-                            .size(48.dp)
+                            .size(Rahal.size.touch)
                             .clip(CircleShape)
                             .clickable(onClickLabel = stringResource(R.string.store_back), onClick = onBack),
                         contentAlignment = Alignment.Center,
@@ -286,7 +305,7 @@ internal fun StoreScreen(
                             painter = painterResource(com.rahalgo.ui.R.drawable.ic_arrow_back),
                             contentDescription = stringResource(R.string.store_back),
                             tint = Rahal.colors.brand,
-                            modifier = Modifier.size(22.dp),
+                            modifier = Modifier.size(Rahal.icon.md),
                         )
                     }
                     Spacer(Modifier.width(Rahal.space.xs))
@@ -294,7 +313,7 @@ internal fun StoreScreen(
                         url = media(h.logoThumbUrl ?: h.logoUrl),
                         name = h.name,
                         modifier = Modifier
-                            .size(64.dp)
+                            .size(Rahal.size.avatarMd)
                             .clip(Rahal.shape.md)
                             .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md),
                     )
@@ -303,12 +322,11 @@ internal fun StoreScreen(
                         Text(
                             text = h.name,
                             color = Rahal.colors.ink,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleMedium,
+                            style = Rahal.type.sectionTitle,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        Spacer(Modifier.height(Rahal.space.xs))
+                        Spacer(Modifier.height(Rahal.space.xxs))
                         // **دوامُ اليوم وحدَه بلا شارة «مفتوح/مسكّر»** (قرارُ المالك ٢٠٢٦-١٠-٢٨) —
                         // **والإغلاقُ الطارئُ يُقال بلفظه** فلا يُقرأ الدوامُ وعداً بأنّه مفتوح.
                         Text(
@@ -319,7 +337,7 @@ internal fun StoreScreen(
                             },
                             color = if (h.emergencyClosed) Rahal.colors.danger else Rahal.colors.inkMuted,
                             fontWeight = if (h.emergencyClosed) FontWeight.Bold else FontWeight.Normal,
-                            style = MaterialTheme.typography.labelMedium,
+                            style = Rahal.type.caption,
                         )
                         // **زمنُ التحضير إن أرسله المحرّك (تدقيق D16)** — لا تقييمَ ولا غلافَ في ردّ المتجر
                         // اليوم، ولا يُختلَق حقل.
@@ -327,10 +345,11 @@ internal fun StoreScreen(
                             Text(
                                 text = stringResource(R.string.store_prep, com.rahalgo.ui.minutes(h.prepMinutes.toLong())),
                                 color = Rahal.colors.inkMuted,
-                                style = MaterialTheme.typography.labelMedium,
+                                style = Rahal.type.caption,
                             )
                         }
                     }
+                }
                 }
                 if (!h.openNow) {
                     Spacer(Modifier.height(Rahal.space.sm))
@@ -341,30 +360,21 @@ internal fun StoreScreen(
                 Spacer(Modifier.height(Rahal.space.sm))
                 notice()
 
-                // **Sections with counts from the summary, items page by page** (owner 2026-11-07:
-                // «ما يصير يكون بطيء») — see `StoreList`.
-                val sections = page.sections.filter { it.count > 0 }
-                if (sections.isEmpty()) {
-                    Empty(
-                        text = stringResource(R.string.store_empty),
-                        hint = stringResource(R.string.store_empty_hint),
-                        actionLabel = "",
-                        onAction = null,
-                    )
-                    return@Column
-                }
-                val list = vm.storeList
-
+                if (sections.isNotEmpty()) {
                 // **كالسوق تماماً** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨: «لازم نفس الاقسام دوائر من فوق وكل
                 // قسم فيه اصنافه») — دوائرُ الأقسام بصورها، **وتحتها أصنافُ المختار وحدَه.**
-                Spacer(Modifier.height(Rahal.space.sm))
                 // **Search inside the store** — on the server, across its sections (2026-11-07).
                 androidx.compose.material3.OutlinedTextField(
                     value = list.query,
                     onValueChange = { list.search(it) },
                     placeholder = { Text(stringResource(com.rahalgo.ui.R.string.ow_search)) },
                     leadingIcon = {
-                        Icon(painterResource(com.rahalgo.ui.R.drawable.ic_search), contentDescription = null, tint = Rahal.colors.inkMuted)
+                        Icon(
+                            painterResource(com.rahalgo.ui.R.drawable.ic_search),
+                            contentDescription = null,
+                            tint = Rahal.colors.inkMuted,
+                            modifier = Modifier.size(Rahal.icon.sm),
+                        )
                     },
                     trailingIcon = if (list.query.isNotEmpty()) {
                         {
@@ -382,23 +392,28 @@ internal fun StoreScreen(
                     singleLine = true,
                     // **بنمط حقل الرئيسيّة نفسِه (تدقيق D16)**: دائريٌّ بحدٍّ عاديّ — لا مستطيلٌ رماديٌّ آخر.
                     shape = Rahal.shape.pill,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = Rahal.space.sm),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
                 )
                 if (list.query.isBlank()) {
-                    Spacer(Modifier.height(Rahal.space.sm))
                     SectionRail(
                         sections.map { Section(id = it.id, name = it.name, icon = it.icon, imageUrl = it.imageUrl, imageThumbUrl = it.imageThumbUrl) },
                         list.section.ifEmpty { sections.first().id },
                         media,
                     ) { list.pick(it) }
                 }
-
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(ShopCols),
-                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + com.rahalgo.ui.LocalChatFabInset.current),
-                    horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
-                    verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
-                ) {
+                }
+                    }
+                    }
+                    if (sections.isEmpty()) {
+                        item(key = "store-empty", span = { GridItemSpan(maxLineSpan) }) {
+                            com.rahalgo.ui.EmptyState(
+                                title = stringResource(R.string.store_empty),
+                                line = stringResource(R.string.store_empty_hint),
+                                icon = R.drawable.ic_store,
+                            )
+                        }
+                        return@LazyVerticalGrid
+                    }
                     items(list.items, key = { it.id }) { item ->
                         ItemCard(
                             item = item,
@@ -415,23 +430,20 @@ internal fun StoreScreen(
                     val full: androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
                     when {
                         list.items.isEmpty() && list.loading -> item(span = full) {
-                            Box(Modifier.fillMaxWidth().padding(vertical = Rahal.space.xl), contentAlignment = Alignment.Center) { RahalLoader(size = 48.dp) }
+                            Box(Modifier.fillMaxWidth().padding(vertical = Rahal.space.xl), contentAlignment = Alignment.Center) { RahalLoader(size = Rahal.size.touch) }
                         }
                         list.items.isEmpty() && list.error.isNotEmpty() -> item(span = full) {
                             LoadState(loading = false, error = list.error, onRetry = list::reload)
                         }
                         list.items.isEmpty() -> item(span = full) {
-                            Text(
-                                stringResource(com.rahalgo.ui.R.string.grid_search_none),
-                                color = Rahal.colors.inkMuted,
-                                style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth().padding(vertical = Rahal.space.xl),
+                            com.rahalgo.ui.EmptyState(
+                                title = stringResource(com.rahalgo.ui.R.string.grid_search_none),
+                                icon = com.rahalgo.ui.R.drawable.ic_search,
                             )
                         }
                         list.hasMore -> item(span = full, key = "more") {
                             androidx.compose.runtime.LaunchedEffect(list.items.size) { list.loadMore() }
-                            Box(Modifier.fillMaxWidth().padding(vertical = Rahal.space.md), contentAlignment = Alignment.Center) { RahalLoader(size = 48.dp) }
+                            Box(Modifier.fillMaxWidth().padding(vertical = Rahal.space.md), contentAlignment = Alignment.Center) { RahalLoader(size = Rahal.size.touch) }
                         }
                     }
                 }

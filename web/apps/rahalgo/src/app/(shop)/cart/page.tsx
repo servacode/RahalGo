@@ -39,6 +39,7 @@ import {
   IconStore,
   IconWallet,
   IconCash,
+  SectionHeader,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -52,6 +53,7 @@ import { ShopPic } from "@/components/customer/ShopPic";
 import { DrinkThumb } from "@/components/customer/DrinkThumb";
 import { AvailabilityNotice, useOrderingState } from "@/components/customer/ServiceNotices";
 import { useShopToast } from "@/components/customer/toast";
+import { OUTLINE_CARD, StickyActionBar } from "@/components/customer/kit";
 
 const m = getMessages(defaultLocale);
 const C = m.shop.cart;
@@ -314,7 +316,7 @@ export default function CartPage() {
           {/* ══ **الأصنافُ كلُّها أوّلاً، ثمّ المشروباتُ مجموعةً تحتها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — المشروبُ
               نفسُه من أكثر من صنفٍ سطرٌ واحدٌ بعدده المجموع: «+» و«−» لأوّل صنفٍ هو معه، والحذفُ من كلّها.
               **والسعرُ في عمودٍ واحدٍ ثابتٍ آخرَ السطر** لكلّ الأسطر، والعدّادُ والحذفُ قبله. ══ */}
-          <div className="surface overflow-hidden">
+          <div className="overflow-hidden rounded-rg-lg border border-line bg-surface">
             {cart.lines[0]?.item.merchant_name && (
               <div className="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-3">
                 <span className="flex min-w-0 items-center gap-2 font-bold">
@@ -339,20 +341,15 @@ export default function CartPage() {
                       <ShopPic src={l.item.image_thumb_url ?? l.item.image_url} name={l.item.name} icon="food" iconSize={22} className="h-14 w-14 shrink-0 rounded-control" />
                     }
                     price={unitPrice(l) * l.qty}
+                    usd={unitPriceUsd(l) != null ? (unitPriceUsd(l) ?? 0) * l.qty : null}
                     qty={l.qty}
                     onLess={() => cart.setQty(k, l.qty - 1)}
                     onMore={() => cart.setQty(k, l.qty + 1)}
                     onRemove={() => cart.setQty(k, 0)}
                   >
-                    <p className="truncate text-sm font-bold">{l.item.name}</p>
+                    <p className="line-clamp-2 text-card-title">{l.item.name}</p>
                     {l.options.length > 0 && (
                       <p className="truncate text-xs text-ink-muted">{l.options.map((o) => o.name).join(m.common.listSep)}</p>
-                    )}
-                    {/* **وصنفٌ بالدولار يُقال دولارُه تحت اسمه** (٢٠٢٦-١١-٠٧) — والليرةُ في عمود السعر، وهي ما يُدفع. */}
-                    {unitPriceUsd(l) != null && (
-                      <p className="text-xs">
-                        <DualPrice usd={(unitPriceUsd(l) ?? 0) * l.qty} syp={unitPrice(l) * l.qty} muted />
-                      </p>
                     )}
                     {l.item.merchant_name && (
                       <p className="flex items-center gap-1 truncate text-xs text-ink-muted">
@@ -383,7 +380,7 @@ export default function CartPage() {
                     moreDisabled={!room}
                     onRemove={() => cart.removeDrink(d.name)}
                   >
-                    <p className="truncate text-sm font-bold">{d.name}</p>
+                    <p className="line-clamp-2 text-card-title">{d.name}</p>
                   </CartRow>
                 </li>
               );
@@ -417,8 +414,8 @@ export default function CartPage() {
           {user && (
             <>
               <AddressChip onOpen={() => setPickAddr(true)} />
-              <div className="surface flex flex-col gap-3 p-4">
-                <h2 className="heading-card">{C.payment}</h2>
+              <SectionHeader title={C.payment} />
+              <div className={`${OUTLINE_CARD} flex flex-col gap-3`}>
                 {/* **سطرٌ واحدٌ حين لا تكفي المحفظة — لا خيارٌ مطفأٌ ولا «رصيدك لا يكفي»** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
                 {walletBlocked ? (
                   <div className="shop-opt" data-on="true">
@@ -472,7 +469,7 @@ export default function CartPage() {
                   </div>
                 )}
               </div>
-              <div className="surface p-4">
+              <div className={OUTLINE_CARD}>
                 <Textarea
                   id="notes"
                   label={C.notes}
@@ -488,7 +485,7 @@ export default function CartPage() {
 
         <aside className="flex flex-col gap-3 lg:sticky lg:top-24">
           {!user ? (
-            <div className="surface flex flex-col gap-3 p-4">
+            <div className={`${OUTLINE_CARD} flex flex-col gap-3`}>
               <p className="text-sm">{C.needLogin}</p>
               <ButtonLink href="/login?next=/cart" className="w-full py-3">
                 {C.login}
@@ -496,7 +493,7 @@ export default function CartPage() {
             </div>
           ) : (
             <>
-              <div className="surface flex flex-col gap-3 p-4">
+              <div className={`${OUTLINE_CARD} flex flex-col gap-3`}>
                 <div className="flex items-end gap-2">
                   <Input
                     id="promo"
@@ -529,8 +526,8 @@ export default function CartPage() {
             </>
           )}
 
-          <div className="surface flex flex-col gap-2 p-4 text-sm">
-            <h2 className="heading-card">{C.summary}</h2>
+          <SectionHeader title={C.summary} />
+          <div className={`${OUTLINE_CARD} flex flex-col gap-2 text-sm`}>
             <div className="flex justify-between">
               <span className="text-ink-muted">{C.subtotal}</span>
               {quote?.blocked ? <span>—</span> : <Money value={quote?.subtotal ?? cart.subtotal} />}
@@ -579,11 +576,11 @@ export default function CartPage() {
 
           {/* **على الحاسوب الزرُّ في الملخّص اللاصق** — وعلى الجوّال في الشريط السفليّ الثابت (نفسُ الحالة والنفسُ الفعل). */}
           {user && (
-            <div className="surface hidden flex-col gap-2 p-4 lg:flex">
-              {why && <p className="line-clamp-3 text-xs text-danger">{why}</p>}
+            <div className={`${OUTLINE_CARD} hidden flex-col gap-2 lg:flex`}>
+              {why && <p className="line-clamp-3 text-caption text-danger">{why}</p>}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-ink-muted">{C.total}</span>
-                {payable != null ? <Money value={payable} className="figure" /> : <p className="figure">—</p>}
+                {payable != null ? <Money value={payable} className="text-price-lg" /> : <p className="text-price-lg">—</p>}
               </div>
               <button
                 type="button"
@@ -661,22 +658,22 @@ export default function CartPage() {
       {/* ══ **الشريطُ الثابت — الإجماليُّ وزرُّ الإرسال وسببُ تعطيله** (مرآةُ `CartScreen.kt`) ══
           **كان الزرُّ آخرَ صفحةٍ طويلة، وإن كان معطّلاً لم يُعرف لماذا.** والإجماليُّ بمعادلة الملخّص حرفاً. */}
       {user && (
-        <div className="surface sticky bottom-[calc(3.9rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-2 p-3 lg:hidden">
-          {why && <p className="line-clamp-3 text-xs text-danger">{why}</p>}
-          <div className="flex items-center gap-3">
+        <StickyActionBar aboveTabs className="lg:hidden">
+          {why && <p className="line-clamp-3 text-caption text-danger">{why}</p>}
+          <div className="flex items-center gap-rg-md">
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-ink-muted">{C.total}</p>
-              {payable != null ? <Money value={payable} className="figure" /> : <p className="figure">—</p>}
+              <p className="text-caption text-ink-muted">{C.total}</p>
+              {payable != null ? <Money value={payable} className="text-price-lg" /> : <p className="text-price-lg">—</p>}
             </div>
             <Button
-              className="flex-1 py-3 text-base"
+              className="min-h-12 flex-1 text-base"
               onClick={send}
               disabled={busy || !address || !online || !ordering.open || blocked || !canSubmit}
             >
               {busy ? C.sending : C.send}
             </Button>
           </div>
-        </div>
+        </StickyActionBar>
       )}
       <AddressSheet open={pickAddr} onClose={() => setPickAddr(false)} />
     </div>
@@ -694,6 +691,7 @@ function CartRow({
   media,
   children,
   price,
+  usd = null,
   qty,
   onLess,
   onMore,
@@ -703,6 +701,8 @@ function CartRow({
   media: ReactNode;
   children: ReactNode;
   price: number;
+  /** سطرٌ بالدولار: سعرٌ واحدٌ مزدوج (الدولار عريضٌ و«≈ ليرة» باهتة) بدل الليرة مرّتين. */
+  usd?: number | null;
   qty: number;
   onLess: () => void;
   onMore: () => void;
@@ -716,7 +716,11 @@ function CartRow({
       {media}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="min-w-0">{children}</div>
-        <Money value={price} className="block whitespace-nowrap text-base font-bold tabular-nums text-accent-text" />
+        {usd != null ? (
+          <DualPrice usd={usd} syp={price} className="text-price" />
+        ) : (
+          <Money value={price} className="block whitespace-nowrap text-price tabular-nums text-accent-text" />
+        )}
       </div>
       <div className="flex shrink-0 items-center gap-0.5 rounded-control bg-field p-0.5">
         {qty <= 1 ? (

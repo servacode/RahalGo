@@ -10,26 +10,21 @@
 import Link from "next/link";
 import { useState } from "react";
 import { getMessages, defaultLocale, fmtDateTime, fmtRef, fmtNum } from "@rahalgo/i18n";
-import { Badge, Money, IconNext, IconChevronDown } from "@rahalgo/ui";
+import { Money, StatusChip, IconNext, IconChevronDown } from "@rahalgo/ui";
 import { statusLabel } from "@/lib/customer/texts";
 import { ENDED, type MyOrder } from "@/lib/customer/types";
+import { OUTLINE_CARD, orderStatusTone } from "./kit";
 import { OrderEta, OrderInvoice, OrderStages } from "./orderParts";
 
 const m = getMessages(defaultLocale);
 const O = m.shop.orders;
 
 /**
- * **لونُ الشارة يقول الحالَ قبل أن تُقرأ** — مرآةُ `statusColor` في `Status.kt` (٢٠٢٦-١٠-٢٧):
- * الانتظارُ برتقاليّ، والعملُ عليه بلون العلامة، والأخضرُ للتسليم وحدَه، والأحمرُ لما سقط.
+ * **لونُ الشارة يقول الحالَ قبل أن تُقرأ** — رقاقةُ الحال المشتركة (`StatusChip`) بنبرة `orderStatusTone`
+ * (مرآةُ `statusTone` في `Status.kt`): الانتظارُ تحذير، والعملُ عليه معلومة، والتسليمُ نجاح، وما سقط خطر.
  */
-const ACTIVE = new Set(["accepted", "confirmed", "preparing", "assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff"]);
-
-export function statusTone(status: string): "success" | "danger" | "warning" | "primary" | "neutral" {
-  if (status === "delivered") return "success";
-  if (status === "cancelled" || status === "rejected" || status === "failed") return "danger";
-  if (status === "pending" || status === "dispatching") return "warning";
-  if (ACTIVE.has(status)) return "primary";
-  return "neutral";
+export function OrderStatusChip({ status }: { status: string }) {
+  return <StatusChip tone={orderStatusTone(status)}>{statusLabel(status)}</StatusChip>;
 }
 
 /**
@@ -63,34 +58,36 @@ export function OrderSummary({ order }: { order: MyOrder }) {
         onClick={() => setExpanded(true)}
         aria-expanded={false}
         aria-label={`${orderTitle(order)} — ${O.expand}`}
-        className="surface flex w-full flex-col gap-2 p-4 text-start"
+        className={`${OUTLINE_CARD} flex w-full flex-col gap-rg-sm text-start`}
       >
-        <span className="flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate text-base font-bold">{orderTitle(order)}</span>
-          <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium tabular-nums" dir="ltr">
-            #{fmtRef(order.number)}
-            <IconChevronDown size={16} className="text-ink-muted" />
+        <span className="flex items-center justify-between gap-rg-sm">
+          <span className="flex min-w-0 items-baseline gap-rg-sm">
+            <span className="truncate text-card-title">{orderTitle(order)}</span>
+            <span className="shrink-0 text-caption tabular-nums text-ink-muted" dir="ltr">
+              #{fmtRef(order.number)}
+            </span>
           </span>
+          <IconChevronDown size={16} className="shrink-0 text-ink-muted" />
         </span>
-        <span className="flex items-center justify-between gap-2">
-          <Badge variant={statusTone(order.status)}>{statusLabel(order.status)}</Badge>
-          <Money value={order.total} className="font-bold text-accent-text" />
+        <span className="flex items-center justify-between gap-rg-sm">
+          <OrderStatusChip status={order.status} />
+          <Money value={order.total} className="text-price text-accent-text" />
         </span>
-        <span className="text-xs text-ink-muted">{fmtDateTime(order.created_at)}</span>
+        <span className="text-caption text-ink-muted">{fmtDateTime(order.created_at)}</span>
       </button>
     );
   }
   return (
-    <div className="surface flex flex-col gap-3 p-4">
+    <div className={`${OUTLINE_CARD} flex flex-col gap-3`}>
       <Link href={href} className="flex flex-col gap-3 transition-transform active:scale-[0.99]">
-        <div className="flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate text-base font-bold">{orderTitle(order)}</span>
-          <span className="shrink-0 text-sm font-medium tabular-nums" dir="ltr">
+        <div className="flex items-baseline justify-between gap-rg-sm">
+          <span className="min-w-0 truncate text-card-title">{orderTitle(order)}</span>
+          <span className="shrink-0 text-caption tabular-nums text-ink-muted" dir="ltr">
             #{fmtRef(order.number)}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <Badge variant={statusTone(order.status)}>{statusLabel(order.status)}</Badge>
+        <div className="flex items-center justify-between gap-rg-sm">
+          <OrderStatusChip status={order.status} />
         </div>
         {order.kind === "custom" && order.custom_request && (
           <p className="line-clamp-2 text-sm">

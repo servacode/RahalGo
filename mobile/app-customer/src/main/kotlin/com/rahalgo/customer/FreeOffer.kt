@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -62,23 +61,23 @@ fun DeliveryFeeRow(label: String, fee: Long, waived: Long) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
+        Text(label, color = Rahal.colors.inkMuted, style = Rahal.type.body)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 money(fee + waived),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
                 textDecoration = TextDecoration.LineThrough,
             )
             Spacer(Modifier.width(Rahal.space.sm))
             if (fee > 0) {
-                Text(money(fee), style = MaterialTheme.typography.bodyMedium)
+                Text(money(fee), style = Rahal.type.body)
             } else {
                 Text(
                     stringResource(R.string.free_badge),
                     color = Rahal.colors.success,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                 )
             }
         }

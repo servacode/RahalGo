@@ -37,13 +37,11 @@ export default function FavoritesPage() {
         <EmptyState
           icon={IconHeart}
           title={F.empty}
+          line={F.emptyHint}
           action={
-            <div className="flex flex-col items-center gap-3">
-              <span className="text-xs text-ink-muted">{F.emptyHint}</span>
-              <ButtonLink href="/shop" variant="secondary">
-                {m.shop.cart.browse}
-              </ButtonLink>
-            </div>
+            <ButtonLink href="/shop" className="min-h-12">
+              {m.shop.cart.browse}
+            </ButtonLink>
           }
         />
       ) : (

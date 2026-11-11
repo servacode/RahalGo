@@ -22,7 +22,6 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.RowScope
@@ -744,7 +743,7 @@ private fun SignedIn(
                                     overlay.show(Overlay.Menu(CustomerItems.INVITE))
                                     scope.launch { drawer.close() }
                                 }
-                                androidx.compose.foundation.layout.Spacer(Modifier.height(6.dp))
+                                androidx.compose.foundation.layout.Spacer(Modifier.height(Rahal.space.sm))
                             }
                             if (citiesVm.cities.isNotEmpty()) {
                                 CityRow(CityScope.nameOf(citiesVm.cities)) {
@@ -909,7 +908,7 @@ private fun SignedIn(
                                 CountBadge(
                                     count = com.rahalgo.customer.cart.Cart.count,
                                     color = Rahal.colors.accent,
-                                    size = 16.dp,
+                                    size = Rahal.icon.xs,
                                     modifier = Modifier.align(Alignment.TopEnd),
                                 )
                             }
@@ -1627,24 +1626,40 @@ private fun PreLaunch(guest: Boolean, onAskLogin: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
             .fillMaxSize()
-            .padding(28.dp),
+            .padding(Rahal.space.xl),
     ) {
+        // **أيقونةُ الوقت في دائرةِ الحالة الموحّدة** — «قريباً» حالٌ مقصودةٌ لا خطأ، فلا أحمر.
+        Box(
+            Modifier
+                .size(Rahal.size.stateCircle)
+                .clip(Rahal.shape.pill)
+                .background(Rahal.colors.brand.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(com.rahalgo.ui.R.drawable.ic_time),
+                contentDescription = null,
+                tint = Rahal.colors.brand,
+                modifier = Modifier.size(Rahal.icon.lg),
+            )
+        }
+        Spacer(Modifier.height(Rahal.space.lg))
         Text(
             text = stringResource(R.string.prelaunch_title),
             color = Rahal.colors.ink,
-            style = MaterialTheme.typography.titleLarge,
+            style = Rahal.type.screenTitle,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Text(
             text = if (notice.isNotEmpty()) notice else stringResource(R.string.prelaunch_body),
             color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             textAlign = TextAlign.Center,
         )
         // **وبابُ الدخول لمن لم يدخل** — **ولا زرَّ إنشاءٍ معه.**
         if (guest) {
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
             RahalButton(onClick = onAskLogin) {
                 Text(stringResource(R.string.prelaunch_login))
             }
@@ -1654,25 +1669,19 @@ private fun PreLaunch(guest: Boolean, onAskLogin: () -> Unit) {
 
 @Composable
 private fun NeedAccount(onAskLogin: () -> Unit) {
+    // **حالةُ الفراغ الموحّدة** (`StateMessage`): أيقونةٌ في دائرةٍ وعنوانٌ وسطرٌ — **ثمّ زرٌّ
+    // مملوء**: الدخولُ هو الفعلُ الوحيدُ هنا، فلا يكون زرّاً محدَّداً خافتاً.
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier.padding(28.dp),
+        modifier = Modifier.padding(Rahal.space.xl),
     ) {
-        Text(
-            text = stringResource(R.string.guest_title),
-            color = Rahal.colors.ink,
-            style = MaterialTheme.typography.titleMedium,
+        com.rahalgo.ui.StateMessage(
+            title = stringResource(R.string.guest_title),
+            line = stringResource(R.string.guest_hint),
+            icon = com.rahalgo.ui.R.drawable.ic_user,
         )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.guest_hint),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(Rahal.space.lg))
-        RahalButton(onClick = onAskLogin) {
+        RahalButton(onClick = onAskLogin, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.guest_enter))
         }
     }

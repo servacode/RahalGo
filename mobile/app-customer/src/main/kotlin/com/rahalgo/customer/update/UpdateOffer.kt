@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -141,13 +140,13 @@ fun UpdateStrip() {
             .fillMaxWidth()
             .background(Rahal.colors.brand)
             .clickable { UpdateOffer.update(context) }
-            .padding(horizontal = 14.dp, vertical = Rahal.space.sm),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = stringResource(R.string.update_offer, v),
             color = Rahal.colors.onBrand,
-            style = MaterialTheme.typography.labelLarge,
+            style = Rahal.type.label,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
         )
@@ -157,7 +156,7 @@ fun UpdateStrip() {
             color = Rahal.colors.onBrand,
             modifier = Modifier
                 .clickable { UpdateOffer.dismissed = true }
-                .padding(horizontal = 6.dp),
+                .padding(horizontal = Rahal.space.sm),
         )
     }
 }

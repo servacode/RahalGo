@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -17,7 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -155,7 +156,7 @@ fun ItemOptionsSheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Rahal.colors.canvas,
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = Rahal.space.xl)) {
             // **ما فوق الزرّ يتمرّر، والزرُّ والعددُ ثابتان تحته** (بلاغُ المالك ٢٠٢٦-١٠-٣١:
             // صنفٌ بخياراتٍ كثيرةٍ كان يدفع «أضف» خارج الشاشة فلا يُطلب).
             Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
@@ -168,15 +169,15 @@ fun ItemOptionsSheet(
                     // **وعدسةٌ صغيرةٌ تقول «تُكبَّر»** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
                     zoomHint = true,
                     // **صورةٌ لا تأكل النافذة** (تدقيق D5): نسبتُها ١٦:١٠ فأقلّ — سقفُها ١٨٠.
-                    minHeight = 120.dp,
-                    maxHeight = 180.dp,
+                    minHeight = Rahal.size.tileMin + Rahal.space.xxl,
+                    maxHeight = Rahal.size.tileMin * 2,
                 )
                 Spacer(Modifier.height(Rahal.space.md))
             }
             Text(
                 item.name,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleLarge,
+                style = Rahal.type.screenTitle,
             )
             // **واسمُ المتجر تحت اسم الصنف** — ملوَّنٌ حين يفتح صفحتَه، رماديٌّ حين لا.
             item.merchantName?.takeIf { it.isNotBlank() }?.let { name ->
@@ -184,7 +185,7 @@ fun ItemOptionsSheet(
                 Text(
                     text = name,
                     color = if (onStore != null) Rahal.colors.brand else Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                     modifier = if (onStore != null) {
                         Modifier
                             .clip(Rahal.shape.sm)
@@ -200,11 +201,11 @@ fun ItemOptionsSheet(
             }
             // **والسعرُ تحت الاسم** — «$2.5 · 300 ل.س» لصنفٍ بالدولار، والليرةُ وحدَها لغيره
             // (طلبُ المالك ٢٠٢٦-١١-٠٧)، **ويتبع ما اختاره** كما في الويب (`Price`).
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             com.rahalgo.ui.DualPrice(
                 usd = item.priceUsd?.let { u -> u + picked.sumOf { it.priceDeltaUsd ?: 0.0 } },
                 syp = item.price + picked.sumOf { it.priceDelta },
-                style = MaterialTheme.typography.titleMedium,
+                style = Rahal.type.sectionTitle,
             )
             Spacer(Modifier.height(Rahal.space.lg))
 
@@ -214,18 +215,14 @@ fun ItemOptionsSheet(
                 failed -> Text(
                     stringResource(R.string.options_failed),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                 )
 
-                groups == null -> Box(
-                    Modifier.fillMaxWidth().height(120.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(color = Rahal.colors.brand)
-                }
+                // **هيكلُ خياراتٍ ينبض لا دوّارة** (D11) — بالقطعة المشتركة.
+                groups == null -> com.rahalgo.ui.SkeletonList(count = 2)
 
                 else -> Column(
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(Rahal.space.lg),
                 ) {
                     groups.orEmpty().forEach { g ->
                         if (g.isDrinks) {
@@ -279,13 +276,13 @@ fun ItemOptionsSheet(
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
             blockedReason?.let { why ->
                 Text(
                     why,
                     color = Rahal.colors.danger,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                 )
                 Spacer(Modifier.height(Rahal.space.sm))
             }
@@ -293,7 +290,7 @@ fun ItemOptionsSheet(
                 Text(
                     stringResource(R.string.options_all_out, g.name),
                     color = Rahal.colors.danger,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                 )
                 Spacer(Modifier.height(Rahal.space.sm))
             }
@@ -307,7 +304,7 @@ fun ItemOptionsSheet(
             com.rahalgo.ui.DualPrice(
                 usd = usdTotal,
                 syp = total,
-                style = MaterialTheme.typography.titleMedium,
+                style = Rahal.type.sectionTitle,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(Rahal.space.sm))
@@ -317,7 +314,7 @@ fun ItemOptionsSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clip(Rahal.shape.pill)
-                    .border(1.dp, Rahal.colors.line, Rahal.shape.pill),
+                    .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.pill),
             ) {
                 SheetQty(R.drawable.ic_minus, stringResource(R.string.cart_qty_less), enabled = qty > 1) { qty -= 1 }
                 Text(qty.toString(), fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = Rahal.space.xs))
@@ -342,7 +339,7 @@ fun ItemOptionsSheet(
 private fun SheetQty(icon: Int, label: String, enabled: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
-            .size(40.dp)
+            .size(Rahal.size.iconBox)
             .clip(CircleShape)
             .clickable(enabled = enabled, onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -351,7 +348,7 @@ private fun SheetQty(icon: Int, label: String, enabled: Boolean, onClick: () -> 
             painter = androidx.compose.ui.res.painterResource(icon),
             contentDescription = label,
             tint = if (enabled) Rahal.colors.brand else Rahal.colors.line,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(Rahal.icon.sm),
         )
     }
 }
@@ -376,16 +373,17 @@ private fun CounterBlock(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 group.name,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
+                color = Rahal.colors.ink,
+                style = Rahal.type.sectionTitle,
+                modifier = Modifier.weight(1f, fill = false),
             )
             Spacer(Modifier.size(Rahal.space.sm))
             // **«مطلوب» شارةٌ مقروءة** (تدقيق D5) — كانت ١١ نقطةً برتقاليّةً على أرضٍ فاتحة.
-            com.rahalgo.ui.Chip(
+            com.rahalgo.ui.StatusChip(
                 stringResource(
                     if (group.minSelect > 0) R.string.options_required else R.string.act_optional,
                 ),
-                if (group.minSelect > 0) Rahal.colors.accentInk else Rahal.colors.inkMuted,
+                if (group.minSelect > 0) com.rahalgo.ui.StatusTone.Warning else com.rahalgo.ui.StatusTone.Neutral,
             )
         }
         Spacer(Modifier.height(Rahal.space.xs))
@@ -399,14 +397,14 @@ private fun CounterBlock(
             ) {
                 if (thumb != null) {
                     com.rahalgo.ui.DrinkThumb(thumb(o))
-                    Spacer(Modifier.size(10.dp))
+                    Spacer(Modifier.size(Rahal.space.md))
                 }
                 Column(Modifier.weight(1f, fill = false)) {
                     Text(
                         o.name,
                         color = if (o.available) Rahal.colors.ink else Rahal.colors.inkMuted,
                         fontWeight = if (n > 0) FontWeight.Bold else FontWeight.Normal,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = Rahal.type.bodyLarge,
                         textDecoration = if (o.available) null else androidx.compose.ui.text.style.TextDecoration.LineThrough,
                     )
                     Text(
@@ -416,7 +414,7 @@ private fun CounterBlock(
                             priceText(o)
                         },
                         color = if (o.available) Rahal.colors.inkMuted else Rahal.colors.danger,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                     )
                 }
                 // **العدّادُ بجانب اسمه لا في آخر السطر** (تدقيق D5) — كان بينهما عرضُ الشاشة.
@@ -425,7 +423,7 @@ private fun CounterBlock(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(Rahal.shape.pill)
-                        .border(1.dp, if (n > 0) Rahal.colors.brand else Rahal.colors.line, Rahal.shape.pill),
+                        .border(Rahal.stroke.hair, if (n > 0) Rahal.colors.brand else Rahal.colors.line, Rahal.shape.pill),
                 ) {
                     SheetQty(R.drawable.ic_minus, stringResource(R.string.cart_qty_less), enabled = n > 0) {
                         onCount(o.id, n - 1)
@@ -460,18 +458,19 @@ private fun GroupBlock(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 group.name,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
+                color = Rahal.colors.ink,
+                style = Rahal.type.sectionTitle,
+                modifier = Modifier.weight(1f, fill = false),
             )
             Spacer(Modifier.size(Rahal.space.sm))
             // **«مطلوب» تُقال قبل أن يُضغط الزرُّ المطفأ** — **ومن رأى
             // زرّاً لا يعمل بلا سببٍ ظنّ التطبيقَ عطبان.**
             // **«مطلوب» شارةٌ مقروءة** (تدقيق D5) — كانت ١١ نقطةً برتقاليّةً على أرضٍ فاتحة.
-            com.rahalgo.ui.Chip(
+            com.rahalgo.ui.StatusChip(
                 stringResource(
                     if (group.minSelect > 0) R.string.options_required else R.string.act_optional,
                 ),
-                if (group.minSelect > 0) Rahal.colors.accentInk else Rahal.colors.inkMuted,
+                if (group.minSelect > 0) com.rahalgo.ui.StatusTone.Warning else com.rahalgo.ui.StatusTone.Neutral,
             )
         }
         if (group.minSelect > 0 && group.options.none { it.available }) {
@@ -479,7 +478,7 @@ private fun GroupBlock(
             Text(
                 stringResource(R.string.options_all_out, group.name),
                 color = Rahal.colors.danger,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
         Spacer(Modifier.height(Rahal.space.sm))
@@ -491,6 +490,7 @@ private fun GroupBlock(
                 fullPrice = if (group.priceMode == "weight") itemPrice + o.priceDelta else null,
                 fullPriceUsd = if (group.priceMode == "weight") itemPriceUsd?.let { b -> o.priceDeltaUsd?.let { b + it } } else null,
                 selected = chosen.any { it.id == o.id },
+                multi = group.maxSelect > 1,
                 onClick = { if (o.available) onPick(o) },
             )
         }
@@ -505,28 +505,39 @@ private fun OptionRow(
     onClick: () -> Unit,
     fullPrice: Long? = null,
     fullPriceUsd: Double? = null,
+    /** **أكثرُ من خيار** — مربّعُ تأشير؛ وإلّا دائرةُ اختيار (D5: «المقاس المطلوب بدائرة»). */
+    multi: Boolean = false,
 ) {
+    // **سطرٌ بزرّ اختيارٍ حقيقيّ** (إعادةُ التصميم ٢٠٢٦-١١-١١) — كانت نقطةً ملوّنةً لا يعرفها
+    // قارئُ الشاشة ولا العينُ اختياراً. **والسطرُ كلُّه يُضغط، والمختارُ بأرضٍ خفيفة.**
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(enabled = option.available, onClick = onClick)
-            .padding(vertical = 10.dp),
+            .heightIn(min = Rahal.size.touch)
+            .clip(Rahal.shape.md)
+            .then(if (selected) Modifier.background(Rahal.colors.brand.copy(alpha = 0.06f)) else Modifier)
+            .selectable(
+                selected = selected,
+                enabled = option.available,
+                role = if (multi) androidx.compose.ui.semantics.Role.Checkbox else androidx.compose.ui.semantics.Role.RadioButton,
+                onClick = onClick,
+            )
+            .padding(end = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier
-                .size(20.dp)
-                .clip(CircleShape)
-                .background(if (selected) Rahal.colors.brand else Rahal.colors.line),
-        )
-        Spacer(Modifier.size(Rahal.space.md))
+        if (multi) {
+            androidx.compose.material3.Checkbox(checked = selected, onCheckedChange = null, enabled = option.available)
+        } else {
+            androidx.compose.material3.RadioButton(selected = selected, onClick = null, enabled = option.available)
+        }
+        Spacer(Modifier.size(Rahal.space.sm))
         // **والنافدُ مشطوبٌ وبجنبه «غير متوفر»** — مرآةُ الويب (تدقيقُ ٢٠٢٦-١٠-٢٨)؛
         // كان رماديّاً وحدَه فيُظنّ معطّلاً بلا سبب.
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 option.name,
                 color = if (option.available) Rahal.colors.ink else Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyLarge,
+                style = Rahal.type.bodyLarge,
                 textDecoration = if (option.available) null else androidx.compose.ui.text.style.TextDecoration.LineThrough,
             )
             if (!option.available) {
@@ -534,7 +545,7 @@ private fun OptionRow(
                 Text(
                     stringResource(R.string.options_unavailable),
                     color = Rahal.colors.danger,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = Rahal.type.meta,
                 )
             }
         }
@@ -542,7 +553,7 @@ private fun OptionRow(
             Text(
                 com.rahalgo.ui.dualPrice(fullPriceUsd, fullPrice),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
         } else if (option.priceDelta != 0L) {
             // **والصفرُ لا يُكتب «+٠»** — **رقمٌ بلا معنًى يُقرأ سعراً.**
@@ -550,7 +561,7 @@ private fun OptionRow(
                 // **وبالدولار لمتجرٍ يعرض به** (٢٠٢٦-١٠-١٢).
                 "+" + com.rahalgo.ui.dualPrice(option.priceDeltaUsd, option.priceDelta),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
         }
     }

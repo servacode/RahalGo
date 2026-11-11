@@ -30,6 +30,7 @@ import {
   Money,
   Radio,
   Sheet,
+  StatusChip,
   FavoriteButton,
   IconAdd,
   IconMinus,
@@ -176,10 +177,11 @@ export function ItemCard({
           ))}
         <div className="shop-item-foot">
           {/* **الدولارُ ثمّ الليرةُ** («$2.5 · 300 ل.س») — والليرةُ تنزل تحته إن ضاق ولا تُقصّ. */}
-          <span className="flex min-w-0 flex-wrap items-baseline gap-x-1">
+          {/* **والسعرُ القديمُ المشطوبُ داخلَ البطاقة تحت السعر مباشرةً** (مرآةُ شريط السعر العلويّ في التطبيق). */}
+          <span className="flex min-w-0 flex-col items-start">
             <DualPrice usd={item.price_usd} syp={item.price} stacked />
             {item.price_before != null && (
-              <span className="text-xs text-ink-muted line-through">
+              <span className="text-meta text-ink-muted line-through">
                 {item.price_before_usd != null ? dollars(item.price_before_usd) : <Money value={item.price_before} small />}
               </span>
             )}
@@ -508,7 +510,7 @@ export function ItemSheet({
                 {view.merchant_name}
               </p>
             ))}
-          {item.has_options && !detail && !loadError && <LoadingState variant="inline" />}
+          {item.has_options && !detail && !loadError && <LoadingState variant="list" rows={3} />}
           {loadError && <Alert>{loadError}</Alert>}
           {groups.map((g) =>
             isDrinksGroup(g) ? (
@@ -544,23 +546,26 @@ export function ItemSheet({
                 }}
               />
             ) : (
-            <fieldset key={g.id} className="surface-inset space-y-2 p-3">
-              <legend className="float-start mb-2 flex w-full items-center justify-between gap-2 text-sm font-bold">
-                <span>{g.name}</span>
-                {/* **«إلزامي» شارةٌ مقروءة** (تدقيق D5) — كانت نصّاً رمادياً صغيراً. */}
-                {g.min_select > 0 ? (
-                  <Badge variant="accent">{I.required}</Badge>
-                ) : (
-                  <span className="text-xs font-normal text-ink-muted">
-                    {g.max_select === 1 ? I.pickOne : fill(I.pickUpTo, { n: fmtNum(g.max_select) })}
-                  </span>
-                )}
+            <fieldset key={g.id} className="space-y-rg-xs">
+              <legend className="float-start mb-rg-sm flex w-full items-center justify-between gap-2">
+                <span className="text-section-title">{g.name}</span>
+                {/* **«مطلوب» رقاقةُ تحذير و«اختياري» محايدة** — مرآةُ `OptionGroupHeader` في التطبيق. */}
+                <StatusChip tone={g.min_select > 0 ? "warning" : "neutral"}>
+                  {g.min_select > 0 ? I.required : I.optional}
+                </StatusChip>
               </legend>
+              <p className="clear-both text-caption text-ink-muted">
+                {g.max_select === 1 ? I.pickOne : fill(I.pickUpTo, { n: fmtNum(g.max_select) })}
+              </p>
               {g.min_select > 0 && !g.options.some((o) => o.available) && (
-                <p className="text-xs text-danger">{fill(I.allOptionsOut, { group: g.name })}</p>
+                <p className="text-caption text-danger">{fill(I.allOptionsOut, { group: g.name })}</p>
               )}
               {g.options.map((o) => {
                 const on = picked[g.id]?.includes(o.id) ?? false;
+                /* **الصفُّ كلُّه يُضغط (≥48px) والمختارُ بتظليلٍ خفيف** — الاختيارُ الحقيقيّ راديو أو مربّعٌ فيه. */
+                const rowCls = `min-h-12 w-full rounded-rg-md border px-rg-md py-rg-xs ${
+                  on ? "border-primary bg-primary-tint" : "border-line-soft"
+                } ${o.available ? "" : "opacity-60"} [&>span:last-child]:flex-1`;
                 const label = (
                   <span className="flex w-full items-center justify-between gap-3">
                     <span className="flex items-center gap-2">
@@ -596,6 +601,7 @@ export function ItemSheet({
                     disabled={!o.available}
                     onChange={() => toggle(g, o)}
                     label={label}
+                    className={rowCls}
                   />
                 ) : (
                   <Checkbox
@@ -605,6 +611,7 @@ export function ItemSheet({
                     disabled={!o.available}
                     onChange={() => toggle(g, o)}
                     label={label}
+                    className={rowCls}
                   />
                 );
               })}
@@ -659,13 +666,11 @@ function CounterBlock({
     <fieldset className="surface-inset space-y-2 p-3">
       {/* **العنوانُ داخل الصندوق لا على حدّه** — عنصرُ legend يقف فوق الإطار فيلامس خطَّه؛ فيبقى للقارئ الصوتيّ ويُرسَم العنوانُ صفّاً عادياً. */}
       <legend className="sr-only">{group.name}</legend>
-      <div className="flex w-full items-center justify-between gap-2 pb-1 text-sm font-bold" aria-hidden>
-        <span>{group.name}</span>
-        {group.min_select > 0 ? (
-          <Badge variant="accent">{I.required}</Badge>
-        ) : (
-          <span className="text-xs font-normal text-ink-muted">{I.optional}</span>
-        )}
+      <div className="flex w-full items-center justify-between gap-2 pb-1" aria-hidden>
+        <span className="text-section-title">{group.name}</span>
+        <StatusChip tone={group.min_select > 0 ? "warning" : "neutral"}>
+          {group.min_select > 0 ? I.required : I.optional}
+        </StatusChip>
       </div>
       {group.options.map((o) => {
         const n = counts[o.id] ?? 0;

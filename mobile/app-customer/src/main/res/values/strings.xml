@@ -401,4 +401,6 @@
     <string name="shop_open_item">عرض الصنف</string>
     <string name="shop_zoom_btn">عرض الصورة بملء الشاشة</string>
     <string name="shop_order_btn">اطلب</string>
+    <!-- إعادةُ التصميم الموحّد ٢٠٢٦-١١-١١ -->
+    <string name="cart_summary_title">ملخّص الحساب</string>
 </resources>

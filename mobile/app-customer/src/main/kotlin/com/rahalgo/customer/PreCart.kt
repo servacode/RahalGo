@@ -295,7 +295,7 @@ fun ServiceBlockNotice(
     // يُبنى عليه قرارُ توسّع**، **ونقطةٌ لم يؤكّدها صاحبُها إشارةٌ لا يُوثَق بها.**
     val cta = com.rahalgo.ui.ServiceReason.ctaKind(av.reason)
     if (cta.isNotEmpty() && address != null && !discovery) {
-        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(8.dp))
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(com.rahalgo.design.Rahal.space.sm))
         if (vm.demandDone) {
             com.rahalgo.ui.Note(
                 com.rahalgo.ui.ServiceReason.ctaDoneText(ctx, av.reason),
@@ -323,7 +323,7 @@ fun ServiceBlockNotice(
     if (onBrowseFlagship != null && flagshipName.isNotEmpty() &&
         com.rahalgo.ui.ServiceReason.expansionPending(av.reason)
     ) {
-        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(8.dp))
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(com.rahalgo.design.Rahal.space.sm))
         com.rahalgo.ui.RahalOutlineButton(
             onClick = onBrowseFlagship,
             modifier = androidx.compose.ui.Modifier.fillMaxWidth(),

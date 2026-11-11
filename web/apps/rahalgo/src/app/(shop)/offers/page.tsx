@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum, fmtSpan } from "@rahalgo/i18n";
-import { Badge, EmptyState, LoadingState, Money, ReloadState, IconPromos, IconStore } from "@rahalgo/ui";
+import { EmptyState, LoadingState, Money, ReloadState, StatusChip, IconPromos, IconStore } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useBrowseQuery, useCustomer } from "@/lib/customer/context";
 import { fill, freeOfferLines } from "@/lib/customer/texts";
@@ -40,10 +40,10 @@ function FreeOfferCard({ fd }: { fd: FreeDelivery }) {
     .filter(Boolean)
     .join(m.common.listSep);
   return (
-    <section className="surface flex flex-col gap-1 border border-success-edge p-4">
-      <h2 className="text-base font-bold text-success">{FR.offerTitle}</h2>
+    <section className="flex flex-col gap-rg-xs rounded-rg-lg border border-success-edge bg-success-tint p-rg-lg">
+      <h2 className="text-card-title text-success">{FR.offerTitle}</h2>
       {freeOfferLines(fd, fill(FR.offerKinds, { kinds })).map((line) => (
-        <p key={line} className="text-sm">
+        <p key={line} className="text-body">
           {line}
         </p>
       ))}
@@ -107,7 +107,7 @@ export default function OffersPage() {
       ) : offers === null ? (
         <LoadingState variant="list" rows={3} />
       ) : offers.length === 0 ? (
-        free ? null : <EmptyState icon={IconPromos} title={F.empty} action={<span className="text-xs text-ink-muted">{F.emptyHint}</span>} />
+        free ? null : <EmptyState icon={IconPromos} title={F.empty} line={F.emptyHint} />
       ) : (
         <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {offers.map((o) => {
@@ -115,34 +115,39 @@ export default function OffersPage() {
             const img = mediaUrl(o.item_image_url ?? o.image_url);
             const saved = Math.max(0, o.price_before - o.price_after);
             const rest = left(o.ends_at);
+            /* **بطاقةٌ بحدٍّ** (مرآةُ `Offers` في التطبيق): صورةٌ ٧٢ في البداية، عنوانٌ بسطرين، اسمُ التاجر
+               باهتاً، السعرُ بلون العلامة وقديمُه مشطوب، الخصمُ رقاقةُ تحذير، و«أضف» صغيرٌ ثانويٌّ في النهاية. */
             const body = (
               <>
-                <span className="h-16 w-16 shrink-0 overflow-hidden rounded-control bg-field">
+                <span className="h-18 w-18 shrink-0 overflow-hidden rounded-rg-md bg-field">
                   {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
                 </span>
-                <span className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="text-sm font-bold">{o.title || o.item_name}</span>
+                <span className="flex min-w-0 flex-1 flex-col gap-rg-xs">
+                  <span className="line-clamp-2 text-card-title">{o.title || o.item_name}</span>
                   {o.merchant_name && (
-                    <span className="flex items-center gap-1 truncate text-xs text-ink-muted">
+                    <span className="flex items-center gap-1 truncate text-caption text-ink-muted">
                       <IconStore size={11} />
                       {o.merchant_name}
                     </span>
                   )}
-                  {o.body && <span className="line-clamp-2 text-xs text-ink-muted">{o.body}</span>}
-                  <span className="flex flex-wrap items-center gap-2">
-                    {o.price_after > 0 && <Money value={o.price_after} className="font-bold text-accent-text" />}
+                  {o.body && <span className="line-clamp-2 text-caption text-ink-muted">{o.body}</span>}
+                  <span className="flex flex-wrap items-center gap-x-rg-sm gap-y-rg-xxs">
+                    {o.price_after > 0 && <Money value={o.price_after} className="text-price text-accent-text" />}
                     {o.price_before > o.price_after && (
-                      <span className="text-xs text-ink-muted line-through">
+                      <span className="text-caption text-ink-muted line-through">
                         <Money value={o.price_before} small />
                       </span>
                     )}
                     {o.discount_percent != null && o.discount_percent > 0 && (
-                      <Badge variant="accent">{`-${fmtNum(o.discount_percent)}%`}</Badge>
+                      <StatusChip tone="warning">{`-${fmtNum(o.discount_percent)}%`}</StatusChip>
                     )}
                   </span>
-                  {saved > 0 && <span className="text-xs text-success">{fill(F.saves, { amount: fmtMoney(saved) })}</span>}
-                  {rest && <span className="text-xs text-ink-muted">{rest}</span>}
+                  {saved > 0 && <span className="text-caption text-success">{fill(F.saves, { amount: fmtMoney(saved) })}</span>}
+                  {rest && <span className="text-caption text-ink-muted">{rest}</span>}
                 </span>
+                {item && (
+                  <span className="self-end rounded-rg-md border border-line px-rg-md py-rg-sm text-label font-bold">{F.order}</span>
+                )}
               </>
             );
             return (
@@ -152,12 +157,12 @@ export default function OffersPage() {
                     type="button"
                     onClick={() => setOpen(item)}
                     aria-label={`${F.order} — ${o.title || o.item_name}`}
-                    className="surface flex w-full items-start gap-3 p-3 text-start transition-transform active:scale-[0.99]"
+                    className="flex w-full items-start gap-rg-md rounded-rg-lg border border-line bg-surface p-rg-md text-start transition-transform active:scale-[0.99]"
                   >
                     {body}
                   </button>
                 ) : (
-                  <div className="surface flex items-start gap-3 p-3">{body}</div>
+                  <div className="flex items-start gap-rg-md rounded-rg-lg border border-line bg-surface p-rg-md">{body}</div>
                 )}
               </li>
             );

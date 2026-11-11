@@ -110,19 +110,25 @@ export function InviteHomeCard() {
   };
 
   return (
-    <div className="flex items-center gap-3 rounded-card bg-accent-tint p-3">
-      <IconCatGifts size={22} className="shrink-0 text-accent-text" />
-      <Link href="/invite" className="min-w-0 flex-1 text-sm font-bold">
-        {fill(after ? I.after : I.home, { n })}
-      </Link>
-      <Button onClick={() => void share()} className="shrink-0">
-        {I.shareCode}
-      </Button>
+    /* **بطاقةٌ بصبغة التحذير بلا ظلّ** (مرآةُ `InviteNudge.kt`): الهديّةُ في مربّعٍ مستدير، والجملةُ تحتها زرٌّ صغيرٌ
+       بنبرة التمييز، و✕ في النهاية — كان صفّاً ضيّقاً بزرٍّ برتقاليٍّ كبير. */
+    <div className="flex items-start gap-rg-md rounded-rg-lg border border-warning-edge bg-warning-tint p-rg-md">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-rg-md bg-warning-fill text-ink">
+        <IconCatGifts size={22} />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-rg-sm">
+        <Link href="/invite" className="text-body-strong">
+          {fill(after ? I.after : I.home, { n })}
+        </Link>
+        <Button size="sm" onClick={() => void share()} className="min-h-10 shrink-0 bg-accent-tint! text-accent-text!">
+          {I.shareCode}
+        </Button>
+      </div>
       <button
         type="button"
         aria-label={I.hide}
         onClick={hide}
-        className="taparea flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-row-hover"
+        className="taparea flex h-12 w-12 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-row-hover"
       >
         <IconClose size={16} />
       </button>

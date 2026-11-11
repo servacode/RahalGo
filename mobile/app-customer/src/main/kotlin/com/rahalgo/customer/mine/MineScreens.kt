@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -177,6 +175,7 @@ private fun Favorites(
             Empty(
                 text = stringResource(R.string.fav_none),
                 hint = stringResource(R.string.fav_none_hint),
+                icon = com.rahalgo.ui.R.drawable.ic_heart_off,
                 actionLabel = stringResource(R.string.act_browse_market),
                 onAction = onBrowse,
             )
@@ -294,7 +293,7 @@ private fun Offers(
                 text = stringResource(R.string.off_gone),
                 color = Rahal.colors.inkMuted,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
         // ══════════════════════════════════════════════════════════════
@@ -307,13 +306,12 @@ private fun Offers(
         LaunchedEffect(Unit) { com.rahalgo.customer.FreeOffer.refresh(scopeFree) }
         val free = com.rahalgo.customer.FreeOffer.state
         if (free.any) {
-            Spacer(Modifier.height(10.dp))
-            Card(tone = Rahal.colors.success) {
+            Spacer(Modifier.height(Rahal.space.md))
+            com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Tinted, tone = com.rahalgo.ui.StatusTone.Success) {
                 Text(
                     text = stringResource(R.string.free_offer_title),
                     color = Rahal.colors.success,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = Rahal.type.cardTitle,
                 )
                 val kinds = listOfNotNull(
                     stringResource(R.string.free_kind_standard).takeIf { free.standard },
@@ -327,7 +325,7 @@ private fun Offers(
                         stringResource(R.string.free_offer_kinds, kinds),
                     ),
                     color = Rahal.colors.ink,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
             }
         }
@@ -336,6 +334,7 @@ private fun Offers(
                 Empty(
                     text = stringResource(R.string.off_none),
                     hint = stringResource(R.string.off_none_hint),
+                    icon = com.rahalgo.ui.R.drawable.ic_offer,
                 )
             }
             return@Screen
@@ -344,31 +343,34 @@ private fun Offers(
             if (focus == null) list else list.sortedByDescending { it.id == focus }
         ordered.forEach { o ->
             if (focus != null && o.id == focus) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 Text(
                     text = stringResource(R.string.off_from_notice),
                     color = Rahal.colors.brand,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = Rahal.type.meta,
                 )
             }
-            Spacer(Modifier.height(10.dp))
-            Card {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.height(Rahal.space.md))
+            // **بطاقةُ عرضٍ بحدٍّ لا بظلّ** (إعادةُ التصميم ٢٠٢٦-١١-١١) — الصورةُ عن اليمين والاسمُ
+            // والسعرُ والشارةُ في عمودها، **و«أضف» في طرفها السفليّ** كبطاقات تطبيقات التوصيل.
+            com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined) {
+                Row(verticalAlignment = Alignment.Top) {
                     RemoteImage(
                         url = Backend.of(context).media(o.itemImageUrl ?: o.imageUrl),
                         name = o.title.ifEmpty { o.itemName },
                         modifier = Modifier
-                            .size(64.dp)
-                            .clip(Rahal.shape.sm),
+                            .size(Rahal.size.avatarLg)
+                            .clip(Rahal.shape.md),
                     )
-                    Spacer(Modifier.size(10.dp))
+                    Spacer(Modifier.size(Rahal.space.md))
                     Column(Modifier.fillMaxWidth()) {
                         Text(
                             text = o.title.ifEmpty { o.itemName },
                             color = Rahal.colors.ink,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = Rahal.type.cardTitle,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                         )
                         // **واسمُ المتجر تحت اسم الصنف** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
                         // كما في بطاقة السوق. **وفارغُه من خادمٍ أقدم لا سطرَ له.**
@@ -376,7 +378,7 @@ private fun Offers(
                             Text(
                                 text = it,
                                 color = Rahal.colors.inkMuted,
-                                style = MaterialTheme.typography.labelSmall,
+                                style = Rahal.type.caption,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -385,7 +387,7 @@ private fun Offers(
                             Text(
                                 text = o.body,
                                 color = Rahal.colors.inkMuted,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = Rahal.type.caption,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -393,24 +395,20 @@ private fun Offers(
                         Spacer(Modifier.height(Rahal.space.xs))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (o.priceAfter > 0) {
-                                Text(
-                                    text = money(o.priceAfter),
-                                    color = Rahal.colors.brand,
-                                    fontWeight = FontWeight.Bold,
-                                )
+                                com.rahalgo.ui.MoneyText(o.priceAfter, color = Rahal.colors.brand)
                             }
                             if (o.priceBefore > o.priceAfter) {
-                                Spacer(Modifier.size(6.dp))
+                                Spacer(Modifier.size(Rahal.space.sm))
                                 Text(
                                     text = money(o.priceBefore),
                                     color = Rahal.colors.inkMuted,
                                     textDecoration = TextDecoration.LineThrough,
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = Rahal.type.caption,
                                 )
                             }
                             o.discountPercent?.let {
-                                Spacer(Modifier.size(6.dp))
-                                Chip("-$it٪", Rahal.colors.accent)
+                                Spacer(Modifier.size(Rahal.space.sm))
+                                com.rahalgo.ui.Badge("-$it٪", com.rahalgo.ui.StatusTone.Warning)
                             }
                         }
 
@@ -432,7 +430,8 @@ private fun Offers(
                         // فارغ) — **وزرٌّ يُضيف لا شيءَ يُقرأ عطبا.**
                         o.menuItemId?.takeIf { it.isNotEmpty() }?.let { itemId ->
                             Spacer(Modifier.height(Rahal.space.sm))
-                            RahalButton(
+                            com.rahalgo.ui.RahalSmallButton(
+                                modifier = Modifier.align(Alignment.End),
                                 onClick = {
                                     // **والسعرُ سعرُ العرض** — وهو ما
                                     // رآه. **والمحرّكُ يُعيد الحسابَ
@@ -468,7 +467,6 @@ private fun Offers(
                                         Flash.ok(addedText)
                                     }
                                 },
-                                compact = true,
                             ) { Text(stringResource(R.string.shop_add)) }
                         }
                     }
@@ -500,19 +498,19 @@ private fun Invite(vm: MineViewModel) {
     Screen {
         // **والعنوانُ في رأس الصفحة بسهم رجوع، ولا سطرَ شرح** (٢٠٢٦-١٠-٣٠).
         Spacer(Modifier.height(Rahal.space.xs))
-        Card {
+        com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Tinted) {
             Text(
                 text = stringResource(R.string.inv_earn, money(r.nextReward)),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                color = Rahal.colors.ink,
+                style = Rahal.type.sectionTitle,
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Text(
                 text = stringResource(
                     if (r.rewardOn == "signup") R.string.inv_on_signup else R.string.inv_on_order,
                 ),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
 
@@ -522,7 +520,7 @@ private fun Invite(vm: MineViewModel) {
         //
         // **كان سطراً صغيراً بلا نسخ** — ومن أراد أن يقوله لصديقٍ على الهاتف يقرؤه
         // حرفاً حرفاً. **والأرقامُ الثلاثةُ مربّعاتٌ كاللوحة** (`StatRow`).
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         val copiedText = stringResource(R.string.inv_copied)
         val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
         Row(
@@ -531,33 +529,33 @@ private fun Invite(vm: MineViewModel) {
                 .fillMaxWidth()
                 .clip(Rahal.shape.md)
                 .border(
-                    androidx.compose.foundation.BorderStroke(1.5.dp, Rahal.colors.brand.copy(alpha = 0.5f)),
+                    androidx.compose.foundation.BorderStroke(Rahal.stroke.focus, Rahal.colors.brand.copy(alpha = 0.5f)),
                     Rahal.shape.md,
                 )
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.inv_code),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = Rahal.type.label,
                 )
                 Text(
                     text = r.code,
                     color = Rahal.colors.ink,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = Rahal.type.headline,
                     maxLines = 1,
                 )
             }
-            com.rahalgo.ui.RahalOutlineButton(
+            com.rahalgo.ui.RahalSmallButton(
                 onClick = {
                     clipboard.setText(androidx.compose.ui.text.AnnotatedString(r.code))
                     Flash.ok(copiedText)
                 },
             ) { Text(stringResource(R.string.inv_copy)) }
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         com.rahalgo.ui.StatRow {
             com.rahalgo.ui.StatBox(stringResource(R.string.inv_invited), r.invited.toString(), Modifier.weight(1f))
             com.rahalgo.ui.StatBox(stringResource(R.string.inv_rewarded), r.rewarded.toString(), Modifier.weight(1f))

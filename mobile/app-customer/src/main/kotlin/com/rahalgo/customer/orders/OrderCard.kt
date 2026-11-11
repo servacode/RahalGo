@@ -1,5 +1,7 @@
 package com.rahalgo.customer.orders
 
+import com.rahalgo.ui.RahalDivider
+
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.rememberScrollState
@@ -15,9 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,7 +40,6 @@ import com.rahalgo.shared.customer.MyOrder
 import com.rahalgo.shared.customer.MyOrderLine
 import com.rahalgo.shared.customer.effectiveWalletScope
 import androidx.compose.foundation.layout.width
-import com.rahalgo.ui.Card
 import com.rahalgo.ui.Chip
 import com.rahalgo.ui.KeyValue
 import com.rahalgo.ui.Stages
@@ -115,7 +113,7 @@ fun OrderCard(
     val finished = ended(order.status)
     var expanded by rememberSaveable(order.id) { mutableStateOf(!finished) }
     val collapsed = finished && !expanded
-    Card {
+    com.rahalgo.ui.RahalCard {
         // **اسمُ المتجر عنوانُ البطاقة ورقمُ الطلب بجانبه مقروءاً** (تدقيق D3) — كان الرقمُ
         // رماديّاً صغيراً وكان العنوانُ غائباً، **والزبونُ يعرف «من أين» قبل «كم رقمُه».**
         Row(
@@ -128,8 +126,7 @@ fun OrderCard(
             Text(
                 text = orderTitle(order),
                 color = Rahal.colors.ink,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
+                style = Rahal.type.cardTitle,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
@@ -139,9 +136,8 @@ fun OrderCard(
                 // معرّفه: **رقمٌ لا يعرفه صاحبُه ولا المكتبُ لا يُستعمل
                 // في شكوى.**
                 text = "#" + order.number,
-                color = Rahal.colors.ink,
-                fontWeight = FontWeight.Medium,
-                style = MaterialTheme.typography.bodyMedium,
+                color = Rahal.colors.inkMuted,
+                style = Rahal.type.label,
                 maxLines = 1,
             )
             if (finished) {
@@ -150,7 +146,7 @@ fun OrderCard(
                     contentDescription = null,
                     tint = Rahal.colors.inkMuted,
                     modifier = Modifier
-                        .size(20.dp)
+                        .size(Rahal.icon.sm)
                         .rotate(if (expanded) 180f else 0f),
                 )
             }
@@ -163,22 +159,13 @@ fun OrderCard(
             horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val tone = statusColor(order.status)
-            Text(
-                text = statusText(order.status),
-                color = tone,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier
-                    .clip(Rahal.shape.pill)
-                    .background(tone.copy(alpha = 0.12f))
-                    .padding(horizontal = Rahal.space.md, vertical = 5.dp),
-            )
+            // **رقاقةُ الحال الموحّدة** — بالنبرات الخمس نفسِها في التطبيقات كلِّها.
+            com.rahalgo.ui.StatusChip(statusText(order.status), statusTone(order.status))
             if (onCancel != null && cancelHint != null) {
                 Text(
                     text = cancelHint,
                     color = Rahal.colors.danger,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = Rahal.type.label,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -201,32 +188,32 @@ fun OrderCard(
                     text = money(order.total),
                     color = Rahal.colors.brand,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = Rahal.type.cardTitle,
                 )
                 Since.text(ctx0, order.createdAt, now0).takeIf { it.isNotEmpty() }?.let {
                     Text(
                         text = it,
                         color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                     )
                 }
             }
             onRate?.let {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 RahalButton(onClick = it, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.ord_rate))
                 }
             }
-            return@Card
+            return@RahalCard
         }
 
         // **وما ليس في المنصّة يُقال بلفظ صاحبه** — لا «طلب #12».
         if (order.kind == "custom" && order.customRequest.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Text(
                 text = stringResource(R.string.ord_wanted) + " " + order.customRequest,
                 color = Rahal.colors.ink,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
         }
 
@@ -276,7 +263,7 @@ fun OrderCard(
                     text = etaText,
                     color = Rahal.colors.brand,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
             }
         }
@@ -285,7 +272,7 @@ fun OrderCard(
         // يطمئنّ.
         // **والسائقُ يُسمّى حين يُسنَد** — **ويصل `null` قبل ذلك.**
         order.driverName?.takeIf { it.isNotEmpty() && !ended(order.status) }?.let {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             KeyValue(stringResource(R.string.ord_driver), it)
         }
 
@@ -296,7 +283,7 @@ fun OrderCard(
         // **لا في الإشعار وحدَه** — من فتح «طلباتي» يرى أنّ موقعَه يُرسَل ويوقفه بضغطة.
         if (com.rahalgo.customer.live.LiveShare.activeOrderId == order.id) {
             val liveCtx = LocalContext.current
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -305,7 +292,7 @@ fun OrderCard(
                 Text(
                     text = stringResource(R.string.live_card_sharing),
                     color = Rahal.colors.success,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                 )
@@ -334,13 +321,13 @@ fun OrderCard(
         if (invoice) {
             // **فاتورةٌ جدولٌ كاملٌ لا «شاورما دجاج، شاورما دجاج»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
             // بنودُها ومجاميعُها في الأعمدة نفسِها.
-            Spacer(Modifier.height(10.dp))
-            HorizontalDivider()
+            Spacer(Modifier.height(Rahal.space.md))
+            RahalDivider()
             Spacer(Modifier.height(Rahal.space.sm))
             InvoiceTable(order)
         } else if (order.itemsPreview.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
-            HorizontalDivider()
+            Spacer(Modifier.height(Rahal.space.md))
+            RahalDivider()
             Spacer(Modifier.height(Rahal.space.sm))
             KeyValue(
                 pluralStringResource(R.plurals.ord_items_n, order.itemsCount, order.itemsCount),
@@ -350,7 +337,7 @@ fun OrderCard(
 
         if (!invoice) {
             Spacer(Modifier.height(Rahal.space.sm))
-            HorizontalDivider()
+            RahalDivider()
             Spacer(Modifier.height(Rahal.space.sm))
         }
         // ══════════════════════════════════════════════════════════════
@@ -369,7 +356,7 @@ fun OrderCard(
             }
             // **والإجماليُّ برقمٍ كبيرٍ تحت خطّ** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — كان سطراً عاديّاً.
             Spacer(Modifier.height(Rahal.space.xs))
-            HorizontalDivider()
+            RahalDivider()
             Spacer(Modifier.height(Rahal.space.xs))
             com.rahalgo.ui.SumLine(
                 stringResource(R.string.ord_total),
@@ -389,7 +376,7 @@ fun OrderCard(
         // النموذج أصلاً** (`createdAt`/`paymentMethod`/`addressText`) —
         // كانت تُجلَب ولا تُعرَض.
         Spacer(Modifier.height(Rahal.space.sm))
-        HorizontalDivider()
+        RahalDivider()
         Spacer(Modifier.height(Rahal.space.sm))
         val ctx = LocalContext.current
         // **والعمرُ يمشي والشاشةُ مفتوحة** — انظر `rememberNow`.
@@ -422,41 +409,52 @@ fun OrderCard(
             Text(
                 text = order.cancelReason,
                 color = Rahal.colors.danger,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
 
         val actions = listOfNotNull(onCancel, onComplain, onRate, onChat)
-        if (actions.isEmpty()) return@Card
+        if (actions.isEmpty()) return@RahalCard
 
-        Spacer(Modifier.height(Rahal.space.md))
-        Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
-            // **والإلغاءُ أحمرُ لأنّه لا يُتراجع عنه.**
-            onCancel?.let {
-                RahalButton(
-                    onClick = it,
-                    tone = Tone.Danger,
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.ord_cancel), maxLines = 1) }
-            }
-            onRate?.let {
-                RahalButton(onClick = it, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.ord_rate))
+        // ══════════════════════════════════════════════════════════════
+        // **الأفعالُ سطران: الثانويّةُ متساويةٌ ثمّ الأساسيُّ بعرض البطاقة** (إعادةُ التصميم ٢٠٢٦-١١-١١)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كانت أربعةُ أزرارٍ في صفٍّ واحد** فتنضغط كلماتُها على ٣٦٠ بخطٍّ ١٫٣. **والحديثُ
+        // والشكوى بديلان متساويان، والإلغاءُ أو التقييمُ فعلٌ واحدٌ مقصود** — فيأخذ السطرَ كلَّه.
+        val secondary = listOfNotNull(onChat, onComplain)
+        if (secondary.isNotEmpty()) {
+            Spacer(Modifier.height(Rahal.space.md))
+            Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                // **وحديثُ السائق قبل الشكوى** — **ومن يستطيع أن يسأل لا
+                // يشكو**: أكثرُ الشكاوى سوءُ فهمٍ يحلّه سطر.
+                onChat?.let {
+                    RahalOutlineButton(
+                        onClick = it,
+                        tone = Tone.Accent,
+                        modifier = Modifier.weight(1f),
+                    ) { Text(stringResource(R.string.ord_chat), maxLines = 1) }
+                }
+                onComplain?.let {
+                    RahalOutlineButton(onClick = it, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.ord_complain), maxLines = 1)
+                    }
                 }
             }
-            // **وحديثُ السائق قبل الشكوى** — **ومن يستطيع أن يسأل لا
-            // يشكو**: أكثرُ الشكاوى سوءُ فهمٍ يحلّه سطر.
-            onChat?.let {
-                RahalOutlineButton(
-                    onClick = it,
-                    tone = Tone.Accent,
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.ord_chat), maxLines = 1) }
-            }
-            onComplain?.let {
-                RahalOutlineButton(onClick = it, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.ord_complain))
-                }
+        }
+        // **والإلغاءُ أحمرُ لأنّه لا يُتراجع عنه.**
+        onCancel?.let {
+            Spacer(Modifier.height(Rahal.space.sm))
+            RahalButton(
+                onClick = it,
+                tone = Tone.Danger,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.ord_cancel), maxLines = 1) }
+        }
+        onRate?.let {
+            Spacer(Modifier.height(Rahal.space.sm))
+            RahalButton(onClick = it, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.ord_rate))
             }
         }
     }
@@ -499,14 +497,14 @@ private fun CustomQuoteSection(
             Text(
                 stringResource(R.string.free_custom_pending),
                 color = Rahal.colors.success,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
                 fontWeight = FontWeight.Bold,
             )
         }
         // **وطلبٌ انتهى (أُلغي أو تعذّر) لا يُقال له «الإجمالي يُعرف بعد…»** (قرارُ المالك
         // ٢٠٢٦-١٠-٣٠) — سطرٌ ينتظر ما لن يأتي.
         if (!ended(order.status)) {
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Text(
                 stringResource(
                     when {
@@ -516,7 +514,7 @@ private fun CustomQuoteSection(
                     },
                 ),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
         return
@@ -531,11 +529,11 @@ private fun CustomQuoteSection(
     // (K) بعد التأكيد — يُظهر الحجزَ من المحفظة إن وُجد، ولا زرَّ.
     if (confirmedCurrent) {
         if (order.customReservedAmount > 0) {
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Text(
                 stringResource(R.string.ord_reserved_note, money(order.customReservedAmount)),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
         return
@@ -552,11 +550,11 @@ private fun CustomQuoteSection(
     // يبقى طلبُه حيث هو** والمكتبُ يتّصل به؛ فيُقال له ذلك ولا يُعاد السؤال.
     // **والرفضُ من أوّل سعرٍ كذلك** (٢٠٢٦-١٠-١٦) — لا بعد التعديل وحده.
     if (order.quoteRejectedAt != null) {
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Text(
             stringResource(R.string.ord_quote_rejected_note),
             color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
         )
         return
     }
@@ -616,7 +614,7 @@ private fun QuoteAmounts(order: MyOrder) {
         order.freeWaived,
     )
     Spacer(Modifier.height(Rahal.space.xs))
-    HorizontalDivider()
+    RahalDivider()
     Spacer(Modifier.height(Rahal.space.xs))
     // **وبضاعةُ الدولار خارجَ المجموع** (٢٠٢٦-١١-٠٩): `total` هو التوصيلُ وحدَه بالليرة، والدولارُ كاشٌ للكابتن.
     val usdGoods = order.customGoodsUsd != null && !order.customGoodsPending
@@ -631,7 +629,7 @@ private fun QuoteAmounts(order: MyOrder) {
         Text(
             stringResource(R.string.ord_goods_usd_cash_note),
             color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
         )
     }
 }
@@ -654,11 +652,11 @@ private fun QuoteConfirmPanel(
     val total = order.total
     val reconfirm = order.quoteConfirmedVersion != null
     if (reconfirm) {
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Text(
             stringResource(R.string.ord_quote_raised_note),
             color = Rahal.colors.ink,
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
         )
         // **«كان X» فوق المجموع الجديد** (قرارُ المالك ٢٠٢٦-١١-٠٦: الزبون يشوف القديم والجديد).
         quoteWasTotal(order)?.let { was ->
@@ -666,7 +664,7 @@ private fun QuoteConfirmPanel(
             Text(
                 stringResource(R.string.ord_quote_was, money(was), money(total)),
                 color = Rahal.colors.ink,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -685,51 +683,52 @@ private fun QuoteConfirmPanel(
     // (J) المحفظةُ لا تبقى مختارةً إن لم تعُد كافية قبل التأكيد.
     if (method != "cash" && !deliveryOk) method = "cash"
 
-    Spacer(Modifier.height(10.dp))
-    HorizontalDivider()
+    Spacer(Modifier.height(Rahal.space.md))
+    RahalDivider()
     Spacer(Modifier.height(Rahal.space.sm))
     Text(
         stringResource(if (walletOk) R.string.ord_confirm_prompt else R.string.ord_confirm_amount),
         color = Rahal.colors.ink,
-        style = MaterialTheme.typography.bodyMedium,
+        style = Rahal.type.body,
         fontWeight = FontWeight.Bold,
     )
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     // **والمحفظةُ خيارٌ فقط إن غطّى رصيدُها المبلغَ** — وإلّا سطرٌ واحدٌ «الدفع: نقداً
     // عند الاستلام» لا رقاقةٌ وحيدةٌ وسطرُ «رصيدك لا يكفي» (قرارُ المالك ٢٠٢٦-١٠-٣٠).
     // والطريقةُ تبقى `cash` كما كانت.
     if (walletOk) {
-        Column {
-            FilterChip(
-                selected = method == "cash",
-                onClick = { method = "cash" },
-                label = { Text(stringResource(R.string.cart_cash)) },
-            )
+        // **خيارُ الدفع بشكل السلّة نفسِه** — بطاقةٌ بدائرة اختيار (`PayChoice`)، لا رقاقةٌ تُقرأ وسماً.
+        Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+            com.rahalgo.customer.cart.PayChoice(
+                text = stringResource(R.string.cart_cash),
+                on = method == "cash",
+                modifier = Modifier.fillMaxWidth(),
+            ) { method = "cash" }
             if (deliveryOk) {
-                FilterChip(
-                    selected = method == "delivery",
-                    onClick = { method = "delivery" },
-                    label = { Text(stringResource(R.string.cart_wallet_delivery)) },
-                )
+                com.rahalgo.customer.cart.PayChoice(
+                    text = stringResource(R.string.cart_wallet_delivery),
+                    on = method == "delivery",
+                    modifier = Modifier.fillMaxWidth(),
+                ) { method = "delivery" }
             }
         }
     } else {
         Text(
             stringResource(R.string.ord_pay_cash_only),
             color = Rahal.colors.ink,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
         )
     }
     // **المحفظةُ ليرةٌ فقط** (٢٠٢٦-١١-٠٩): مع بضاعةٍ بالدولار تدفع التوصيلَ وحدَه، والدولارُ كاش.
     if (method == "delivery" && order.customGoodsUsd != null) {
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Text(
             stringResource(R.string.ord_wallet_delivery_only),
             color = Rahal.colors.ink,
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
         )
     }
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(Rahal.space.md))
     // **والقبولُ أخضرُ ممتلئ** (طلبُ المالك ٢٠٢٦-١٠-١٨) — كان أزرقَ يُقرأ «متابعة».
     RahalButton(
         onClick = { onConfirmQuote(method) },
@@ -738,7 +737,7 @@ private fun QuoteConfirmPanel(
         modifier = Modifier.fillMaxWidth(),
     ) {
         if (confirming) {
-            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+            CircularProgressIndicator(Modifier.size(Rahal.icon.sm), strokeWidth = Rahal.stroke.focus)
         } else {
             Text(
                 stringResource(
@@ -821,7 +820,7 @@ fun QuoteConfirmDialog(
                     Text(
                         text = stringResource(R.string.ord_wanted) + " " + order.customRequest,
                         color = Rahal.colors.ink,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = Rahal.type.body,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -888,8 +887,8 @@ private fun stageLabel(key: String, amanah: Boolean = false): String = when (key
 internal fun InvoiceTable(order: MyOrder) {
     com.rahalgo.ui.InvoiceLines(order.items.orEmpty().map { it.toInvoiceLine() })
     Spacer(Modifier.height(Rahal.space.sm))
-    HorizontalDivider()
-    Spacer(Modifier.height(6.dp))
+    RahalDivider()
+    Spacer(Modifier.height(Rahal.space.sm))
     Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.xs)) {
         if (order.subtotal > 0) {
             com.rahalgo.ui.InvoiceRow(stringResource(R.string.ord_subtotal), money(order.subtotal))
@@ -900,21 +899,21 @@ internal fun InvoiceTable(order: MyOrder) {
                 Text(
                     stringResource(R.string.ord_delivery),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
                     money(order.deliveryFee + order.freeWaived),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = Rahal.type.meta,
                     textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
                 )
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(Rahal.space.sm))
                 Text(
                     if (order.deliveryFee > 0) money(order.deliveryFee) else stringResource(R.string.free_badge),
                     color = if (order.deliveryFee > 0) Rahal.colors.ink else Rahal.colors.success,
                     fontWeight = if (order.deliveryFee > 0) FontWeight.Normal else FontWeight.Bold,
-                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+                    style = Rahal.type.caption.copy(fontFeatureSettings = "tnum"),
                 )
             }
         } else {
@@ -966,40 +965,38 @@ private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onCh
     val showFull = scope == "full"
     val showDelivery = (deliveryPart > 0 && budget >= deliveryPart) || scope == "delivery"
     if (!showFull && !showDelivery) return
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     Text(
         stringResource(R.string.ord_change_pay),
         color = Rahal.colors.ink,
-        style = MaterialTheme.typography.bodyMedium,
+        style = Rahal.type.body,
         fontWeight = FontWeight.Bold,
     )
     Text(
         stringResource(R.string.ord_change_pay_hint),
         color = Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.bodySmall,
+        style = Rahal.type.caption,
     )
-    Column {
-        FilterChip(
-            selected = scope == "none",
-            enabled = !busy,
-            onClick = { if (scope != "none") onChange("none") },
-            label = { Text(stringResource(R.string.ord_pay_cash)) },
-        )
+    Spacer(Modifier.height(Rahal.space.sm))
+    Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+        com.rahalgo.customer.cart.PayChoice(
+            text = stringResource(R.string.ord_pay_cash),
+            on = scope == "none",
+            modifier = Modifier.fillMaxWidth(),
+        ) { if (!busy && scope != "none") onChange("none") }
         if (showFull) {
-            FilterChip(
-                selected = scope == "full",
-                enabled = !busy,
-                onClick = {},
-                label = { Text(stringResource(R.string.cart_wallet_full)) },
-            )
+            com.rahalgo.customer.cart.PayChoice(
+                text = stringResource(R.string.cart_wallet_full),
+                on = scope == "full",
+                modifier = Modifier.fillMaxWidth(),
+            ) {}
         }
         if (showDelivery) {
-            FilterChip(
-                selected = scope == "delivery",
-                enabled = !busy,
-                onClick = { if (scope != "delivery") onChange("delivery") },
-                label = { Text(stringResource(R.string.cart_wallet_delivery)) },
-            )
+            com.rahalgo.customer.cart.PayChoice(
+                text = stringResource(R.string.cart_wallet_delivery),
+                on = scope == "delivery",
+                modifier = Modifier.fillMaxWidth(),
+            ) { if (!busy && scope != "delivery") onChange("delivery") }
         }
     }
 }

@@ -16,10 +16,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtDateTime, fmtMoney, fmtNum, fmtRef } from "@rahalgo/i18n";
-import { Alert, Badge, Button, LoadingState, Money, OrderChat, ReloadState, Sheet, IconChat, IconPrev, useLiveRefresh } from "@rahalgo/ui";
+import { Alert, Button, LoadingState, Money, OrderChat, ReloadState, Sheet, IconChat, IconPrev, useLiveRefresh } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { customFee, fill, freeCustomOn, statusLabel } from "@/lib/customer/texts";
+import { customFee, fill, freeCustomOn } from "@/lib/customer/texts";
 import { useActiveOrders } from "@/lib/customer/active";
 import { useCustomer } from "@/lib/customer/context";
 import { ENDED, type MyOrder } from "@/lib/customer/types";
@@ -34,7 +34,8 @@ import {
   QuoteAmounts,
   payScopeLabel,
 } from "@/components/customer/orderParts";
-import { statusTone } from "@/components/customer/OrderSummary";
+import { OrderStatusChip } from "@/components/customer/OrderSummary";
+import { OUTLINE_CARD } from "@/components/customer/kit";
 import { OrderSections } from "@/components/customer/OrderSections";
 import { NeedLogin } from "@/components/customer/NeedLogin";
 import { useShopToast } from "@/components/customer/toast";
@@ -117,15 +118,15 @@ export default function OrderPage() {
       {back}
       <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-6">
       <div className="flex min-w-0 flex-col gap-3">
-      <div className="surface flex flex-col gap-4 p-4">
+      <div className={`${OUTLINE_CARD} flex flex-col gap-4`}>
         <div className="flex items-center justify-between gap-2">
-          <h1 className="heading-page tabular-nums" dir="ltr">
+          <h1 className="text-screen-title tabular-nums" dir="ltr">
             #{fmtRef(order.number)}
           </h1>
           {/* **ومهلةُ الإلغاء جنبَ الحال** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — والزرُّ تحت بلا عدّاد. */}
           <span className="flex flex-wrap items-center justify-end gap-2">
             <CancelNote order={order} />
-            <Badge variant={statusTone(order.status)}>{statusLabel(order.status)}</Badge>
+            <OrderStatusChip status={order.status} />
           </span>
         </div>
         {!ended && (
@@ -150,18 +151,14 @@ export default function OrderPage() {
       <DeliveryCode order={order} />
 
       {!ended && order.driver_name && (
-        <div className="surface flex items-center gap-3 p-4">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-accent-tint heading-card text-accent-text" aria-hidden>
+        <div className={`${OUTLINE_CARD} flex items-center gap-3`}>
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-accent-tint text-card-title text-accent-text" aria-hidden>
             {Array.from(order.driver_name.trim())[0] ?? ""}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-xs text-ink-muted">{O.driver}</span>
-            <b className="block truncate">{order.driver_name}</b>
+            <span className="block text-caption text-ink-muted">{O.driver}</span>
+            <b className="block truncate text-card-title">{order.driver_name}</b>
           </span>
-          <Button variant="primary" className="flex items-center gap-2" onClick={() => setChat(true)}>
-            <IconChat size={16} />
-            {O.chat}
-          </Button>
         </div>
       )}
       {!ended && <LiveStartButton orderId={order.id} status={order.status} />}
@@ -171,7 +168,7 @@ export default function OrderPage() {
       {/* **«طلبك من {n} محلات»** — طلبٌ مشتركٌ فقط؛ الحقلُ غائبٌ في طلب المحلّ الواحد فلا يُرسم شيء. */}
       <OrderSections sections={order.sections} />
 
-      <dl className="surface flex flex-col gap-2 p-4">
+      <dl className={`${OUTLINE_CARD} flex flex-col gap-2`}>
         {order.items_preview && (order.items ?? []).length === 0 && (
           <Row label={fill(O.items, { n: fmtNum(order.items_count) })}>{order.items_preview}</Row>
         )}
@@ -191,7 +188,7 @@ export default function OrderPage() {
         }}
       />
 
-      <dl className="surface flex flex-col gap-2 p-4">
+      <dl className={`${OUTLINE_CARD} flex flex-col gap-2`}>
         {custom ? (
           order.custom_goods_amount == null ? (
             /* **وأجرةُ المنصّة تُقال برقمها** — مرآةُ `OrderCard.kt` (٢٠٢٦-١٠-١٤):
@@ -279,15 +276,27 @@ export default function OrderPage() {
         )}
       </dl>
 
-      <CancelOrder
-        order={order}
-        onDone={() => {
-          toast(O.cancelled);
-          load();
-        }}
-      />
-      <RateButton order={order} />
-      <ComplaintBox order={order} />
+      {/* أفعالُ البطاقة (مرآةُ `OrderCard.kt`): الثانويّةُ — محادثة وشكوى — في صفٍّ بأزرارٍ متساويةِ العرض
+          بحدٍّ، ثمّ الأساسيّ (إلغاء أحمر مصمت أو تقييم بلون العلامة) بعرضٍ كامل تحتها. */}
+      <div className="flex flex-col gap-rg-md">
+        <div className="flex gap-rg-sm [&>*]:min-w-0 [&>*]:flex-1">
+          {!ended && order.driver_name && (
+            <Button variant="secondary" className="flex min-h-12 items-center justify-center gap-2" onClick={() => setChat(true)}>
+              <IconChat size={16} />
+              {O.chat}
+            </Button>
+          )}
+          <ComplaintBox order={order} />
+        </div>
+        <CancelOrder
+          order={order}
+          onDone={() => {
+            toast(O.cancelled);
+            load();
+          }}
+        />
+        <RateButton order={order} />
+      </div>
       </div>
       </div>
       {chat && (

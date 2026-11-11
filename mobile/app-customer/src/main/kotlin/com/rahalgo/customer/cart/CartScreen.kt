@@ -1,5 +1,7 @@
 package com.rahalgo.customer.cart
 
+import com.rahalgo.ui.RahalDivider
+
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
@@ -7,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.material3.RadioButton
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,8 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -183,8 +184,8 @@ fun CartScreen(
         ScreenTitle(stringResource(R.string.cart_title))
 
         // **والخطأُ لا يُرسم هنا** — يُرسم فوق زرّ الطلب. انظر أدناه.
-        Spacer(Modifier.height(10.dp))
-        Card {
+        Spacer(Modifier.height(Rahal.space.xs))
+        com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined) {
             Cart.lines.forEach { line ->
                 val bad = badLines[line.item.id]
                 Row(
@@ -207,13 +208,19 @@ fun CartScreen(
                         url = media(line.item.imageThumbUrl ?: line.item.imageUrl),
                         name = line.item.name,
                         modifier = Modifier
-                            .padding(vertical = 6.dp)
-                            .size(56.dp)
+                            .padding(vertical = Rahal.space.sm)
+                            .size(Rahal.size.thumb)
                             .clip(Rahal.shape.sm),
                     )
-                    Spacer(Modifier.size(10.dp))
+                    Spacer(Modifier.size(Rahal.space.md))
                     Column(Modifier.weight(1f)) {
-                        Text(line.item.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text(
+                            line.item.name,
+                            style = Rahal.type.cardTitle,
+                            color = Rahal.colors.ink,
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        )
                         // **وما اختاره يُقال تحت اسمه** — **وسطران
                         // متطابقان في السلّة بلا فرقٍ مكتوبٍ يُقرآن
                         // تكراراً**، فيُحذف أحدُهما وهو المقصود.
@@ -221,19 +228,24 @@ fun CartScreen(
                             Text(
                                 line.options.joinToString("، ") { it.name },
                                 color = Rahal.colors.inkMuted,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = Rahal.type.caption,
                             )
                         }
                         // **وصنفٌ بالدولار يُقال دولارُه تحت اسمه** (طلبُ المالك ٢٠٢٦-١١-٠٧) —
                         // والليرةُ في عمود السعر، وهي ما يُدفع.
                         // **والسعرُ أكبرُ وفي العمود نفسِه مع الاسم والخيار** (تدقيق D13).
-                        LinePrice(money(line.unitPrice * line.qty))
-                        line.unitPriceUsd?.let { u ->
+                        // **سعرٌ واحدٌ واضح** (إعادةُ التصميم ٢٠٢٦-١١-١١): كانت الليرةُ تُكتب مرّتين —
+                        // سطرُ الليرة ثمّ «$ ≈ ل.س». **والدولارُ يمرّ بالقطعة المشتركة وحدَها.**
+                        Spacer(Modifier.height(Rahal.space.xxs))
+                        val usd = line.unitPriceUsd
+                        if (usd != null) {
                             com.rahalgo.ui.DualPrice(
-                                u * line.qty,
+                                usd * line.qty,
                                 line.unitPrice * line.qty,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = Rahal.type.cardTitle,
                             )
+                        } else {
+                            LinePrice(money(line.unitPrice * line.qty))
                         }
                         bad?.let { c ->
                             Text(
@@ -246,7 +258,7 @@ fun CartScreen(
                                 },
                                 color = Rahal.colors.danger,
                                 fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = Rahal.type.caption,
                             )
                         }
                     }
@@ -260,7 +272,7 @@ fun CartScreen(
                         onMore = { Cart.setQty(line.key, line.qty + 1) },
                     )
                 }
-                HorizontalDivider()
+                RahalDivider()
             }
             // ══════════════════════════════════════════════════════════
             // **والمشروباتُ كلُّها تحت الأصناف — سطرٌ لكلّ مشروب** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
@@ -274,16 +286,15 @@ fun CartScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // **بعرض صورة الصنف** — فتصطفّ الأسماءُ تحت بعضها.
-                    Box(Modifier.width(56.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.width(Rahal.size.thumb), contentAlignment = Alignment.Center) {
                         com.rahalgo.ui.DrinkThumb(media(d.thumb))
                     }
-                    Spacer(Modifier.size(10.dp))
+                    Spacer(Modifier.size(Rahal.space.md))
                     Column(Modifier.weight(1f)) {
                         Text(
                             d.name,
                             color = Rahal.colors.ink,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
+                            style = Rahal.type.cardTitle,
                         )
                         LinePrice(money(d.total))
                     }
@@ -295,7 +306,7 @@ fun CartScreen(
                         moreEnabled = Cart.canMoreDrink(d),
                     )
                 }
-                HorizontalDivider()
+                RahalDivider()
             }
         }
 
@@ -313,9 +324,9 @@ fun CartScreen(
                     painter = painterResource(com.rahalgo.ui.R.drawable.ic_trash),
                     contentDescription = null,
                     tint = Rahal.colors.inkMuted,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(Rahal.icon.xs),
                 )
-                Spacer(Modifier.size(6.dp))
+                Spacer(Modifier.size(Rahal.space.sm))
                 Text(stringResource(R.string.cart_clear), color = Rahal.colors.inkMuted)
             }
         }
@@ -341,7 +352,7 @@ fun CartScreen(
         //
         // **وكان يُرسَل مع الطلب وحدَه** — **فيعرف أثرَه بعد أن يطلب**،
         // ومن كتب كوداً منتهياً دفع ثمناً ظنّه أقلّ.
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         Row(
             horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
             verticalAlignment = Alignment.CenterVertically,
@@ -364,7 +375,7 @@ fun CartScreen(
         // **وكلُّ رفضٍ بسببه، والتوصيلُ المجانيّ باسمه** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
         // كانت «الكود غير صالح أو منتهي» لكلّ رفض، و«خصم ٠» لكود التوصيل المجانيّ.
         vm.promoResult?.let { r ->
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             val ctx = LocalContext.current
             Text(
                 text = when {
@@ -375,7 +386,7 @@ fun CartScreen(
                     else -> stringResource(R.string.cart_promo_bad)
                 },
                 color = if (r.valid) Rahal.colors.success else Rahal.colors.danger,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
 
@@ -422,15 +433,15 @@ fun CartScreen(
                 vm.walletScope = "none"
             }
         }
-        Spacer(Modifier.height(Rahal.space.md))
-        // **سطرُ الدفع بطاقةٌ (تدقيق D13)** — كان سطراً عارياً يضيع بين الحقول.
-        Card {
+        // **سطرُ الدفع بطاقةٌ تحت عنوانها (تدقيق D13)** — كان سطراً عارياً يضيع بين الحقول.
+        com.rahalgo.ui.SectionHeader(stringResource(R.string.ord_payment))
+        com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined) {
         if (walletBlocked) {
             // **سطرٌ واحدٌ لا خيارٌ مطفأٌ ولا «رصيدك لا يكفي»** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
             Text(
                 stringResource(R.string.ord_pay_cash_only),
                 color = Rahal.colors.ink,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
@@ -452,7 +463,7 @@ fun CartScreen(
                                 money(deliveryPart), money(payableTotal - deliveryPart),
                             ),
                             color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = Rahal.type.caption,
                         )
                     }
                 }
@@ -471,8 +482,8 @@ fun CartScreen(
         // **ولا «رصيدك لا يكفي» ولا «ادفع نقداً»** — المحفظةُ تغيب بصمت (قرارُ المالك ٢٠٢٦-١٠-٣٠).
 
 
-        Spacer(Modifier.height(14.dp))
-        Card {
+        com.rahalgo.ui.SectionHeader(stringResource(R.string.cart_summary_title))
+        com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined) {
             // **والمعروضُ من تسعيرة المحرّك متى وُجدت لا من أسعار السلّة المخزَّنة**
             // — `CUST-DEF-005`: `Cart.subtotal` يُجمَع من `unitPrice` المحفوظ ساعةَ
             // الإضافة ويبقى بعد إعادة التشغيل، **فسعرٌ تبدّل يجعل المعروضَ غيرَ
@@ -493,7 +504,7 @@ fun CartScreen(
                 Text(
                     text = stringResource(R.string.cart_need_address),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
             } else if (q.blocked) {
                 // **سلّةٌ موقوفةٌ لا مجموعَ لها** (تدقيقُ ٢٠٢٦-١٠-٢٨) — المحرّكُ يردّ الأرقامَ
@@ -732,7 +743,7 @@ fun CartScreen(
             // **والخروجُ بإقرارٍ صريحٍ لا بتعديلٍ صامت** (`CAF-02`): **من
             // تحقّق من «طلباتي» ولم يجد طلبَه يبدأ محاولةً جديدةً عن قصد** —
             // **فيُمحى المفتاحُ القديم**، ولا يُدوَّر صامتاً فوق سابقٍ نجح.
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             RahalTextButton(onClick = { vm.acknowledgeUncertain() }, tone = Tone.Danger) {
                 Text(stringResource(R.string.cart_uncertain_ack))
             }
@@ -751,14 +762,14 @@ fun CartScreen(
             Spacer(Modifier.height(Rahal.space.md))
             Note(stringResource(R.string.cc_review_title), Rahal.colors.danger)
             vm.changes.forEach { c ->
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 Note(
                     com.rahalgo.ui.CartChanges.text(LocalContext.current, c),
                     Rahal.colors.ink,
                 )
             }
             if (!vm.canSubmit) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 // **وقبولُ المبالغ المتبدّلة زرٌّ أخضرُ ممتلئ** (طلبُ المالك ٢٠٢٦-١٠-١٨)
                 // — كنافذة تأكيد السعر؛ **وزرٌّ نصّيٌّ أزرقُ لا يُقرأ «موافق».**
                 RahalButton(
@@ -772,7 +783,7 @@ fun CartScreen(
         }
 
         // **ذيلٌ يفسح للأرقام الأخيرة (تدقيق D13)**: على ٣٦٠ بخطٍّ ١٫٣ كان الإجماليُّ يُقصّ خلف شريط الإرسال.
-        Spacer(Modifier.height(56.dp))
+        Spacer(Modifier.height(Rahal.size.thumb))
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -820,35 +831,36 @@ fun CartScreen(
         !vm.canSubmit -> stringResource(R.string.cart_why_review)
         else -> vm.error
     }
-    HorizontalDivider()
+    // **شريطٌ ثابتٌ بشكل `BottomActionBar`** — أرضُ الصفحة وظلٌّ مرفوع وحشوةُ الحافّة. (لا يُنادى
+    // `BottomActionBar` نفسُه: يضيف حشوةَ شريط النظام، والشريطُ السفليُّ للتطبيق يحجزها أصلاً.)
     Column(
         Modifier
             .fillMaxWidth()
-            .background(Rahal.colors.surface)
-            .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.sm),
+            .shadow(Rahal.elevation.raised, clip = false)
+            .background(Rahal.colors.canvas)
+            .padding(horizontal = Rahal.space.gutter, vertical = Rahal.space.md),
     ) {
         if (why.isNotEmpty()) {
             Text(
                 text = why,
                 color = Rahal.colors.danger,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
                 maxLines = 3,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(
                     stringResource(R.string.ord_total),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = Rahal.type.label,
                 )
                 Text(
                     text = barTotal?.let { money(it) } ?: "—",
                     color = Rahal.colors.ink,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = Rahal.type.priceLarge,
                     maxLines = 1,
                 )
             }
@@ -887,7 +899,7 @@ fun CartScreen(
             modifier = Modifier.weight(1f),
         ) {
             if (vm.busy) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(Modifier.size(Rahal.icon.sm), strokeWidth = Rahal.stroke.focus)
             } else {
                 Text(stringResource(R.string.cart_send), maxLines = 1)
             }
@@ -902,7 +914,7 @@ fun CartScreen(
 private fun QtyButton(icon: Int, label: String, enabled: Boolean = true, onClick: () -> Unit) {
     Box(
         Modifier
-            .size(36.dp)
+            .size(Rahal.size.iconBox)
             .clip(CircleShape)
             .clickable(enabled = enabled, onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -911,7 +923,7 @@ private fun QtyButton(icon: Int, label: String, enabled: Boolean = true, onClick
             painter = painterResource(icon),
             contentDescription = label,
             tint = if (enabled) Rahal.colors.brand else Rahal.colors.line,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(Rahal.icon.sm),
         )
     }
 }
@@ -936,12 +948,12 @@ private fun LineControls(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clip(Rahal.shape.pill)
-            .border(1.dp, Rahal.colors.line, Rahal.shape.pill),
+            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.pill),
     ) {
         if (qty <= 1) {
             Box(
                 Modifier
-                    .size(36.dp)
+                    .size(Rahal.size.iconBox)
                     .clip(CircleShape)
                     .clickable(onClickLabel = stringResource(R.string.cart_remove), onClick = onLess),
                 contentAlignment = Alignment.Center,
@@ -950,7 +962,7 @@ private fun LineControls(
                     painter = painterResource(com.rahalgo.ui.R.drawable.ic_trash),
                     contentDescription = stringResource(R.string.cart_remove),
                     tint = Rahal.colors.danger,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(Rahal.icon.sm),
                 )
             }
         } else {
@@ -977,7 +989,7 @@ private fun LinePrice(price: String) {
         price,
         color = Rahal.colors.brand,
         fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.titleSmall.copy(fontFeatureSettings = "tnum"),
+        style = Rahal.type.cardTitle.copy(fontFeatureSettings = "tnum"),
         maxLines = 1,
     )
 }
@@ -1406,7 +1418,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
  * **وكلاهما بعرضٍ واحد** — **وخيارٌ أعرضُ من أخيه يُقرأ الموصى به.**
  */
 @Composable
-private fun PayChoice(
+internal fun PayChoice(
     text: String,
     on: Boolean,
     modifier: Modifier = Modifier,
@@ -1419,7 +1431,7 @@ private fun PayChoice(
     Row(
         modifier
             .clip(Rahal.shape.md)
-            .border(if (on && enabled) 2.dp else 1.dp, tint, Rahal.shape.md)
+            .border(if (on && enabled) Rahal.stroke.focus else Rahal.stroke.hair, tint, Rahal.shape.md)
             .background(
                 if (on && enabled) Rahal.colors.brand.copy(alpha = 0.06f) else Color.Transparent,
             )
@@ -1431,7 +1443,7 @@ private fun PayChoice(
         Text(
             text = text,
             color = if (enabled) Rahal.colors.ink else Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             fontWeight = if (on && enabled) FontWeight.Bold else FontWeight.Normal,
         )
     }

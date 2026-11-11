@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,7 +21,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -89,32 +90,38 @@ fun AddressPage(
         onDone()
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **«حفظ العنوان» ثابتٌ تحت الصفحة** (إعادةُ التصميم ٢٠٢٦-١١-١١)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان آخرَ الصفحة بعد الخريطة والنوع والمشاركة** فيُمرَّر إليه. والآن في الشريط
+    // الموحَّد (`BottomActionBar`) — يُرى من أوّل الصفحة، والمحتوى يمرّ فوقه.
     Column(
         Modifier
             .fillMaxSize()
             .background(Rahal.colors.canvas)
             .statusBarsPadding()
-            .navigationBarsPadding()
-            .imePadding()
+            .imePadding(),
+    ) {
+    Column(
+        Modifier
+            .weight(1f)
+            .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
+            .padding(horizontal = Rahal.space.gutter, vertical = Rahal.space.md),
     ) {
         PageHeader(stringResource(R.string.addrp_title), onBack = onDone)
         Spacer(Modifier.height(Rahal.space.md))
 
         // ── ١ · العنوانُ التفصيليّ ──
-        Text(
-            stringResource(R.string.addrp_detail),
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        Spacer(Modifier.height(6.dp))
-        OutlinedTextField(
+        // **حقلٌ موسومٌ بالقطعة الموحّدة** (`LabeledField`) — الوسمُ فوقه يبقى، والمثالُ داخلَه.
+        com.rahalgo.ui.LabeledField(
+            label = stringResource(R.string.addrp_detail),
             value = text,
             onValueChange = { text = TextLimits.fit(it, TextLimits.ADDRESS_PART) },
-            placeholder = { Text(stringResource(R.string.addrp_detail_hint)) },
+            placeholder = stringResource(R.string.addrp_detail_hint),
+            singleLine = false,
             minLines = 2,
-            modifier = Modifier.fillMaxWidth(),
         )
 
         // ── ٢ و٣ · الخريطةُ و«حدّد موقعي بدقة» ──
@@ -134,7 +141,7 @@ fun AddressPage(
         )
 
         // ── ٤ · النوع ──
-        Spacer(Modifier.height(Rahal.space.lg))
+        com.rahalgo.ui.SectionHeader(stringResource(com.rahalgo.ui.R.string.addr_kind))
         Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
             KindChip("home", com.rahalgo.ui.R.drawable.ic_home, kind == "home", Modifier.weight(1f)) { kind = "home" }
             KindChip("work", com.rahalgo.ui.R.drawable.ic_work, kind == "work", Modifier.weight(1f)) { kind = "work" }
@@ -147,7 +154,7 @@ fun AddressPage(
             Modifier
                 .fillMaxWidth()
                 .clip(Rahal.shape.md)
-                .border(1.dp, Rahal.colors.line, Rahal.shape.md)
+                .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
                 .clickable { LiveAuto.set(context, !LiveAuto.on) }
                 .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
             verticalAlignment = Alignment.CenterVertically,
@@ -155,7 +162,7 @@ fun AddressPage(
             Text(
                 stringResource(R.string.addrp_live),
                 fontWeight = FontWeight.Medium,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 modifier = Modifier.weight(1f),
             )
             // **حالُ المفتاح بالكلمة (تدقيق D18)** — المفتاحُ وحدَه لا يقول «شغّال» أم «واقف» لكلّ العيون.
@@ -163,7 +170,7 @@ fun AddressPage(
                 stringResource(if (LiveAuto.on) R.string.addrp_live_on else R.string.addrp_live_off),
                 color = if (LiveAuto.on) Rahal.colors.success else Rahal.colors.inkMuted,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelMedium,
+                style = Rahal.type.label,
             )
             Spacer(Modifier.size(Rahal.space.sm))
             Switch(
@@ -172,15 +179,17 @@ fun AddressPage(
             )
         }
 
-        // ── ٦ · الحفظ ──
         Spacer(Modifier.height(Rahal.space.lg))
+    }
+    // ── ٦ · الحفظ — في الشريط الثابت ──
+    com.rahalgo.ui.BottomActionBar {
         com.rahalgo.ui.ClearStateButton(
             onClick = save,
             enabled = canSave,
             tone = Tone.Accent,
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(com.rahalgo.ui.R.string.addr_save)) }
-        Spacer(Modifier.height(Rahal.space.lg))
+    }
     }
 }
 
@@ -208,27 +217,30 @@ private fun KindChip(
             .clip(Rahal.shape.pill)
             .background(if (on) Rahal.colors.warnTint else Rahal.colors.canvas)
             .border(
-                width = if (on) 2.dp else 1.dp,
+                width = if (on) Rahal.stroke.focus else Rahal.stroke.hair,
                 color = if (on) Rahal.colors.accent else Rahal.colors.line,
                 shape = Rahal.shape.pill,
             )
-            .clickable(onClick = onPick)
-            .padding(vertical = 10.dp),
+            .selectable(selected = on, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = onPick)
+            .heightIn(min = Rahal.size.touch)
+            .padding(horizontal = Rahal.space.xs, vertical = Rahal.space.sm),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             painter = painterResource(icon),
             contentDescription = null,
-            tint = if (on) Rahal.colors.accent else Rahal.colors.inkMuted,
-            modifier = Modifier.size(18.dp),
+            tint = if (on) Rahal.colors.accentInk else Rahal.colors.inkMuted,
+            modifier = Modifier.size(Rahal.icon.sm),
         )
-        Spacer(Modifier.size(6.dp))
+        Spacer(Modifier.size(Rahal.space.xs))
+        // **حبرُ البرتقاليّ الغامق للنصّ** — البرتقاليُّ نفسُه على الأبيض لا يُقرأ.
         Text(
             stringResource(addressKindLabel(kind)),
-            color = if (on) Rahal.colors.accent else Rahal.colors.inkMuted,
-            fontWeight = FontWeight.Medium,
-            style = MaterialTheme.typography.bodyMedium,
+            color = if (on) Rahal.colors.accentInk else Rahal.colors.inkMuted,
+            fontWeight = if (on) FontWeight.Bold else FontWeight.Medium,
+            style = Rahal.type.label,
+            maxLines = 1,
         )
     }
 }

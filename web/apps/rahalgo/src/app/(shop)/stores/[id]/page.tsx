@@ -183,45 +183,37 @@ export default function StorePageView() {
       ) : (
         <>
           {/* ── الرأس: شريطٌ مصبوغٌ وشعارٌ يعلوه ودوامُ اليوم ── */}
-          <header className="shop-store-hero">
-            {/* **زرٌّ واضحٌ بسهم رجوع** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨) */}
-            <Link href="/shop" className="shop-back">
-              <IconPrev size={18} />
-              {ST.back}
+          {/* **الرأسُ بطاقةٌ بحدٍّ**: سهمُ رجوعٍ (٤٨) وشعارٌ (٥٦ مستدير) واسمٌ بسطرين ودوامُ اليوم — مرآةُ `StoreScreen.kt`. */}
+          <header className="flex items-center gap-rg-md rounded-rg-lg border border-line bg-surface p-rg-md">
+            <Link
+              href="/shop"
+              aria-label={ST.back}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full hover:bg-row-hover"
+            >
+              <IconPrev size={22} />
             </Link>
-            <div className="shop-store-band">
-              <ShopPic src={null} name={page.store.name} iconSize={0} />
+            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-rg-md border border-line-soft bg-field">
+              <ShopPic
+                src={page.store.logo_thumb_url ?? page.store.logo_url}
+                name={page.store.name}
+                fit="contain"
+                initial
+                className="h-full w-full"
+              />
             </div>
-            <div className="shop-store-head">
-              <div className="shop-store-logo">
-                <ShopPic
-                  src={page.store.logo_thumb_url ?? page.store.logo_url}
-                  name={page.store.name}
-                  fit="contain"
-                  initial
-                  className="h-full w-full"
-                />
-              </div>
-              <div className="shop-store-meta min-w-0 flex-1 space-y-1.5 pb-1">
-                <h1 className="truncate">{page.store.name}</h1>
-                {/* **دوامُ اليوم وحدَه بلا حبّة «مفتوح / مسكّر»** (قرارُ المالك ٢٠٢٦-١٠-٢٨، مرآةُ `StoreScreen.kt`) —
-                    **والإغلاقُ الطارئُ يُقال بلفظه** فلا يُقرأ الدوامُ وعداً بأنّه مفتوح. */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {page.store.emergency_closed ? (
-                    <span className="shop-cap" data-tone="bad">
-                      {ST.emergencyClosed}
-                    </span>
-                  ) : (
-                    <span className="shop-cap" data-tone={page.store.open_now ? "ok" : "brand"}>
-                      {todayText(page.store.today)}
-                    </span>
-                  )}
-                  {page.store.prep_minutes > 0 && (
-                    <span className="shop-cap" data-tone="brand">
-                      {fill(SK.prep, { n: fmtNum(page.store.prep_minutes) })}
-                    </span>
-                  )}
-                </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="line-clamp-2 text-section-title">{page.store.name}</h1>
+              {/* **دوامُ اليوم وحدَه بلا حبّة «مفتوح / مسكّر»** (قرارُ المالك ٢٠٢٦-١٠-٢٨، مرآةُ `StoreScreen.kt`) —
+                  **والإغلاقُ الطارئُ يُقال بلفظه** فلا يُقرأ الدوامُ وعداً بأنّه مفتوح. */}
+              <div className="flex flex-wrap items-center gap-x-rg-md gap-y-rg-xxs text-caption">
+                {page.store.emergency_closed ? (
+                  <span className="font-bold text-danger">{ST.emergencyClosed}</span>
+                ) : (
+                  <span className="text-ink-muted">{todayText(page.store.today)}</span>
+                )}
+                {page.store.prep_minutes > 0 && (
+                  <span className="text-ink-muted">{fill(SK.prep, { n: fmtNum(page.store.prep_minutes) })}</span>
+                )}
               </div>
             </div>
           </header>
@@ -229,7 +221,7 @@ export default function StorePageView() {
           {!page.store.open_now && <Alert tone="warning">{ST.browseOnly}</Alert>}
 
           {sections.length === 0 ? (
-            <EmptyState icon={IconStore} title={ST.empty} action={<span className="text-xs text-ink-muted">{ST.emptyHint}</span>} />
+            <EmptyState icon={IconStore} title={ST.empty} line={ST.emptyHint} />
           ) : (
             <div className="shop-store-cols">
               <div className="flex min-w-0 flex-col gap-4">
@@ -286,7 +278,7 @@ export default function StorePageView() {
                 ) : items.length === 0 && listError ? (
                   <ReloadState label={listError} onRetry={() => setRev((r) => r + 1)} />
                 ) : items.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-ink-muted">{ST.noMatch}</p>
+                  <EmptyState icon={IconSearch} title={ST.noMatch} />
                 ) : (
                   <>
                     <ItemGrid items={items} onOpen={setOpen} storeLink={false} layout="row" />
