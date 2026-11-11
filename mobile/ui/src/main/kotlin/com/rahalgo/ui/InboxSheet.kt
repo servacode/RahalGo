@@ -86,16 +86,11 @@ fun InboxSheet(
             // **ولا يظهر إلّا إن كان فيه ما لم يُقرأ** — وزرٌّ يُضغط فلا
             // يتغيّر شيءٌ يُقرأ عطبا. (وهو عينُ ما تفعله صفحةُ الويب.)
             if (items.any { !it.read }) {
-                // **فعلٌ نصّيٌّ صغير** (D12: كان ثقيلاً) — لا زرٌّ بأرضٍ وحدّ.
-                Text(
-                    stringResource(R.string.inbox_mark_all),
-                    color = Rahal.colors.brand,
-                    style = Rahal.type.label,
-                    modifier = Modifier
-                        .clip(Rahal.shape.sm)
-                        .clickable(onClick = onMarkAll)
-                        .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.sm),
-                )
+                // **زرٌّ صغيرٌ بإطار** (قرارُ المالك ٢٠٢٦-١١-١١: «اعملها زر») — كان نصّاً لا يُعرف أنّه يُضغط.
+                // **وهو زرُّ «نسيت كلمة المرور؟» نفسُه** (`RahalSmallButton`) — كلُّ زرٍّ يبدو زرّاً.
+                RahalSmallButton(onClick = onMarkAll) {
+                    Text(stringResource(R.string.inbox_mark_all), maxLines = 1, softWrap = false)
+                }
             }
         }
 
