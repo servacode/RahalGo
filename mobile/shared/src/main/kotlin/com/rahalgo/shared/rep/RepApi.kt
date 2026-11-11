@@ -429,6 +429,11 @@ data class RepMerchant(
     @SerialName("min_items") val minItems: Int = 0,
     /** **نسبةُ عمولة المنصّة من المتجر** (قراءةٌ فقط، ٢٠٢٦-١١-١١) — كالتي في التفصيل. */
     @SerialName("store_commission_percent") val storeCommissionPercent: Double = 0.0,
+    /**
+     * **أسبابُ «بدّهن متابعة»** (٢٠٢٦-١١-١١): `no_items` · `conditions` · `no_orders` — يحسبها
+     * المحرّكُ، وفارغةٌ إن لم يحتج المتجرُ شيئاً.
+     */
+    @SerialName("follow_up") val followUp: List<String> = emptyList(),
 )
 
 @Serializable

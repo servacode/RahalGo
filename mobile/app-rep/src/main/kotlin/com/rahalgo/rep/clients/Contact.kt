@@ -77,9 +77,11 @@ private fun dial(context: Context, phone: String) {
     runCatching { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$p"))) }
 }
 
-private fun whatsapp(context: Context, digits: String) {
+private fun whatsapp(context: Context, digits: String, text: String? = null) {
+    // **ونصٌّ جاهزٌ إن وُجد** — يُرسله المندوبُ من واتسابه هو (wa.me/<رقم>?text=…).
+    val url = "https://wa.me/$digits" + if (text.isNullOrBlank()) "" else "?text=" + Uri.encode(text)
     runCatching {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$digits")))
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 }
 
@@ -126,4 +128,4 @@ fun localPhone(phone: String): String {
 
 internal fun dialNumber(context: Context, phone: String) = dial(context, phone)
 
-internal fun openWhatsapp(context: Context, digits: String) = whatsapp(context, digits)
+internal fun openWhatsapp(context: Context, digits: String, text: String? = null) = whatsapp(context, digits, text)

@@ -247,8 +247,10 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		MinItems    int64  `json:"min_items"`
 		// StoreCommissionPercent نسبةُ ما تقتطعه المنصّةُ من المتجر الآن (قراءةٌ فقط) — كما في التفصيل.
 		StoreCommissionPercent pricing.Percent2 `json:"store_commission_percent"`
-		opener                 bool
-		counted                bool
+		// FollowUp أسبابُ «بدّهن متابعة» (no_items · conditions · no_orders) — فارغةٌ إن لم يحتج المتجرُ شيئاً.
+		FollowUp []string `json:"follow_up"`
+		opener   bool
+		counted  bool
 	}
 	// **العتبةُ تُقرأ مرّةً لا لكل متجر** — وهي إعدادُ منصةٍ لا خاصّيةُ متجر.
 	//
@@ -277,6 +279,8 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		case m.opener:
 			m.GoalState = "pending"
 		}
+		m.FollowUp = repFollowUpReasons(m.Status, m.GoalState, m.HasHours, m.HasLocation,
+			m.PhotoItems, m.MinItems, m.ItemsCount, m.LastOrderAt, m.JoinedAt, time.Now())
 		m.LogoThumbURL = media.URLForPtr(m.LogoThumbURL)
 		out = append(out, m)
 	}

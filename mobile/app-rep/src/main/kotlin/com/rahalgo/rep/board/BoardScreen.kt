@@ -1,6 +1,7 @@
 package com.rahalgo.rep.board
 
 import android.app.Application
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -24,6 +26,7 @@ import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
 import com.rahalgo.rep.R
 import com.rahalgo.shared.rep.RepApi
+import com.rahalgo.shared.rep.RepMerchant
 import com.rahalgo.shared.rep.RepMe
 import com.rahalgo.ui.ActionRow
 import com.rahalgo.ui.AppCore
@@ -35,6 +38,7 @@ import com.rahalgo.ui.ListRow
 import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalCard
+import com.rahalgo.ui.RahalDivider
 import com.rahalgo.ui.RahalOutlineButton
 import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.Refreshable
@@ -81,8 +85,11 @@ fun BoardScreen(
     onOpenAccount: () -> Unit = {},
     /** **بطاقةُ «بحاجة معلومات» تفتح «عملائي»** (٢٠٢٦-١٠-٢٨). */
     onOpenClients: () -> Unit = {},
-    /** **اختصارُ «إضافة عميل»** (٢٠٢٦-١١-١١) — ينقل إلى تبويبه. */
-    onAddClient: () -> Unit = {},
+    /** **بدّهن متابعة** (٢٠٢٦-١١-١١) — متاجرُه بأسباب المحرّك، وضغطةُ السطر تفتح العميل. */
+    followUp: List<RepMerchant> = emptyList(),
+    onOpenClient: (String) -> Unit = {},
+    /** **«عرض الكل»** يفتح «عملائي» مفلترةً بـ«بدّه متابعة». */
+    onShowAllFollowUp: () -> Unit = {},
     /** **اختصارُ «المكافآت»** (٢٠٢٦-١١-١١) — يفتح «أهدافي والمكافآت». */
     onOpenGoals: () -> Unit = {},
 ) {
@@ -233,37 +240,31 @@ fun BoardScreen(
         }
 
         // ══════════════════════════════════════════════════════════════
-        // **٤ · اختصارات** — ما يُفعل كلَّ يومٍ بضغطةٍ من اللوحة.
+        // **٤ · بدّهن متابعة اليوم** (قرارُ المالك ٢٠٢٦-١١-١١) + اختصارُ المكافآت
         // ══════════════════════════════════════════════════════════════
-        SectionHeader(stringResource(R.string.bd_quick))
-        RahalCard {
-            ActionRow {
-                IconAction(
-                    icon = com.rahalgo.ui.R.drawable.ic_plus,
-                    description = stringResource(R.string.nav_add_client),
-                    label = stringResource(R.string.nav_add_client),
-                    onClick = onAddClient,
-                )
-                IconAction(
-                    icon = com.rahalgo.ui.R.drawable.ic_store,
-                    description = stringResource(R.string.nav_clients),
-                    label = stringResource(R.string.nav_clients),
-                    onClick = onOpenClients,
-                )
-                IconAction(
-                    icon = com.rahalgo.ui.R.drawable.ic_wallet,
-                    description = stringResource(R.string.bd_q_wallet),
-                    label = stringResource(R.string.bd_q_wallet),
-                    onClick = onOpenWallet,
-                )
-                IconAction(
-                    icon = com.rahalgo.ui.R.drawable.ic_star,
-                    description = stringResource(com.rahalgo.ui.R.string.menu_rewards),
-                    label = stringResource(com.rahalgo.ui.R.string.menu_rewards),
-                    // **بلونِ أخواته** (قرارُ المالك ٢٠٢٦-١١-١١) — كان برتقاليّاً وحدَه بين أربعة.
-                    onClick = onOpenGoals,
-                )
+        //
+        // **كانت الاختصاراتُ الأربعةُ تكرّر الشريطَ السفليَّ وبطاقةَ المحفظة** — فحلّ محلَّها ما
+        // يُفعل فعلاً: متاجرُه التي تنتظر كلمةً منه، **والمحرّكُ هو من يحسب السبب.**
+        if (followUp.isNotEmpty()) {
+            SectionHeader(
+                title = stringResource(R.string.fu_title),
+                action = stringResource(R.string.fu_all, followUp.size.toString()),
+                onAction = onShowAllFollowUp,
+            )
+            RahalCard {
+                followUp.take(FOLLOW_UP_SHOWN).forEachIndexed { idx, m ->
+                    if (idx > 0) RahalDivider()
+                    FollowUpRow(m, onClick = { onOpenClient(m.id) })
+                }
             }
+        }
+        SectionHeader(stringResource(R.string.bd_quick))
+        RahalCard(onClick = onOpenGoals) {
+            ListRow(
+                title = stringResource(com.rahalgo.ui.R.string.menu_rewards),
+                icon = com.rahalgo.ui.R.drawable.ic_star,
+                chevron = true,
+            )
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -325,6 +326,55 @@ fun BoardScreen(
             }
         }
     }
+    }
+}
+
+/** **أقصى ما يُعرض في «بدّهن متابعة»** — والباقي خلف «عرض الكل». */
+private const val FOLLOW_UP_SHOWN = 5
+
+/** **سطرُ متجرٍ يحتاج متابعةً** — اسمُه وأسبابُه بشاراتٍ، وضغطتُه تفتح تفصيلَه. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun FollowUpRow(m: RepMerchant, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = Rahal.space.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Rahal.space.xs)) {
+            Text(
+                text = m.name,
+                style = Rahal.type.bodyStrong,
+                color = Rahal.colors.ink,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs),
+                verticalArrangement = Arrangement.spacedBy(Rahal.space.xs),
+            ) {
+                m.followUp.forEach { reason ->
+                    StatusChip(
+                        stringResource(
+                            when (reason) {
+                                "no_items" -> R.string.fu_no_items
+                                "conditions" -> R.string.fu_conditions
+                                else -> R.string.fu_no_orders
+                            },
+                        ),
+                        StatusTone.Warning,
+                    )
+                }
+            }
+        }
+        Icon(
+            painterResource(com.rahalgo.ui.R.drawable.ic_chevron_end),
+            contentDescription = null,
+            tint = Rahal.colors.inkMuted,
+            modifier = Modifier.size(Rahal.icon.sm),
+        )
     }
 }
 

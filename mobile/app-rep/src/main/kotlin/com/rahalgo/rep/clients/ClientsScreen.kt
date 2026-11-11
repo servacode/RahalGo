@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -113,6 +114,7 @@ fun ClientsScreen(
                 pointCard = { la, ln, enabled, onPoint ->
                     com.rahalgo.map.PointMapCard(
                         lat = la, lng = ln, pending = false, enabled = enabled, onPoint = onPoint,
+                        tapToActivate = true,
                     )
                 },
             )
@@ -209,11 +211,41 @@ fun ClientsScreen(
                         FilterOption(R.string.cl_f_missing, ClientFilter.Missing, vm)
                         FilterOption(R.string.cl_f_no_items, ClientFilter.NoItems, vm)
                         FilterOption(R.string.cl_stopped, ClientFilter.Stopped, vm)
+                        FilterOption(R.string.cl_f_follow_up, ClientFilter.FollowUp, vm)
+                    }
+                    Spacer(Modifier.height(Rahal.space.xs))
+                } else if (vm.filter == ClientFilter.FollowUp) {
+                    // **وقد جاء من «عرض الكل» في لوحتي** — فيبقى زرُّ إلغاء الفلتر ظاهراً لمن قائمتُه قصيرة.
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                        FilterOption(com.rahalgo.ui.R.string.wal_all, ClientFilter.All, vm)
+                        FilterOption(R.string.cl_f_follow_up, ClientFilter.FollowUp, vm)
+                    }
+                    Spacer(Modifier.height(Rahal.space.xs))
+                }
+                // **والترتيبُ لمن له أكثر من عميل** (قرارُ المالك ٢٠٢٦-١١-١١) — أحدث · أكثر طلبات · أقلّ نشاطاً.
+                if (list.size > 1) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+                        verticalArrangement = Arrangement.spacedBy(Rahal.space.xs),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.cl_sort),
+                            style = Rahal.type.caption,
+                            color = Rahal.colors.inkMuted,
+                            modifier = Modifier.align(Alignment.CenterVertically),
+                        )
+                        SortOption(R.string.cl_sort_newest, ClientSort.Newest, vm)
+                        SortOption(R.string.cl_sort_orders, ClientSort.MostOrders, vm)
+                        SortOption(R.string.cl_sort_idle, ClientSort.LeastActive, vm)
                     }
                     Spacer(Modifier.height(Rahal.space.xs))
                 }
                 // **وبلا حقلٍ ظاهرٍ لا بحثَ يُطبَّق** (٢٠٢٦-١٠-٢٨) — والنموذجُ يصفّرهما أيضاً.
-                val shown = if (list.size > 5) vm.visible(list) else list
+                val shown = if (list.size > 5 || vm.filter == ClientFilter.FollowUp || vm.sort != ClientSort.Newest) {
+                    vm.visible(list)
+                } else {
+                    list
+                }
                 if (shown.isEmpty()) {
                     EmptyState(
                         title = stringResource(R.string.cl_no_match),
@@ -225,6 +257,7 @@ fun ClientsScreen(
                         MerchantCard(
                             m = m,
                             media = { path -> Backend.of(context).media(path) },
+                            repName = vm.repName,
                             onOpen = { vm.openDetail(m.id) },
                         )
                     }
@@ -232,6 +265,16 @@ fun ClientsScreen(
             }
         }
     }
+}
+
+@Composable
+private fun SortOption(label: Int, s: ClientSort, vm: ClientsViewModel) {
+    FilterChip(
+        selected = vm.sort == s,
+        onClick = { vm.sort = s },
+        label = { Text(stringResource(label), style = Rahal.type.label) },
+        shape = Rahal.shape.pill,
+    )
 }
 
 @Composable
@@ -384,6 +427,7 @@ internal fun MissingStrip(missing: List<String>, onClick: (() -> Unit)? = null) 
 private fun MerchantCard(
     m: RepMerchant,
     media: (String?) -> String?,
+    repName: String,
     onOpen: () -> Unit,
 ) {
     val active = m.status == "active"
@@ -392,7 +436,8 @@ private fun MerchantCard(
         // **الشاراتُ أوّلاً** — ما ينقصه ليُحسب، أو أنّه محسوب، و«بلا أصناف».
         val missing = missingFor(m)
         val counted = missing.isEmpty() && m.goalState == "counted"
-        if (missing.isNotEmpty() || counted || m.itemsCount == 0) {
+        val idle = "no_orders" in m.followUp
+        if (missing.isNotEmpty() || counted || m.itemsCount == 0 || idle) {
             Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                 when {
                     missing.isNotEmpty() ->
@@ -402,6 +447,9 @@ private fun MerchantCard(
                 }
                 if (m.itemsCount == 0) {
                     StatusChip(stringResource(R.string.cl_f_no_items), StatusTone.Warning, icon = com.rahalgo.ui.R.drawable.ic_warning)
+                }
+                if (idle) {
+                    StatusChip(stringResource(R.string.fu_no_orders), StatusTone.Warning, icon = com.rahalgo.ui.R.drawable.ic_time)
                 }
             }
             Spacer(Modifier.height(Rahal.space.sm))
@@ -482,35 +530,47 @@ private fun MerchantCard(
             Bar(ratio = m.activationDone.toFloat() / needed.toFloat(), color = Rahal.colors.accent)
         }
 
-        // **أربعةُ مربّعاتٍ في سطرين** (قرارُ المالك ٢٠٢٦-١١-١١) — «سُلّم» و«عمولتي»، ثمّ «شقد النا نسبة
-        // عمولة عنده» و«عدد الاصناف الي منزلها». `StatTile` المشترك.
+        // **أربعةُ مربّعاتٍ مضغوطةٍ في سطرٍ واحد** (قرارُ المالك ٢٠٢٦-١١-١١: «بطاقةٌ أقصر يظهر منها ثلاثةٌ في الشاشة»)
+        // — سُلّم · عمولتك · عمولة المتجر · أصناف. `StatTile` المشترك بنمطه المضغوط.
         Spacer(Modifier.height(Rahal.space.md))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs),
+        ) {
             com.rahalgo.ui.StatTile(
                 label = stringResource(R.string.cl_s_orders),
                 value = m.deliveredOrders.toString(),
                 modifier = Modifier.weight(1f),
+                compact = true,
             )
+            // **والعمولةُ «12,000 ل.س» أعرضُ ما في السطر** فتأخذ حصّةً أكبر.
             com.rahalgo.ui.StatTile(
                 label = stringResource(R.string.cl_s_commission),
                 value = money(m.myCommission),
                 valueColor = Rahal.colors.brand,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1.5f),
+                compact = true,
             )
-        }
-        Spacer(Modifier.height(Rahal.space.sm))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
             com.rahalgo.ui.StatTile(
                 label = stringResource(R.string.cd_commission_tile),
                 value = pctLabel(m.storeCommissionPercent),
                 modifier = Modifier.weight(1f),
+                compact = true,
             )
             com.rahalgo.ui.StatTile(
                 label = stringResource(R.string.cl_s_items),
                 value = m.itemsCount.toString(),
                 valueColor = if (m.itemsCount == 0) Rahal.colors.accentInk else Rahal.colors.ink,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(0.8f),
+                compact = true,
             )
+        }
+        // **و«ذكّره» لمن يحتاج متابعةً** — رسالةٌ جاهزةٌ من واتسابه.
+        if (canRemind(m)) {
+            Spacer(Modifier.height(Rahal.space.sm))
+            RemindButton(m, repName, Modifier.fillMaxWidth())
         }
     }
 }

@@ -285,4 +285,22 @@
     <string name="mn_need_price">اكتب سعرا صحيحا بالأرقام</string>
     <!-- **نصُّ شاشة التحديث الإلزاميّ للمندوب** — توزيعٌ مباشرٌ من الموقع، لا Google Play، والمندوبُ لا «يطلب». -->
     <string name="update_body_rep">صدر تحديثٌ إلزاميٌّ لتطبيق المندوب. نزّله من موقع رحّال غو لتتابع عملك.</string>
+
+    <!-- بدّهن متابعة · الترتيب · ذكّره (٢٠٢٦-١١-١١) -->
+    <string name="cl_f_follow_up">بدّه متابعة</string>
+    <string name="cl_sort">الترتيب:</string>
+    <string name="cl_sort_newest">الأحدث</string>
+    <string name="cl_sort_orders">الأكتر طلبات</string>
+    <string name="cl_sort_idle">الأقل نشاط</string>
+    <string name="fu_title">بدّهن متابعة اليوم</string>
+    <string name="fu_all">عرض الكل (%1$s)</string>
+    <string name="fu_no_items">بلا أصناف</string>
+    <string name="fu_conditions">شروط ناقصة</string>
+    <string name="fu_no_orders">ما إجاه طلب من أسبوع</string>
+    <string name="rem_button">ذكّره</string>
+    <string name="rem_rep_fallback">مندوبك</string>
+    <string name="rem_no_items">مرحبا، أنا %1$s من رحّال غو 🌷 لسّا ما في أصناف بمتجرك %2$s على التطبيق، ابعتلي صور أصنافك وأسعارها وأنا بنزّلهن</string>
+    <string name="rem_conditions">مرحبا، أنا %1$s من رحّال غو 🌷 متجرك %2$s لسّا ناقصه: %3$s ليشتغل كامل على التطبيق، خبرني شو بتحتاج وأنا بساعدك</string>
+    <string name="rem_no_orders">مرحبا، أنا %1$s من رحّال غو 🌷 لاحظت إنو متجرك %2$s ما إجاه طلب من أسبوع، خبرني إذا في شي بقدر ساعدك فيه: صور جديدة أو عرض أو تعديل أسعار</string>
+    <string name="ac_default_governorate">الرقة</string>
 </resources>

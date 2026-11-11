@@ -51,6 +51,7 @@ import com.rahalgo.rep.board.BoardScreen
 import com.rahalgo.rep.board.BoardViewModel
 import com.rahalgo.rep.add.AddClientScreen
 import com.rahalgo.rep.add.AddClientViewModel
+import com.rahalgo.rep.clients.ClientFilter
 import com.rahalgo.rep.clients.ClientsScreen
 import com.rahalgo.rep.menu.MenuScreen
 import com.rahalgo.rep.menu.MenuViewModel
@@ -524,7 +525,14 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         onOpenWallet = { overlay.show(Overlay.Wallet) },
                         onOpenAccount = { tab = Tab.Account; leaveStore() },
                         onOpenClients = { tab = Tab.Clients; leaveStore() },
-                        onAddClient = { tab = Tab.AddClient; leaveStore() },
+                        followUp = clientsVm.followUp,
+                        onOpenClient = { id -> clientsVm.openDetail(id); tab = Tab.Clients; leaveStore() },
+                        onShowAllFollowUp = {
+                            clientsVm.closeDetail()
+                            clientsVm.filter = ClientFilter.FollowUp
+                            tab = Tab.Clients
+                            leaveStore()
+                        },
                         onOpenGoals = { overlay.show(Overlay.Menu(RepItems.REWARDS)) },
                     )
 

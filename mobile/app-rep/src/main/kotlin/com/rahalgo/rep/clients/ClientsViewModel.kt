@@ -71,12 +71,22 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
     var query by mutableStateOf("")
     var filter by mutableStateOf(ClientFilter.All)
 
+    /** **ترتيبُ القائمة** — الأحدثُ افتراضاً (ترتيبُ المحرّك). */
+    var sort by mutableStateOf(ClientSort.Newest)
+
+    /** **اسمُ المندوب** — يدخل في رسالة «ذكّره»؛ أفضلُ جهدٍ. */
+    var repName by mutableStateOf("")
+        private set
+
+    /** **من يحتاج متابعةً** — بالأسباب التي حسبها المحرّك. */
+    val followUp: List<RepMerchant> get() = merchants.orEmpty().filter { it.followUp.isNotEmpty() }
+
     /** **العملاءُ بعد البحث والفلترة** — والترتيبُ ترتيبُ المحرّك. */
     fun visible(list: List<RepMerchant>): List<RepMerchant> {
         // **بالاسم أو الصنف أو رقم صاحب المتجر** — والأرقامُ العربيّةُ ومفتاحُ سوريا يُفهمان.
         val q = normalizeQuery(query)
         val qd = digitsOnly(query)
-        return list.filter { m ->
+        val filtered = list.filter { m ->
             (q.isEmpty() || normalizeQuery(m.name).contains(q) || normalizeQuery(m.categoryName).contains(q) ||
                 (qd.isNotEmpty() && digitsOnly(m.ownerPhone.orEmpty()).contains(qd))) &&
                 when (filter) {
@@ -84,7 +94,14 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
                     ClientFilter.Missing -> m.goalState == "pending"
                     ClientFilter.NoItems -> m.itemsCount == 0
                     ClientFilter.Stopped -> m.status != "active"
+                    ClientFilter.FollowUp -> m.followUp.isNotEmpty()
                 }
+        }
+        return when (sort) {
+            ClientSort.Newest -> filtered
+            ClientSort.MostOrders -> filtered.sortedByDescending { it.deliveredOrders }
+            // **الأقلُّ نشاطاً أوّلاً**: من لم يُسلَّم له طلبٌ قطّ، ثمّ الأقدمُ آخرَ تسليم.
+            ClientSort.LeastActive -> filtered.sortedWith(compareBy({ it.lastOrderAt != null }, { it.lastOrderAt.orEmpty() }))
         }
     }
 
@@ -423,12 +440,13 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 merchants = api.merchants()
+                if (repName.isEmpty()) runCatching { repName = api.me().fullName }
                 // **ومن صارت قائمتُه خمسةً أو أقلّ يُصفَّر بحثُه وفلترُه** (٢٠٢٦-١٠-٢٨) —
                 // **فالحقلُ والفلترُ يختفيان تحت ستّة** (`ClientsScreen`) ويبقيان يحجبان
                 // عملاءَ لا يرى سببَ غيابهم ولا ما يمحوه.
                 if ((merchants?.size ?: 0) <= 5) {
                     query = ""
-                    filter = ClientFilter.All
+                    if (filter != ClientFilter.FollowUp) filter = ClientFilter.All
                 }
                 error = ""
             } catch (e: Exception) {
@@ -472,7 +490,10 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 /** **فلاترُ قائمة العملاء** — الكلُّ · ناقصُه شروط · بلا أصناف · متوقّف. */
-enum class ClientFilter { All, Missing, NoItems, Stopped }
+enum class ClientFilter { All, Missing, NoItems, Stopped, FollowUp }
+
+/** **ترتيبُ «عملائي»** — الأحدث · الأكثر طلبات · الأقلّ نشاطاً. */
+enum class ClientSort { Newest, MostOrders, LeastActive }
 
 /** **الأرقامُ العربيّةُ والفارسيّةُ لاتينيّة**، والحروفُ صغيرة. */
 private fun normalizeQuery(s: String): String = buildString {
