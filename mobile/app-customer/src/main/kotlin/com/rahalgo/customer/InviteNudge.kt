@@ -165,7 +165,8 @@ fun InviteDrawerRow(onOpen: () -> Unit) {
             color = Rahal.colors.accentInk,
             fontWeight = FontWeight.Bold,
             style = Rahal.type.body,
-            maxLines = 1,
+            // **سطران لا نقاط** (الفحصُ البصريّ ٢٠٢٦-١١-١١): على ٣٦٠ كان المبلغُ يُقصّ «اربح ٣٠ …».
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
     }

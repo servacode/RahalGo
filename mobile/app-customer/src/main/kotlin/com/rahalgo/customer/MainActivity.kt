@@ -1551,7 +1551,8 @@ private fun RowScope.Tab(selected: Boolean, onClick: () -> Unit, icon: Int, labe
         onClick = onClick,
         icon = { Icon(painterResource(icon), contentDescription = null) },
         // **سطرٌ واحدٌ دائماً (تدقيق D2)**: «طلب خاص» كانت تنكسر سطرين على ٣٦٠ بخطٍّ مكبَّر.
-        label = { Text(stringResource(label), maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+        // **ويصغر بدل أن يُقصّ** (الفحصُ البصريّ ٢٠٢٦-١١-١١: «طلب خا…» على ٣٦٠ بخطٍّ ١٫٣).
+        label = { com.rahalgo.ui.FitText(stringResource(label), maxLines = 1) },
     )
 }
 

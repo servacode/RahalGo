@@ -273,15 +273,13 @@ private fun DrawerRow(
         IconBox(icon = icon, tint = tint, size = if (compact) 24.dp else 30.dp)
         Spacer(Modifier.size(if (compact) Rahal.space.sm else Rahal.space.md))
         if (compact) {
-            val style = Rahal.type.body.copy(color = labelColor)
-            androidx.compose.foundation.text.BasicText(
+            // **سطران بحجمٍ واحدٍ لكلّ بنود العمودين** (الفحصُ البصريّ ٢٠٢٦-١١-١١): كان سطراً
+            // يصغر حتّى يسع فتفاوتت الأحجام، **و«سياسة الخصوصية» تُقصّ إلى «سياسة»** على ٣٦٠.
+            FitText(
                 text = label,
-                style = style,
-                maxLines = 1,
-                autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(
-                    minFontSize = 10.sp,
-                    maxFontSize = style.fontSize,
-                ),
+                color = labelColor,
+                style = Rahal.type.label,
+                maxLines = 2,
             )
         } else {
             Text(

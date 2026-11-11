@@ -233,19 +233,18 @@ fun TopBar(
                         softWrap = false,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
+                    // **يصغر ولا يُقصّ** (الفحصُ البصريّ ٢٠٢٦-١١-١١: «المنزل» صارت «الم…» على ٣٦٠ بخطٍّ ١٫٣).
+                    FitText(
                         text = addressLabel.ifEmpty {
                             stringResource(R.string.top_pick_address)
                         },
-                        fontWeight = FontWeight.Bold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = Rahal.type.body,
+                        style = Rahal.type.body.copy(fontWeight = FontWeight.Bold),
                     )
                 }
                 // **والسهمُ آخرَ الزرّ** — **وأيقونتان في طرفٍ واحدٍ
-                // تُقرآن زخرفة.**
-                Icon(
+                // تُقرآن زخرفة.** **وفي الضيق يسقط** فيبقى عرضُه للاسم (الإطارُ يقول إنّه زرّ).
+                if (!tight) Icon(
                     painter = painterResource(R.drawable.ic_chevron_down),
                     contentDescription = null,
                     tint = Rahal.colors.brand,

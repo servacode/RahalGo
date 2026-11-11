@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -156,10 +157,17 @@ fun ItemOptionsSheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Rahal.colors.canvas,
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = Rahal.space.xl)) {
+        // **صنفٌ بخياراتٍ يفتح بطول الشاشة** (الفحصُ البصريّ ٢٠٢٦-١١-١١): كانت النافذةُ تُفتح على طول
+        // الهيكل النابض ثمّ تصل الخياراتُ فتطول ولا تعلو — **فيبقى «أضف» تحت حافّة الشاشة.**
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .then(if (item.hasOptions) Modifier.fillMaxHeight() else Modifier)
+                .padding(horizontal = Rahal.space.xl),
+        ) {
             // **ما فوق الزرّ يتمرّر، والزرُّ والعددُ ثابتان تحته** (بلاغُ المالك ٢٠٢٦-١٠-٣١:
             // صنفٌ بخياراتٍ كثيرةٍ كان يدفع «أضف» خارج الشاشة فلا يُطلب).
-            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+            Column(Modifier.weight(1f, fill = item.hasOptions).verticalScroll(rememberScrollState())) {
             // **وصورةُ الصنف عريضةٌ فوق** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — يرى ما يختار له.
             if (media != null && (item.imageThumbUrl ?: item.imageUrl) != null) {
                 // **والصورةُ كاملةً بأبعادها، والنقرُ يفتحها بملء الشاشة** (قرارُ المالك ٢٠٢٦-١٠-٢٩).

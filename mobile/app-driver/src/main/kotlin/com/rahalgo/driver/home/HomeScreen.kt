@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -167,10 +166,11 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
             // **وتحت شريط الحالة لا خلفه** — الشاشة تُرسم من حافة إلى
             // حافة. **وشريط النظام السفليّ يحسبه `Scaffold` مرّة**،
             // فلو أُضيف هنا `safeDrawing` لحُسب مرّتين وارتفع المحتوى.
-            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Rahal.space.lg),
     ) {
+        // **فراغٌ واحدٌ فوق العنوان لا اثنان** (الفحصُ البصريّ ٢٠٢٦-١١-١١): الشريطُ العلويُّ يحسب شريطَ
+        // الحالة، **وحشوتُه هنا مع الفراغ كانا ٤٨ نقطةً فارغةً** — والآن كشاشات الزبون والمتجر.
         Spacer(Modifier.height(Rahal.space.lg))
         // **عنوانُ الشاشة بالدور الواحد** كباقي الشاشات (إعادةُ التصميم ٢٠٢٦-١١-١١).
         com.rahalgo.ui.ScreenTitle(title = stringResource(R.string.login_welcome, me.fullName))

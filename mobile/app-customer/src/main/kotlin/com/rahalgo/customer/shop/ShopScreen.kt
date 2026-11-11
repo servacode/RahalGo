@@ -876,7 +876,16 @@ internal fun ItemCard(
                 itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 // **قطعةُ السعر المشتركة** (ملاحظةُ المالك ٢٠٢٦-١١-١١): الدولارُ عريضٌ والليرةُ بعد «≈» تحته.
-                Column(horizontalAlignment = Alignment.End) {
+                // **وبارتفاع سطرين دائماً** (الفحصُ البصريّ ٢٠٢٦-١١-١١): صنفٌ بالليرة وحدَها كان أقصرَ
+                // من جاره بالدولار فتتفاوت البطاقاتُ في الصفّ الواحد.
+                val twoLines = with(androidx.compose.ui.platform.LocalDensity.current) {
+                    (Rahal.type.label.lineHeight * 2).toDp()
+                }
+                Column(
+                    Modifier.heightIn(min = twoLines),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.Center,
+                ) {
                     com.rahalgo.ui.DualPrice(
                         usd = item.priceUsd,
                         syp = item.price,
@@ -981,6 +990,8 @@ internal fun ItemCard(
                     text = item.name,
                     style = itemStyle,
                     maxLines = 2,
+                    // **وسطران محجوزان دائماً** — اسمٌ قصيرٌ لا يُقصّر بطاقتَه عن جارتها.
+                    minLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 14.sp),
                     modifier = Modifier

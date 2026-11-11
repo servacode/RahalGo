@@ -575,7 +575,7 @@
     <string name="ok_ameen_saved">تم حفظ اختيارك</string>
     <!-- **أسماءٌ قصيرةٌ لأسطر «متجري»** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الطويلةُ تأكل مكانَ القيمة. -->
     <string name="home_row_rate_short">سعر الصرف</string>
-    <string name="home_val_rate">1$ = %1$s ل.س</string>
+    <string name="home_val_rate">⁦$1⁩ = %1$s ل.س</string>
     <string name="home_row_prep">مدة التحضير</string>
     <string name="home_val_point_set">محدّد ✓</string>
     <string name="home_val_cash">نقداً</string>

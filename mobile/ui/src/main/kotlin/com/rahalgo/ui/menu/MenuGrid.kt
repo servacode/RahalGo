@@ -339,7 +339,8 @@ private fun RowScope.ToolChip(icon: Int, label: String, onClick: () -> Unit) {
     ) {
         Icon(painterResource(icon), contentDescription = null, tint = Rahal.colors.brand, modifier = Modifier.size(ToolIcon))
         Spacer(Modifier.height(Rahal.space.xs))
-        Text(
+        // **يصغر ولا تنكسر كلمتُه** (الفحصُ البصريّ ٢٠٢٦-١١-١١: «المشروبا/ت» على ٣٦٠ بخطٍّ ١٫٣).
+        com.rahalgo.ui.FitText(
             label,
             style = Rahal.type.label,
             color = Rahal.colors.ink,
