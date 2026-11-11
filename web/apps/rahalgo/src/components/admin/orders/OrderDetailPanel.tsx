@@ -107,6 +107,9 @@ interface Item {
   note: string;
   options: { group: string; name: string; price_delta: number }[];
   drink_for?: string | null;
+  /** **صورةُ الصنف لحظةَ الطلب** (٢٠٢٦-١١-١٢). */
+  image_url?: string | null;
+  image_thumb_url?: string | null;
 }
 
 interface OrderFile {

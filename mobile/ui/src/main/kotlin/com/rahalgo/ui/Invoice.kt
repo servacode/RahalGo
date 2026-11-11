@@ -1,14 +1,21 @@
 package com.rahalgo.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -50,6 +57,12 @@ data class InvoiceLine(
      * تتحمّله. يُعرض مشطوباً بكلمته، **ولا يُدمج مشروبٌ مرتجعٌ مع غير المرتجع.**
      */
     val returned: Boolean = false,
+    /**
+     * **صورةُ الصنف لحظةَ الطلب** (قرارُ المالك ٢٠٢٦-١١-١٢) — الكابتنُ يرى القميصَ ولونَه لا اسمَه
+     * وحدَه. مساراتٌ نسبيّةٌ من المحرّك (`/media/...`)، و`null` لطلبٍ قديمٍ أو صنفٍ بلا صورة.
+     */
+    val imageUrl: String? = null,
+    val thumbUrl: String? = null,
 )
 
 private val weightWord = Regex("كيلو|كغ|غرام|(^|\\s|[0-9٠-٩])غ$")
@@ -137,31 +150,76 @@ fun OrderLine.toInvoiceLine(): InvoiceLine = InvoiceLine(
     qty = qty,
     options = options.map { it.group to it.name },
     returned = returned,
+    imageUrl = imageUrl,
+    thumbUrl = imageThumbUrl,
 )
+
+/**
+ * **الخياراتُ بمجموعاتها تحت الاسم** (قرارُ المالك ٢٠٢٦-١١-١٢) — «المقاس: 42 · اللون: أسود».
+ * **ما لا مجموعةَ له لا يُكتب هنا** (يبقى في نصّ السطر)، وفراغُها يعني لا سطر.
+ */
+fun invoiceOptionsLabel(options: List<Pair<String, String>>): String =
+    options
+        .filter { it.first.isNotBlank() && it.second.isNotBlank() }
+        .joinToString(" · ") { it.first.trim() + ": " + it.second.trim() }
+
+/** **عنوانٌ كاملٌ لصورةٍ يرسلها المحرّكُ نسبيّةً** — من نواة التطبيق، وكما هي إن لم تُركَّب. */
+private fun lineMedia(path: String?): String? =
+    runCatching { AppCore.get().media(path) }.getOrNull() ?: path
+
+/**
+ * **مربّعُ صورة الصنف على سطر الطلب** — مصغّرةٌ صغيرة، **ولمسةٌ عليها تفتحها بملء الشاشة**
+ * (`ImageViewer`). واحدٌ للزبون والسائق والمتجر.
+ */
+@Composable
+fun OrderLineThumb(imageUrl: String?, thumbUrl: String?, name: String, modifier: Modifier = Modifier) {
+    val full = lineMedia(imageUrl ?: thumbUrl) ?: return
+    val small = lineMedia(thumbUrl ?: imageUrl)
+    var open by remember { mutableStateOf(false) }
+    val label = stringResource(R.string.inv_line_photo)
+    RemoteImage(
+        url = small,
+        name = name,
+        modifier = modifier
+            .size(Rahal.size.thumb)
+            .clip(Rahal.shape.sm)
+            .clickable(onClickLabel = label) { open = true },
+    )
+    if (open) ImageViewer(url = full, onClose = { open = false })
+}
 
 /** **أسطرُ الأصناف** — كلٌّ في سطرٍ: النصُّ في البداية والمبلغُ في النهاية. */
 @Composable
 fun InvoiceLines(lines: List<InvoiceLine>, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
         invoiceOrder(lines).forEach { l ->
-            Column(Modifier.fillMaxWidth()) {
-                // **المرتجعُ باهتٌ مشطوبٌ كما في الويب** (`InvoiceLines.tsx`): يُشطب النصُّ وحدَه لا المبلغ.
-                InvoiceRow(l.text, l.amount?.let { money(it) }, bold = !l.returned, strikethrough = l.returned)
-                // **ما رجّعه الزبونُ يُقال بكلمته** — لا يُقرأ صنفاً مجّانيّاً. وكلمتُه عريضةٌ بلون الخطر كالويب.
-                if (l.returned) {
-                    Text(
-                        stringResource(R.string.inv_returned),
-                        color = Rahal.colors.danger,
-                        fontWeight = FontWeight.Bold,
-                        style = Rahal.type.caption,
-                    )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                if (l.imageUrl != null || l.thumbUrl != null) {
+                    OrderLineThumb(l.imageUrl, l.thumbUrl, l.name)
                 }
-                if (l.note.isNotBlank()) {
-                    Text(
-                        l.note,
-                        color = Rahal.colors.inkMuted,
-                        style = Rahal.type.caption,
-                    )
+                Column(Modifier.weight(1f)) {
+                    // **المرتجعُ باهتٌ مشطوبٌ كما في الويب** (`InvoiceLines.tsx`): يُشطب النصُّ وحدَه لا المبلغ.
+                    InvoiceRow(l.text, l.amount?.let { money(it) }, bold = !l.returned, strikethrough = l.returned)
+                    // **ما رجّعه الزبونُ يُقال بكلمته** — لا يُقرأ صنفاً مجّانيّاً. وكلمتُه عريضةٌ بلون الخطر كالويب.
+                    if (l.returned) {
+                        Text(
+                            stringResource(R.string.inv_returned),
+                            color = Rahal.colors.danger,
+                            fontWeight = FontWeight.Bold,
+                            style = Rahal.type.caption,
+                        )
+                    }
+                    // **وما اختاره بمجموعته** — «المقاس: 42 · اللون: أسود» (لا يغني عنه نصُّ السطر المختصر).
+                    invoiceOptionsLabel(l.options).takeIf { it.isNotEmpty() && l.drinkFor == null }?.let {
+                        Text(it, color = Rahal.colors.ink, style = Rahal.type.caption)
+                    }
+                    if (l.note.isNotBlank()) {
+                        Text(
+                            l.note,
+                            color = Rahal.colors.inkMuted,
+                            style = Rahal.type.caption,
+                        )
+                    }
                 }
             }
         }

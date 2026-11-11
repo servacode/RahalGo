@@ -16,7 +16,7 @@
 
 import { useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
-import { Badge, Button, FormActions, IconStore, Input, Select } from "@rahalgo/ui";
+import { Badge, Button, FormActions, IconStore, Input, OrderLineThumb, Select } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Box, MapLink, PartyLine, type OrderPart } from "./CardSections";
@@ -185,7 +185,9 @@ function PartBox({
           <span className="text-xs font-bold text-ink-muted">{dead ? P.removedLines : P.lines}</span>
           {items.length === 0 && <span className="text-xs text-ink-muted">{P.noLines}</span>}
           {items.map((it, i) => (
-            <span key={`${it.name}-${i}`} className={`flex flex-col ${dead ? "text-ink-muted line-through" : ""}`}>
+            <span key={`${it.name}-${i}`} className={`flex items-start gap-2 ${dead ? "text-ink-muted line-through" : ""}`}>
+              <OrderLineThumb image={it.image_url} thumb={it.image_thumb_url} name={it.name} />
+              <span className="flex min-w-0 flex-1 flex-col">
               <span className="flex items-center justify-between gap-2">
                 <span className="min-w-0 break-words">
                   {it.name}
@@ -195,6 +197,7 @@ function PartBox({
               </span>
               {it.options && <span className="text-xs text-ink-muted">{it.options}</span>}
               {it.note && <span className="text-xs text-accent-dark">{it.note}</span>}
+              </span>
             </span>
           ))}
         </div>

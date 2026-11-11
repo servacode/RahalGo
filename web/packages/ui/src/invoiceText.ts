@@ -23,6 +23,20 @@ export interface InvoiceLineItem {
   merged_ids?: string[];
   /** **رجّعه الزبونُ بعد الاستلام** (٢٠٢٦-١١-٠٣) — سعرُه صفر، ولا يُدمج مع غير المرتجع. */
   returned?: boolean;
+  /** **صورةُ الصنف لحظةَ الطلب** (٢٠٢٦-١١-١٢) — مسارٌ نسبيٌّ من المحرّك، وغائبةٌ لطلبٍ قديم. */
+  image_url?: string | null;
+  image_thumb_url?: string | null;
+}
+
+/**
+ * **الخياراتُ بمجموعاتها تحت الاسم** (قرارُ المالك ٢٠٢٦-١١-١٢) — «المقاس: 42 · اللون: أسود».
+ * **ما لا مجموعةَ له لا يُكتب هنا** (يبقى في نصّ السطر)، وفراغُها يعني لا سطر.
+ */
+export function invoiceOptionsLabel(options?: { group?: string; name: string }[] | null): string {
+  return (options ?? [])
+    .filter((o) => (o.group ?? "").trim() !== "" && (o.name ?? "").trim() !== "")
+    .map((o) => `${(o.group ?? "").trim()}: ${o.name.trim()}`)
+    .join(" · ");
 }
 
 const WEIGHT = /كيلو|كغ|غرام|(^|\s|[0-9٠-٩])غ$/;

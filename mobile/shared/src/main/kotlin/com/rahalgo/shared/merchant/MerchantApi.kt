@@ -658,6 +658,9 @@ data class OrderLine(
     @SerialName("drink_for") val drinkFor: String? = null,
     /** **رجّعه الزبونُ بعد الاستلام** (٢٠٢٦-١١-٠٣) — وحقُّ المتجر فيه باقٍ. */
     val returned: Boolean = false,
+    /** **صورةُ الصنف لحظةَ الطلب** (٢٠٢٦-١١-١٢) — وفارغةٌ لطلبٍ قديم. */
+    @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
 )
 
 @Serializable

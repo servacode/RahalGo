@@ -93,7 +93,7 @@ export { WalletPage } from "./WalletPage";
 export { AddressBook, type SavedAddress } from "./AddressBook";
 export { Invoice, type InvoiceOrder, type InvoiceItem } from "./Invoice";
 /** **سطرُ الفاتورة بشكلٍ واحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */
-export { InvoiceLines, invoiceLineText, invoiceOrder, type InvoiceLineItem } from "./InvoiceLines";
+export { InvoiceLines, OrderLineThumb, invoiceLineText, invoiceOptionsLabel, invoiceOrder, type InvoiceLineItem } from "./InvoiceLines";
 export {
   MenuManager,
   ItemModal as MenuItemEditor,

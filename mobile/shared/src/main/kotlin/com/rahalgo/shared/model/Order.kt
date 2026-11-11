@@ -362,6 +362,9 @@ data class DriverItem(
     @SerialName("option_list") val optionList: List<DriverOption> = emptyList(),
     /** **رجّعه الزبونُ بعد الاستلام** (٢٠٢٦-١١-٠٣) — لا يُقبض ثمنُه. */
     val returned: Boolean = false,
+    /** **صورةُ الصنف لحظةَ الطلب** (٢٠٢٦-١١-١٢) — مسارٌ نسبيٌّ من المحرّك، وفارغٌ لطلبٍ قديم. */
+    @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
 )
 
 /** **خيارٌ بمجموعته** — «النمرة» و«40». */

@@ -51,6 +51,9 @@ export interface OrderLine {
   unit_price: number;
   note: string;
   options: OrderOption[];
+  /** **صورةُ الصنف لحظةَ الطلب** (٢٠٢٦-١١-١٢) — وغائبةٌ لطلبٍ قديم. */
+  image_url?: string | null;
+  image_thumb_url?: string | null;
 }
 
 export interface MerchantOrder {

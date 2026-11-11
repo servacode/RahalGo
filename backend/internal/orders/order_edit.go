@@ -383,9 +383,11 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 				if _, err := tx.Exec(ctx, `
 					INSERT INTO order_items (order_id, menu_item_id, name, unit_price, merchant_price,
 					                         merchant_id, qty, note, options, merchant_settlement_method,
-					                         offer_cut, offer_borne_by, returned, drink_for, drink_option_id)
+					                         offer_cut, offer_borne_by, returned, drink_for, drink_option_id,
+					                         image_media_id)
 					SELECT order_id, menu_item_id, name, 0, merchant_price, merchant_id, $2, note, options,
-					       merchant_settlement_method, 0, offer_borne_by, true, drink_for, drink_option_id
+					       merchant_settlement_method, 0, offer_borne_by, true, drink_for, drink_option_id,
+					       image_media_id
 					FROM order_items WHERE id = $1`, r.id, back); err != nil {
 					return nil, res, err
 				}
@@ -442,11 +444,12 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO order_items (order_id, menu_item_id, name, unit_price,
 				                         merchant_price, merchant_id, qty, note, options,
-				                         merchant_settlement_method, offer_cut, offer_borne_by)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, '', $8, $9, $10, NULLIF($11,''))`,
+				                         merchant_settlement_method, offer_cut, offer_borne_by,
+				                         image_media_id)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, '', $8, $9, $10, NULLIF($11,''), $12::uuid)`,
 				orderID, it.MenuItemID, it.Name, it.UnitPrice, it.MerchantPrice,
 				it.MerchantID, it.Qty, marshalOptions(it.Options), method,
-				it.OfferCut, it.OfferBorneBy); err != nil {
+				it.OfferCut, it.OfferBorneBy, it.ImageMediaID); err != nil {
 				return nil, res, err
 			}
 			touched[it.MerchantID] = true

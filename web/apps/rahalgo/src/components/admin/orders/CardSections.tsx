@@ -33,6 +33,9 @@ export interface PartItem {
   merchant_price: number;
   options?: string;
   note?: string;
+  /** **صورةُ الصنف لحظةَ الطلب** (٢٠٢٦-١١-١٢) — وغائبةٌ لطلبٍ قديم. */
+  image_url?: string | null;
+  image_thumb_url?: string | null;
 }
 
 /**

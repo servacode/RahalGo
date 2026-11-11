@@ -151,6 +151,13 @@ type OrderItem struct {
 	Qty        int              `json:"qty"`
 	Note       string           `json:"note"`
 	Options    []OptionSnapshot `json:"options"`
+	// ImageMediaID **صورةُ الصنف لحظةَ الطلب** (قرارُ المالك ٢٠٢٦-١١-١٢) — لقطةٌ لا
+	// قراءةٌ لاحقة: تبديلُ المتجر لصورة الصنف بعدها لا يغيّر ما طُلب. لا تصل أحداً.
+	ImageMediaID *string `json:"-"`
+	// ImageURL و ImageThumbURL **رابطا الصورة والمصغّرة** على السطر — للزبون والسائق
+	// والمتجر والمكتب. **غيابُهما = طلبٌ قديمٌ أو صنفٌ بلا صورة.**
+	ImageURL      *string `json:"image_url,omitempty"`
+	ImageThumbURL *string `json:"image_thumb_url,omitempty"`
 	// OfferCut و OfferBorneBy **خصمُ العرض على الوحدة ومن يتحمّله** — لقطةٌ
 	// تُكتب مع البند ولا تصل الزبون.
 	OfferCut     int64  `json:"-"`

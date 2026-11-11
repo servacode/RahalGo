@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
+	"github.com/servacode/rahalgo/backend/internal/media"
 )
 
 // OpsPartItem **بندُ قسمٍ كما يراه المكتب.**
@@ -29,6 +30,9 @@ type OpsPartItem struct {
 	MerchantPrice int64  `json:"merchant_price"`
 	Options       string `json:"options"`
 	Note          string `json:"note"`
+	// ImageURL و ImageThumbURL **صورةُ الصنف لحظةَ الطلب** (٢٠٢٦-١١-١٢).
+	ImageURL      *string `json:"image_url,omitempty"`
+	ImageThumbURL *string `json:"image_thumb_url,omitempty"`
 }
 
 // OpsPart **قسمُ متجرٍ في حمولة المكتب** — العقدُ §2.
@@ -172,8 +176,8 @@ func (s *Service) fillPartPayloads(ctx context.Context, q dbtx.Querier, list []*
 	// **بنودُ كلّ متجرٍ الحيّة** — بسعري البيع والشراء.
 	irows, err := q.Query(ctx, `
 		SELECT oi.order_id::text, oi.merchant_id::text, oi.name, oi.qty, oi.unit_price, oi.merchant_price,
-		       oi.note, oi.options
-		FROM order_items oi
+		       oi.note, oi.options, lim.path, lim.thumb_path
+		FROM order_items oi LEFT JOIN media lim ON lim.id = oi.image_media_id
 		WHERE oi.order_id = ANY($1::uuid[]) AND oi.merchant_id IS NOT NULL
 		ORDER BY oi.drink_for NULLS FIRST, oi.name, oi.id`, ids)
 	if err != nil {
@@ -184,13 +188,16 @@ func (s *Service) fillPartPayloads(ctx context.Context, q dbtx.Querier, list []*
 		var oid, mid string
 		var it OpsPartItem
 		var opts []byte
-		if err := irows.Scan(&oid, &mid, &it.Name, &it.Qty, &it.UnitPrice, &it.MerchantPrice, &it.Note, &opts); err != nil {
+		if err := irows.Scan(&oid, &mid, &it.Name, &it.Qty, &it.UnitPrice, &it.MerchantPrice, &it.Note, &opts,
+			&it.ImageURL, &it.ImageThumbURL); err != nil {
 			irows.Close()
 			return err
 		}
 		var os []OptionSnapshot
 		_ = json.Unmarshal(opts, &os)
 		it.Options = optionsLabel(os)
+		it.ImageURL = media.URLForPtr(it.ImageURL)
+		it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 		k := oid + "|" + strings.ToLower(mid)
 		live[k] = append(live[k], it)
 	}
