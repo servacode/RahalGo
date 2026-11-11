@@ -33,8 +33,8 @@
     "setting_defs": 285,
     "behaviour_settings": 240,
     "order_fields": 147,
-    "test_files": 836,
-    "test_funcs": 3203
+    "test_files": 837,
+    "test_funcs": 3207
   },
   "flows": [
     {
@@ -18596,6 +18596,30 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestEXTNAME_001_StoreNameRequired",
+      "file": "internal/qa/ext_store_name_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestEXTNAME_002_DriverSeesStoreName",
+      "file": "internal/qa/ext_store_name_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestEXTNAME_003_DriverSeesStorePoint",
+      "file": "internal/qa/ext_store_name_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD_DriverSeesNonPartnerShop",
+      "file": "internal/qa/ext_store_name_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestEXTSTORE_001_EachAllowedStatusConverts",

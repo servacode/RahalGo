@@ -3557,21 +3557,21 @@ function OrderActions({
               height="h-52"
               api={<T,>(path: string) => api<T>(path)}
             />
-            <button
-              type="button"
-              className="text-xs text-danger underline"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => {
                 setExtMap(false);
                 setExtPoint(null);
               }}
             >
               {m.admin.ordersPage.extStorePointClear}
-            </button>
+            </Button>
           </div>
         ) : (
-          <button type="button" className="text-xs text-brand underline" onClick={() => setExtMap(true)}>
+          <Button variant="secondary" size="sm" onClick={() => setExtMap(true)}>
             {m.admin.ordersPage.extStorePointAdd}
-          </button>
+          </Button>
         )}
         <Textarea
           id={`ext-store-${o.id}`}
