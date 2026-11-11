@@ -3,6 +3,7 @@
 import { amountText } from "@/lib/store/deliveries";
 import { fmtUsd } from "@rahalgo/i18n";
 import { useCallback, useEffect, useState, useRef } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -111,6 +112,8 @@ import {
   type NewOrder,
 } from "./BoardWidgets";
 import { PartsSection } from "./PartsBoxes";
+
+const ExtPickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), { ssr: false });
 import { SHAMCASH_LABEL, shamcashText, type ShamcashBoard } from "./ShamcashLine";
 import { CustomPhotoGrid } from "@/components/CustomPhotos";
 
@@ -3118,6 +3121,11 @@ function OrderActions({
    * بسببٍ إلزاميّ، **والخادمُ يحرس الشروطَ والمال** (`orders/external_store.go`).
    */
   const [extStoring, setExtStoring] = useState(false);
+  const [extName, setExtName] = useState("");
+  const [extPhone, setExtPhone] = useState("");
+  const [extAddress, setExtAddress] = useState("");
+  const [extPoint, setExtPoint] = useState<{ lat: number; lng: number } | null>(null);
+  const [extMap, setExtMap] = useState(false);
   /**
    * **«تعديل الطلب»** (قرارُ المالك ٢٠٢٦-١١-٠٣) — الطلبُ العاديُّ لحتّى التسليم: كمّيّةٌ وحذفٌ
    * وإضافةٌ وسعر، بسببٍ إجباريّ ومعاينةٍ يحسبها الخادم. انظر `OrderEditor.tsx`.
@@ -3372,14 +3380,30 @@ function OrderActions({
       setErr(BOARD.reasonMissing);
       return;
     }
+    if (extName.trim() === "") {
+      setErr(m.admin.ordersPage.extStoreNameMissing);
+      return;
+    }
     setBusy("ext-store");
     setErr("");
     try {
       await api(`/api/v1/admin/orders/${o.id}/external-store`, {
         method: "POST",
-        body: JSON.stringify({ reason: reason.trim() }),
+        body: JSON.stringify({
+          reason: reason.trim(),
+          store_name: extName.trim(),
+          store_phone: extPhone.trim() || undefined,
+          store_address: extAddress.trim() || undefined,
+          lat: extPoint?.lat,
+          lng: extPoint?.lng,
+        }),
       });
       setExtStoring(false);
+      setExtName("");
+      setExtPhone("");
+      setExtAddress("");
+      setExtPoint(null);
+      setExtMap(false);
       setReason("");
       setNotice(m.admin.ordersPage.extStoreDone);
       onChanged();
@@ -3495,9 +3519,62 @@ function OrderActions({
         <p className="text-xs text-ink-muted">
           {m.admin.ordersPage.extStoreHint}
         </p>
+        <Input
+          id={`ext-store-name-${o.id}`}
+          autoFocus
+          maxLength={80}
+          value={extName}
+          onChange={(e) => {
+            setExtName(e.target.value);
+            setErr("");
+          }}
+          placeholder={m.admin.ordersPage.extStoreName}
+        />
+        <Input
+          id={`ext-store-phone-${o.id}`}
+          type="tel"
+          inputMode="tel"
+          dir="ltr"
+          maxLength={32}
+          value={extPhone}
+          onChange={(e) => setExtPhone(e.target.value)}
+          placeholder={m.admin.ordersPage.extStorePhone}
+        />
+        <Input
+          id={`ext-store-address-${o.id}`}
+          maxLength={200}
+          value={extAddress}
+          onChange={(e) => setExtAddress(e.target.value)}
+          placeholder={m.admin.ordersPage.extStoreAddress}
+        />
+        {extMap ? (
+          <div className="space-y-1">
+            <p className="text-xs text-ink-muted">{m.admin.ordersPage.extStorePointHint}</p>
+            <ExtPickMap
+              lat={extPoint?.lat ?? null}
+              lng={extPoint?.lng ?? null}
+              onPick={(la, ln) => setExtPoint({ lat: la, lng: ln })}
+              height="h-52"
+              api={<T,>(path: string) => api<T>(path)}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setExtMap(false);
+                setExtPoint(null);
+              }}
+            >
+              {m.admin.ordersPage.extStorePointClear}
+            </Button>
+          </div>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={() => setExtMap(true)}>
+            {m.admin.ordersPage.extStorePointAdd}
+          </Button>
+        )}
         <Textarea
           id={`ext-store-${o.id}`}
-          autoFocus
           autoGrow
           rows={2}
           value={reason}
@@ -3513,6 +3590,8 @@ function OrderActions({
           onSave={() => void submitExtStore()}
           onCancel={() => {
             setExtStoring(false);
+            setExtMap(false);
+            setExtPoint(null);
             setReason("");
             setErr("");
           }}

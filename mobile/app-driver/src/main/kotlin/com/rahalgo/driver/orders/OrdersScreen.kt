@@ -537,8 +537,11 @@ private fun OrderCard(
         // **ولا سطرَ إلى متجرٍ لا وجودَ له** — الخاصُّ لا مصدرَ له حتّى
         // يقوله الزبون. **وكان يُكتب «المسافة إلى (طلب خاصّ)» بلا مسافةٍ
         // ولا عنوان** — سطرٌ يشغل مكاناً ولا يقول شيئا.
-        if (!custom || amanahPoint) Leg(
-            label = stringResource(
+        val outsideShop = custom && com.rahalgo.driver.trip.isOutsideShop(order)
+        if (!custom || amanahPoint || outsideShop) Leg(
+            label = if (outsideShop) {
+                stringResource(R.string.card_buy_from, com.rahalgo.driver.Bidi.isolate(order.merchantName))
+            } else stringResource(
                 R.string.card_dist_to,
                 if (amanahPoint) stringResource(R.string.amanah_place)
                 else com.rahalgo.driver.Bidi.isolate(order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) }),

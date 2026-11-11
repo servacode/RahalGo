@@ -13,6 +13,8 @@ import (
 	"context"
 	"net/http"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 // atPickupRipeSilence **إسنادٌ مباشر، السائقُ عند المتجر، ومهلةُ الصمت منقضية** — الحالُ التي
@@ -111,7 +113,8 @@ func TestTransferAtPickupNotReclaimed(t *testing.T) {
 func TestExternalStoreAtPickupNotReclaimed(t *testing.T) {
 	f, orderID, first, ops := atPickupRipeSilence(t)
 	_, ch, err := f.srv.orders.ConvertToExternalStore(context.Background(), ops, orderID,
-		"المتجرُ مغلق والزبونُ يريده من غيره", nil)
+		"المتجرُ مغلق والزبونُ يريده من غيره",
+		orders.ExtStoreTarget{Name: "متجر الاختبار"}, nil)
 	if err != nil {
 		t.Fatalf("القلب: %v", err)
 	}

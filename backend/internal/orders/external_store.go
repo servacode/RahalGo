@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -53,6 +54,21 @@ var extStoreStatuses = map[string]bool{
 	StAccepted: true, StPreparing: true, StDispatching: true, StAssigned: true, StAtPickup: true,
 }
 
+// ExtStoreTarget **أين يشتري السائقُ** (قرارُ المالك ٢٠٢٦-١١-١٢: «طلب المشتريات لازم ينذكر اسم
+// المتجر ليعرف مين المتجر الي لازم نشتري منه»).
+//
+// **الاسمُ إلزاميّ**، والباقي اختياريّ: هاتفٌ (زرُّ اتّصال)، وعنوانٌ مكتوب، ونقطةٌ على الخريطة
+// (زرُّ ملاحة). **وتُكتب في حقول الاستلام نفسِها التي يقرؤها السائقُ في طلب الواتساب**
+// (`pickup_name` · `pickup_phone` · `pickup_address` · `pickup_override`) — فلا عمودَ جديد
+// ولا قارئَ جديد.
+type ExtStoreTarget struct {
+	Name    string
+	Phone   string
+	Address string
+	Lat     *float64
+	Lng     *float64
+}
+
 // ExtStoreChange **ما وقع في القلب** — للتدقيق.
 type ExtStoreChange struct {
 	FromMerchantID   string `json:"from_merchant_id"`
@@ -62,6 +78,10 @@ type ExtStoreChange struct {
 	FromStatus string            `json:"from_status"`
 	ToStatus   string            `json:"to_status"`
 	Reason     string            `json:"reason"`
+	// StoreName **المتجرُ الذي يشتري منه السائق.**
+	StoreName string `json:"store_name"`
+	// HasPoint **أحُدِّدت نقطتُه على الخريطة.**
+	HasPoint bool `json:"has_point"`
 	// ReleasedPromo **الكودُ الذي عاد للزبون** — فراغٌ إن لم يكن.
 	ReleasedPromo string `json:"released_promo"`
 	// FeeSnapshot **الأجرةُ التي ثبّتتها المنصّة** — أجرةُ الطلب الأصليّة كاملةً.
@@ -74,7 +94,7 @@ type ExtStoreChange struct {
 //
 // **والتدقيقُ في المعاملة نفسِها** (`hook`) — قلبٌ بلا أثرٍ لا يقع، وأثرٌ بلا قلبٍ لا يُكتب.
 func (s *Service) ConvertToExternalStore(ctx context.Context, actorID, orderID, reason string,
-	hook func(context.Context, dbtx.Querier, ExtStoreChange) error) (*Order, ExtStoreChange, error) {
+	store ExtStoreTarget, hook func(context.Context, dbtx.Querier, ExtStoreChange) error) (*Order, ExtStoreChange, error) {
 	var ch ExtStoreChange
 	if _, err := uuid.Parse(orderID); err != nil {
 		return nil, ch, httpx.ErrNotFound
@@ -84,6 +104,15 @@ func (s *Service) ConvertToExternalStore(ctx context.Context, actorID, orderID, 
 		return nil, ch, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
 	ch.Reason = reason
+	store.Name = strings.TrimSpace(store.Name)
+	store.Phone = strings.TrimSpace(store.Phone)
+	store.Address = strings.TrimSpace(store.Address)
+	if store.Name == "" || utf8.RuneCountInString(store.Name) > 80 ||
+		utf8.RuneCountInString(store.Phone) > 32 || utf8.RuneCountInString(store.Address) > 200 ||
+		(store.Lat == nil) != (store.Lng == nil) {
+		return nil, ch, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+	}
+	ch.StoreName = store.Name
 
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -136,6 +165,19 @@ func (s *Service) ConvertToExternalStore(ctx context.Context, actorID, orderID, 
 		return nil, ch, err
 	} else if left {
 		return nil, ch, ErrExtStoreAfterPickup
+	}
+	// **نقطةُ المتجر — تُفحص كنقطة التسليم** (صحّةٌ ثمّ محافظةٌ ثمّ تغطية) وفي المعاملة نفسِها.
+	if store.Lat != nil {
+		if !ValidPoint(*store.Lat, *store.Lng) {
+			return nil, ch, ErrBadPoint
+		}
+		if err := s.requirePlaceLaunched(ctx, tx, *store.Lat, *store.Lng); err != nil {
+			return nil, ch, err
+		}
+		if _, err := s.RequireServiceable(ctx, tx, *store.Lat, *store.Lng); err != nil {
+			return nil, ch, err
+		}
+		ch.HasPoint = true
 	}
 	ch.FromMerchantID, ch.FromMerchantName, ch.FromStatus = merchantID, merchantName, status
 
@@ -212,14 +254,18 @@ func (s *Service) ConvertToExternalStore(ctx context.Context, actorID, orderID, 
 		       custom_driver_may_change_fee = false,
 		       door_instruction = '', door_instruction_note = '', door_instruction_at = NULL,
 		       sent_to_merchant_at = NULL, prep_minutes = NULL, ready_at = NULL,
-		       pickup_override = NULL, pickup_override_note = '',
+		       pickup_name = $7, pickup_phone = NULLIF($8, ''), pickup_address = NULLIF($9, ''),
+		       pickup_override = CASE WHEN $10::float8 IS NULL OR $11::float8 IS NULL THEN NULL
+		            ELSE ST_SetSRID(ST_MakePoint($11, $10), 4326)::geography END,
+		       pickup_override_note = '',
 		       offer_expires_at = CASE WHEN status = 'at_pickup' THEN NULL ELSE offer_expires_at END,
 		       status = $6,
 		       dispatched_at = CASE WHEN $6 = 'dispatching' AND status <> 'dispatching'
 		                            THEN now() ELSE dispatched_at END,
 		       updated_at = now()
 		 WHERE id = $1`,
-		orderID, request, actorID, reason, ch.FeeSnapshot, to); err != nil {
+		orderID, request, actorID, reason, ch.FeeSnapshot, to,
+		store.Name, store.Phone, store.Address, store.Lat, store.Lng); err != nil {
 		return nil, ch, err
 	}
 
@@ -233,7 +279,7 @@ func (s *Service) ConvertToExternalStore(ctx context.Context, actorID, orderID, 
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note)
 		VALUES ($1, $2, $2, $3, $4)`,
-		orderID, to, actorID, "من متجرٍ غير تابع لنا — "+reason); err != nil {
+		orderID, to, actorID, "من متجرٍ غير تابع لنا — "+reason+" ("+store.Name+")"); err != nil {
 		return nil, ch, err
 	}
 
