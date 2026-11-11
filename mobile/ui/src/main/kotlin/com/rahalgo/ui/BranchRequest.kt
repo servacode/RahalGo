@@ -13,6 +13,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -50,9 +54,14 @@ open class BranchViewModel(app: Application, rep: Boolean) : AndroidViewModel(ap
     var error by mutableStateOf("")
         private set
 
-    /** **أُرسل الطلبُ للتوّ** — تُعرض رسالةُ التأكيد. */
+    /** **أُرسل الطلبُ للتوّ** — تُعرض رسالةُ التأكيد ويُمرَّر إلى «طلباتي». */
     var sent by mutableStateOf(false)
         private set
+
+    /** **عُرضت الرسالةُ ومُرّر** — فلا تتكرّر عند العودة إلى الشاشة. */
+    fun ackSent() {
+        sent = false
+    }
 
     var name by mutableStateOf("")
     var phone by mutableStateOf("")
@@ -104,8 +113,9 @@ open class BranchViewModel(app: Application, rep: Boolean) : AndroidViewModel(ap
                 phone = ""
                 lat = null
                 lng = null
-                sent = true
+                // **والقائمةُ تُجلب قبل الإعلان** — فيجد التمريرُ الطلبَ الجديد في «طلباتي».
                 runCatching { items = api.list(parentId) }
+                sent = true
             }.onFailure { error = err(it) }
             busy = false
         }
@@ -127,12 +137,24 @@ fun BranchRequestScreen(
     LaunchedEffect(parentId) { vm.load(parentId) }
     val needName = stringResource(R.string.branch_need_name)
     val needPoint = stringResource(R.string.branch_need_point)
+    val sentText = stringResource(R.string.branch_sent)
+    val scroll = rememberScrollState()
+
+    // **أُرسل الطلب** (قرارُ المالك ٢٠٢٦-١١-١١): رسالةٌ فوريّةٌ فوق الشاشة — كانت تحت الخريطة لا يراها أحد —
+    // ثمّ تمريرٌ إلى «طلباتي» حيث يظهر الطلبُ الجديد.
+    var mineTop by remember { mutableIntStateOf(0) }
+    LaunchedEffect(vm.sent) {
+        if (!vm.sent) return@LaunchedEffect
+        Flash.ok(sentText)
+        scroll.animateScrollTo(mineTop)
+        vm.ackSent()
+    }
 
     Column(Modifier.fillMaxSize()) {
         Column(
             Modifier
                 .weight(1f)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
                 .padding(horizontal = Rahal.space.gutter),
         ) {
             PageHeader(title = stringResource(R.string.branch_title), onBack = onBack)
@@ -161,12 +183,11 @@ fun BranchRequestScreen(
                 Spacer(Modifier.height(Rahal.space.md))
                 Note(vm.error, Rahal.colors.danger)
             }
-            if (vm.sent) {
-                Spacer(Modifier.height(Rahal.space.md))
-                Note(stringResource(R.string.branch_sent), Rahal.colors.success)
-            }
 
-            SectionHeader(stringResource(R.string.branch_mine))
+            SectionHeader(
+                title = stringResource(R.string.branch_mine),
+                modifier = Modifier.onGloballyPositioned { mineTop = it.positionInParent().y.toInt() },
+            )
             if (vm.items.isEmpty() && !vm.loading) {
                 EmptyState(title = stringResource(R.string.branch_none))
             }

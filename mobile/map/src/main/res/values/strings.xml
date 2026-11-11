@@ -38,6 +38,7 @@
     <string name="pick_wait_accuracy">يظهر زر التأكيد عندما تصبح الدقة 15 متراً أو أقل — أو حرّك الدبوس بيدك إلى مكانك</string>
     <string name="pick_choose_first">اضغط «موقعي» أو حرّك الدبوس بيدك إلى مكانك الصحيح</string>
     <!-- **بطاقةُ الخريطة الصغيرة** — للمتجر والمندوب (٢٠٢٦-١٠-٢٩). -->
+    <string name="map_tap_to_move">اضغط لتحريك الخريطة</string>
     <string name="map_drag_to_set">حرّك الخريطة حتى يصبح الدبوس فوق المتجر</string>
     <string name="map_point_chosen">تم اختيار موقع جديد، ولم يُحفظ بعد</string>
     <string name="map_locating">جارٍ تحديد موقعك…</string>

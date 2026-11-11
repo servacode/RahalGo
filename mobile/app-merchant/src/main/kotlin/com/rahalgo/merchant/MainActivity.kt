@@ -688,6 +688,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                             pointCard = { la, ln, enabled, onPoint ->
                                 com.rahalgo.map.PointMapCard(
                                     lat = la, lng = ln, pending = false, enabled = enabled, onPoint = onPoint,
+                                    tapToActivate = true,
                                 )
                             },
                         )

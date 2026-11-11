@@ -96,7 +96,8 @@ func (s *Server) handleAdminGovernorates(w http.ResponseWriter, r *http.Request)
 func (s *Server) listGovernorates(w http.ResponseWriter, r *http.Request, liveOnly bool) {
 	where := ""
 	if liveOnly {
-		where = ` WHERE g.active`
+		// **ومحافظةٌ بلا منطقةٍ فعّالةٍ لا تُعرض** — لا يُختار منها شيء (المندوب: «الرقة وحدها شغّالة»).
+		where = ` WHERE g.active AND EXISTS (SELECT 1 FROM districts ad WHERE ad.governorate_id = g.id AND ad.active)`
 	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT g.id::text, g.name, g.active, g.sort_order,

@@ -181,6 +181,11 @@ fun ClientDetail(
             }
             // **وما ينقصه ليُحسب — شريطٌ بنبرةٍ واضحة** (٢٠٢٦-١٠-٢٧)، ونقصُ الدوام يُضغط فيفتح صفحتَه (٢٠٢٦-١٠-٣٠).
             row?.let { MissingStrip(missingFor(it), onClick = if (!it.hasHours) ({ vm.openHours() }) else null) }
+            // **و«ذكّره» حين يحتاج متابعة** (٢٠٢٦-١١-١١) — رسالةٌ جاهزةٌ من واتسابه.
+            row?.takeIf { canRemind(it) }?.let {
+                Spacer(Modifier.height(Rahal.space.md))
+                RemindButton(it, vm.repName, Modifier.fillMaxWidth())
+            }
 
             // ══════════════════════════════════════════════════════════
             // **ثلاثةُ مربّعاتِ وظائف** — دوامٌ · عمولةٌ · أقسام، لكلٍّ أيقونتُه وقيمتُه وضغطتُه.

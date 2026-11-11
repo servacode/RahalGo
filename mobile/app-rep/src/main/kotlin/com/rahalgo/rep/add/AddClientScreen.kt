@@ -679,7 +679,13 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
                         govFailed = false
                         // **ومحافظةٌ واحدةٌ تُختار وحدَها** — **ولا يُسأل عن
                         // اختيارٍ لا بديلَ له**، وتُفتح مناطقُها فوراً.
-                        governorates.singleOrNull()?.let { pickGovernorate(it.id) }
+                        // **وإن تعدّدت فالرقّةُ مختارةٌ مسبقاً** (٢٠٢٦-١١-١١) — حيث تعمل المنصّة.
+                        if (pickedGovernorate.isEmpty()) {
+                            val home = getApplication<android.app.Application>()
+                                .getString(com.rahalgo.rep.R.string.ac_default_governorate)
+                            (governorates.singleOrNull() ?: governorates.firstOrNull { it.name == home })
+                                ?.let { pickGovernorate(it.id) }
+                        }
                     }
                     .onFailure { govFailed = true }
             }

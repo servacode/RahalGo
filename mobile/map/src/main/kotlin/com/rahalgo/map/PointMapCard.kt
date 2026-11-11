@@ -144,8 +144,15 @@ fun PointMapCard(
      * **ومن رفض الإذنَ لا يُرى خطأً** — تبقى الخريطةُ على المدينة ويحرّكها بيده.
      */
     autoLocate: Boolean = false,
+    /**
+     * **الخريطةُ لا تأكل السحبَ حتّى تُضغط** (قرارُ المالك ٢٠٢٦-١١-١١: «ما بقدر مرّر الصفحة وإصبعي على
+     * الخريطة») — غطاءٌ شفّافٌ «اضغط لتحريك الخريطة»؛ **والسحبُ عليه يمرّر الصفحة**، والضغطةُ تفعّلها.
+     * لصفحاتٍ طويلةٍ فيها خريطةٌ في الوسط (أضف فرع).
+     */
+    tapToActivate: Boolean = false,
 ) {
     val context = LocalContext.current
+    var active by remember { mutableStateOf(!tapToActivate) }
     val set = lat != null && lng != null
     val setPoint by rememberUpdatedState(onPoint)
     val here = if (lat != null && lng != null) LatLng(lat, lng) else com.rahalgo.map.RAQQA
@@ -349,6 +356,28 @@ fun PointMapCard(
                         .background(Rahal.colors.ink)
                         .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
                 )
+            }
+            if (!active && enabled) {
+                // **غطاءٌ يمرّر السحبَ للصفحة ويلتقط الضغطة وحدَها.**
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .clickable(role = Role.Button) { active = true },
+                    contentAlignment = Alignment.BottomCenter,
+                ) {
+                    Text(
+                        stringResource(R.string.map_tap_to_move),
+                        color = Rahal.colors.canvas,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .padding(Rahal.space.sm)
+                            .clip(Rahal.shape.pill)
+                            .background(Rahal.colors.ink)
+                            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+                    )
+                }
             }
             if (enabled) {
                 Column(

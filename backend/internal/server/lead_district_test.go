@@ -12,7 +12,9 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -102,5 +104,51 @@ func TestDistrictOffWhenGovernorateOff(t *testing.T) {
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "/x", nil)
 	if _, err := f.srv.validDistrict(req, dist); err == nil {
 		t.Error("منطقةٌ تحت محافظةٍ مطفأةٍ قُبلت — **وإطفاءُ المحافظة لا يعني شيئاً**")
+	}
+}
+
+// محافظةٌ فعّالةٌ بلا منطقةٍ فعّالةٍ لا تظهر في القائمة العامّة، وبمنطقةٍ فعّالةٍ تظهر.
+func TestPublicGovernorates_HidesOnesWithoutLiveDistrict(t *testing.T) {
+	f := newDriverFixture(t, 0)
+	ctx := context.Background()
+	var gov string
+	if err := f.pool.QueryRow(ctx, `
+		INSERT INTO governorates (name, active) VALUES ('محافظةُ فحصٍ بلا مناطق', true)
+		RETURNING id::text`).Scan(&gov); err != nil {
+		t.Fatalf("تعذّرت المحافظة: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(), `DELETE FROM districts WHERE governorate_id = $1::uuid`, gov)
+		_, _ = f.pool.Exec(context.Background(), `DELETE FROM governorates WHERE id = $1::uuid`, gov)
+	})
+	listed := func() bool {
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "/x", nil)
+		w := httptest.NewRecorder()
+		f.srv.handlePublicGovernorates(w, req)
+		var env struct {
+			Data struct {
+				Governorates []struct {
+					ID string `json:"id"`
+				} `json:"governorates"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &env); err != nil {
+			t.Fatal(err)
+		}
+		for _, g := range env.Data.Governorates {
+			if g.ID == gov {
+				return true
+			}
+		}
+		return false
+	}
+	if listed() {
+		t.Fatal("محافظةٌ بلا منطقةٍ فعّالةٍ ظهرت في القائمة العامّة")
+	}
+	if _, err := f.pool.Exec(ctx, `INSERT INTO districts (governorate_id, name, active) VALUES ($1::uuid, 'منطقةُ فحص', true)`, gov); err != nil {
+		t.Fatal(err)
+	}
+	if !listed() {
+		t.Fatal("محافظةٌ بمنطقةٍ فعّالةٍ غابت عن القائمة")
 	}
 }
