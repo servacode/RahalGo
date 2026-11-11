@@ -65,20 +65,26 @@ fun DualPrice(
     )
     val usdPart = dualUsdPart(usd)
     val sypPart = dualSypPart(syp)
-    if (stacked) {
-        Column(modifier, horizontalAlignment = horizontalAlignment) {
-            Text(usdPart, style = main, maxLines = 1)
-            Text(sypPart, style = small, maxLines = 1)
-        }
-    } else {
-        FlowRow(
-            modifier,
-            horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs),
-            verticalArrangement = Arrangement.Top,
-        ) {
-            Text(usdPart, style = main, maxLines = 1, softWrap = false)
-            Text(sypPart, style = small, maxLines = 1, softWrap = false)
-        }
+    // ══════════════════════════════════════════════════════════════════
+    // **العملتان في سطرٍ واحدٍ دائماً** (ملاحظةُ المالك ٢٠٢٦-١١-١١: «سعر السوري والدولار لازم
+    // يكون بنفس السطر، هيك منظرهم بشع بسطرين»)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والليرةُ تصغر حتّى تسع** في خانةٍ ضيّقةٍ كبطاقة المنتج — ولا تنزل سطراً.
+    // و`stacked` باقٍ في التوقيع لمن يناديه، ولا يغيّر شيئاً.
+    androidx.compose.foundation.layout.Row(
+        modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs),
+    ) {
+        Text(usdPart, style = main, maxLines = 1, softWrap = false)
+        FitText(
+            text = sypPart,
+            style = small,
+            maxLines = 1,
+            minSize = 8.sp,
+            modifier = Modifier.weight(1f, fill = false),
+        )
     }
 }
 

@@ -93,11 +93,13 @@ export function DualPrice({
   if (usd == null) return <Money value={syp} small={muted} className={`${strong} ${className}`} />;
   const sypTone = inherit ? "opacity-90" : "text-ink-muted";
   return (
-    <span className={`inline-flex ${stacked ? "flex-col items-start" : "flex-wrap items-baseline gap-x-1"} ${className}`}>
-      <span dir="ltr" className={`tabular-nums ${strong}`}>
+    /* **العملتان في سطرٍ واحدٍ دائماً** (ملاحظةُ المالك ٢٠٢٦-١١-١١: «بسطرين منظرهم بشع») — والليرةُ تُقصّ
+       بنقاطٍ في خانةٍ ضيّقةٍ ولا تنزل سطراً. و`stacked` باقٍ في التوقيع ولا يغيّر شيئاً. */
+    <span data-stacked={stacked || undefined} className={`inline-flex min-w-0 max-w-full flex-nowrap items-baseline gap-x-1 ${className}`}>
+      <span dir="ltr" className={`shrink-0 whitespace-nowrap tabular-nums ${strong}`}>
         {usdLabel(usd)}
       </span>
-      <span className={`whitespace-nowrap ${muted ? "" : "text-xs"} ${sypTone}`}>
+      <span className={`min-w-0 truncate whitespace-nowrap ${muted ? "" : "text-xs"} ${sypTone}`}>
         {"≈ "}
         <Money value={syp} small className={inherit ? "[&_span]:text-current!" : ""} />
       </span>

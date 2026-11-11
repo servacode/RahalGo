@@ -96,10 +96,10 @@ export function RateDialog({
 }) {
   const toast = useShopToast();
   const driver = hasDriver(order);
-  // **والنجومُ تبدأ فارغة** (مرآةُ `RateDialog` ٢٠٢٦-١٠-٢٧) — كانت خمساً، فمن ضغط «إرسال» دغري
-  // أرسل خمسَ نجومٍ وهو لم يقيّم. **فالزرُّ معطّلٌ حتّى يختار.**
-  const [stars, setStars] = useState(0);
-  const [driverStars, setDriverStars] = useState(0);
+  // **والنجومُ تبدأ خمساً** (مرآةُ `RateDialog` — قرارُ المالك ٢٠٢٦-١١-١١: «خليها دائما 5 نجوم
+  // بشكل افتراضي مشان اذا ضغط ارسال يكون ع 5 نجوم»).
+  const [stars, setStars] = useState(5);
+  const [driverStars, setDriverStars] = useState(5);
   const ready = stars > 0 && (!driver || driverStars > 0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");

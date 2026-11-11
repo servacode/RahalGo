@@ -29,8 +29,9 @@ export default function RateFeedbackPage() {
   const [info, setInfo] = useState<Info | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
   const [loadError, setLoadError] = useState("");
-  const [service, setService] = useState(0);
-  const [driver, setDriver] = useState(0);
+  // **خمسُ نجومٍ افتراضاً** (قرارُ المالك ٢٠٢٦-١١-١١) — كنافذة التطبيق والموقع.
+  const [service, setService] = useState(5);
+  const [driver, setDriver] = useState(5);
   const [feedback, setFeedback] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");

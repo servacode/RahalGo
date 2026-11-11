@@ -110,20 +110,18 @@ export function InviteHomeCard() {
   };
 
   return (
-    /* **بطاقةٌ بصبغة التحذير بلا ظلّ** (مرآةُ `InviteNudge.kt`): الهديّةُ في مربّعٍ مستدير، والجملةُ تحتها زرٌّ صغيرٌ
-       بنبرة التمييز، و✕ في النهاية — كان صفّاً ضيّقاً بزرٍّ برتقاليٍّ كبير. */
-    <div className="flex items-start gap-rg-md rounded-rg-lg border border-warning-edge bg-warning-tint p-rg-md">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-rg-md bg-warning-fill text-ink">
-        <IconCatGifts size={22} />
+    /* **سطرٌ واحد** (ملاحظةُ المالك ٢٠٢٦-١١-١١، مرآةُ `InviteNudge.kt`): الهديّةُ، والجملةُ في سطرها،
+       وزرُّ «شارك رمزك» الصغير، و✕ في النهاية. */
+    <div className="flex items-center gap-rg-sm rounded-rg-lg border border-warning-edge bg-warning-tint px-rg-sm py-rg-xs">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-rg-md bg-warning-fill text-ink">
+        <IconCatGifts size={20} />
       </span>
-      <div className="flex min-w-0 flex-1 flex-col items-start gap-rg-sm">
-        <Link href="/invite" className="text-body-strong">
-          {fill(after ? I.after : I.home, { n })}
-        </Link>
-        <Button size="sm" onClick={() => void share()} className="min-h-10 shrink-0 bg-accent-tint! text-accent-text!">
-          {I.shareCode}
-        </Button>
-      </div>
+      <Link href="/invite" className="min-w-0 flex-1 truncate text-body-strong">
+        {fill(after ? I.after : I.home, { n })}
+      </Link>
+      <Button size="sm" onClick={() => void share()} className="min-h-10 shrink-0 whitespace-nowrap bg-accent-tint! text-accent-text!">
+        {I.shareCode}
+      </Button>
       <button
         type="button"
         aria-label={I.hide}

@@ -343,7 +343,7 @@
     <!-- **«ادعُ صديقاً» أوضح** (٢٠٢٦-١٠-٣٠). -->
     <string name="inv_drawer">ادعُ صديقاً — اربح %1$s</string>
     <string name="inv_home">ادعُ صديقك واربح %1$s</string>
-    <string name="inv_home_after">عجبتك الخدمة؟ ادعُ صديقاً واربح %1$s</string>
+    <string name="inv_home_after">ادعُ صديقك واربح %1$s</string>
     <string name="inv_share_code">شارك رمزك</string>
     <string name="inv_hide">إخفاء</string>
     <string name="live_denied">لا يمكننا مشاركة موقعك دون إذن الموقع</string>

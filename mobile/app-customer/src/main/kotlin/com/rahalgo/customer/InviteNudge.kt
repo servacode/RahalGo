@@ -182,36 +182,35 @@ fun InviteHomeCard() {
     val context = LocalContext.current
     val after = InviteNudge.afterMode()
     // ══════════════════════════════════════════════════════════════════
-    // **لافتةٌ بسطرين لا صفٌّ مزدحم** (إعادةُ التصميم ٢٠٢٦-١١-١١)
+    // **لافتةٌ بسطرٍ واحد** (ملاحظةُ المالك ٢٠٢٦-١١-١١: «ادع صديق مافي داعي عجبتك الخدمة مشان
+    // يظل كلشي بسطر واحد وماياخذ مساحة كبيرة»)
     // ══════════════════════════════════════════════════════════════════
     //
-    // **كانت الأيقونةُ والجملةُ وزرٌّ مملوءٌ و✕ في صفٍّ واحد** — فتنعصر الجملةُ على ٣٦٠ بخطٍّ ١٫٣،
-    // **وزرٌّ برتقاليٌّ مملوءٌ في رأس السوق ينازع «اطلب».** والآن: أيقونةٌ في مربّعها، والجملةُ
-    // وتحتها زرٌّ صغيرٌ بنبرتها، و✕ في الطرف. **بطاقةٌ ملوّنةٌ بنبرة التنبيه** بلا ظلّ.
+    // أيقونةٌ، والجملةُ تصغر حتّى تسع سطرَها، وزرُّ «شارك رمزك» الصغير، و✕ في الطرف.
     com.rahalgo.ui.RahalCard(
         variant = com.rahalgo.ui.CardVariant.Tinted,
         tone = com.rahalgo.ui.StatusTone.Warning,
-        modifier = Modifier.padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
-        padding = Rahal.space.sm,
+        modifier = Modifier.padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs),
+        padding = Rahal.space.xs,
     ) {
-    Row(verticalAlignment = Alignment.Top) {
-        com.rahalgo.ui.IconBox(R.drawable.ic_gift, Rahal.colors.accent, modifier = Modifier.padding(top = Rahal.space.xs))
-        Spacer(Modifier.size(Rahal.space.md))
-        Column(Modifier.weight(1f).padding(top = Rahal.space.xs)) {
-            Text(
-                text = stringResource(
-                    if (after) R.string.inv_home_after else R.string.inv_home,
-                    money(r.nextReward),
-                ),
-                color = Rahal.colors.ink,
-                style = Rahal.type.bodyStrong,
-            )
-            Spacer(Modifier.size(Rahal.space.sm))
-            com.rahalgo.ui.RahalSmallButton(
-                onClick = { InviteNudge.share(context, r) },
-                tone = Tone.Accent,
-            ) { Text(stringResource(R.string.inv_share_code)) }
-        }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        com.rahalgo.ui.IconBox(R.drawable.ic_gift, Rahal.colors.accent)
+        Spacer(Modifier.size(Rahal.space.sm))
+        com.rahalgo.ui.FitText(
+            text = stringResource(
+                if (after) R.string.inv_home_after else R.string.inv_home,
+                money(r.nextReward),
+            ),
+            color = Rahal.colors.ink,
+            style = Rahal.type.bodyStrong,
+            maxLines = 1,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.size(Rahal.space.sm))
+        com.rahalgo.ui.RahalSmallButton(
+            onClick = { InviteNudge.share(context, r) },
+            tone = Tone.Accent,
+        ) { Text(stringResource(R.string.inv_share_code), maxLines = 1, softWrap = false) }
         IconButton(onClick = { InviteNudge.hide(context) }) {
             Icon(
                 painter = painterResource(com.rahalgo.ui.R.drawable.ic_close),

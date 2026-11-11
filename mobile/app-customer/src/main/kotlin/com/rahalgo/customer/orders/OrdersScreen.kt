@@ -454,13 +454,13 @@ internal fun RateDialog(
     onDismiss: () -> Unit,
 ) {
     // ══════════════════════════════════════════════════════════════════
-    // **والنجومُ تبدأ فارغة** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧)
+    // **والنجومُ تبدأ خمساً** (قرارُ المالك ٢٠٢٦-١١-١١: «خليها دائما 5 نجوم بشكل افتراضي
+    // مشان اذا ضغط ارسال يكون ع 5 نجوم»)
     // ══════════════════════════════════════════════════════════════════
     //
-    // **كانت تبدأ خمساً** فمن ضغط «إرسال» دغري أرسل خمسَ نجومٍ وهو لم يقيّم —
-    // **فيتضخّم المتوسّطُ في اللوحة ويختفي الضعيف.** فالزرُّ معطّلٌ حتّى يختار.
-    var stars by rememberSaveable { mutableIntStateOf(0) }
-    var driverStars by rememberSaveable { mutableIntStateOf(0) }
+    // **وكانت فارغةً** (تدقيقُ ٢٠٢٦-١٠-٢٧) خشيةَ أن يتضخّم المتوسّط — **وقرارُ المالك يسبقه.**
+    var stars by rememberSaveable { mutableIntStateOf(5) }
+    var driverStars by rememberSaveable { mutableIntStateOf(5) }
     val ready = stars > 0 && (!hasDriver || driverStars > 0)
     com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
