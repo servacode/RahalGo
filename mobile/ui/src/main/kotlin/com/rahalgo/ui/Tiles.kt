@@ -108,13 +108,13 @@ fun IconTile(
         verticalArrangement = Arrangement.spacedBy(Rahal.space.xs, Alignment.CenterVertically),
     ) {
         Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(Rahal.icon.md))
-        Text(
+        // **يصغر ولا تنكسر كلمتُه** (الفحصُ البصريّ ٢٠٢٦-١١-١١: «العرو/ض» على ٣٦٠ بخطٍّ ١٫٣).
+        FitText(
             label,
             color = Rahal.colors.ink,
             style = Rahal.type.label.copy(fontWeight = Rahal.type.bodyStrong.fontWeight),
             textAlign = TextAlign.Center,
             maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
         )
         if (value.isNotEmpty()) {
             Text(
@@ -153,6 +153,9 @@ fun StatTile(
 ) {
     Column(
         modifier
+            // **ويملأ خانتَه عرضاً** كـ`IconTile` (الفحصُ البصريّ ٢٠٢٦-١١-١١): كان في `ActionRow`
+            // بعرض نصّه فتطفو مربّعاتٌ ضيّقةٌ بينها فراغ.
+            .fillMaxWidth()
             .fillMaxHeight()
             // **مربّعٌ بصبغة العلامة** لا بطاقةٌ بظلّ — فيصلح داخل بطاقةٍ وعلى الأرض الرماديّة معاً.
             .clip(Rahal.shape.md)
@@ -224,13 +227,14 @@ fun IconAction(
             Icon(painterResource(icon), contentDescription = description, tint = c, modifier = Modifier.size(Rahal.icon.md))
         }
         if (label.isNotEmpty()) {
-            Text(
+            // **سطران يصغران ولا يُقصّان** (الفحصُ البصريّ: «أهدافي والمكا…» على ٣٦٠) — والصفُّ
+            // يصفّ الدوائرَ من أعلاها (`ActionRow`) فلا يُزيحها اسمٌ من سطرين.
+            FitText(
                 label,
                 color = c,
                 style = Rahal.type.label,
                 textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                maxLines = 2,
                 modifier = Modifier.padding(top = Rahal.space.xs),
             )
         }
@@ -319,7 +323,8 @@ fun ActionRow(
             placeables.forEachIndexed { i, p ->
                 val x = i * (cell + gapPx) + (cell - p.width) / 2
                 // **والاتّجاهُ من اليمين** — `placeRelative` يقلب الترتيبَ في العربيّة.
-                p.placeRelative(x, (h - p.height) / 2)
+                // **ومن أعلى الخانة** — الدوائرُ تتحاذى ولو كان اسمُ إحداها سطرين.
+                p.placeRelative(x, 0)
             }
         }
     }

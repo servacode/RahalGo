@@ -76,11 +76,13 @@ fun RowScope.RahalNavTab(
             }
         },
         label = {
-            Text(
+            // **يصغر ولا يُقصّ** (الفحصُ البصريّ ٢٠٢٦-١١-١١: «الطلبا…»، «أضف …» بستّة تبويبات على ٣٦٠).
+            FitText(
                 stringResource(label),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                style = androidx.compose.material3.LocalTextStyle.current.copy(
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                ),
             )
         },
         colors = NavigationBarItemDefaults.colors(

@@ -11,6 +11,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -184,6 +185,9 @@ fun NetBanner(modifier: Modifier = Modifier) {
             Modifier
                 .fillMaxWidth()
                 .background(Rahal.colors.danger)
+                // **تحت شريط الحالة لا فوقه** (الفحصُ البصريّ ٢٠٢٦-١١-١١): كان النصُّ يُكتب فوق الساعة
+                // والأيقونات — **والأحمرُ يمتدّ خلفها فيُقرأ شريطاً واحداً.**
+                .statusBarsPadding()
                 .padding(horizontal = 14.dp, vertical = Rahal.space.sm),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,

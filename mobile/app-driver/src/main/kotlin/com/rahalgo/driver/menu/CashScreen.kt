@@ -93,10 +93,14 @@ fun CashScreen(vm: SectionsViewModel) {
             // **ولونُ الشريط يقول قربَه من الحافّة** قبل أن يُقرأ رقم.
             Bar(ratio = ratio, color = cashBarColor(ratio))
             Spacer(Modifier.height(Rahal.space.sm))
-            Row(
+            // **ينزل الثاني سطراً إن ضاق** (الفحصُ البصريّ ٢٠٢٦-١١-١١: على ٣٦٠ بخطٍّ ١٫٣ تلاصق
+            // «السقف ١٠٬٠٠٠ ل.س» و«يبقى قبل السقف» فقُرئا جملةً واحدة).
+            @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+            androidx.compose.foundation.layout.FlowRow(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(Rahal.space.xs),
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.cash_limit) + " " + com.rahalgo.driver.Bidi.isolate(money(limit)),

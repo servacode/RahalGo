@@ -362,13 +362,12 @@ private fun HomeHeader(
         )
         Spacer(Modifier.width(Rahal.space.md))
         Column(Modifier.weight(1f)) {
-            Text(
+            // **يصغر ولا تنكسر كلمتُه** (الفحصُ البصريّ ٢٠٢٦-١١-١١: «QA-Merchant-Dev / ice-A» على ٣٦٠).
+            com.rahalgo.ui.FitText(
                 store.name,
                 color = Rahal.colors.onBrand,
-                fontWeight = FontWeight.Bold,
-                style = Rahal.type.screenTitle,
+                style = Rahal.type.screenTitle.copy(fontWeight = FontWeight.Bold),
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
             )
             // **ومبدّلُ الفرع هنا لا شريطاً فوقه** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — كان الاسمُ يُقرأ مرّتين.
             if (stores.size > 1) {

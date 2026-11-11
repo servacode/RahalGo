@@ -78,6 +78,12 @@ fun PhoneField(
         // **ولوحة أرقام لا حروف** — رقم الهاتف لا يُكتب بحروف، **ولوحة
         // كاملة تُبطئ من يكتبه كلّ يوم.**
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+        // **الرقمُ من اليسار إلى اليمين دائماً** (الفحصُ البصريّ ٢٠٢٦-١١-١١): في سطرٍ عربيٍّ كانت
+        // «+963…» تُرسم «963…+» — **والإشارةُ في آخره.** ويبقى ملاصقاً لأيقونة الهاتف يميناً.
+        textStyle = androidx.compose.material3.LocalTextStyle.current.copy(
+            textDirection = androidx.compose.ui.text.style.TextDirection.Ltr,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Right,
+        ),
         enabled = enabled,
         modifier = modifier.fillMaxWidth(),
     )
