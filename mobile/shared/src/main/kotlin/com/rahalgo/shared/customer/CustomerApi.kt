@@ -55,6 +55,10 @@ class CustomerApi(private val api: ApiClient) {
     /** **مدنُ المنصّة الفعّالة** — ليقول «أنت تتسوّق في…» وليُبدَّل. */
     suspend fun cities(): CitiesPage = api.raw("/api/v1/public/cities")
 
+    /** **أصنافُ السوق كلُّها بلا قسم** — الرئيسيةُ حين لا يُختار قسم. */
+    suspend fun allItems(): ItemsPage =
+        api.raw("/api/v1/public/items" + BrowseScope.query('?'))
+
     /** **أصنافُ قسم** — من كلّ المصادر مختلطةً بلا اسم متجر. */
     suspend fun sectionItems(sectionId: String): ItemsPage =
         api.raw("/api/v1/public/sections/$sectionId/items" + BrowseScope.query('?'))

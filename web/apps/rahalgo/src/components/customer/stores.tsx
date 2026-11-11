@@ -58,12 +58,12 @@ export function StoreLogo({
 }
 
 /** **الشريطُ نفسُه** — بطاقاتٌ بالشعار والاسم، **ولا يُرسم إن لم يصل متجر.** */
-export function FeaturedStrip({ stores }: { stores: FeaturedStore[] }) {
+export function FeaturedStrip({ stores, title = ST.featured }: { stores: FeaturedStore[]; title?: string }) {
   if (stores.length === 0) return null;
   return (
-    <section aria-label={ST.featured} className="flex flex-col gap-3">
+    <section aria-label={title} className="flex flex-col gap-3">
       <div className="shop-sec-head">
-        <h2>{ST.featured}</h2>
+        <h2>{title}</h2>
       </div>
       <ul className="shop-featured">
         {stores.map((s) => (

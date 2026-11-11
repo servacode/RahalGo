@@ -170,12 +170,12 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
                 //
                 // **ويأخذ الرقمَ كغيرِه** — **فالسحبةُ أحدثُ من نداءٍ
                 // سابقٍ لم يردّ بعد**: **وإلّا دهس القديمُ الجديد.**
-                pick?.let {
+                run {
                     // **والسحبةُ تخلُف النداءَ الجاري لا تجاوره** —
                     // **وإلّا بقي يعمل وقد أُبطلت تذكرتُه.**
                     fetching?.cancel()
                     val ticket = latest.begin()
-                    val got = api.sectionItems(it).items
+                    val got = (pick?.let { api.sectionItems(it) } ?: api.allItems()).items
                     if (latest.isCurrent(ticket)) items = got
                 }
                 error = ""
@@ -200,6 +200,10 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **أهذه نتيجةُ بحثٍ أم أصنافُ قسم** — والفارغُ يقول غيرَ ما يقول. */
     var searching by mutableStateOf(false)
+        private set
+
+    /** **المتاجرُ المطابقةُ باسمها** لنتيجة البحث الجارية — صفٌّ فوق الأصناف (٢٠٢٦-١١-١١). */
+    var searchStores by mutableStateOf<List<FeaturedStore>>(emptyList())
         private set
 
     private var typing: Job? = null
@@ -299,8 +303,10 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
                 // **وأوّلُ قسمٍ يُفتح** — إلّا أن يكون قد اختار قبل الدوران.
                 // **ويُفتح أوّلُ قسمٍ له محتوىً** — **لا أوّلُ قسمٍ في القائمة**،
             // **فقد يكون خاوياً فيُستقبَل الزبونُ بفراغ.**
-            val first = pick ?: home.sections.firstOrNull { it.count > 0 }?.id
-                if (first != null) openSection(first) else busy = false
+            // **ولا قسمَ يُختار افتراضاً** (ملاحظة المالك ٢٠٢٦-١١-١١) — كانت دائرةُ «شاورما» تبدو
+                // مختارةً وتحتها أصنافُ كلّ الأقسام. **الآن: بلا اختيارٍ فالشبكةُ للكلّ، وبقسمٍ مختارٍ
+                // فالشبكةُ له وحدَه** — الحالتان من متغيّرٍ واحد (`pick`) فلا تفترقان.
+                if (home.sections.isNotEmpty()) loadSection(pick) else busy = false
             } catch (e: Exception) {
                 error = apiError(getApplication(), e)
                 busy = false
@@ -317,11 +323,13 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
      * ومحوُ الحقل فيها يمحو ما يكتبه صاحبُه تحت إصبعه.
      */
     fun openSection(id: String) {
-        pick = id
+        // **وضغطةٌ ثانيةٌ على القسم المختار تمحو الاختيارَ** فتعود الشبكةُ للكلّ.
+        pick = if (pick == id) null else id
         searching = false
+        searchStores = emptyList()
         query = ""
         typing?.cancel()
-        loadSection(id)
+        loadSection(pick)
     }
 
     /**
@@ -338,7 +346,7 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
      * **ولا خطأَ ولا رسالة**: لوحةُ المفاتيح تُفتح والحرفُ يُبتلع،
      * **فيُقرأ عطباً في الجهاز لا في التطبيق.**
      */
-    private fun loadSection(id: String) {
+    private fun loadSection(id: String?) {
         // **ويُلغى نداءُ القسم السابق** — انظر `fetching`: **نداءان
         // يتسابقان يضعان بضاعةَ قسمٍ تحت عنوانِ قسمٍ آخر.**
         fetching?.cancel()
@@ -350,7 +358,7 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
         error = ""
         fetching = viewModelScope.launch {
             try {
-                val got = api.sectionItems(id).items
+                val got = (if (id == null) api.allItems() else api.sectionItems(id)).items
                 if (!latest.isCurrent(ticket)) return@launch
                 items = got
             } catch (e: CancellationException) {
@@ -384,7 +392,8 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
             // مفتاحٍ يستنزف حزمةَ من يتصفّح في الرقّة.**
             if (searching) {
                 searching = false
-                pick?.let { loadSection(it) }
+                searchStores = emptyList()
+                loadSection(pick)
             }
             return
         }
@@ -398,9 +407,11 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
             busy = true
             error = ""
             try {
-                val got = api.search(q).items
+                val page = api.search(q)
                 if (!latest.isCurrent(ticket)) return@launch
+                val got = page.items
                 items = got
+                searchStores = page.stores
                 searching = true
             } catch (e: CancellationException) {
                 // ══════════════════════════════════════════════════════

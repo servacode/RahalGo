@@ -198,7 +198,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun CustomerApp() {
     // **والإطارُ من الوحدة** — السمةُ وشريطا النظام.
-    AppFrame { theme, dark -> Signed(theme, dark) }
+    // **لا أذوناتَ عند الإقلاع** (قرارُ المالك ٢٠٢٦-١١-١١، بعد جولة QA) — كان الموقعُ والإشعاراتُ يُطلبان
+    // معاً على أوّل شاشةٍ قبل أن يفهم الزبونُ شيئاً. **الموقعُ يُطلب حين يفتح الخريطةَ أو يضغط «حدّد موقعي»**
+    // (`mapPicker` أدناه)، **والإشعاراتُ بعد دخوله** (`AskNotifyPermission`). ومن مُنح الإذنَ سلفاً لا يتغيّر شيء.
+    AppFrame(permissions = emptyList()) { theme, dark -> Signed(theme, dark) }
 }
 
 @Composable
@@ -440,6 +443,15 @@ private fun SignedIn(
     }
 
     val mapPicker: PointPicker = { onPick, onCancel ->
+        // **الموقعُ يُسأل حين تُفتح الخريطةُ لتحديد عنوان** — مرّةً واحدةً (أندرويد يُقفل الإذنَ بعد رفضين)؛
+        // وبعدها زرُّ «موقعي» يسأل بنفسه كما كان.
+        LaunchedEffect(Unit) {
+            val prefs = ctx.getSharedPreferences("rahalgo", android.content.Context.MODE_PRIVATE)
+            if (!Here.granted(ctx) && !prefs.getBoolean("asked_loc_map_v1", false)) {
+                prefs.edit().putBoolean("asked_loc_map_v1", true).apply()
+                askHere.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        }
         PickPoint(
             start = LastPoint.value?.let { LatLng(it.lat, it.lng) },
             vm = pickVm,

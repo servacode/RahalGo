@@ -1788,6 +1788,31 @@ html[data-shop-theme="dark"] .shop-pic {
   width: 100%;
   height: 100%;
 }
+/* **عدّادُ الكمية على البطاقة** (٢٠٢٦-١١-١١): يحلّ محلَّ «اطلب» بعد أوّل إضافة — بارتفاعه (٣٦) فلا تقفز البطاقة. */
+.shop-step {
+  display: inline-flex;
+  height: 36px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--color-primary);
+  border-radius: 10px;
+  color: var(--color-primary);
+}
+.shop-step button {
+  display: grid;
+  width: 34px;
+  height: 100%;
+  place-items: center;
+}
+.shop-step button:disabled {
+  opacity: 0.4;
+}
+.shop-step b {
+  min-width: 22px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-ink);
+}
 .shop-qty-badge {
   position: absolute;
   inset-block-end: 8px;

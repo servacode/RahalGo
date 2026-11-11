@@ -32,8 +32,26 @@ const storeAnnounceCond = `m.announced_at IS NULL AND NOT m.announce_skip AND m.
 
 // storeAnnounceText **نصُّ الإعلان** — رسميٌّ قصير (طلبُ المالك: «صياغة احترافية»).
 func storeAnnounceText(name string) (title, body string) {
+	name = isolateName(name)
 	return "🎉 انضمّ " + name + " إلى عائلة رحّال غو",
 		"أصبح بإمكانك الطلب من " + name + " عبر تطبيقنا. اكتشف منتجاته الآن"
+}
+
+// isolateName **اسمٌ لاتينيٌّ فيه أرقام داخل جملةٍ عربيّة يُحاط بعازل اتّجاهٍ كاملاً**
+// (FSI ... PDI)، فيبقى «QA-Money-Model2» كما كُتب ولا ينقلب إلى «2QA-Money-Model».
+// **في المصدر** لينجح في التطبيق والموقع وإشعار النظام معاً. ما لا لاتينيَّ فيه لا يُمسّ.
+func isolateName(name string) string {
+	hasLatin := false
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+			hasLatin = true
+			break
+		}
+	}
+	if !hasLatin {
+		return name
+	}
+	return "⁨" + name + "⁩"
 }
 
 // SweepStoreAnnounce **يعلن عن كلّ متجرٍ صار ظاهراً** — ويردّ كم أُعلن.

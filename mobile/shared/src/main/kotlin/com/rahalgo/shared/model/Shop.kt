@@ -287,7 +287,12 @@ data class ItemDetail(
 )
 
 @Serializable
-data class ItemsPage(val items: List<Item> = emptyList(), val total: Int = 0)
+data class ItemsPage(
+    val items: List<Item> = emptyList(),
+    val total: Int = 0,
+    /** **متاجرُ البحث المطابقةُ باسمها** — `/public/search/items` وحدَه؛ وغيابُه من خادمٍ أقدم = لا صفّ. */
+    val stores: List<FeaturedStore> = emptyList(),
+)
 
 /**
  * **تسعيرةٌ قبل الإرسال** — من الخادم لا من الجهاز.

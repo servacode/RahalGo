@@ -41,6 +41,7 @@ import {
 import { api, mediaUrl } from "@/lib/api";
 import {
   useCart,
+  lineKey,
   unitPrice,
   MAX_DRINK,
   MAX_PER_OPTION,
@@ -123,6 +124,22 @@ export function ItemCard({
   const cart = useCart();
   // **كم منه في السلّة** — شارةٌ على الصورة كما في المخطّط، وللعرض وحدَه.
   const inCart = cart.lines.reduce((n, l) => (l.item.id === item.id ? n + l.qty : n), 0);
+  /* **«اطلب» يضيف مباشرةً ويقول ذلك** (قرارُ المالك ٢٠٢٦-١١-١١، مرآةُ بطاقة التطبيق): خبرٌ «انضاف للسلة»، ثمّ
+     يصير الزرُّ عدّاداً − ن + على البطاقة. **وما له خياراتٌ، أو بوّابةُ الإضافة مقفلة، أو السلّةُ من متجرٍ آخر،
+     يفتح نافذتَه** — فيها السؤالُ والتنبيهُ كما كان. */
+  const gate = useAddGate();
+  const toast = useShopToast();
+  const key = lineKey({ item, options: [] });
+  const bare = item.has_options ? undefined : cart.lines.find((l) => lineKey(l) === key);
+  const sameShop = !cart.merchantId || !item.merchant_id || cart.merchantId === item.merchant_id;
+  const quickAdd = () => {
+    if (item.has_options || gate.kind !== "ok" || !sameShop) {
+      onOpen(item);
+      return;
+    }
+    cart.add(item, 1);
+    toast(I.added);
+  };
   return (
     <div className="shop-item" data-layout={layout}>
       {/* **والصورةُ وعدسةُ التكبير أخوان لا متداخلان** — زرٌّ في زرٍّ لا يصحّ. */}
@@ -195,12 +212,28 @@ export function ItemCard({
               size="sm"
               className="shrink-0 rounded-full! border border-line-soft"
             />
-            {!closed && (
-              <button type="button" onClick={() => onOpen(item)} className="shop-add">
-                <IconAdd size={14} />
-                {I.orderBtn}
-              </button>
-            )}
+            {!closed &&
+              (bare && bare.qty > 0 ? (
+                <span className="shop-step" role="group" aria-label={fill(SK.inCart, { n: fmtNum(bare.qty) })}>
+                  <button type="button" aria-label={I.dec} onClick={() => cart.setQty(key, bare.qty - 1)}>
+                    <IconMinus size={14} />
+                  </button>
+                  <b>{fmtNum(bare.qty)}</b>
+                  <button
+                    type="button"
+                    aria-label={I.inc}
+                    disabled={bare.qty >= MAX_QTY}
+                    onClick={() => cart.setQty(key, bare.qty + 1)}
+                  >
+                    <IconAdd size={14} />
+                  </button>
+                </span>
+              ) : (
+                <button type="button" onClick={quickAdd} className="shop-add">
+                  <IconAdd size={14} />
+                  {I.orderBtn}
+                </button>
+              ))}
           </span>
         </div>
       </div>

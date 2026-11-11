@@ -22,8 +22,22 @@ object BidiText {
     fun fixArrows(text: String): String =
         if (!text.contains('←')) text else arrow.replace(text) { FSI + it.groupValues[2] + PDI + " ← " + FSI + it.groupValues[1] + PDI }
 
+    /**
+     * **الجزءُ اللاتينيُّ بأرقامه كتلةً واحدة** (ملاحظةُ المالك ٢٠٢٦-١١-١١: متجر «QA-Money-Model2» يظهر
+     * «2QA-Money-Model» في عنوان الإشعار). **عزلُ الرقم وحدَه يترك «QA-Money-Model» لاتينيّاً مكشوفاً
+     * فيلتصق به الرقمُ المعزول من الجهة الخطأ.** فيُعزل المقطعُ كلُّه: كلماتٌ لاتينيّةٌ تفصلها مسافةٌ أو
+     * شرطةٌ أو نقطةٌ أو شرطةٌ سفليّة، وينتهي بحرفٍ أو رقم. **ولا يُعزل ما لا رقمَ فيه** (يبقى كما كان).
+     */
+    private val latinRun = Regex("[A-Za-z](?:[A-Za-z0-9_.\\- ]*[A-Za-z0-9])?")
+
+    private val any = Regex(latinRun.pattern + "|" + token.pattern)
+
     fun isolateNumbers(text: String): String =
-        if (text.isEmpty()) text else token.replace(text) { FSI + it.value + PDI }
+        if (text.isEmpty()) text else any.replace(text) { m ->
+            val v = m.value
+            // مقطعٌ لاتينيٌّ بلا رقمٍ لا يُمسّ؛ وما سواه (لاتينيٌّ برقم، أو رقمٌ عاديّ) يُعزل كاملاً.
+            if (v[0].let { it in 'A'..'Z' || it in 'a'..'z' } && v.none { it.isDigit() }) v else FSI + v + PDI
+        }
 }
 
 /**

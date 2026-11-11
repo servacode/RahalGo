@@ -87,6 +87,7 @@ func TestBrowse_ShowsStoreName(t *testing.T) {
 	r.Get("/sections/{id}/items", srv.handlePublicSectionItems)
 	r.Get("/items/{id}", srv.handlePublicItem)
 	r.Get("/search", srv.handleSearchItems)
+	r.Get("/items", srv.handlePublicAllItems)
 	// **والصفحةُ الأولى كانت خارجَ الحراسة.**
 	//
 	// حرس هذا الاختبارُ الأقسامَ والأصنافَ والبحثَ منذ المرحلة الثانية،
@@ -112,6 +113,7 @@ func TestBrowse_ShowsStoreName(t *testing.T) {
 		"/sections/" + sectionID + "/items",
 		"/items/" + itemID,
 		"/search?q=" + "صنف",
+		"/items",
 	} {
 		body := get(path)
 		if !strings.Contains(body, secret) {
@@ -119,6 +121,27 @@ func TestBrowse_ShowsStoreName(t *testing.T) {
 		}
 		if !strings.Contains(body, merchantID) {
 			t.Errorf("%s لم يُخرج معرّفَ المتجر", path)
+		}
+	}
+
+	// **والبحثُ يردّ المتجرَ المطابقَ باسمه** (ملاحظة المالك ٢٠٢٦-١١-١١) — حقلُ stores.
+	{
+		var sr struct {
+			Data struct {
+				Stores []map[string]any `json:"stores"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal([]byte(get("/search?q="+"السرِّ")), &sr); err != nil {
+			t.Fatalf("ردٌّ غيرُ مقروء: %v", err)
+		}
+		found := false
+		for _, st := range sr.Data.Stores {
+			if st["id"] == merchantID {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("البحثُ باسم المتجر لم يردّ المتجر: %v", sr.Data.Stores)
 		}
 	}
 
