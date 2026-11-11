@@ -366,7 +366,7 @@ fun OrderChatSheet(
                 .fillMaxWidth(0.92f)
                 .fillMaxHeight(0.72f),
         ) {
-            Column(Modifier.padding(horizontal = Rahal.space.lg, vertical = 14.dp)) {
+            Column(Modifier.padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md)) {
                 Row(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -427,7 +427,7 @@ fun OrderChatSheet(
                     }
                 }
                 if (tabs.size > 1) {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     Row(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
@@ -442,7 +442,7 @@ fun OrderChatSheet(
                                     .clip(Rahal.shape.pill)
                                     .background(if (on) Rahal.colors.brand else Rahal.colors.brand.copy(alpha = 0.12f))
                                     .clickable(enabled = !on) { onSwitch(id) }
-                                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                                    .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
                             ) {
                                 Text(
                                     text = "#$number",
@@ -450,14 +450,14 @@ fun OrderChatSheet(
                                     color = if (on) Rahal.colors.onBrand else Rahal.colors.brand,
                                 )
                                 if (fresh > 0) {
-                                    Spacer(Modifier.width(6.dp))
+                                    Spacer(Modifier.width(Rahal.space.sm))
                                     Badge { Text(if (fresh > 99) "99+" else "$fresh") }
                                 }
                             }
                         }
                     }
                 }
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
 
                 // **والقائمةُ تأخذ ما بقي** — فلا بياضَ ولا قفز.
                 Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -506,7 +506,7 @@ fun OrderChatSheet(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 // ══════════════════════════════════════════════════════
                 // **والحديثُ المنتهي لا حقلَ كتابةٍ فيه** (فحصُ القبول ٢٠٢٦-١٠-٠٣)
                 // ══════════════════════════════════════════════════════

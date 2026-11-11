@@ -142,7 +142,7 @@ fun OrderLine.toInvoiceLine(): InvoiceLine = InvoiceLine(
 /** **أسطرُ الأصناف** — كلٌّ في سطرٍ: النصُّ في البداية والمبلغُ في النهاية. */
 @Composable
 fun InvoiceLines(lines: List<InvoiceLine>, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
         invoiceOrder(lines).forEach { l ->
             Column(Modifier.fillMaxWidth()) {
                 // **المرتجعُ باهتٌ مشطوبٌ كما في الويب** (`InvoiceLines.tsx`): يُشطب النصُّ وحدَه لا المبلغ.

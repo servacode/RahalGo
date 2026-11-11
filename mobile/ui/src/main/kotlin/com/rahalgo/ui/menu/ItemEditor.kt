@@ -53,7 +53,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
+import com.rahalgo.ui.BottomActionBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -446,16 +446,9 @@ fun ItemEditor(
             Spacer(Modifier.height(Rahal.space.xl))
         }
         // ── الشريطُ الثابت: سببُ رفض الحفظ فوقه، ثمّ «حفظ» و«إلغاء» ──
-        HorizontalDivider(thickness = Rahal.stroke.hair, color = Rahal.colors.line)
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .background(Rahal.colors.canvas)
-                .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.sm),
-        ) {
+        BottomActionBar {
             if (error.isNotEmpty()) {
                 Note(error, Rahal.colors.danger)
-                Spacer(Modifier.height(Rahal.space.sm))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                 if (!readOnly) {

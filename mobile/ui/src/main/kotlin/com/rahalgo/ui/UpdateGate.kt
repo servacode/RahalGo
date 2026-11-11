@@ -129,7 +129,7 @@ fun UpdateGate(
                 style = Rahal.type.body,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
             val openDirect = {
                 runCatching {
                     ctx.startActivity(

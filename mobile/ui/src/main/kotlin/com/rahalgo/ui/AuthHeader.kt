@@ -47,8 +47,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun AuthHeader(
     logoSize: Dp = 140.dp,
-    topSpace: Dp = 40.dp,
-    bottomSpace: Dp = 6.dp,
+    topSpace: Dp = Rahal.space.xxl + Rahal.space.sm,
+    bottomSpace: Dp = Rahal.space.xs + Rahal.space.xxs,
 ) {
     Spacer(Modifier.height(topSpace))
     Image(
@@ -91,7 +91,7 @@ fun AuthCard(content: @Composable ColumnScope.() -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
-            .cardSurface(Rahal.shape.lg, elevation = 6.dp)
+            .cardSurface(Rahal.shape.lg, elevation = Rahal.elevation.raised)
             .padding(Rahal.space.lg),
         content = content,
     )

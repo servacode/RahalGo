@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -109,13 +108,13 @@ fun Drawer(
     ) {
         if (profile != null) {
             ProfileHeader(profile)
-            HorizontalDivider()
+            RahalDivider()
             Spacer(Modifier.height(Rahal.space.xxs))
         }
         if (header != null) {
             header()
             Spacer(Modifier.height(Rahal.space.xxs))
-            HorizontalDivider()
+            RahalDivider()
             Spacer(Modifier.height(Rahal.space.xxs))
         }
 
@@ -128,7 +127,7 @@ fun Drawer(
             if (item.group != lastGroup) {
                 if (lastGroup != null) {
                     Spacer(Modifier.height(Rahal.space.xxs))
-                    HorizontalDivider()
+                    RahalDivider()
                     Spacer(Modifier.height(Rahal.space.xxs))
                 }
                 lastGroup = item.group
@@ -140,7 +139,7 @@ fun Drawer(
         // مع الترويسة. (والتمريرُ ممنوعٌ بقرار المالك.)
         if (platform.isNotEmpty()) {
             Spacer(Modifier.height(Rahal.space.xxs))
-            HorizontalDivider()
+            RahalDivider()
             Spacer(Modifier.height(Rahal.space.xxs))
             platform.chunked(2).forEach { pair ->
                 Row(Modifier.fillMaxWidth()) {
@@ -162,7 +161,7 @@ fun Drawer(
         // **والسمةُ ثمّ الخروج — في سطرٍ واحدٍ بعمودين في القاع** (بعيداً عن طريق الإبهام).
         // **والأيقونةُ تُظهر الوجهةَ لا الحال** — هلالٌ يقول «انتقل إلى الغامقة»، وشمسٌ «عُد إلى الفاتحة».
         Spacer(Modifier.height(Rahal.space.xxs))
-        HorizontalDivider()
+        RahalDivider()
         Spacer(Modifier.height(Rahal.space.xxs))
         Row(Modifier.fillMaxWidth()) {
             if (dark != null) {

@@ -110,7 +110,7 @@ fun AuthScreen(
             style = Rahal.type.screenTitle,
             fontWeight = FontWeight.Bold,
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
 
         if (notice.isNotEmpty()) {
             Text(
@@ -122,7 +122,7 @@ fun AuthScreen(
                     .fillMaxWidth()
                     .clip(Rahal.shape.sm)
                     .background(Rahal.colors.warnTint)
-                    .padding(14.dp),
+                    .padding(Rahal.space.md),
             )
             Spacer(Modifier.height(Rahal.space.lg))
         }
@@ -143,7 +143,7 @@ fun AuthScreen(
                     text = { Text(stringResource(R.string.login_tab_otp)) },
                 )
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
         }
 
         // **والرقم لا يُعدَّل بعد إرسال الرمز** — الرمز أُصدر لرقم بعينه،
@@ -154,7 +154,7 @@ fun AuthScreen(
             onChange = { phone = it },
             enabled = !state.busy && !state.codeSent,
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
 
         when {
             state.mode == LoginMode.PASSWORD -> PasswordField(
@@ -216,7 +216,7 @@ fun AuthScreen(
             }
             Spacer(Modifier.height(Rahal.space.md))
         } else {
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
         }
         RahalButton(
             onClick = {
@@ -236,7 +236,7 @@ fun AuthScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (state.busy) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(Modifier.size(Rahal.icon.xs), strokeWidth = Rahal.stroke.focus)
             } else {
                 Icon(
                     painter = painterResource(
@@ -244,7 +244,7 @@ fun AuthScreen(
                         else R.drawable.ic_login,
                     ),
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(Rahal.icon.xs),
                 )
                 Spacer(Modifier.size(Rahal.space.sm))
                 Text(
@@ -296,7 +296,7 @@ fun AuthScreen(
                 }
             }
         }
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(Rahal.space.xxl + Rahal.space.sm))
     }
 }
 

@@ -27,7 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.HorizontalDivider
+import com.rahalgo.ui.BottomActionBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -565,12 +565,9 @@ fun OffersWizard(
         }
         // ── شريطُ «حفظ» و«إلغاء» الثابت — في النموذج وحدَه ──
         if (composing && vm.merchantID.isNotEmpty()) {
-            HorizontalDivider(thickness = Rahal.stroke.hair, color = Rahal.colors.line)
+            BottomActionBar {
             Row(
-                Modifier
-                    .fillMaxWidth()
-                    .background(Rahal.colors.canvas)
-                    .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.sm),
+                Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
             ) {
                 RahalButton(
@@ -586,6 +583,7 @@ fun OffersWizard(
                     enabled = !vm.busy,
                     modifier = Modifier.weight(1f),
                 ) { IconText(R.drawable.ic_close, stringResource(R.string.act_cancel)) }
+            }
             }
         }
     }

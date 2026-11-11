@@ -50,7 +50,7 @@ fun ForcedPasswordScreen(
     val mismatch = next.isNotEmpty() && confirm.isNotEmpty() && next != confirm
 
     AuthPage {
-        AuthHeader(logoSize = 100.dp, topSpace = 24.dp, bottomSpace = 10.dp)
+        AuthHeader(logoSize = 100.dp, topSpace = Rahal.space.xl, bottomSpace = Rahal.space.sm)
         AuthCard {
         Text(
             text = stringResource(R.string.pw_forced_title),
@@ -64,7 +64,7 @@ fun ForcedPasswordScreen(
             style = Rahal.type.body,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
 
         PasswordField(current, {
             current = it
@@ -76,11 +76,11 @@ fun ForcedPasswordScreen(
         PasswordField(confirm, { confirm = it }, !state.busy, R.string.acc_pw_confirm)
 
         if (mismatch) {
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Text(stringResource(R.string.acc_pw_mismatch), color = Rahal.colors.danger)
         }
         if (state.error.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Text(state.error, color = Rahal.colors.danger)
         }
 

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.rahalgo.shared.model.IncentiveEntry
 import com.rahalgo.shared.model.TargetLevel
 
@@ -95,8 +93,11 @@ fun IncentivesScreen(
 
         levels.forEach { lv ->
             val reached = st.done >= lv.target
-            Spacer(Modifier.height(10.dp))
-            Card {
+            Spacer(Modifier.height(Rahal.space.md))
+            RahalCard(
+                variant = if (reached) CardVariant.Tinted else CardVariant.Elevated,
+                tone = if (reached) StatusTone.Success else null,
+            ) {
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -110,10 +111,11 @@ fun IncentivesScreen(
                         } else {
                             stringResource(R.string.inc_target)
                         },
-                        fontWeight = FontWeight.Bold,
+                        style = Rahal.type.cardTitle,
+                        color = Rahal.colors.ink,
                     )
                     if (reached) {
-                        Chip(stringResource(R.string.inc_reached), Rahal.colors.success)
+                        StatusChip(stringResource(R.string.inc_reached), StatusTone.Success)
                     } else {
                         Text(
                             text = stringResource(
@@ -125,14 +127,14 @@ fun IncentivesScreen(
                         )
                     }
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 Bar(
                     // **والنسبةُ تُقصّ عند الواحد** — من تجاوز المرحلةَ
                     // يملأ شريطَها ولا يتجاوزه.
                     ratio = (st.done.toFloat() / lv.target.toFloat()).coerceAtMost(1f),
                     color = if (reached) Rahal.colors.success else Rahal.colors.brand,
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(Rahal.space.xs))
                 Text(
                     text = st.done.toString() + " / " + lv.target.toString(),
                     color = Rahal.colors.inkMuted,
@@ -143,7 +145,7 @@ fun IncentivesScreen(
                 // ٢٠٢٦-٠٨-٠٩: «لازم يعرف شو المكافأة الي رح يحصل عليها
                 // وقت يحقّق هدفه»). **وصفرٌ يُخفيها**: لا وعدَ بلا مبلغ.
                 if (lv.reward > 0) {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(Rahal.space.md))
                     Text(
                         text = if (reached) {
                             stringResource(R.string.inc_reward_got, money(lv.reward))
@@ -157,10 +159,10 @@ fun IncentivesScreen(
             }
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(Rahal.space.lg))
         // **ومربّعاتٌ لا أسطر** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «أهدافي
         // والمكافآت أيضاً»). **وثلاثةٌ في صفٍّ واحدٍ تُقرأ بنظرة.**
-        Card(tone = Rahal.colors.inkMuted) {
+        RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Neutral) {
             StatRow {
                 StatBox(
                     label = stringResource(R.string.inc_done),
@@ -195,15 +197,15 @@ fun IncentivesScreen(
 private fun EntryRow(e: IncentiveEntry) {
     val reward = e.kind == "reward"
     val color = if (reward) Rahal.colors.success else Rahal.colors.danger
-    Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
+    Column(Modifier.fillMaxWidth().padding(vertical = Rahal.space.sm)) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Chip(
+            StatusChip(
                 text = stringResource(if (reward) R.string.inc_reward else R.string.inc_penalty),
-                color = color,
+                tone = if (reward) StatusTone.Success else StatusTone.Danger,
             )
             Text(
                 text = (if (reward) "+" else "−") + money(kotlin.math.abs(e.amount)),
@@ -218,8 +220,8 @@ private fun EntryRow(e: IncentiveEntry) {
             Text(e.reason, style = Rahal.type.body)
         }
         Text(whenText(e.createdAt), color = Rahal.colors.inkMuted, style = Rahal.type.caption)
-        Spacer(Modifier.height(6.dp))
-        HorizontalDivider()
+        Spacer(Modifier.height(Rahal.space.xs))
+        RahalDivider()
     }
 }
 

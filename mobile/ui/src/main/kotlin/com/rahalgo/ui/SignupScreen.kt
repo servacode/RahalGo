@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -116,12 +115,12 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
     AuthPage {
         // **شعارُ الهويّة المشترك** (Batch 5) — مُصغَّرٌ ومسافةٌ أقلُّ فوقَه
         // فلا يزحم حقولَ الإنشاء الكثيرة.
-        AuthHeader(logoSize = 100.dp, topSpace = 24.dp, bottomSpace = 10.dp)
+        AuthHeader(logoSize = 100.dp, topSpace = Rahal.space.xl, bottomSpace = Rahal.space.sm)
         Text(
             text = stringResource(R.string.signup_title),
             style = Rahal.type.headline,
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Text(
             text = stringResource(
                 when (state.step) {
@@ -131,6 +130,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 },
             ),
             color = Rahal.colors.inkMuted,
+            style = Rahal.type.body,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(Rahal.space.xl))
@@ -170,15 +170,14 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
 
             SignupStep.DETAILS -> {
                 Hint(GuideSpot.NAME)
-                OutlinedTextField(
+                LabeledField(
+                    label = stringResource(R.string.signup_name),
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.signup_name)) },
-                    singleLine = true,
                     enabled = !state.busy,
-                    modifier = Modifier.fillMaxWidth().tracks(GuideSpot.NAME),
+                    modifier = Modifier.tracks(GuideSpot.NAME),
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 Hint(GuideSpot.PASSWORD)
                 // **والعينُ هنا أيضا** — كلمةٌ تُكتب مرّةً واحدةً بلا
                 // تأكيد، **فمن أخطأ حرفاً ضبط كلمةً لا يعرفها** ثمّ عاد
@@ -201,7 +200,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 // **والحقلُ مخفيٌّ بنقاط** — فمن أخطأ حرفاً لا يراه،
                 // **فيُنشئ حساباً بكلمةٍ لا يعرفها** ثمّ يعود يستعيدها
                 // برسالةٍ إلى واتساب. **والتأكيدُ يمنع ذلك بحقل.**
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 PasswordField(
                     value = password2,
                     onChange = { password2 = it },
@@ -242,18 +241,15 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 //
                 // **واختياريٌّ صراحةً في نصّه**: حقلٌ لا يُعرف أإلزاميٌّ
                 // هو **يوقف من لا رمزَ عنده** عند آخر خطوةٍ في التسجيل.
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 Hint(GuideSpot.REFERRAL)
-                OutlinedTextField(
+                LabeledField(
+                    label = stringResource(R.string.signup_referral),
                     value = referral,
                     onValueChange = { referral = it.trim().uppercase() },
-                    label = { Text(stringResource(R.string.signup_referral)) },
-                    supportingText = {
-                        Text(stringResource(R.string.signup_referral_hint))
-                    },
-                    singleLine = true,
+                    supporting = stringResource(R.string.signup_referral_hint),
                     enabled = !state.busy,
-                    modifier = Modifier.fillMaxWidth().tracks(GuideSpot.REFERRAL),
+                    modifier = Modifier.tracks(GuideSpot.REFERRAL),
                 )
             }
         }
@@ -266,7 +262,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
             // **بدلاً من «الرقم مستعمل» الساكنة**: خياراتُ استعادةٍ صريحة.
             // **ولا دخولٌ أعمى هنا**: الدخولُ التلقائيُّ لا يقع إلّا في سياق
             // ضياعِ ردِّ تسجيلٍ بدأه العميلُ نفسُه (يُعالَج في النموذج).
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Text(
                 text = stringResource(R.string.signup_taken_title),
                 color = Rahal.colors.ink,
@@ -287,7 +283,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
             }
         } else {
             if (state.error.isNotEmpty()) {
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 Text(
                     text = state.error,
                     color = Rahal.colors.danger,
@@ -316,7 +312,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 if (state.busy) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(Modifier.size(Rahal.icon.xs), strokeWidth = Rahal.stroke.focus)
                 } else {
                     Text(
                         stringResource(
@@ -337,7 +333,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
         }
         } // AuthCard
 
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
         RahalTextButton(onClick = actions.cancel, enabled = !state.busy) {
             Text(stringResource(R.string.reset_back), color = Rahal.colors.inkMuted)
         }

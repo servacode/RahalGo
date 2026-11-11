@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
+import com.rahalgo.ui.RahalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -454,7 +454,7 @@ fun HoursPlanner(plan: HoursPlan, enabled: Boolean = true) {
         ) {
             val week = plan.draft.filter { it.dayOfWeek != FRIDAY }.sortedBy { (it.dayOfWeek + 1) % 7 }
             week.forEachIndexed { i, d ->
-                if (i > 0) HorizontalDivider(color = Rahal.colors.line, thickness = Rahal.stroke.hair)
+                if (i > 0) RahalDivider()
                 DayRow(
                     d = d,
                     enabled = enabled,
