@@ -275,9 +275,11 @@ var OrderPrivacy = map[string]FieldRule{
 	"fetch_amount_status":  {Ref: "أوافق المتجرُ على مبلغ الإحضار", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"amount_currency":      {Ref: "عملةُ مبلغ التوصيلة والإحضار (٢٠٢٦-١٠-٢٠)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_request":       {Ref: "نصُّ الطلب — لصاحبه ولمن ينفّذه", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"custom_agreed_at":     {Ref: "وقتُ الاتّفاق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"custom_goods_amount":  {Ref: "قيمةُ البضاعة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"custom_fee":           {Ref: "أجرُ الخدمة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	// **صورُ قائمة الزبون أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١، هجرة ٠٥٤١) — كنصّ الطلب: لصاحبه ولمن ينفّذه.
+	"custom_photos":       {Ref: "صورُ الطلب الخاصّ — لصاحبه ولمن ينفّذه (روابطُ موقَّعة)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"custom_agreed_at":    {Ref: "وقتُ الاتّفاق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"custom_goods_amount": {Ref: "قيمةُ البضاعة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"custom_fee":          {Ref: "أجرُ الخدمة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	// **ثمنُ البضاعة بالدولار** (قرارُ المالك ٢٠٢٦-١١-٠٩) — كقيمة البضاعة: يراه الزبونُ بعملته كما كُتب.
 	"custom_goods_usd": {Ref: "قيمةُ البضاعة بالدولار (بالسنتات)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	// **وسعرُ الدولار الملقوطُ ومعادلُه بالليرة** — حسابٌ داخليٌّ للمكتب وحدَه.

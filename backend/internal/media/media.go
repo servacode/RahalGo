@@ -129,7 +129,10 @@ var validKinds = map[string]bool{"merchant_logo": true, "menu_item": true, "menu
 	"expense_receipt": true,
 	// **و`odometer` صورةُ عدّاد الدرّاجة عند فتح الدوام وسكّره** — صنفٌ محميّ (هجرة ٠٥٠١،
 	// قرارُ المالك ٢٠٢٦-١١-٠٥): يراها المالكُ والمديرُ وحدَهما، وتُمحى بعد مدّة حفظها.
-	"odometer": true}
+	"odometer": true,
+	// **و`custom_photo` صورةُ قائمة مشتريات الطلب الخاصّ أو الغرض** — صنفٌ محميّ (هجرة ٠٥٤١،
+	// قرارُ المالك ٢٠٢٦-١١-١١): يراها صاحبُ الطلب وسائقُه والمكتبُ برابطٍ موقَّع.
+	"custom_photo": true}
 
 type Media struct {
 	ID       string `json:"id"`

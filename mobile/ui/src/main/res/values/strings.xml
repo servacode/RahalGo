@@ -798,6 +798,10 @@
     <string name="signup_password2">تأكيد كلمة المرور</string>
     <string name="signup_password_mismatch">كلمتا المرور غير متطابقتين</string>
     <string name="wal_k_topup">شحن رصيد</string>
+    <string name="err_custom_photos_invalid">إحدى الصور غير صالحة، أزلها وأضفها من جديد</string>
+    <string name="custom_photos_label">صور الطلب</string>
+    <string name="wal_topup_title">كيف بشحن محفظتي؟</string>
+    <string name="wal_topup_body">الشحن بيتم عند فريق رحّال غو: بتدفع المبلغ نقداً بمكتب المنصة وبينضاف لمحفظتك. المحفظة بتدفع أجرة التوصيل بس، وثمن الأغراض بيبقى كاش للكابتن. والدفع كاش عند الاستلام متاح دائماً.</string>
     <string name="wal_k_order_payment">دفع طلب من المحفظة</string>
     <string name="wal_k_merchant_earning">مستحقات مبيعات</string>
     <string name="wal_k_platform_profit">ربح المنصة</string>

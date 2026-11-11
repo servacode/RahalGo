@@ -121,6 +121,11 @@
       **المثالُ يُري ما يُطلب وما لا يُطلب** — ولا تعريفَ يُغني عنه.
       (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
     -->
+    <string name="cst_photos_title">صور القائمة أو الغرض (اختياري)</string>
+    <string name="cst_photos_hint">صوّر قائمة مشترياتك أو الغرض اللي بدك ياه — لحد ٣ صور، وبتغنيك عن الكتابة.</string>
+    <string name="cst_photos_add">إضافة صورة</string>
+    <string name="cst_photos_remove">إزالة الصورة</string>
+    <string name="cst_photos_failed">ما قدرنا نرفع الصورة، جرّب مرة ثانية</string>
     <string name="cst_what_hint">مثال: وجبة من مطعم معيّن، أو أدوية من صيدلية، أو أي غرض آخر</string>
     <string name="cst_what_hint_amanah">مثال: مفتاح أو ظرف أو كيس أغراض عند صاحب الأمانة</string>
     <string name="cst_notes">ملاحظات للسائق</string>

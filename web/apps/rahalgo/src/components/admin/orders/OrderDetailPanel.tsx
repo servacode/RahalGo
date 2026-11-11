@@ -44,6 +44,7 @@ import {
   IconLocation,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { CustomPhotoGrid } from "@/components/CustomPhotos";
 import { useAuth } from "@/lib/auth";
 import { useCanOpen } from "@/lib/policy";
 import { OrderChatView } from "./OrderChat";
@@ -157,6 +158,8 @@ interface Detail {
   fail_reason?: string;
   fault?: string;
   custom_request?: string;
+  /** صورُ قائمة الزبون أو الغرض (٢٠٢٦-١١-١١) — روابطُ موقَّعة. */
+  custom_photos?: string[];
   parcel_note?: string;
   holder_name?: string;
   holder_phone?: string;
@@ -490,6 +493,7 @@ function WhatSection({ o }: { o: Detail }) {
         o.custom_store_paid != null || o.fetch_amount != null || o.partner_merchant_name || o.ext_store_merchant_name) && (
         <div className="space-y-1">
           {o.custom_request && <Row label={F.customRequest}>{o.custom_request}</Row>}
+          <CustomPhotoGrid urls={o.custom_photos} />
           {o.parcel_note && <Row label={F.parcel}>{o.parcel_note}</Row>}
           {o.holder_name && (
             <Row label={F.holder}>

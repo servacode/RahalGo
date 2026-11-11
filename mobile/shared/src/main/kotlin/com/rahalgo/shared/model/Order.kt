@@ -68,6 +68,9 @@ data class DriverOrder(
      */
     @SerialName("custom_request") val customRequest: String = "",
 
+    /** **صورُ قائمة الزبون أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١) — روابطُ موقَّعة، وفارغٌ من خادمٍ قديم. */
+    @SerialName("custom_photos") val customPhotos: List<String> = emptyList(),
+
     /**
      * **ما يحمله السائقُ في «لدي توصيلة»** (الخطوة ١٨) — «كيس طعام ساخن، لا
      * يُقلب». **وفي التوصيلة `customer_name` اسمُ المستلِم** — لا حسابَ له.

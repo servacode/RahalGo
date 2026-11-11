@@ -42,6 +42,7 @@ import { useShopToast } from "@/components/customer/toast";
 import { ComplaintBox, RateButton } from "@/components/customer/feedback";
 import { LiveStartButton } from "@/components/customer/LiveShare";
 import WebPushCard from "@/components/WebPushCard";
+import { CustomPhotoGrid } from "@/components/CustomPhotos";
 
 const m = getMessages(defaultLocale);
 const O = m.shop.orders;
@@ -141,6 +142,7 @@ export default function OrderPage() {
             {O.wanted} {order.custom_request}
           </p>
         )}
+        {custom && <CustomPhotoGrid urls={order.custom_photos} />}
         {order.cancel_reason && <Alert>{order.cancel_reason}</Alert>}
         {order.quote_rejected_at && !ended && <Alert tone="info">{O.rejectedNote}</Alert>}
       </div>

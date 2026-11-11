@@ -31,6 +31,7 @@ import { customFee, fill, freeCustomOn, freeUntilText } from "@/lib/customer/tex
 import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
 import { OUTLINE_CARD, Segmented, StickyActionBar } from "@/components/customer/kit";
 import { NeedLogin } from "@/components/customer/NeedLogin";
+import { CustomPhotoPicker, type UploadedPhoto } from "@/components/CustomPhotos";
 import { useOrderingState, useAddGate, AvailabilityNotice } from "@/components/customer/ServiceNotices";
 import { useShopToast } from "@/components/customer/toast";
 
@@ -60,6 +61,8 @@ export default function CustomOrderPage() {
   const [mode, setMode] = useState<Mode>("purchase");
   const [request, setRequest] = useState("");
   const [notes, setNotes] = useState("");
+  // **صورُ القائمة أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١) — للمشتريات، اختياريّة، ١–٣، وتغني عن الكتابة.
+  const [photos, setPhotos] = useState<UploadedPhoto[]>([]);
   // **صاحبُ الأمانة ورقمُه، و«اطلب الموقع منه»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يلغي خريطةَ الصباح:
   // الزبونُ لا يعرف أين الأمانة. **كـ«إحضار» المتجر**: يصل صاحبَها رابطُ «أرسل موقعي»، ونقطتُه
   // تصير نقطةَ الاستلام قبل الإرسال أو بعده. مرآةُ `CustomScreen.kt`.
@@ -164,6 +167,7 @@ export default function CustomOrderPage() {
           notes: notes.trim(),
           payment_method: "cash",
           custom_mode: mode,
+          ...(mode !== "amanah" && photos.length > 0 ? { photo_ids: photos.map((p) => p.id) } : {}),
           ...(mode === "amanah"
             ? {
                 holder_name: holderName.trim(),
@@ -176,6 +180,7 @@ export default function CustomOrderPage() {
       clearAttempt(SLOT);
       setRequest("");
       setNotes("");
+      setPhotos([]);
       setMode("purchase");
       setHolderName("");
       setHolderPhone("");
@@ -226,6 +231,8 @@ export default function CustomOrderPage() {
           rows={4}
           maxLength={MAX_REQUEST}
         />
+
+        {mode !== "amanah" && <CustomPhotoPicker photos={photos} onChange={setPhotos} disabled={busy} />}
       </section>
 
       <AddressChip onOpen={() => setPickAddr(true)} />
@@ -354,7 +361,7 @@ export default function CustomOrderPage() {
         <Button
           className="min-h-12 w-full text-base"
           onClick={send}
-          disabled={busy || !request.trim() || !address || needHolder || !ordering.open || closed || gate.kind === "blocked"}
+          disabled={busy || (!request.trim() && !(mode !== "amanah" && photos.length > 0)) || !address || needHolder || !ordering.open || closed || gate.kind === "blocked"}
         >
           {busy ? K.sending : K.send}
         </Button>

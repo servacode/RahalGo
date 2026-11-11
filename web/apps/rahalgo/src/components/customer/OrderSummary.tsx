@@ -15,6 +15,7 @@ import { statusLabel } from "@/lib/customer/texts";
 import { ENDED, type MyOrder } from "@/lib/customer/types";
 import { OUTLINE_CARD, orderStatusTone } from "./kit";
 import { OrderEta, OrderInvoice, OrderStages } from "./orderParts";
+import { CustomPhotoGrid } from "@/components/CustomPhotos";
 
 const m = getMessages(defaultLocale);
 const O = m.shop.orders;
@@ -94,6 +95,7 @@ export function OrderSummary({ order }: { order: MyOrder }) {
             {O.wanted} {order.custom_request}
           </p>
         )}
+        {order.kind === "custom" && <CustomPhotoGrid urls={order.custom_photos} label={false} />}
         {live && <OrderStages order={order} />}
         {live && <OrderEta order={order} />}
         {!invoice && order.items_preview && <p className="line-clamp-2 text-xs text-ink-muted">{order.items_preview}</p>}

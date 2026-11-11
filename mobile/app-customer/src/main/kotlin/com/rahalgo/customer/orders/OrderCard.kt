@@ -216,6 +216,15 @@ fun OrderCard(
                 style = Rahal.type.body,
             )
         }
+        // **وصورُ قائمته أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١) — تحت وصف ما يريده.
+        if (order.kind == "custom" && order.customPhotos.isNotEmpty()) {
+            Spacer(Modifier.height(Rahal.space.sm))
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            com.rahalgo.ui.CustomPhotoStrip(
+                urls = order.customPhotos,
+                media = { p -> com.rahalgo.customer.Backend.of(ctx).media(p) },
+            )
+        }
 
         // ══════════════════════════════════════════════════════════════
         // **وشريطُ المراحل يأتي من المحرّك كاملا**

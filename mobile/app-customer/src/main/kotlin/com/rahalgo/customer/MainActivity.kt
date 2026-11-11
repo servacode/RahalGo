@@ -1098,6 +1098,7 @@ private fun SignedIn(
                     over == Overlay.Wallet -> WalletScreen(
                         vm = walletVm,
                         payouts = false,
+                        topUpInfo = true,
                         // **وسهمُ رجوعٍ فوقها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
                         onBack = { overlay.clear() },
                     )

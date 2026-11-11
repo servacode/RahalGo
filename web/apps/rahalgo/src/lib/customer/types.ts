@@ -308,6 +308,8 @@ export interface MyOrder {
   address_text: string;
   notes: string;
   custom_request: string;
+  /** **صورُ قائمة الزبون أو الغرض** (٢٠٢٦-١١-١١) — روابطُ موقَّعة؛ وغيابُها من خادمٍ قديم. */
+  custom_photos?: string[];
   custom_goods_amount: number | null;
   /** **ثمنُ البضاعة بالدولار بالسنتات** (١٢٥٠ = 12.50$) — غيرُ فارغٍ ⇒ البضاعةُ دولار و`custom_goods_amount` صفر. */
   custom_goods_usd?: number | null;

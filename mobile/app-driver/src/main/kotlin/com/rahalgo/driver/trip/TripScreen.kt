@@ -2213,6 +2213,14 @@ private fun TripCard(
                                     fontWeight = FontWeight.Bold,
                                     color = Rahal.colors.ink,
                                 )
+                                // **وصورُ قائمة الزبون أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١).
+                                if (order.customPhotos.isNotEmpty()) {
+                                    Spacer(Modifier.height(Rahal.space.sm))
+                                    com.rahalgo.ui.CustomPhotoStrip(
+                                        urls = order.customPhotos,
+                                        media = { p -> com.rahalgo.ui.AppCore.get().media(p) },
+                                    )
+                                }
                             }
                         }
 

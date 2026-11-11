@@ -231,6 +231,8 @@ fun WalletScreen(
      * الموظّف داخليّةٌ لا تُعرض له**. تطبيقُ السائق وحدَه يمرّرها.
      */
     neutralCompensation: Boolean = false,
+    /** **بطاقةُ «كيف بشحن محفظتي؟»** (قرارُ المالك ٢٠٢٦-١١-١١) — للزبون وحدَه: لا زرَّ شحنٍ له، الشحنُ عند فريق المنصة. */
+    topUpInfo: Boolean = false,
     /** **سهمُ رجوعٍ وعنوان «محفظتك» فوقها** — و`null` بلا رأس كما كانت. */
     onBack: (() -> Unit)? = null,
 ) {
@@ -362,6 +364,24 @@ fun WalletScreen(
                     if (i > 0) RahalDivider(inset = Rahal.space.lg)
                     PayoutRow(p)
                 }
+            }
+        }
+
+        if (topUpInfo) {
+            Spacer(Modifier.height(Rahal.space.lg))
+            RahalCard {
+                Text(
+                    stringResource(R.string.wal_topup_title),
+                    color = Rahal.colors.ink,
+                    style = Rahal.type.label,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(Rahal.space.sm))
+                Text(
+                    stringResource(R.string.wal_topup_body),
+                    color = Rahal.colors.inkMuted,
+                    style = Rahal.type.body,
+                )
             }
         }
 
