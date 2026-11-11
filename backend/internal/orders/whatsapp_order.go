@@ -78,7 +78,19 @@ var (
 	ErrWAFeeRequired = errors.New("wa_fee_required")
 	// ErrWAAddressClosed **تعديلُ العنوان بعد التسليم أو الإقفال** — الطلبُ انتهى.
 	ErrWAAddressClosed = errors.New("wa_address_closed")
+	// ErrWAAmanahSender **أمانةٌ بلا رقم صاحبها** (قرارُ المالك ٢٠٢٦-١١-١١) — منه يُطلب موقعُ الاستلام.
+	ErrWAAmanahSender = errors.New("wa_amanah_sender_required")
+	// ErrWAAmanahStore **أمانةٌ ومتجرٌ معاً** — الاستلامُ من شخصٍ لا من محلّ.
+	ErrWAAmanahStore = errors.New("wa_amanah_store")
+	// ErrWASamePhone **صاحبُ الأمانة والمستلِمُ رقمٌ واحد** — ردُّه بالموقع لا يُعرف لأيّهما.
+	ErrWASamePhone = errors.New("wa_same_phone")
+	// ErrWAPickupPending **أمانةٌ لم يصل موقعُ صاحبها** — لا تنزل للسائقين قبل أن تُعرف نقطةُ الاستلام.
+	// **ويبلغ من أبواب الانتقال العامّة** (المكتبُ ينزل الطلبَ بيده) — فردُّه في `respondErr` نفسِه.
+	ErrWAPickupPending = errors.New("wa_pickup_pending")
 )
+
+// WAAmanahSenderName **اسمُ صاحب الأمانة إن لم يُكتب** — والقيدُ يشترط اسماً للاستلام.
+const WAAmanahSenderName = "صاحب الأمانة"
 
 // WAFeeRangeError **أجرةٌ معدَّلةٌ خارجَ حدَّيها** — `delivery.custom_fee_min/max`، والحدّان
 // يُقالان في الردّ.
@@ -112,6 +124,13 @@ type WhatsAppOrderInput struct {
 	DriverNote string
 	// Fee **أجرةٌ عدّلها الموظّف** — وnil: المحسوبة. **وبلا موقعٍ للمستلِم إلزاميّة.**
 	Fee *int64
+
+	// Amanah **«أمانة من شخص»** (قرارُ المالك ٢٠٢٦-١١-١١) — الاستلامُ من صاحب الأمانة لا من متجر:
+	// اسمُه ورقمُه مكانَ المتجر، **ونقطتُه اختياريّة** (وبلاها يطلبها البوتُ منه). **ولا ثمنَ بضاعة.**
+	Amanah               bool
+	SenderName           string
+	SenderPhone          string
+	SenderLat, SenderLng *float64
 }
 
 // hasPoint **أمعه موقعُ المستلِم؟** — والنصفُ (خطُّ عرضٍ بلا طول) خطأٌ لا «بلا موقع».
@@ -157,6 +176,9 @@ type WhatsAppCreated struct {
 	PickupMerchantID string
 	// HasPoint **أُنشئ بموقع المستلِم** — وبلاه بالعنوان المكتوب (ملحقُ المالك ٢٠٢٦-١١-٠٥، ب).
 	HasPoint bool
+	// Amanah/PickupKnown **أمانةٌ، وأعُرفت نقطةُ صاحبها؟** — وبلاها يولد «مقبولاً» لا في الطابور.
+	Amanah      bool
+	PickupKnown bool
 }
 
 // waStore **المتجرُ كما يُكتب على الطلب.**
@@ -222,6 +244,37 @@ func (s *Service) resolveWhatsAppStore(ctx context.Context, q dbtx.Querier,
 	// **ورقمُ المتجر يُعدَّل في النموذج** — الموظّفُ يعرف من يردّ.
 	if in.StorePhone != "" {
 		st.phone = in.StorePhone
+	}
+	return st, nil
+}
+
+// resolveWhatsAppSender **صاحبُ الأمانة مكانَ المتجر** (قرارُ المالك ٢٠٢٦-١١-١١) — اسمُه ورقمُه
+// يُنسخان على الطلب كما يُنسخ المتجرُ غيرُ التابع، **فيقرؤهما تطبيقُ السائق حيث اعتاد** («استلام من»
+// وزرُّ الاتّصال). **ونقطتُه اختياريّة**: بلاها يطلبها البوتُ منه، والطلبُ لا ينزل حتّى تصل.
+//
+// **ولا متجرَ مع الأمانة**، ولا رقمَ واحدٌ للطرفين — ردُّه بالموقع لا يُعرف لأيّهما (`HandleWALocation`
+// يملأ أحدثَ طلبٍ مفتوحٍ لرقم المرسل).
+func resolveWhatsAppSender(in WhatsAppOrderInput) (waStore, error) {
+	if in.StoreID != "" || in.StoreName != "" || in.StorePhone != "" || in.StoreAddress != "" ||
+		in.StoreLat != nil || in.StoreLng != nil {
+		return waStore{}, ErrWAAmanahStore
+	}
+	if in.SenderPhone == "" {
+		return waStore{}, ErrWAAmanahSender
+	}
+	if in.SenderPhone == in.RecipientPhone {
+		return waStore{}, ErrWASamePhone
+	}
+	st := waStore{name: in.SenderName, phone: in.SenderPhone}
+	if st.name == "" {
+		st.name = WAAmanahSenderName
+	}
+	switch {
+	case in.SenderLat == nil && in.SenderLng == nil:
+	case in.SenderLat == nil || in.SenderLng == nil || !ValidPoint(*in.SenderLat, *in.SenderLng):
+		return waStore{}, ErrBadPoint
+	default:
+		st.lat, st.lng, st.known = *in.SenderLat, *in.SenderLng, true
 	}
 	return st, nil
 }
@@ -407,6 +460,8 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 	in.RecipientPhone = strings.TrimSpace(in.RecipientPhone)
 	in.AddressText = strings.TrimSpace(in.AddressText)
 	in.DriverNote = strings.TrimSpace(in.DriverNote)
+	in.SenderName = strings.TrimSpace(in.SenderName)
+	in.SenderPhone = strings.TrimSpace(in.SenderPhone)
 	// **رقمُ الزبون وحدَه إلزاميّ** (قرارُ المالك ٢٠٢٦-١١-٠٦) — لا اسمَ له («زبون»)، **والعنوانُ
 	// والموقعُ يطلبهما البوتُ منه** ويملآن الطلبَ حين يصلان. والتفاصيلُ ملاحظةٌ اختياريّة.
 	if in.RecipientPhone == "" {
@@ -438,7 +493,16 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
 
-	store, err := s.resolveWhatsAppStore(ctx, tx, in, true)
+	// **والأمانةُ لا ثمنَ بضاعةٍ فيها** (قرارُ المالك ٢٠٢٦-١١-١١) — والصفرُ صار nil أعلاه.
+	if in.Amanah && in.GoodsAmount != nil {
+		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+	}
+	var store waStore
+	if in.Amanah {
+		store, err = resolveWhatsAppSender(in)
+	} else {
+		store, err = s.resolveWhatsAppStore(ctx, tx, in, true)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -482,6 +546,18 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 	}
 	driverFee := DriverFeeWithShare(fee, p.pct, p.fixed)
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وأمانةٌ بلا نقطة صاحبها تولد «مقبولةً» لا في الطابور** (قرارُ المالك ٢٠٢٦-١١-١١)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **لا يراها سائقٌ ولا تُعرض** — العرضُ والإسنادُ من الطابور وحدَه. **وتنزل لحظةَ وصول موقعه**
+	// (`ApplyWhatsAppPickup`)، **والآلةُ تحرس النزولَ قبله** (`ErrWAPickupPending`). **وثمنُ الأمانة
+	// صفرٌ موثَّقٌ من الإنشاء** — فلا يُسأل السائقُ عنه بمكان الاستلام (تطبيقُه كما هو).
+	status := StDispatching
+	if in.Amanah && !store.known {
+		status = StAccepted
+	}
+
 	snap, err := s.snapshotNow(ctx, tx)
 	if err != nil {
 		return nil, err
@@ -495,7 +571,8 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 		pickupMerchant = &store.merchantID
 	}
 	out := &WhatsAppCreated{ComputedFee: p.fee, Fee: fee, DriverFee: driverFee,
-		StoreName: store.name, PickupMerchantID: store.merchantID, HasPoint: hasPoint}
+		StoreName: store.name, PickupMerchantID: store.merchantID, HasPoint: hasPoint,
+		Amanah: in.Amanah, PickupKnown: store.known}
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO orders (kind, origin, created_by, pickup_merchant_id,
 		                    pickup_name, pickup_phone, pickup_address, pickup_override,
@@ -507,19 +584,23 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 		                    snap_commission_source, snap_activation_orders,
 		                    snap_platform_delivery_percent, dropoff_known, snap_platform_delivery_fixed,
 		                    delivery_mode, collect_amount, amount_currency, promo_delivery_waived,
-		                    accepted_at, dispatched_at, money_model)
+		                    accepted_at, dispatched_at, money_model,
+		                    wa_amanah, fetch_amount, fetch_amount_version, fetch_amount_status,
+		                    fetch_amount_at, fetch_amount_decided_at)
 		VALUES ('merchant_delivery', 'whatsapp', $1, $2,
 		        $3, NULLIF($4, ''), NULLIF($5, ''),
 	        CASE WHEN $6::float8 IS NULL OR $7::float8 IS NULL THEN NULL
 	             ELSE ST_SetSRID(ST_MakePoint($7, $6), 4326)::geography END,
 		        $8, ST_SetSRID(ST_MakePoint($10, $9), 4326)::geography, $11,
 		        $12, $13, $14, 'recipient',
-		        'dispatching', 'cash', 0, $15, $16,
+		        $28, 'cash', 0, $15, $16,
 		        $15, $15, $17,
 		        $18, $19, $20, $21,
 		        $22, $26, $23,
 		        'send', $24, $25, 0,
-		        now(), now(), $27)
+		        now(), CASE WHEN $28::text = 'dispatching' THEN now() END, $27,
+		        $29, CASE WHEN $29 THEN 0 END, CASE WHEN $29 THEN 1 ELSE 0 END,
+		        CASE WHEN $29 THEN 'approved' END, CASE WHEN $29 THEN now() END, CASE WHEN $29 THEN now() END)
 		RETURNING id::text, number`,
 		actor, pickupMerchant,
 		store.name, store.phone, store.address, pickLat, pickLng,
@@ -528,7 +609,8 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 		fee, driverFee, in.DriverNote,
 		snap.MerchantCommission, snap.RepCommissionPercent, snap.CommissionSource, snap.ActivationOrders,
 		p.pct, p.fixed,
-		in.GoodsAmount, in.Currency, hasPoint, s.newOrderMoneyModel(ctx, tx)).Scan(&out.ID, &out.Number); err != nil {
+		in.GoodsAmount, in.Currency, hasPoint, s.newOrderMoneyModel(ctx, tx),
+		status, in.Amanah).Scan(&out.ID, &out.Number); err != nil {
 		return nil, err
 	}
 	// **وثمنٌ بالدولار كتبه الموظّف يُلقط سعرُه الآن** (قرارُ المالك ٢٠٢٦-١١-٠٩) — كما يُلقط حين يكتبه
@@ -543,10 +625,18 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 		}
 	}
 
-	// **ولحظةُ الميلاد تُقيَّد** — والفاعلُ الموظّفُ الذي كتبه، **والحالُ الأولى الطابور.**
+	// **ولحظةُ الميلاد تُقيَّد** — والفاعلُ الموظّفُ الذي كتبه، **والحالُ الأولى الطابور** (أو «مقبول»
+	// لأمانةٍ تنتظر موقعَ صاحبها).
+	birthNote := whatsAppBirthNote
+	if in.Amanah {
+		birthNote = whatsAppAmanahBirthNote
+		if !store.known {
+			birthNote = whatsAppAmanahWaitNote
+		}
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note)
-		VALUES ($1, '', 'dispatching', $2, $3)`, out.ID, actor, whatsAppBirthNote); err != nil {
+		VALUES ($1, '', $4, $2, $3)`, out.ID, actor, birthNote, status); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -559,6 +649,12 @@ const WhatsAppRecipientName = "زبون"
 // whatsAppBirthNote **سطرُ الميلاد في سجلّ الطلب.**
 const whatsAppBirthNote = "طلب واتساب"
 
+// whatsAppAmanahBirthNote/whatsAppAmanahWaitNote **سطرا ميلاد الأمانة** — بنقطة صاحبها أو بانتظارها.
+const (
+	whatsAppAmanahBirthNote = "أمانة واتساب"
+	whatsAppAmanahWaitNote  = "أمانة واتساب — بانتظار موقع صاحب الأمانة"
+)
+
 // AfterWhatsAppOrder **ما لا يقع إلّا بعد التثبيت** — البثُّ والعرضُ الأوّل على السائقين.
 //
 // **ولا رنينَ للمكتب**: هو من كتبه (والرنينُ للمعلَّق غيرِ المرئيّ وحدَه). **والسائقون
@@ -569,6 +665,10 @@ func (s *Service) AfterWhatsAppOrder(ctx context.Context, id string) (*Order, er
 		return nil, err
 	}
 	s.publishOrder(o)
+	// **وأمانةٌ تنتظر موقعَ صاحبها لا تُعرض** — «مقبولةٌ» حتّى يصل (`ApplyWhatsAppPickup`).
+	if o.Status != StDispatching {
+		return o, nil
+	}
 	if err := s.OfferNext(ctx, id, nil); err != nil {
 		s.logger.Error("طلب واتساب: تعذّر أوّلُ عرض", "order", id, "error", err)
 	}
@@ -772,6 +872,84 @@ func (s *Service) applyWhatsAppShared(ctx context.Context, orderID string, lat, 
 			Entity: "order", EntityID: orderID, Href: "/dashboard/orders",
 		})
 	}
+	return true, nil
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **موقعُ صاحب الأمانة يصل بعد الإنشاء** (قرارُ المالك ٢٠٢٦-١١-١١)
+// ══════════════════════════════════════════════════════════════════════
+//
+// «فنروح ع موقع الامانة نستلمها ونرجع نوصلها لصاحبها». **الأمانةُ بلا نقطة صاحبها «مقبولةٌ» لا
+// يراها سائق** — فإن وصل موقعُه (ردُّه على البوت أو الرابط) كُتب نقطةَ استلامٍ (`pickup_override`)
+// **ونزل الطلبُ للطابور وعُرض في لحظته.** والأجرةُ لا تتبدّل — كُتبت عند الإنشاء.
+//
+// **ونقطةٌ خارجَ التغطية تُكتب ولا ينزل الطلب** — يُخبَر المكتبُ ويقرّر (ينزله بيده أو يلغيه).
+
+// waPickupArrivedTitle/waPickupOutsideTitle **ما يقرؤه السائقُ والمكتب.**
+const (
+	waPickupArrivedTitle = "وصل موقع صاحب الأمانة — صار على الخريطة"
+	waPickupOutsideTitle = "موقع صاحب أمانة واتساب برّا التغطية"
+	// waAmanahDispatchNote **سطرُ السجلّ لنزول الأمانة بعد وصول الموقع.**
+	waAmanahDispatchNote = "وصل موقع صاحب الأمانة — نزل للسائقين"
+)
+
+// ApplyWhatsAppPickup **صاحبُ الأمانة شارك موقعَه** — يُكتب نقطةَ استلامٍ ما لم يُستلَم الطلبُ أو
+// يُقفَل، **وينزل للسائقين إن كان ينتظره.** ويردّ أكُتب.
+func (s *Service) ApplyWhatsAppPickup(ctx context.Context, orderID string, lat, lng float64) (bool, error) {
+	return s.applyWhatsAppPickup(ctx, orderID, lat, lng, false)
+}
+
+// FillWhatsAppPickup **كـ`ApplyWhatsAppPickup` في أمانةٍ بلا نقطة استلامٍ وحدَها** — لجولة الإصلاح:
+// موقعٌ وصل وسقطت كتابتُه. **وكاتبان معاً لا يُنزلان الطلبَ مرّتين**: الثاني يجد النقطةَ مكتوبة.
+func (s *Service) FillWhatsAppPickup(ctx context.Context, orderID string, lat, lng float64) (bool, error) {
+	return s.applyWhatsAppPickup(ctx, orderID, lat, lng, true)
+}
+
+func (s *Service) applyWhatsAppPickup(ctx context.Context, orderID string, lat, lng float64,
+	onlyUnknown bool) (bool, error) {
+	if !ValidPoint(lat, lng) {
+		return false, ErrBadPoint
+	}
+	covered, cerr := s.CoverableAt(ctx, s.db, lat, lng)
+	if cerr != nil {
+		s.logger.Warn("أمانة واتساب: فحصُ تغطية موقع صاحبها سقط", "order", orderID, "error", cerr)
+	}
+	var number int64
+	var driverID *string
+	var status string
+	err := s.db.QueryRow(ctx, `
+		UPDATE orders
+		   SET pickup_override = ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography, updated_at = now()
+		 WHERE id = $1 AND origin = 'whatsapp' AND wa_amanah
+		   AND picked_up_at IS NULL AND closed_at IS NULL
+		   AND (NOT $4 OR pickup_override IS NULL)
+		RETURNING number, driver_id::text, status`, orderID, lat, lng, onlyUnknown).
+		Scan(&number, &driverID, &status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	outside := waPointOutside(covered, cerr)
+	if outside && s.notify != nil {
+		s.notify.NotifyOps(ctx, notifications.Input{
+			Kind: notifications.KindOrder, Title: waPickupOutsideTitle,
+			Body:   "#" + itoa(number) + " — الموقع انكتب بالطلب وما نزل للسائقين، شوفوا إذا بنقدر نستلم",
+			Entity: "order", EntityID: orderID, Href: "/dashboard/orders",
+		})
+	}
+	// **ينتظر الموقعَ وداخلَ التغطية (أو فحصُها سقط) ⇒ ينزل ويُعرض** — بالآلة نفسِها باسم المكتب
+	// (والآلةُ تبثّ وتعرض أوّلَ عرضٍ بنفسها، `afterTransition`)، **وتعثّرُه لا يُبطل نقطةً كُتبت**:
+	// المكتبُ يراه «مقبولاً» بنقطةٍ وينزله بيده.
+	if status == StAccepted && !outside {
+		if _, err := s.Transition(ctx, "", []string{"ops"}, orderID, StDispatching, waAmanahDispatchNote); err != nil {
+			s.logger.Warn("أمانة واتساب: النزولُ بعد الموقع تعثّر — تنتظر المكتب", "order", orderID, "error", err)
+			s.afterWhatsAppRecipientChange(ctx, orderID, driverID, number, waPickupArrivedTitle, "")
+		}
+		return true, nil
+	}
+	s.afterWhatsAppRecipientChange(ctx, orderID, driverID, number, waPickupArrivedTitle, "")
 	return true, nil
 }
 

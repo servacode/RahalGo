@@ -20,6 +20,7 @@ package server
 //   - **رسالةُ الطلب الأولى لم تصل** (`whatsapp_sent`) — ثانيةٌ بلا أولى لا تُفهم.
 //   - **الطلبُ المربوطُ انتهى** (سُلّم أو أُلغي) — لا يُسأل عن عنوانٍ لا يُوصَل إليه.
 //   - **الطلبُ المربوطُ له نقطةٌ معروفة** — حدّدها الموظّفُ على الخريطة، فلا يُسأل عن عنوانه.
+//     **وطلبُ صاحب الأمانة** (`target='pickup'`، ٢٠٢٦-١١-١١) يُذكَّر ما دامت نقطةُ الاستلام مجهولة.
 //   - **طلبٌ قديمٌ قبل اشتعال الإعداد** — نافذةُ ساعتين، فمن أشعله اليوم لا يُراسل طلباتِ الأمس.
 //
 // # وجولةُ إصلاحٍ قبلها
@@ -62,17 +63,23 @@ const waLocRepairGrace = time.Minute
 
 // repairWALocations **موقعٌ وصل ولم يُكتب في طلبه الجاري** — يُكتب الآن (`FillWhatsAppShared`:
 // لا فوق نقطةٍ معروفة) ويُبثّ للسائق كما لو وصل الآن. ويردّ كم كُتب.
+//
+// **وموقعُ صاحب الأمانة كذلك** (قرارُ المالك ٢٠٢٦-١١-١١) — نقطةُ استلامٍ لم تُكتب في أمانةٍ تنتظرها
+// (`FillWhatsAppPickup`)، فتنزل للسائقين ولا تبقى «مقبولةً» إلى الأبد.
 func (s *Server) repairWALocations(ctx context.Context) int {
 	rows, err := s.pg.Query(ctx, `
-		SELECT l.order_id::text, l.lat, l.lng
+		SELECT l.order_id::text, l.lat, l.lng, `+locReqModeSQL+`
 		  FROM recipient_location_requests l
 		  JOIN orders o ON o.id = l.order_id
 		 WHERE l.mode = 'whatsapp' AND l.received_at IS NOT NULL
 		   AND l.lat IS NOT NULL AND l.lng IS NOT NULL
 		   AND l.received_at <  now() - make_interval(secs => $1)
 		   AND l.received_at >  now() - interval '1 day'
-		   AND o.origin = 'whatsapp' AND NOT o.dropoff_known
-		   AND o.delivered_at IS NULL AND o.closed_at IS NULL
+		   AND o.origin = 'whatsapp'
+		   AND ((l.target = 'dropoff' AND NOT o.dropoff_known AND o.delivered_at IS NULL)
+		     OR (l.target = 'pickup' AND o.wa_amanah AND o.pickup_override IS NULL
+		         AND o.picked_up_at IS NULL))
+		   AND o.closed_at IS NULL
 		 ORDER BY l.received_at
 		 LIMIT $2`, int(waLocRepairGrace.Seconds()), waLocFollowUpBatch)
 	if err != nil {
@@ -80,13 +87,13 @@ func (s *Server) repairWALocations(ctx context.Context) int {
 		return 0
 	}
 	type cand struct {
-		order    string
-		lat, lng float64
+		order, mode string
+		lat, lng    float64
 	}
 	var cands []cand
 	for rows.Next() {
 		var c cand
-		if err := rows.Scan(&c.order, &c.lat, &c.lng); err != nil {
+		if err := rows.Scan(&c.order, &c.lat, &c.lng, &c.mode); err != nil {
 			rows.Close()
 			s.logger.Warn("إصلاحُ موقع طلب الواتساب: قراءةُ صفٍّ سقطت", "error", err)
 			return 0
@@ -99,7 +106,11 @@ func (s *Server) repairWALocations(ctx context.Context) int {
 		if ctx.Err() != nil {
 			break
 		}
-		ok, err := s.orders.FillWhatsAppShared(ctx, c.order, c.lat, c.lng)
+		fill := s.orders.FillWhatsAppShared
+		if c.mode == locReqModeWAPickup {
+			fill = s.orders.FillWhatsAppPickup
+		}
+		ok, err := fill(ctx, c.order, c.lat, c.lng)
 		if err != nil {
 			s.logger.Warn("إصلاحُ موقع طلب الواتساب: الكتابةُ سقطت ثانيةً", "order", c.order, "error", err)
 			continue
@@ -139,7 +150,9 @@ func (s *Server) SweepWALocationFollowUp(ctx context.Context) int {
 		   AND (l.order_id IS NULL OR EXISTS (
 		        SELECT 1 FROM orders o
 		         WHERE o.id = l.order_id AND o.delivered_at IS NULL AND o.closed_at IS NULL
-		           AND NOT o.dropoff_known))
+		           -- **وصاحبُ الأمانة يُذكَّر ما دامت نقطةُ الاستلام مجهولة** (٢٠٢٦-١١-١١).
+		           AND CASE WHEN l.target = 'pickup' THEN o.pickup_override IS NULL
+		                    ELSE NOT o.dropoff_known END))
 		 ORDER BY l.created_at
 		 LIMIT $3`, minutes, int(waLocFollowUpWindow.Seconds()), waLocFollowUpBatch)
 	if err != nil {

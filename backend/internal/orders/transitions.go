@@ -266,6 +266,19 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 	if (to == StAtPickup || to == StPickedUp) && driverID == nil {
 		return nil, ErrNeedsDriver
 	}
+	// **وأمانةُ الواتساب لا تنزل للسائقين قبل موقع صاحبها** (قرارُ المالك ٢٠٢٦-١١-١١) — لا بيد المكتب
+	// ولا بكنسة: سائقٌ يُرسَل إلى لا مكان. **وتنزل وحدَها حين يصل** (`ApplyWhatsAppPickup`).
+	if origin == OriginWhatsApp && to == StDispatching {
+		var waiting bool
+		if err := tx.QueryRow(ctx,
+			`SELECT wa_amanah AND pickup_override IS NULL FROM orders WHERE id = $1`, orderID).
+			Scan(&waiting); err != nil {
+			return nil, err
+		}
+		if waiting {
+			return nil, ErrWAPickupPending
+		}
+	}
 
 	// **ولا يبدأ الخاصُّ قبل أن يُوثَّق ما اتُّفق عليه.**
 	//

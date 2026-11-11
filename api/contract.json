@@ -7365,6 +7365,26 @@
         {
           "name": "location_request_id",
           "type": "string"
+        },
+        {
+          "name": "amanah",
+          "type": "bool"
+        },
+        {
+          "name": "sender_name",
+          "type": "string"
+        },
+        {
+          "name": "sender_phone",
+          "type": "string"
+        },
+        {
+          "name": "sender_lat",
+          "type": "?float64"
+        },
+        {
+          "name": "sender_lng",
+          "type": "?float64"
         }
       ]
     },

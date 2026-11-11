@@ -13,6 +13,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
@@ -75,6 +76,11 @@ func (s *Server) respondErr(w http.ResponseWriter, err error) {
 	// **وأخطاءُ أقسام الطلب بعدّة محطّات برموزها** — من أيّ بابٍ جاءت (`admin_parts.go`).
 	if pe := partAppErr(err); pe != nil {
 		httpx.Error(w, pe)
+		return
+	}
+	// **وأمانةُ واتسابٍ تنتظر موقعَ صاحبها** (٢٠٢٦-١١-١١) — من أيّ باب انتقالٍ جاءت.
+	if errors.Is(err, orders.ErrWAPickupPending) {
+		httpx.Error(w, errWAPickupPending)
 		return
 	}
 	var pgErr *pgconn.PgError
