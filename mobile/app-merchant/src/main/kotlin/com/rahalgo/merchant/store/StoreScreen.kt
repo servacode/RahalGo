@@ -49,7 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.DayHours
-import com.rahalgo.ui.Card
+import com.rahalgo.ui.RahalCard
 import com.rahalgo.ui.StatRow
 import com.rahalgo.ui.StatBox
 import com.rahalgo.ui.KeyValue

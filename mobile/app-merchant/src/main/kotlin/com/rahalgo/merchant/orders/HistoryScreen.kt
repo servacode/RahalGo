@@ -41,7 +41,7 @@ import com.rahalgo.shared.merchant.commissionLabel
 import com.rahalgo.ui.err
 import com.rahalgo.ui.money
 import com.rahalgo.ui.AppCore
-import com.rahalgo.ui.Card
+import com.rahalgo.ui.RahalCard
 import com.rahalgo.ui.SumLine
 import com.rahalgo.ui.StatRow
 import com.rahalgo.ui.StatBox
@@ -283,7 +283,7 @@ fun HistoryScreen(vm: HistoryViewModel) {
  */
 @Composable
 private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> Unit) {
-    Card {
+    RahalCard(padding = Rahal.space.lg) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "#" + o.number,
@@ -296,12 +296,12 @@ private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> U
                 Text(at, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
             }
             Spacer(Modifier.weight(1f))
-            com.rahalgo.ui.Chip(
+            com.rahalgo.ui.StatusChip(
                 statusAr(o.status),
                 when {
-                    o.status == "delivered" -> Rahal.colors.success
-                    noPayout(o.status) -> Rahal.colors.danger
-                    else -> Rahal.colors.inkMuted
+                    o.status == "delivered" -> com.rahalgo.ui.StatusTone.Success
+                    noPayout(o.status) -> com.rahalgo.ui.StatusTone.Danger
+                    else -> com.rahalgo.ui.StatusTone.Neutral
                 },
             )
         }

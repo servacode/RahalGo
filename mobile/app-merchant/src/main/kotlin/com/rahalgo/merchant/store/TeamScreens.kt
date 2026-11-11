@@ -1,5 +1,6 @@
 package com.rahalgo.merchant.store
 
+import com.rahalgo.ui.cardVariant
 import com.rahalgo.ui.hours.IconChoice
 import com.rahalgo.ui.hours.IconChoicePair
 import com.rahalgo.ui.hours.TimeField
@@ -43,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
-import com.rahalgo.ui.cardSurface
 import com.rahalgo.merchant.Dates
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.MerchantApi
@@ -130,19 +130,12 @@ private fun WhiteCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (title.isNotEmpty()) {
-        Text(
-            title,
-            color = Rahal.colors.inkMuted,
-            fontWeight = FontWeight.Bold,
-            style = Rahal.type.cardTitle,
-            modifier = Modifier.padding(horizontal = Rahal.space.xs),
-        )
-        Spacer(Modifier.height(Rahal.space.sm))
+        com.rahalgo.ui.SectionHeader(title, modifier = Modifier.padding(horizontal = Rahal.space.xs))
     }
     Column(
         Modifier
             .fillMaxWidth()
-            .cardSurface(Rahal.shape.lg)
+            .cardVariant(com.rahalgo.ui.CardVariant.Elevated)
             .padding(Rahal.space.lg),
         content = content,
     )
@@ -274,18 +267,14 @@ fun StaffScreen(vm: StaffViewModel, canManage: Boolean, onBack: (() -> Unit)? = 
         if (vm.items.isEmpty()) {
             StaffEmpty()
         } else {
-            Text(
+            com.rahalgo.ui.SectionHeader(
                 stringResource(R.string.staff_list_title),
-                color = Rahal.colors.inkMuted,
-                fontWeight = FontWeight.Bold,
-                style = Rahal.type.cardTitle,
                 modifier = Modifier.padding(horizontal = Rahal.space.xs),
             )
-            Spacer(Modifier.height(Rahal.space.sm))
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .cardSurface(Rahal.shape.lg),
+                    .cardVariant(com.rahalgo.ui.CardVariant.Elevated),
             ) {
                 vm.items.forEachIndexed { i, row ->
                     if (i > 0) com.rahalgo.ui.RahalDivider()
@@ -372,33 +361,11 @@ fun StaffScreen(vm: StaffViewModel, canManage: Boolean, onBack: (() -> Unit)? = 
 /** **لا موظّفين بعد** — أيقونةٌ في دائرةٍ وسطرٌ واحد. */
 @Composable
 private fun StaffEmpty() {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .cardSurface(Rahal.shape.lg)
-            .padding(vertical = Rahal.space.xl, horizontal = Rahal.space.lg),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            Modifier
-                .size(Rahal.size.avatarMd)
-                .clip(Rahal.shape.pill)
-                .background(Rahal.colors.brand.copy(alpha = 0.10f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painterResource(com.rahalgo.ui.R.drawable.ic_user),
-                contentDescription = null,
-                tint = Rahal.colors.brand,
-                modifier = Modifier.size(Rahal.icon.md),
-            )
-        }
-        Spacer(Modifier.height(Rahal.space.md))
-        Text(
-            stringResource(R.string.staff_none),
-            color = Rahal.colors.inkMuted,
-            fontWeight = FontWeight.Bold,
-            style = Rahal.type.bodyLarge,
+    // **حالةُ الفراغ الموحّدة** (تصميمُ ٢٠٢٦-١١-١١).
+    com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined) {
+        com.rahalgo.ui.EmptyState(
+            title = stringResource(R.string.staff_none),
+            icon = com.rahalgo.ui.R.drawable.ic_user,
         )
     }
 }
@@ -469,7 +436,7 @@ private fun StaffRow(
                 onClick = onRemove,
                 enabled = enabled,
                 modifier = Modifier
-                    .size(Rahal.size.iconBox)
+                    .size(Rahal.size.touch)
                     .clip(Rahal.shape.pill)
                     .background(Rahal.colors.danger.copy(alpha = 0.10f)),
             ) {

@@ -63,7 +63,7 @@ import com.rahalgo.design.Rahal
 import com.rahalgo.merchant.Backend
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.MenuItem
-import com.rahalgo.ui.Card
+import com.rahalgo.ui.RahalCard
 import com.rahalgo.ui.Empty
 import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.RahalButton

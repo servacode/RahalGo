@@ -30,13 +30,10 @@ import com.rahalgo.merchant.R
  */
 @Composable
 internal fun CashOnlyCard() {
+    // **البطاقةُ الملوّنةُ الموحّدة** (تصميمُ ٢٠٢٦-١١-١١) — `RahalCard.Tinted` بنبرة المعلومة.
+    com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Tinted, tone = com.rahalgo.ui.StatusTone.Info) {
     Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(Rahal.shape.lg)
-            .background(Rahal.colors.brand.copy(alpha = 0.08f))
-            .border(Rahal.stroke.hair, Rahal.colors.brand, Rahal.shape.lg)
-            .padding(Rahal.space.md),
+        Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -67,5 +64,6 @@ internal fun CashOnlyCard() {
                 style = Rahal.type.caption,
             )
         }
+    }
     }
 }
