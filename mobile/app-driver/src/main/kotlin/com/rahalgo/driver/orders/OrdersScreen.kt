@@ -206,6 +206,10 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
 @Composable
 private fun WhyNoOrders(state: OrdersState, openBoard: () -> Unit = {}) {
     val me = state.me
+    // **وما تعدّه لوحتُه ينقصه تعدّه القائمةُ** — مصدرٌ واحد (`Readiness.missingCount`). كانت تقول
+    // «كلُّ شيءٍ جاهز» واللوحةُ «ينقصك (١)» (الموقعُ «أثناء الاستخدام» فقط) — ٢٠٢٦-١١-١١.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val missing = if (me != null) com.rahalgo.driver.location.Readiness.missingCount(context, me.onShift) else 0
     val reason: Pair<Int, Boolean>? = when {
         me == null -> null
         // **والحسابُ الموقوفُ أوّلُ الأسباب** — كان يُقرأ «كلّ شيء جاهز» ولا طلب.
@@ -215,6 +219,8 @@ private fun WhyNoOrders(state: OrdersState, openBoard: () -> Unit = {}) {
         me.cashLimit > 0 && me.cashHeld >= me.cashLimit -> R.string.why_cash_full to true
         me.maxActiveOrders > 0 && me.activeOrders >= me.maxActiveOrders ->
             R.string.why_too_many to true
+
+        missing > 0 -> R.string.why_missing to true
 
         else -> R.string.why_all_good to false
     }
@@ -251,11 +257,17 @@ private fun WhyNoOrders(state: OrdersState, openBoard: () -> Unit = {}) {
     // (إعادةُ التصميم ٢٠٢٦-١١-١١): السببُ عنوانٌ كبيرٌ يُقرأ بنظرة.
     // **والورديةُ المغلقةُ بزرٍّ يفتح «لوحتي»** — الكلامُ يقول «افتحها من لوحتي» فالزرُّ يأخذه إليها.
     val shiftClosed = text == R.string.why_shift_closed
+    // **والنقصُ يأخذه إلى «لوحتي»** حيث أزرارُ إصلاحه — الزرُّ نفسُه الذي هناك لا نسخةٌ ثانية.
+    val missingFix = text == R.string.why_missing
     Empty(
         text = stringResource(text),
         icon = R.drawable.ic_warning,
-        actionLabel = if (shiftClosed) stringResource(R.string.act_my_board) else "",
-        onAction = if (shiftClosed) openBoard else null,
+        actionLabel = when {
+            shiftClosed -> stringResource(R.string.act_my_board)
+            missingFix -> stringResource(R.string.why_missing_button)
+            else -> ""
+        },
+        onAction = if (shiftClosed || missingFix) openBoard else null,
     )
 }
 

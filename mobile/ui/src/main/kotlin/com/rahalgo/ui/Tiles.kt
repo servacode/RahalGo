@@ -150,6 +150,12 @@ fun StatTile(
     valueColor: Color = Rahal.colors.ink,
     @androidx.annotation.DrawableRes icon: Int? = null,
     onClick: (() -> Unit)? = null,
+    /**
+     * **مربّعٌ مضغوط** — اسمٌ بسطرٍ واحدٍ وحشوةٌ أقلّ. **لمن أسماؤه كلمةٌ واحدة** (سلّمت · تعذّر ·
+     * المسافة): حجزُ سطرين للاسم كان يترك فراغاً ميّتاً (ملاحظةُ المالك ٢٠٢٦-١١-١١). **والافتراضيُّ
+     * كما كان** فلا يتغيّر مربّعٌ في تطبيقٍ آخر.
+     */
+    compact: Boolean = false,
 ) {
     Column(
         modifier
@@ -161,7 +167,7 @@ fun StatTile(
             .clip(Rahal.shape.md)
             .background(Rahal.colors.brand.copy(alpha = 0.07f))
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.md),
+            .padding(horizontal = Rahal.space.sm, vertical = if (compact) Rahal.space.sm else Rahal.space.md),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -174,7 +180,7 @@ fun StatTile(
             color = Rahal.colors.inkMuted,
             style = Rahal.type.caption,
             textAlign = TextAlign.Center,
-            minLines = 2,
+            minLines = if (compact) 1 else 2,
             maxLines = 2,
         )
         androidx.compose.foundation.layout.Spacer(Modifier.size(Rahal.space.xs))

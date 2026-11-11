@@ -109,6 +109,14 @@ data class DriverTerms(
     val phone: String = "",
 )
 
+/** **ساعةٌ (٠–٢٣ بتوقيت دمشق) وعددُ الطلبات المنشأة فيها** — «أفضل أوقات الشغل». */
+@Serializable
+data class BusyHour(val hour: Int = 0, val orders: Int = 0)
+
+/** **أكثرُ الساعات طلباً في آخر `days` يوماً** — وفارغٌ إن قلّت البيانات. */
+@Serializable
+data class BusyHours(val days: Int = 14, val top: List<BusyHour> = emptyList())
+
 /** **جسمُ الموافقة — صنفٌ موسوم** لا `mapOf` (يسقط المختلطُ في النسخة المضغوطة). */
 @Serializable
 data class TermsAccept(val version: Int)

@@ -33,6 +33,9 @@ class DriverApi(private val api: ApiClient) {
     /** حال السائق — **الوردية والمال واليوم في نداء واحد.** */
     suspend fun me(): DriverMe = api.call("/api/v1/driver/me")
 
+    /** **أفضل أوقات الشغل** — أكثرُ ثلاثِ ساعاتٍ طلباً في المدينة، أرقامٌ مجمَّعة (٢٠٢٦-١١-١١). */
+    suspend fun busyHours(): com.rahalgo.shared.model.BusyHours = api.call("/api/v1/driver/busy-hours")
+
     /** **شروطُ العمل ونسختُها وما وافق عليه** (قرارُ المالك ٢٠٢٦-١١-٠٥). */
     suspend fun terms(): com.rahalgo.shared.model.DriverTerms = api.call("/api/v1/driver/terms")
 

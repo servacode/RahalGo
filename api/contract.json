@@ -8401,6 +8401,28 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/driver/busy-hours",
+      "handler": "handleDriverBusyHours",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "days",
+          "type": "unknown"
+        },
+        {
+          "name": "top",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/driver/cash",
       "handler": "handleDriverCash",
       "auth": true,

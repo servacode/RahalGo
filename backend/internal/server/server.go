@@ -1057,6 +1057,8 @@ func (s *Server) Router() http.Handler {
 			// **شروطُ العمل وموافقتُه عليها** (قرارُ المالك ٢٠٢٦-١١-٠٥) — `driver_terms.go`.
 			r.Get("/terms", s.handleDriverTerms)
 			r.Post("/terms/accept", s.handleDriverTermsAccept)
+			// **أفضل أوقات الشغل** — أكثرُ ثلاثِ ساعاتٍ طلباً في آخر ١٤ يوماً، أرقامٌ مجمَّعةٌ (`driver_busy_hours.go`).
+			r.Get("/busy-hours", s.handleDriverBusyHours)
 			// **موضعُه — يُرسله هو ولا يُخمَّن.** ومنه تُقاس المسافةُ إلى
 			// المتجر، **والترتيبُ بالدور عدلٌ في الوقت أعمى في المكان.**
 			r.Post("/location", s.handleDriverLocation)

@@ -108,6 +108,11 @@ fun TopBar(
     /** **وشاشةُ المحفظة نفسُها تُظهر الرصيدَ** — فلا رقاقةَ مكرَّرةً فوقها (المالك ٢٠٢٦-١١-١٠). */
     showBalance: Boolean = true,
     /**
+     * **اسمٌ صغيرٌ فوق رقم الرصيد** («رصيد محفظتك») — لمن يحمل غيرَ الرصيد من أرقام المال (السائق: ما معه
+     * للمكتب غيرُ ما في محفظته، والرقمُ وحدَه يُقرأ ديناً أو مالاً). **وفارغٌ كما كان** فلا يتغيّر شريطٌ آخر.
+     */
+    balanceCaption: String = "",
+    /**
      * ══════════════════════════════════════════════════════════════════
      * **بابُ عنوان التوصيل — أوّلُ ما يُقرأ في الشريط**
      * ══════════════════════════════════════════════════════════════════
@@ -339,12 +344,28 @@ fun TopBar(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.size(6.dp))
-                    Text(
-                        text = money(balance),
-                        color = Rahal.colors.brand,
-                        fontWeight = FontWeight.Bold,
-                        style = Rahal.type.body,
-                    )
+                    if (balanceCaption.isEmpty()) {
+                        Text(
+                            text = money(balance),
+                            color = Rahal.colors.brand,
+                            fontWeight = FontWeight.Bold,
+                            style = Rahal.type.body,
+                        )
+                    } else {
+                        Column {
+                            Text(
+                                text = balanceCaption,
+                                color = Rahal.colors.inkMuted,
+                                style = Rahal.type.caption,
+                            )
+                            Text(
+                                text = money(balance),
+                                color = Rahal.colors.brand,
+                                fontWeight = FontWeight.Bold,
+                                style = Rahal.type.body,
+                            )
+                        }
+                    }
                 }
                 Spacer(Modifier.size(Rahal.space.xs))
             }

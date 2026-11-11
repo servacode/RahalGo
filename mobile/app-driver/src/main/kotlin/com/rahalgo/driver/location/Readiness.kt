@@ -223,4 +223,43 @@ object Readiness {
      * **ويبقى معنىً قائماً**: **متابعةُ رحلةٍ في اليد.**
      */
     fun canWork(context: Context): Boolean = canWork(of(context))
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **كم ينقصه ليصله العمل؟ — العدُّ الذي تقوله لوحتُه وتقوله قائمةُ الطلبات** (٢٠٢٦-١١-١١)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **كانت القائمةُ تقول «كلُّ شيءٍ جاهز» واللوحةُ تقول «ينقصك (١)»** — الموقعُ «أثناء الاستخدام»
+     * فقط: اللوحةُ تعدّه والقائمةُ لا تسأله. **فمصدرٌ واحد**: هذه الدالّةُ تعدّ ما تعدّه بطاقةُ
+     * «حتى تستمر بالعمل» سطراً بسطر (الموقعُ أو إشارتُه · الموقعُ طولَ الوقت · التشغيلُ التلقائيّ ·
+     * الإشعارات).
+     */
+    fun missingCount(
+        canWork: Boolean,
+        onShift: Boolean,
+        gpsLost: Boolean,
+        backgroundGranted: Boolean,
+        autoStartPending: Boolean,
+        notifyMissing: Boolean,
+    ): Int {
+        var n = 0
+        if (!canWork) n++ else if (onShift && gpsLost) n++
+        if (canWork && !backgroundGranted) n++
+        if (autoStartPending) n++
+        if (notifyMissing) n++
+        return n
+    }
+
+    /** **وبقراءة النظام** — لقائمة الطلبات. */
+    fun missingCount(context: Context, onShift: Boolean): Int {
+        val s = of(context)
+        return missingCount(
+            canWork = canWork(s),
+            onShift = onShift,
+            gpsLost = GpsSignal.lost,
+            backgroundGranted = !s.blockers.contains(Blocker.BACKGROUND_LOCATION_REQUIRED),
+            autoStartPending = AutoStart.applies() && !AutoStart.done(context),
+            notifyMissing = s.blockers.contains(Blocker.NOTIFICATION_PERMISSION_REQUIRED),
+        )
+    }
 }
