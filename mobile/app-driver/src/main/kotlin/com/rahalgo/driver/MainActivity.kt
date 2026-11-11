@@ -1240,6 +1240,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         },
                         refresh = orders::refresh,
                         decline = orders::declineOffer,
+                        openBoard = { overlay.clear(); tab = 2; home.refresh() },
                     ),
                 )
             }

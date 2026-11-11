@@ -530,7 +530,9 @@ private fun Row(
             )
         }
         // **والمسافةُ التي قادها فيه** (قرارُ المالك ٢٠٢٦-١١-٠٥) — «المسافة: ٣ كم»، من المحرّك.
-        o.driveM?.let { m ->
+        // **والصفرُ لا يُكتب** (رُئي على جوال المالك ٢٠٢٦-١١-١١: «المسافة: 0 م» على كلّ طلب) — صفرٌ
+        // يعني أنّ المسافة لم تُقس، لا أنّه لم يتحرّك.
+        o.driveM?.takeIf { it > 0 }?.let { m ->
             Text(
                 text = stringResource(R.string.hist_drive, com.rahalgo.ui.dist(m.toDouble())),
                 color = Rahal.colors.inkMuted,

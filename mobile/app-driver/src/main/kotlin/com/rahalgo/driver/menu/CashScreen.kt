@@ -251,7 +251,13 @@ private fun CashRow(e: CashEntry) {
             }
         }
         if (parts.isNotEmpty()) {
-            Text(parts.joinToString(" · "), color = Rahal.colors.inkMuted, style = Rahal.type.caption)
+            // **والمبلغُ لا ينكسر عن «ل.س»** (رُئي على جوال المالك ٢٠٢٦-١١-١١: «ل.س» وحدَها أوّلَ السطر) —
+            // مسافاتُ كلّ جزءٍ لا تنكسر، والسطرُ ينكسر بين الأجزاء عند «·» وحدَها.
+            Text(
+                parts.joinToString(" · ") { it.replace(' ', NBSP) },
+                color = Rahal.colors.inkMuted,
+                style = Rahal.type.caption,
+            )
         }
         // **والملاحظةُ لا تُكرّر الاسم** — تظهر إن قالت زيادة.
         if (e.note.isNotEmpty() && e.note != label) {
@@ -282,3 +288,6 @@ private fun cashKind(kind: String): String = when (kind) {
     "collection_reversed" -> stringResource(R.string.cash_k_collection_reversed)
     else -> ""
 }
+
+/** **مسافةٌ لا تنكسر** — تربط المبلغَ بعملته في سطرٍ واحد. */
+private const val NBSP = '\u00A0'

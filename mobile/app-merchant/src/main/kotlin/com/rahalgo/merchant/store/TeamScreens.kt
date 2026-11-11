@@ -460,6 +460,8 @@ class OrderPhonesViewModel(app: Application) : AndroidViewModel(app) {
     private val api = MerchantApi(AppCore.get().api)
 
     var phones by mutableStateOf<OrderPhones?>(null)
+    /** **آخرُ ما وصل من المحرّك** — فلا يظهر «حفظ» قبل أن يتغيّر شيء (رُئي على جوال المالك ٢٠٢٦-١١-١١). */
+    var savedPhones by mutableStateOf<OrderPhones?>(null)
     var loading by mutableStateOf(true)
         private set
     var busy by mutableStateOf(false)
@@ -476,7 +478,7 @@ class OrderPhonesViewModel(app: Application) : AndroidViewModel(app) {
         storeId = id
         loading = true
         viewModelScope.launch {
-            runCatching { phones = api.orderPhones(id) }
+            runCatching { phones = api.orderPhones(id); savedPhones = phones }
                 .onSuccess { error = "" }
                 .onFailure { error = err(it) }
             loading = false
@@ -496,7 +498,7 @@ class OrderPhonesViewModel(app: Application) : AndroidViewModel(app) {
         saved = false
         viewModelScope.launch {
             runCatching { api.setOrderPhones(storeId, p) }
-                .onSuccess { phones = it; saved = true }
+                .onSuccess { phones = it; savedPhones = it; saved = true }
                 .onFailure { error = err(it) }
             busy = false
         }
@@ -588,7 +590,8 @@ fun OrderPhonesScreen(
             }
         }
 
-        if (canManage) {
+        // **و«حفظ» بعد التغيير وحدَه** — كـ«ساعات الدوام».
+        if (canManage && p != vm.savedPhones) {
             Spacer(Modifier.height(Rahal.space.xl))
             RahalButton(
                 onClick = {

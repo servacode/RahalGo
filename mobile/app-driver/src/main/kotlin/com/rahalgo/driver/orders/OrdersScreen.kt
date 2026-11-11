@@ -131,7 +131,7 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
         // المقبول، **فسطرٌ يعيد ما تقوله البطاقة حشو.**
         if (state.offers.isEmpty()) {
             // **والفراغ لا يُترك فراغا** — يُقال سببه.
-            item { WhyNoOrders(state) }
+            item { WhyNoOrders(state, actions.openBoard) }
         } else {
             items(state.offers, key = { it.id }) { order ->
                 OrderCard(
@@ -204,7 +204,7 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
  * معا** فلا يعرف أيّها يعالج.
  */
 @Composable
-private fun WhyNoOrders(state: OrdersState) {
+private fun WhyNoOrders(state: OrdersState, openBoard: () -> Unit = {}) {
     val me = state.me
     val reason: Pair<Int, Boolean>? = when {
         me == null -> null
@@ -249,9 +249,13 @@ private fun WhyNoOrders(state: OrdersState) {
     }
     // **والمانعُ حالةٌ فارغةٌ بأيقونة التنبيه** — بشكل «كل شيء جاهز» نفسه، لا شريطٌ ضيّق
     // (إعادةُ التصميم ٢٠٢٦-١١-١١): السببُ عنوانٌ كبيرٌ يُقرأ بنظرة.
+    // **والورديةُ المغلقةُ بزرٍّ يفتح «لوحتي»** — الكلامُ يقول «افتحها من لوحتي» فالزرُّ يأخذه إليها.
+    val shiftClosed = text == R.string.why_shift_closed
     Empty(
         text = stringResource(text),
         icon = R.drawable.ic_warning,
+        actionLabel = if (shiftClosed) stringResource(R.string.act_my_board) else "",
+        onAction = if (shiftClosed) openBoard else null,
     )
 }
 
@@ -1012,4 +1016,6 @@ data class OrdersActions(
     val refresh: () -> Unit,
     /** **رفضُ عرضٍ** — يُخفيه وينقل الدورَ للتالي. */
     val decline: (String) -> Unit = {},
+    /** **يفتح «لوحتي»** — حيث تُفتح الوردية (رُئي على جوال المالك ٢٠٢٦-١١-١١: «افتحها من لوحتي» بلا زرّ). */
+    val openBoard: () -> Unit = {},
 )

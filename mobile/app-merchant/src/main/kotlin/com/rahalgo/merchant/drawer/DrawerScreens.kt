@@ -119,9 +119,13 @@ fun WarningsScreen(vm: WarningsViewModel) {
         Screen {
             // **والعنوانُ في رأس الصفحة** (`OverlayPage`) — ولا سطرَ شرح.
 
-            // **ولا إنذارَ خبرٌ سارّ** — فيُقال بلون العلامة لا بسطرٍ رماديّ.
+            // **ولا إنذارَ خبرٌ سارّ** — بالحال الفارغة الموحّدة (أيقونةٌ وتحتها الكلام) كباقي الصفحات
+            // (رُئي على جوال المالك ٢٠٢٦-١١-١١: كان شريطاً رماديّاً وحدَه).
             if (vm.items.isEmpty()) {
-                Note(stringResource(com.rahalgo.merchant.R.string.store_no_warnings), Rahal.colors.brand)
+                com.rahalgo.ui.EmptyState(
+                    title = stringResource(com.rahalgo.merchant.R.string.store_no_warnings),
+                    icon = com.rahalgo.ui.R.drawable.ic_check,
+                )
                 return@Screen
             }
             // **كلُّ إنذارٍ بطاقةٌ بأيقونةٍ ملوّنة** (مراجعةُ التصميم ٢٠٢٦-١١-٠٩).
