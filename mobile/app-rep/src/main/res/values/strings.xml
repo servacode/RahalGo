@@ -202,6 +202,9 @@
     <string name="ac_ok_body">أُرسل الطلب إلى الإدارة وهو الآن بانتظار الموافقة. سيظهر في عملائك فور قبوله.</string>
     <string name="ac_ok_go">عرض عملائي</string>
     <!-- وحقولُ الاختيار تقول إنها مطلوبة قبل أن يُضغط زر معطل -->
+    <!-- عناوينُ مجموعات نموذج «إضافة عميل» (٢٠٢٦-١١-١١) -->
+    <string name="ac_sec_place">المنطقة والتصنيف</string>
+    <string name="ac_sec_store">بيانات المتجر</string>
     <string name="ac_required">مطلوب</string>
     <!-- وسقوطُ جلب المحافظات يُقال داخل لوحها مع زرّ إعادة (٢٠٢٦-١٠-٢٧) -->
     <string name="ac_gov_failed">تعذّر جلب المحافظات</string>
@@ -251,6 +254,13 @@
          هو.** والحالُ تنبيهٌ برتقاليٌّ بزرّه لا خطأٌ أحمر (٢٠٢٦-١٠-٢٧). -->
     <string name="bd_code_locked">يظهر رمزك بعد توثيق حسابك</string>
     <string name="bd_verify">وثّق حسابك</string>
+    <!-- **لوحتي بشكلها الجديد** (٢٠٢٦-١١-١١) — اختصاراتٌ وسطرُ «الباقي للمرحلة» -->
+    <string name="bd_quick">اختصارات</string>
+    <string name="bd_q_wallet">المحفظة</string>
+    <string name="bd_next">باقي %1$s للمرحلة %2$s</string>
+    <string name="bd_all_done">✓ حققت كل مراحل هذا الشهر</string>
+    <string name="bd_my_commissions">عمولاتي</string>
+    <string name="bd_open_wallet">افتح المحفظة</string>
 
     <!-- **رابطُ الدعوة** -->
     <string name="push_ch_lead">عملاء جدد</string>

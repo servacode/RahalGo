@@ -12,7 +12,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.merchant.DayHours
 import com.rahalgo.ui.LoadState
@@ -65,7 +64,7 @@ fun ClientHours(vm: ClientsViewModel) {
                 enabled = !vm.hoursSaving,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(Rahal.size.action),
             ) { Text(stringResource(com.rahalgo.ui.R.string.act_save), fontWeight = FontWeight.Bold) }
         }
         Spacer(Modifier.height(Rahal.space.xl))

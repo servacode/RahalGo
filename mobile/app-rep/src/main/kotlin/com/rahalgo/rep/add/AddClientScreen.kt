@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -117,40 +116,30 @@ private fun PickerBlock(
     chips: @Composable () -> Unit,
 ) {
     val done = !chosen.isNullOrBlank()
-    val edge = if (done) Rahal.colors.brand else Rahal.colors.accent
-    Column(
-        Modifier
-            .fillMaxWidth()
-            // **بطاقةٌ بظلّ كبقيّة الشاشات** — الناقصُ بصبغة التنبيه، والتامُّ بيضاءُ بلون العلامة (مراجعةُ التصميم ٢٠٢٦-١١-٠٩).
-            .cardSurface(Rahal.shape.md, tone = if (done) null else edge, elevation = 2.dp)
-            .padding(Rahal.space.md),
+    // **بطاقةٌ من العُدّة** — الناقصُ بصبغة التنبيه، والتامُّ بيضاءُ محدودة (مراجعةُ التصميم ٢٠٢٦-١١-٠٩ · ٢٠٢٦-١١-١١).
+    com.rahalgo.ui.RahalCard(
+        variant = if (done) com.rahalgo.ui.CardVariant.Outlined else com.rahalgo.ui.CardVariant.Tinted,
+        tone = if (done) null else com.rahalgo.ui.StatusTone.Warning,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 label,
                 color = Rahal.colors.ink,
-                style = MaterialTheme.typography.titleSmall,
+                style = Rahal.type.cardTitle,
+                modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(Rahal.space.sm))
             if (done) {
                 // **وعلامةُ الصحّ نصٌّ لا أيقونة** — **ولا تُجَرّ حزمةُ
                 // `material-icons` كلُّها (آلافُ المتّجهات) لأجل رمزٍ
                 // واحد**، والمشروعُ لا يعتمدها أصلاً.
-                Text(
-                    "✓ " + chosen.orEmpty(),
-                    color = Rahal.colors.success,
-                    style = MaterialTheme.typography.bodyMedium,
+                com.rahalgo.ui.StatusChip(
+                    chosen.orEmpty(),
+                    com.rahalgo.ui.StatusTone.Success,
+                    icon = com.rahalgo.ui.R.drawable.ic_check,
                 )
             } else {
-                Text(
-                    stringResource(R.string.ac_required),
-                    color = Rahal.colors.accent,
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier
-                        .clip(Rahal.shape.sm)
-                        .background(Rahal.colors.accent.copy(alpha = 0.14f))
-                        .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
-                )
+                com.rahalgo.ui.StatusChip(stringResource(R.string.ac_required), com.rahalgo.ui.StatusTone.Warning)
             }
         }
         // **والتلميحُ يبقى ما دام ناقصاً ويذهب حين يتمّ** — **وشرحٌ
@@ -160,7 +149,7 @@ private fun PickerBlock(
             Text(
                 hint,
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
         // ══════════════════════════════════════════════════════════════
@@ -171,12 +160,12 @@ private fun PickerBlock(
         // المحافظات — فلا يختار منطقةً ولا يُرسل، **ولا يُحَلّ إلّا بإغلاق
         // التطبيق.**
         if (failed.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     failed,
                     color = Rahal.colors.danger,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                     modifier = Modifier.weight(1f),
                 )
                 if (onRetry != null) {
@@ -247,25 +236,21 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         // ══════════════════════════════════════════════════════════════
         if (editing) {
             if (vm.editNote.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(Rahal.shape.md)
-                        .background(Rahal.colors.warnTint)
-                        .border(Rahal.stroke.hair, Rahal.colors.danger.copy(alpha = 0.55f), Rahal.shape.md)
-                        .padding(Rahal.space.md),
+                Spacer(Modifier.height(Rahal.space.md))
+                com.rahalgo.ui.RahalCard(
+                    variant = com.rahalgo.ui.CardVariant.Tinted,
+                    tone = com.rahalgo.ui.StatusTone.Danger,
                 ) {
                     Text(
                         stringResource(R.string.ac_edit_note_title),
                         color = Rahal.colors.danger,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = Rahal.type.cardTitle,
                     )
                     Spacer(Modifier.height(Rahal.space.xs))
-                    Text(vm.editNote, color = Rahal.colors.ink, style = MaterialTheme.typography.bodyMedium)
+                    Text(vm.editNote, color = Rahal.colors.ink, style = Rahal.type.body)
                 }
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             RahalTextButton(onClick = { vm.cancelEdit() }) {
                 Text(stringResource(R.string.ac_edit_cancel))
             }
@@ -299,7 +284,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         // **ورقائقُ لا قائمةٌ منسدلة** — كالتصنيف حرفاً: **المندوبُ واقفٌ
         // في السوق بيدٍ واحدة**، والرقاقةُ تُضغط بالإبهام والمنسدلةُ
         // تحتاج ضغطتين ونافذةً تُغطّي النموذج.
-        Spacer(Modifier.height(Rahal.space.md))
+        com.rahalgo.ui.SectionHeader(stringResource(R.string.ac_sec_place))
         PickerBlock(
             label = stringResource(R.string.ac_governorate),
             chosen = vm.governorates.firstOrNull { it.id == vm.pickedGovernorate }?.name,
@@ -310,7 +295,8 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
                 FilterChip(
                     selected = vm.pickedGovernorate == g.id,
                     onClick = { vm.pickGovernorate(g.id) },
-                    label = { Text(g.name) },
+                    label = { Text(g.name, style = Rahal.type.label) },
+                    shape = Rahal.shape.pill,
                 )
             }
         }
@@ -319,7 +305,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         // يُخفى حتّى تُختار محافظة**، فيرى المندوبُ حقلين ويُرسل فيُردّ
         // عليه بزرٍّ معطّلٍ لا يعرف سببَه. **والصفُّ الغائبُ لا يُعلّم،
         // والصفُّ الذي يقول «اختر المحافظة أوّلاً» يُعلّم.**
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         PickerBlock(
             label = stringResource(R.string.ac_district),
             chosen = vm.districts.firstOrNull { it.id == vm.pickedDistrict }?.name,
@@ -328,7 +314,8 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
                 FilterChip(
                     selected = vm.pickedDistrict == d.id,
                     onClick = { vm.pickDistrict(d.id) },
-                    label = { Text(d.name) },
+                    label = { Text(d.name, style = Rahal.type.label) },
+                    shape = Rahal.shape.pill,
                 )
             }
         }
@@ -351,26 +338,27 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
                 FilterChip(
                     selected = vm.pickedCategory == c.id,
                     onClick = { vm.pickCategory(c.id) },
-                    label = { Text(c.name) },
+                    label = { Text(c.name, style = Rahal.type.label) },
+                    shape = Rahal.shape.pill,
                 )
             }
         }
 
-        Spacer(Modifier.height(Rahal.space.md))
-        OutlinedTextField(
+        com.rahalgo.ui.SectionHeader(stringResource(R.string.ac_sec_store))
+        com.rahalgo.ui.LabeledField(
+            label = stringResource(R.string.mn_store_name),
             value = vm.store,
             onValueChange = { vm.store = it },
-            label = { Text(stringResource(R.string.mn_store_name)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            enabled = !vm.busy,
+            leadingIcon = com.rahalgo.ui.R.drawable.ic_store,
         )
         Spacer(Modifier.height(Rahal.space.sm))
-        OutlinedTextField(
+        com.rahalgo.ui.LabeledField(
+            label = stringResource(R.string.ac_owner),
             value = vm.owner,
             onValueChange = { vm.owner = it },
-            label = { Text(stringResource(R.string.ac_owner)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            enabled = !vm.busy,
+            leadingIcon = com.rahalgo.ui.R.drawable.ic_user,
         )
         Spacer(Modifier.height(Rahal.space.sm))
         // **ورقمُ الهاتف بالحقل المركزيّ** — **وتحقّقُ الشكل في موضعٍ
@@ -378,12 +366,12 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         PhoneField(value = vm.phone, onChange = { vm.phone = it }, enabled = !vm.busy)
 
         Spacer(Modifier.height(Rahal.space.sm))
-        OutlinedTextField(
+        com.rahalgo.ui.LabeledField(
+            label = stringResource(R.string.ac_area),
             value = vm.area,
             onValueChange = { vm.area = it },
-            label = { Text(stringResource(R.string.ac_area)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            enabled = !vm.busy,
+            leadingIcon = com.rahalgo.ui.R.drawable.ic_pin,
         )
 
         // ══════════════════════════════════════════════════════════════
@@ -397,13 +385,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         // **الخريطةُ الصغيرةُ نفسُها التي في معالج المتجر** (طلبُ المالك ٢٠٢٦-١٠-٢٩) —
         // الدبّوسُ في الوسط والخريطةُ تتحرّك تحته، و«حدّد موقعي بدقة» فيها؛ **ولا ملتقطَ
         // بشاشةٍ كاملة.**
-        Spacer(Modifier.height(Rahal.space.md))
-        Text(
-            stringResource(R.string.ac_point),
-            color = Rahal.colors.ink,
-            style = MaterialTheme.typography.titleSmall,
-        )
-        Spacer(Modifier.height(6.dp))
+        com.rahalgo.ui.SectionHeader(stringResource(R.string.ac_point))
         com.rahalgo.map.PointMapCard(
             lat = vm.point?.first,
             lng = vm.point?.second,
@@ -424,7 +406,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         ) {
             // **وتنبيهٌ برتقاليٌّ لا خطأٌ أحمر** (٢٠٢٦-١٠-٢٧) — لا يمنع الإرسال،
             // **والأحمرُ يجعله يظنّ أنّ عليه أن يُصلح شيئاً.**
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Note(
                 stringResource(R.string.ac_point_other_district, pointDistrict.name, chosenDistrict.name),
                 Rahal.colors.accent,
@@ -459,7 +441,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             if (vm.point == null) add(stringResource(R.string.ac_point))
         }
 
-        Spacer(Modifier.height(Rahal.space.lg))
+        Spacer(Modifier.height(Rahal.space.xl))
         RahalButton(
             onClick = { vm.send() },
             // ══════════════════════════════════════════════════════════
@@ -476,10 +458,10 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             // **والمحافظةُ لا تُشترط منفصلةً** — لا تُختار منطقةٌ بلا
             // محافظة، **وشرطٌ لا يمكن كسرُه شرطٌ يزحم ولا يحرس.**
             enabled = !vm.busy && missing.isEmpty(),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(Rahal.size.action),
         ) {
             if (vm.busy) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(Modifier.size(Rahal.icon.xs), strokeWidth = Rahal.stroke.focus)
             } else {
                 Text(stringResource(if (editing) R.string.ac_resend else R.string.ac_send))
             }
@@ -490,10 +472,10 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             Text(
                 stringResource(R.string.ac_missing, missing.joinToString("، ")),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
-        Spacer(Modifier.height(28.dp))
+        
     }
 }
 

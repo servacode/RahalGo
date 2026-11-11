@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,15 +16,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.rep.R
 import com.rahalgo.shared.rep.RepMerchantDetail
 import com.rahalgo.shared.rep.RepMerchantHead
 import com.rahalgo.shared.rep.RepStoreCommission
+import com.rahalgo.ui.IconTile
+import com.rahalgo.ui.LabeledField
 import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalDialog
 import com.rahalgo.ui.RahalTextButton
 import com.rahalgo.ui.WesternDigits
 import java.math.BigDecimal
@@ -131,7 +130,7 @@ fun StoreCommissionRow(
     var text by remember(merchantId, current) { mutableStateOf(pctText(current)) }
 
     // **مربّعٌ بأيقونةٍ وقيمةٍ يُضغط فتُفتح نافذةُ التعديل** (طلبُ المالك ٢٠٢٦-١١-١١) — لا سطرٌ وزرٌّ مؤطَّر.
-    InfoTile(
+    IconTile(
         icon = R.drawable.ic_percent,
         label = stringResource(R.string.cd_commission_tile),
         value = pctLabel(current),
@@ -141,30 +140,24 @@ fun StoreCommissionRow(
     )
     if (!editing) return
 
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = { editing = false; text = pctText(current) },
-        title = { Text(stringResource(R.string.cd_commission_title), fontWeight = FontWeight.Bold) },
+    val close = { editing = false; text = pctText(current) }
+    RahalDialog(
+        onDismissRequest = close,
+        title = { Text(stringResource(R.string.cd_commission_title), style = Rahal.type.sectionTitle) },
         text = {
-            Column {
-                Text(
-                    stringResource(R.string.cd_commission_range, pctLabel(lo), pctLabel(hi)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Rahal.colors.inkMuted,
-                )
-                Spacer(Modifier.height(10.dp))
-                // **ما يُفحص هو ما يُرسَل** — لاتينيّاً وبما يقبله المحرّك وحدَه، والفارغُ `null` (`commissionPayload`).
-                val payload = commissionPayload(text, lo, hi)
-                OutlinedTextField(
-                    value = text,
-                    // **والخانةُ تُظهر ما سيُرسَل**: الأرقامُ العربيّةُ تصير لاتينيّةً عند الكتابة (قاعدةُ الأرقام).
-                    onValueChange = { v -> text = normalizePctInput(v).filter { c -> c in '0'..'9' || c == '.' }.take(6) },
-                    label = { Text(stringResource(R.string.cd_commission_field)) },
-                    singleLine = true,
-                    isError = text.isNotBlank() && payload == null,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            // **والحدّان سطرُ عونٍ تحت الخانة** — ويصير أحمرَ إن خرجت النسبةُ عنهما.
+            // **ما يُفحص هو ما يُرسَل** — لاتينيّاً وبما يقبله المحرّك وحدَه، والفارغُ `null` (`commissionPayload`).
+            val payload = commissionPayload(text, lo, hi)
+            val range = stringResource(R.string.cd_commission_range, pctLabel(lo), pctLabel(hi))
+            LabeledField(
+                label = stringResource(R.string.cd_commission_field),
+                value = text,
+                // **والخانةُ تُظهر ما سيُرسَل**: الأرقامُ العربيّةُ تصير لاتينيّةً عند الكتابة (قاعدةُ الأرقام).
+                onValueChange = { v -> text = normalizePctInput(v).filter { c -> c in '0'..'9' || c == '.' }.take(6) },
+                supporting = range,
+                error = if (text.isNotBlank() && payload == null) range else "",
+                keyboardType = KeyboardType.Decimal,
+            )
         },
         confirmButton = {
             val payload = commissionPayload(text, lo, hi)
@@ -175,7 +168,7 @@ fun StoreCommissionRow(
             ) { Text(stringResource(com.rahalgo.ui.R.string.act_save)) }
         },
         dismissButton = {
-            RahalTextButton(onClick = { editing = false; text = pctText(current) }) {
+            RahalTextButton(onClick = close) {
                 Text(stringResource(R.string.cd_commission_cancel), color = Rahal.colors.inkMuted)
             }
         },

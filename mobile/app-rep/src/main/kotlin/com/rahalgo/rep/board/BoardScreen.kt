@@ -8,9 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,31 +17,33 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
 import com.rahalgo.rep.R
 import com.rahalgo.shared.rep.RepApi
 import com.rahalgo.shared.rep.RepMe
+import com.rahalgo.ui.ActionRow
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Bar
-import com.rahalgo.ui.Card
-import com.rahalgo.ui.Chip
-import com.rahalgo.ui.KeyValue
+import com.rahalgo.ui.CardVariant
+import com.rahalgo.ui.IconAction
+import com.rahalgo.ui.IconBox
+import com.rahalgo.ui.ListRow
 import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalCard
 import com.rahalgo.ui.RahalOutlineButton
 import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.Refreshable
-import androidx.compose.foundation.clickable
 import com.rahalgo.ui.Screen
-import com.rahalgo.ui.StatRow
-import com.rahalgo.ui.StatBox
 import com.rahalgo.ui.ScreenTitle
-import com.rahalgo.ui.SectionTitle
+import com.rahalgo.ui.SectionHeader
+import com.rahalgo.ui.StatTile
+import com.rahalgo.ui.StatusChip
+import com.rahalgo.ui.StatusTone
 import com.rahalgo.ui.apiError
 import com.rahalgo.ui.money
 import kotlinx.coroutines.flow.drop
@@ -80,6 +81,10 @@ fun BoardScreen(
     onOpenAccount: () -> Unit = {},
     /** **بطاقةُ «بحاجة معلومات» تفتح «عملائي»** (٢٠٢٦-١٠-٢٨). */
     onOpenClients: () -> Unit = {},
+    /** **اختصارُ «إضافة عميل»** (٢٠٢٦-١١-١١) — ينقل إلى تبويبه. */
+    onAddClient: () -> Unit = {},
+    /** **اختصارُ «المكافآت»** (٢٠٢٦-١١-١١) — يفتح «أهدافي والمكافآت». */
+    onOpenGoals: () -> Unit = {},
 ) {
     val me = vm.me
     if (me == null) {
@@ -91,57 +96,22 @@ fun BoardScreen(
     // **وسحبٌ للتحديث كما في تطبيق المتجر** (٢٠٢٦-١٠-٢٧).
     Refreshable(refreshing = false, onRefresh = { vm.load(force = true) }) {
     Screen {
-        // **وبلا تلميحٍ تحت العنوان** — (طلبُ المالك ٢٠٢٦-٠٨-٣١:
-        // «أرقامك وهدف الشهر احذفها، غيرُ ضروريّة»).
-        //
-        // **وتلميحٌ يعيد ما تحته لا يضيف**: الأرقامُ والهدفُ معروضان
-        // في الشاشة نفسِها بأسمائهما، **فسطرٌ يسمّيهما يزحم ولا يشرح.**
+        // **وبلا تلميحٍ تحت العنوان** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «أرقامك وهدف الشهر احذفها،
+        // غيرُ ضروريّة»). **وتلميحٌ يعيد ما تحته لا يضيف.**
         ScreenTitle(stringResource(R.string.act_my_board))
 
         // ══════════════════════════════════════════════════════════════
-        // **والبسطُ متاجرُ فُتحت — لا طلباتٌ سُلّمت**
+        // **١ · هدفُ الشهر — البطاقةُ الأولى، والبسطُ متاجرُ فُتحت لا طلباتٌ سُلّمت**
         // ══════════════════════════════════════════════════════════════
         //
-        // **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** «الهدفُ الشهريّ هو عددُ العملاء
-        // المسجَّلين» · **وبلاغُه**: «يوجد فقط عميلٌ واحدٌ بالهدف الشهريّ
-        // مع أنّ بعملائه أربعةَ عملاء».)
+        // (قرارُ المالك ٢٠٢٦-٠٨-٣١: «الهدفُ الشهريّ هو عددُ العملاء المسجَّلين».) **والمحرّكُ يرسل
+        // `month_merchants` و`month_delivered` معاً — فالشاشةُ تختار، ومن اختار الخطأ لا يُخطئه بناء.**
         //
-        // **وكان `monthDelivered`** — فيقرأ «١ / ٥» **وفي السطر نفسِه
-        // تحته «عملاء سجلتهم: ٤»**: رقمان متناقضان في شاشةٍ واحدة.
+        // **وخطٌّ طويلٌ بمراحله الثلاث** (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «لازم يطول خط الهدف بحيث يعرف أنّه
+        // حقّق أوّل هدف، وشو باقي لثاني هدف وثالث هدف»). **والعدّادُ شهريٌّ** بتوقيت دمشق.
         //
-        // # وهذا موضعٌ رابعٌ لقاعدةٍ واحدة
-        //
-        // **`doneThisMonth` تدفع · و`Standings` تعرض في اللوحة · والكلمةُ
-        // تقول · وهذا يرسم.** أُصلحت ثلاثةٌ ٢٠٢٦-٠٨-٣١ **وبقي هذا يوماً
-        // كاملاً يعرض غيرَ ما يُدفع عليه.**
-        //
-        // **والمحرّكُ يرسل الحقلين معاً** (`month_merchants` و
-        // `month_delivered`) — **فالشاشةُ تختار، ومن اختار الخطأ لا
-        // يُخطئه بناءٌ ولا حارس.**
-        //
-        // **وأنا من وضع الخطأ** (٢٠٢٦-٠٨-٣٠): رأيتُ الشيفرةَ تعدّ طلبات
-        // **فجعلتُ الشاشةَ تتبعها**، والصوابُ أن تتبع الشيفرةُ القصد.
-        // ══════════════════════════════════════════════════════════════
-        // **وهدفُ الشهر خطٌّ طويلٌ بمراحله الثلاث** — طلبُ المالك ٢٠٢٦-٠٩-٣٠
-        // ══════════════════════════════════════════════════════════════
-        //
-        // «لازم يطول خط الهدف بحيث يعرف أنّه حقّق أوّل هدف، وشو باقي لثاني
-        // هدف وثالث هدف». **وكانت البطاقةُ تعرف المرحلةَ الأولى وحدَها**
-        // (`monthly_target`) — فمن بلغ خمسةً رأى «تمّ» ولم يعرف أنّ أمامه ١٥.
-        //
-        // **والعدّادُ شهريّ** — يبدأ من صفرٍ كلَّ شهرٍ بتوقيت دمشق
-        // (`incentives.doneThisMonthOn`)، والمراحلُ تُدفع مرّةً في الشهر.
-        //
-        // ══════════════════════════════════════════════════════════════
-        // **ولا هدفَ يُخترع** (٢٠٢٦-١٠-٢٧)
-        // ══════════════════════════════════════════════════════════════
-        //
-        // **كان يضع «1» من عنده** حين تُطفئ الإدارةُ الهدفَ
-        // (`sales.monthly_target=0`) أو يسقط نداءُ المراحل — **فيرى
-        // «المرحلة 1 · 1 عملاء» هدفاً لم يضعه أحد**، وقد يظنّ أنّ على
-        // أوّل عميلٍ مكافأة. **فالمراحلُ من المحرّك، ثمّ الهدفُ الشهريُّ
-        // إن كان، ثمّ لا شيء** — وتقول البطاقةُ إنّه لا هدف.
-        val done = me.monthMerchants
+        // **ولا هدفَ يُخترع** (٢٠٢٦-١٠-٢٧): المراحلُ من المحرّك، ثمّ الهدفُ الشهريُّ إن كان، ثمّ لا شيء.
+        val done = me.monthMerchants.toLong()
         val steps = vm.levels.ifEmpty {
             if (me.monthlyTarget > 0) {
                 listOf(com.rahalgo.shared.model.TargetLevel(n = 1, target = me.monthlyTarget.toLong()))
@@ -151,288 +121,242 @@ fun BoardScreen(
         }
         val top = steps.lastOrNull()?.target ?: 0L
         val allDone = top > 0 && done >= top
-        Spacer(Modifier.height(Rahal.space.md))
-        if (steps.isEmpty()) {
-            Card {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+        RahalCard(padding = Rahal.space.lg) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconBox(com.rahalgo.ui.R.drawable.ic_star, Rahal.colors.brand)
+                Spacer(Modifier.size(Rahal.space.md))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.act_month_target), style = Rahal.type.sectionTitle, color = Rahal.colors.ink)
+                    val next = steps.firstOrNull { done < it.target }
                     Text(
-                        stringResource(R.string.act_month_target),
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium,
+                        text = when {
+                            steps.isEmpty() -> stringResource(R.string.bd_no_target)
+                            allDone -> stringResource(R.string.bd_all_done)
+                            next != null -> stringResource(R.string.bd_next, (next.target - done).toString(), next.n.toString())
+                            else -> ""
+                        },
+                        color = if (allDone) Rahal.colors.success else Rahal.colors.inkMuted,
+                        style = Rahal.type.caption,
                     )
+                }
+                if (steps.isNotEmpty()) {
+                    // **«٣ / ٣٥» معزولةً يساريّاً** — فلا ينقلب ترتيبُ الرقمين داخل سطرٍ عربيّ.
                     Text(
-                        stringResource(R.string.bd_no_target),
-                        color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "⁦$done / $top⁩",
+                        color = if (allDone) Rahal.colors.success else Rahal.colors.brand,
+                        style = Rahal.type.headline,
                     )
                 }
             }
-        } else Card {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(R.string.act_month_target),
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = "$done / $top",
-                    color = if (allDone) Rahal.colors.success else Rahal.colors.brand,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium,
-                )
+            if (steps.isNotEmpty()) {
+                Spacer(Modifier.height(Rahal.space.lg))
+                // **خطٌّ واحدٌ بقطعٍ على قدر المراحل** — قطعةُ كلِّ مرحلةٍ بطولِ ما بينها وبين سابقتها.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs)) {
+                    var from = 0L
+                    steps.forEach { l ->
+                        val span = (l.target - from).coerceAtLeast(1)
+                        val filled = ((done - from).toFloat() / span).coerceIn(0f, 1f)
+                        Box(Modifier.weight(span.toFloat())) {
+                            Bar(ratio = filled, color = if (done >= l.target) Rahal.colors.success else Rahal.colors.brand)
+                        }
+                        from = l.target
+                    }
+                }
+                Spacer(Modifier.height(Rahal.space.md))
+                Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                    steps.forEach { l -> LevelRow(l, done) }
+                }
             }
-            Spacer(Modifier.height(10.dp))
-            // **خطٌّ واحدٌ بقطعٍ على قدر المراحل** — قطعةُ كلِّ مرحلةٍ بطولِ
-            // ما بينها وبين سابقتها، **فيُرى أين هو من الثلاث معاً.**
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs),
-            ) {
-                var from = 0L
-                steps.forEach { l ->
-                    val span = (l.target - from).coerceAtLeast(1)
-                    val filled = ((done - from).toFloat() / span).coerceIn(0f, 1f)
-                    Box(Modifier.weight(span.toFloat())) {
-                        Bar(
-                            ratio = filled,
-                            color = if (done >= l.target) Rahal.colors.success else Rahal.colors.brand,
+            // **وما ينتظر شروطَه يُقال** (قرارُ المالك ٢٠٢٦-١٠-١٣) — وإلّا ظنّ أنّ متجراً سجّله ضاع من عدّاده.
+            if (me.goalPending > 0) {
+                Spacer(Modifier.height(Rahal.space.md))
+                StatusChip(goalPendingText(me.goalPending.toInt()), StatusTone.Warning, icon = com.rahalgo.ui.R.drawable.ic_time)
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **٢ · ما ينتظره** — «بحاجة معلومات» عليه هو فتُضغط، و«بانتظار الموافقة» للعلم.
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **ولا يُعرضان صفراً**: رقمٌ صفريٌّ بجانب «بانتظار الموافقة» يُقرأ رفضا.
+        if (me.needsInfoLeads > 0 || me.pendingLeads > 0) {
+            Spacer(Modifier.height(Rahal.space.md))
+            Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                if (me.needsInfoLeads > 0) {
+                    // (٢٠٢٦-١٠-٢٨) **بطاقةٌ برتقاليّةٌ تُضغط فتفتح «عملائي»** حيث الطلبُ وملاحظتُه.
+                    RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Warning, onClick = onOpenClients) {
+                        ListRow(
+                            title = stringResource(R.string.bd_needs_info),
+                            icon = com.rahalgo.ui.R.drawable.ic_warning,
+                            iconTint = Rahal.colors.accent,
+                            titleColor = Rahal.colors.accentInk,
+                            trailing = { StatusChip(me.needsInfoLeads.toString(), StatusTone.Warning) },
+                            chevron = true,
                         )
                     }
-                    from = l.target
                 }
-            }
-            Spacer(Modifier.height(10.dp))
-            steps.forEach { l ->
-                val reachedL = done >= l.target
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        // **«الهدف ٥» لا «٥ عملاء»** — فلا تُقرأ «1 عملاء» (٢٠٢٦-١٠-٢٧).
-                        stringResource(R.string.bd_level, l.n.toString(), l.target.toString()),
-                        color = if (reachedL) Rahal.colors.success else Rahal.colors.ink,
-                        fontWeight = if (reachedL) FontWeight.Bold else FontWeight.Normal,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        if (reachedL) {
-                            if (l.reward > 0) {
-                                // **والمكافأةُ بفواصلها كسائر المبالغ** — «+50,000 ل.س».
-                                stringResource(R.string.bd_level_done_reward, money(l.reward))
-                            } else {
-                                stringResource(R.string.bd_level_done)
-                            }
-                        } else {
-                            stringResource(R.string.bd_target_left, (l.target - done).toString())
-                        },
-                        color = if (reachedL) Rahal.colors.success else Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-            // **وما ينتظر شروطَه يُقال** (قرارُ المالك ٢٠٢٦-١٠-١٣) — وإلّا ظنّ أنّ
-            // متجراً سجّله ضاع من عدّاده. وتفصيلُ كلِّ متجرٍ في «عملائي».
-            if (me.goalPending > 0) {
-                Spacer(Modifier.height(Rahal.space.sm))
-                Text(
-                    goalPendingText(me.goalPending.toInt()),
-                    color = Rahal.colors.accent,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **وشهرُه بعده** — ما عمله هذا الشهر
-        // ══════════════════════════════════════════════════════════════
-        Spacer(Modifier.height(14.dp))
-        SectionTitle(stringResource(R.string.bd_this_month))
-        // **ومربّعاتٌ لا أسطر** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «لوحتي أيضاً
-        // اعملها مربّعاتٍ مناسبة، أفضل»). **والرقمُ يُرى قبل أن يُقرأ.**
-        Card {
-            StatRow {
-                StatBox(
-                    label = stringResource(R.string.bd_month_clients),
-                    value = me.monthMerchants.toString(),
-                    modifier = Modifier.weight(1f),
-                )
-                StatBox(
-                    label = stringResource(R.string.bd_month_delivered),
-                    value = me.monthDelivered.toString(),
-                    modifier = Modifier.weight(1f),
-                )
-                StatBox(
-                    label = stringResource(R.string.bd_month_commissions),
-                    value = money(me.monthCommissions),
-                    modifier = Modifier.weight(1f),
-                    color = Rahal.colors.brand,
-                )
-            }
-        }
-
-        // **وما ينتظر البتّ** — ولا يُعرض صفراً: **رقمٌ صفريٌّ بجانب
-        // «بانتظار الموافقة» يُقرأ رفضا.**
-        if (me.pendingLeads > 0) {
-            Spacer(Modifier.height(10.dp))
-            Card {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(R.string.bd_pending),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Chip(me.pendingLeads.toString(), Rahal.colors.accent)
-                }
-            }
-        }
-
-        // **وما ردّته الإدارةُ تسأل عن معلومة** (٢٠٢٦-١٠-٢٨) — عليه هو لا عليها،
-        // **فبطاقةٌ برتقاليّةٌ تُضغط فتفتح «عملائي»** حيث الطلبُ وملاحظتُه. وكانت لا
-        // تُعدّ أصلاً (`pending_leads` تعدّ `new` وحدَها) فلا يعلم أنّ عليه شيئاً.
-        if (me.needsInfoLeads > 0) {
-            Spacer(Modifier.height(10.dp))
-            Card(
-                modifier = Modifier.clickable(onClick = onOpenClients),
-                tone = Rahal.colors.accent,
-            ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(R.string.bd_needs_info),
-                        color = Rahal.colors.accent,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Chip(me.needsInfoLeads.toString(), Rahal.colors.accent)
+                if (me.pendingLeads > 0) {
+                    RahalCard(variant = CardVariant.Outlined) {
+                        ListRow(
+                            title = stringResource(R.string.bd_pending),
+                            icon = com.rahalgo.ui.R.drawable.ic_time,
+                            trailing = { StatusChip(me.pendingLeads.toString(), StatusTone.Info) },
+                        )
+                    }
                 }
             }
         }
 
         // ══════════════════════════════════════════════════════════════
-        // **والتراكميُّ آخرا** — ما جمعه منذ بدأ
-        // ══════════════════════════════════════════════════════════════
-        Spacer(Modifier.height(14.dp))
-        SectionTitle(stringResource(R.string.bd_all_time))
-        // **وثلاثةٌ فوق ورصيدُه وحدَه تحت** — **والرصيدُ ليس من جنسها**:
-        // تلك حصيلةُ عمله، **وهذا ما في يده الآن.** ومربّعٌ رابعٌ في
-        // صفّها يجعله رقماً بينها فيُقرأ حصيلةً أخرى.
-        //
-        // **وصار الرصيدُ بطاقةً تُضغط فتفتح المحفظة** (٢٠٢٦-١٠-٢٧) — **وكان
-        // مربّعاً لا يُضغط** فيُقرأ رقماً إحصائيّاً كغيره.
-        Card {
-            StatRow {
-                StatBox(
-                    label = stringResource(R.string.bd_clients),
-                    value = me.merchants.toString(),
-                    modifier = Modifier.weight(1f),
-                )
-                StatBox(
-                    label = stringResource(R.string.bd_delivered),
-                    value = me.deliveredOrders.toString(),
-                    modifier = Modifier.weight(1f),
-                )
-                StatBox(
-                    label = stringResource(R.string.bd_commissions),
-                    value = money(me.totalCommissions),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        Card(modifier = Modifier.clickable(onClick = onOpenWallet)) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column {
-                    Text(
-                        stringResource(R.string.bd_balance),
-                        color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        money(me.balance),
-                        color = Rahal.colors.brand,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.headlineSmall,
-                    )
-                }
-                Text(
-                    stringResource(R.string.bd_balance_go),
-                    color = Rahal.colors.brand,
-                    style = MaterialTheme.typography.labelLarge,
-                )
-            }
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **ورمزُه مقفلٌ حتّى يوثّق واتساب**
+        // **٣ · عمولاتي — والرصيدُ فيها يُفتح به المحفظة** (٢٠٢٦-١٠-٢٧)
         // ══════════════════════════════════════════════════════════════
         //
-        // **والإدارةُ تنسب إليه برمزه المتجرَ الذي تفتحه من لوحتها** (ولا
-        // رابطَ دعوةٍ بعد `JOIN-0`) — **ومن لا قناةَ
-        // تواصلٍ موثّقةً له لا يُتحقّق أنّه هو.**
-        Spacer(Modifier.height(14.dp))
-        Card {
-            Text(
-                stringResource(R.string.bd_code),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Spacer(Modifier.height(Rahal.space.xs))
+        // **والرصيدُ ليس من جنس الأرقام**: تلك حصيلةُ عمله، **وهذا ما في يده الآن** — فله بطاقتُه.
+        SectionHeader(stringResource(R.string.bd_my_commissions))
+        RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Info, padding = Rahal.space.lg) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.bd_balance), color = Rahal.colors.inkMuted, style = Rahal.type.caption)
+                    Text(money(me.balance), color = Rahal.colors.brand, style = Rahal.type.priceLarge)
+                }
+                IconBox(com.rahalgo.ui.R.drawable.ic_wallet, Rahal.colors.brand)
+            }
+            Spacer(Modifier.height(Rahal.space.md))
+            ActionRow {
+                StatTile(stringResource(R.string.bd_month_commissions), money(me.monthCommissions), valueColor = Rahal.colors.brand)
+                StatTile(stringResource(R.string.bd_commissions), money(me.totalCommissions))
+            }
+            Spacer(Modifier.height(Rahal.space.md))
+            RahalButton(onClick = onOpenWallet, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.bd_open_wallet))
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **٤ · اختصارات** — ما يُفعل كلَّ يومٍ بضغطةٍ من اللوحة.
+        // ══════════════════════════════════════════════════════════════
+        SectionHeader(stringResource(R.string.bd_quick))
+        RahalCard {
+            ActionRow {
+                IconAction(
+                    icon = com.rahalgo.ui.R.drawable.ic_plus,
+                    description = stringResource(R.string.nav_add_client),
+                    label = stringResource(R.string.nav_add_client),
+                    onClick = onAddClient,
+                )
+                IconAction(
+                    icon = com.rahalgo.ui.R.drawable.ic_store,
+                    description = stringResource(R.string.nav_clients),
+                    label = stringResource(R.string.nav_clients),
+                    onClick = onOpenClients,
+                )
+                IconAction(
+                    icon = com.rahalgo.ui.R.drawable.ic_wallet,
+                    description = stringResource(R.string.bd_q_wallet),
+                    label = stringResource(R.string.bd_q_wallet),
+                    onClick = onOpenWallet,
+                )
+                IconAction(
+                    icon = com.rahalgo.ui.R.drawable.ic_star,
+                    description = stringResource(com.rahalgo.ui.R.string.menu_rewards),
+                    label = stringResource(com.rahalgo.ui.R.string.menu_rewards),
+                    tint = Rahal.colors.accent,
+                    onClick = onOpenGoals,
+                )
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **٥ · هذا الشهر ثمّ منذ بدأت** — مربّعاتٌ لا أسطر (طلبُ المالك ٢٠٢٦-٠٨-٣١).
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **والشهريُّ يسبق**: رقمٌ إجماليٌّ وحدَه لا يقول أيَعمل هذا الشهرَ أم يعيش على ما مضى.
+        SectionHeader(stringResource(R.string.bd_this_month))
+        ActionRow {
+            StatTile(stringResource(R.string.bd_month_clients), me.monthMerchants.toString(), icon = com.rahalgo.ui.R.drawable.ic_store)
+            StatTile(stringResource(R.string.bd_month_delivered), me.monthDelivered.toString(), icon = com.rahalgo.ui.R.drawable.ic_check)
+        }
+        SectionHeader(stringResource(R.string.bd_all_time))
+        ActionRow {
+            StatTile(stringResource(R.string.bd_clients), me.merchants.toString(), icon = com.rahalgo.ui.R.drawable.ic_store)
+            StatTile(stringResource(R.string.bd_delivered), me.deliveredOrders.toString(), icon = com.rahalgo.ui.R.drawable.ic_check)
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **٦ · ورمزُه مقفلٌ حتّى يوثّق واتساب**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **والإدارةُ تنسب إليه برمزه المتجرَ الذي تفتحه من لوحتها** — ومن لا قناةَ تواصلٍ موثّقةً
+        // له لا يُتحقّق أنّه هو.
+        SectionHeader(stringResource(R.string.bd_code))
+        RahalCard {
             if (me.whatsappVerified && !me.inviteCode.isNullOrEmpty()) {
                 // **والرمزُ يُنسخ بضغطة** (٢٠٢٦-١٠-٢٧) — يُرسله لمكتبٍ أو لصاحب متجر.
                 val code = me.inviteCode.orEmpty()
                 val copied = stringResource(R.string.bd_copied)
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = code,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.headlineSmall,
-                    )
-                    RahalOutlineButton(onClick = {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = "⁦$code⁩", style = Rahal.type.headline, color = Rahal.colors.ink, modifier = Modifier.weight(1f))
+                    IconAction(
+                        icon = com.rahalgo.ui.R.drawable.ic_copy,
+                        description = stringResource(R.string.bd_copy),
+                        label = stringResource(R.string.bd_copy),
+                    ) {
                         val cm = context.getSystemService(android.content.ClipboardManager::class.java)
                         cm?.setPrimaryClip(android.content.ClipData.newPlainText("code", code))
                         com.rahalgo.ui.Flash.ok(copied)
-                    }) { Text(stringResource(R.string.bd_copy)) }
+                    }
                 }
             } else {
-                // **و«غيرُ موثّق» تنبيهٌ برتقاليٌّ بزرّه لا خطأٌ أحمر** (٢٠٢٦-١٠-٢٧) —
-                // **الأحمرُ يُقرأ عطباً**، والمطلوبُ خطوةٌ يعرف أين يخطوها.
-                Text(
-                    text = stringResource(R.string.bd_code_locked),
-                    color = Rahal.colors.accent,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(Modifier.height(Rahal.space.sm))
-                RahalButton(onClick = onOpenAccount, modifier = Modifier.fillMaxWidth()) {
+                // **و«غيرُ موثّق» تنبيهٌ برتقاليٌّ بزرّه لا خطأٌ أحمر** (٢٠٢٦-١٠-٢٧) — الأحمرُ يُقرأ عطباً.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconBox(com.rahalgo.ui.R.drawable.ic_lock, Rahal.colors.accent)
+                    Spacer(Modifier.size(Rahal.space.md))
+                    Text(
+                        text = stringResource(R.string.bd_code_locked),
+                        color = Rahal.colors.accentInk,
+                        style = Rahal.type.body,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(Rahal.space.md))
+                RahalOutlineButton(onClick = onOpenAccount, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.bd_verify))
                 }
             }
         }
-        Spacer(Modifier.height(28.dp))
     }
+    }
+}
+
+/** **سطرُ مرحلة** — علامةٌ (تمّت أو لا) ثمّ «المرحلة ١ · الهدف ١٠» ثمّ الباقي أو المكافأة. */
+@Composable
+private fun LevelRow(l: com.rahalgo.shared.model.TargetLevel, done: Long) {
+    val reached = done >= l.target
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            painterResource(if (reached) com.rahalgo.ui.R.drawable.ic_check else com.rahalgo.ui.R.drawable.ic_star_outline),
+            contentDescription = null,
+            tint = if (reached) Rahal.colors.success else Rahal.colors.inkMuted,
+            modifier = Modifier.size(Rahal.icon.sm),
+        )
+        Spacer(Modifier.size(Rahal.space.sm))
+        Text(
+            // **«الهدف ٥» لا «٥ عملاء»** — فلا تُقرأ «1 عملاء» (٢٠٢٦-١٠-٢٧).
+            stringResource(R.string.bd_level, l.n.toString(), l.target.toString()),
+            color = if (reached) Rahal.colors.success else Rahal.colors.ink,
+            style = if (reached) Rahal.type.bodyStrong else Rahal.type.body,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            if (reached) {
+                // **والمكافأةُ بفواصلها كسائر المبالغ** — «+50,000 ل.س».
+                if (l.reward > 0) stringResource(R.string.bd_level_done_reward, money(l.reward)) else stringResource(R.string.bd_level_done)
+            } else {
+                stringResource(R.string.bd_target_left, (l.target - done).toString())
+            },
+            color = if (reached) Rahal.colors.success else Rahal.colors.inkMuted,
+            style = Rahal.type.caption,
+        )
     }
 }
 
