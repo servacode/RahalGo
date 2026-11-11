@@ -358,11 +358,12 @@ internal fun MissingStrip(missing: List<String>, onClick: (() -> Unit)? = null) 
 }
 
 /**
- * **بطاقةُ عميلٍ في القائمة — مضغوطة** (طلبُ المالك ٢٠٢٦-١١-١١).
+ * **بطاقةُ عميلٍ في القائمة** (قرارُ المالك ٢٠٢٦-١١-١١).
  *
- * شعارٌ واسمٌ وصاحبُه وحالُه في سطرٍ واحد، وتحت فاصلٍ رقمان هما ما يسأل عنه المندوب (سُلّم كم ·
- * عمولتي كم) وشارةٌ بما ينقصه إن نقص. **والتواصلُ والإجراءاتُ وساعاتُ الدوام في تفصيله** —
- * **وزرٌّ في سطر القائمة يُضغط سهواً وهو يمرّر.**
+ * «طلبات سلمت وعمولتك لازم يكون مربعات، وبلا اصناف ومحسوب في هدفك لازم بالاعلى، والاتصال
+ * والواتس يكون بالكرت احسن مايفوت ع صفحة العميل ليبعثله ع واتس او يتصل بيه» — فالشاراتُ في
+ * رأس البطاقة، وأيقونتا الواتساب والاتصال بجانب الاسم، ورقما «سُلّم» و«عمولتي» مربّعان تحت.
+ * **والضغطُ على البطاقة يفتح تفصيلَها كما كان.**
  */
 @Composable
 private fun MerchantCard(
@@ -371,7 +372,25 @@ private fun MerchantCard(
     onOpen: () -> Unit,
 ) {
     val active = m.status == "active"
+    val context = androidx.compose.ui.platform.LocalContext.current
     RahalCard(onClick = onOpen) {
+        // **الشاراتُ أوّلاً** — ما ينقصه ليُحسب، أو أنّه محسوب، و«بلا أصناف».
+        val missing = missingFor(m)
+        val counted = missing.isEmpty() && m.goalState == "counted"
+        if (missing.isNotEmpty() || counted || m.itemsCount == 0) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                when {
+                    missing.isNotEmpty() ->
+                        StatusChip(stringResource(R.string.cl_missing_badge, missing.size.toString()), StatusTone.Warning)
+                    counted ->
+                        StatusChip(stringResource(R.string.cl_goal_counted), StatusTone.Success)
+                }
+                if (m.itemsCount == 0) {
+                    StatusChip(stringResource(R.string.cl_f_no_items), StatusTone.Warning, icon = com.rahalgo.ui.R.drawable.ic_warning)
+                }
+            }
+            Spacer(Modifier.height(Rahal.space.sm))
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             RemoteImage(
                 url = media(m.logoThumbUrl),
@@ -415,12 +434,22 @@ private fun MerchantCard(
                     }
                 }
             }
-            Icon(
-                painterResource(com.rahalgo.ui.R.drawable.ic_chevron_end),
-                contentDescription = null,
-                tint = Rahal.colors.inkMuted,
-                modifier = Modifier.size(Rahal.icon.sm),
-            )
+            // **الواتساب والاتصال على البطاقة نفسِها** — لا يفتح التفصيلَ ليراسل صاحبَه.
+            val phone = m.ownerPhone?.takeIf { it.isNotBlank() }
+            if (phone != null) {
+                val wa = com.rahalgo.ui.waMeDigits(phone)
+                if (wa.isNotEmpty()) {
+                    com.rahalgo.ui.IconAction(
+                        icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
+                        description = stringResource(com.rahalgo.ui.R.string.contact_whatsapp),
+                        tint = Rahal.colors.success,
+                    ) { openWhatsapp(context, wa) }
+                }
+                com.rahalgo.ui.IconAction(
+                    icon = com.rahalgo.ui.R.drawable.ic_phone,
+                    description = stringResource(com.rahalgo.ui.R.string.contact_call),
+                ) { dialNumber(context, phone) }
+            }
         }
 
         // **والتفعيلُ بعددين لا بكلمة** — كم أنجز من الطلبات التي تُصرف بعدها عمولتُه.
@@ -436,38 +465,20 @@ private fun MerchantCard(
             Bar(ratio = m.activationDone.toFloat() / needed.toFloat(), color = Rahal.colors.accent)
         }
 
-        // **ورقمان في سطرٍ واحدٍ تحت فاصل** — لا مربّعان كبيران (البطاقةُ مضغوطة).
+        // **ورقما «سُلّم» و«عمولتي» مربّعان** (قرارُ المالك ٢٠٢٦-١١-١١) — `StatTile` المشترك.
         Spacer(Modifier.height(Rahal.space.md))
-        RahalDivider()
-        Spacer(Modifier.height(Rahal.space.sm))
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Rahal.space.lg),
-        ) {
-            MiniStat(stringResource(R.string.cl_s_orders), m.deliveredOrders.toString(), Rahal.colors.ink)
-            MiniStat(stringResource(R.string.cl_s_commission), money(m.myCommission), Rahal.colors.brand)
-            Spacer(Modifier.weight(1f))
-            val missing = missingFor(m)
-            when {
-                missing.isNotEmpty() ->
-                    StatusChip(stringResource(R.string.cl_missing_badge, missing.size.toString()), StatusTone.Warning)
-                m.goalState == "counted" ->
-                    StatusChip(stringResource(R.string.cl_goal_counted), StatusTone.Success)
-            }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+            com.rahalgo.ui.StatTile(
+                label = stringResource(R.string.cl_s_orders),
+                value = m.deliveredOrders.toString(),
+                modifier = Modifier.weight(1f),
+            )
+            com.rahalgo.ui.StatTile(
+                label = stringResource(R.string.cl_s_commission),
+                value = money(m.myCommission),
+                valueColor = Rahal.colors.brand,
+                modifier = Modifier.weight(1f),
+            )
         }
-        if (m.itemsCount == 0) {
-            Spacer(Modifier.height(Rahal.space.sm))
-            StatusChip(stringResource(R.string.cl_f_no_items), StatusTone.Warning, icon = com.rahalgo.ui.R.drawable.ic_warning)
-        }
-    }
-}
-
-/** **رقمٌ صغيرٌ بكلمته** — الكلمةُ فوق والرقمُ تحتها، بلا أرضٍ ولا إطار. */
-@Composable
-private fun MiniStat(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
-    Column {
-        Text(label, color = Rahal.colors.inkMuted, style = Rahal.type.meta, maxLines = 1)
-        Text(value, color = color, style = Rahal.type.bodyStrong, maxLines = 1)
     }
 }

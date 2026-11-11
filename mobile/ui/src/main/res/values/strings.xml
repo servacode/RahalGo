@@ -1359,4 +1359,8 @@
     <string name="home_row_hours">ساعات الدوام</string>
     <string name="home_val_not_set">لم يُضبط بعد</string>
     <string name="ok_hours_saved">✓ حُفظت أوقات العمل</string>
+    <!-- شبكةُ أقسام السوق المشتركة (MarketSectionGrid) — للمتجر والمندوب -->
+    <string name="ms_search">ابحث عن قسم</string>
+    <string name="ms_picked">الأقسام المختارة: %1$d</string>
+    <string name="ms_no_match">لا يوجد قسم بهذا الاسم</string>
 </resources>

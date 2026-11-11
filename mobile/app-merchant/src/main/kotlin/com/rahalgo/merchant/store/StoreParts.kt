@@ -116,132 +116,15 @@ internal fun SectionGrid(
     enabled: Boolean = true,
     onToggle: (String) -> Unit,
 ) {
-    var query by rememberSaveable { mutableStateOf("") }
-    OutlinedTextField(
-        value = query,
-        onValueChange = { query = it.take(40) },
-        placeholder = { Text(stringResource(R.string.wz_sections_search)) },
-        leadingIcon = {
-            Icon(
-                painterResource(com.rahalgo.ui.R.drawable.ic_search),
-                contentDescription = null,
-                tint = Rahal.colors.inkMuted,
-            )
+    // **والشبكةُ نفسُها في `:ui`** (`MarketSectionGrid`) — يراها المندوبُ كما يراها صاحبُ المتجر.
+    com.rahalgo.ui.MarketSectionGrid(
+        all = all.map {
+            com.rahalgo.ui.SectionChoice(it.id, it.name, it.imageThumbUrl?.takeIf { u -> u.isNotBlank() } ?: it.imageUrl)
         },
-        trailingIcon = if (query.isNotEmpty()) {
-            {
-                IconButton(onClick = { query = "" }) {
-                    Icon(
-                        painterResource(com.rahalgo.ui.R.drawable.ic_close),
-                        contentDescription = stringResource(com.rahalgo.ui.R.string.act_cancel),
-                        tint = Rahal.colors.inkMuted,
-                    )
-                }
-            }
-        } else {
-            null
-        },
-        singleLine = true,
-        shape = Rahal.shape.md,
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = Rahal.colors.field,
-            focusedContainerColor = Rahal.colors.field,
-            unfocusedBorderColor = Color.Transparent,
-        ),
-        modifier = Modifier.fillMaxWidth(),
+        picked = picked,
+        enabled = enabled,
+        onToggle = onToggle,
     )
-    Spacer(Modifier.height(Rahal.space.sm))
-    Text(
-        stringResource(R.string.wz_sections_picked, picked.size),
-        color = if (picked.isEmpty()) Rahal.colors.inkMuted else Rahal.colors.brand,
-        fontWeight = FontWeight.Bold,
-        style = Rahal.type.body,
-    )
-    Spacer(Modifier.height(Rahal.space.sm))
-    val q = query.trim()
-    val shown = if (q.isEmpty()) all else all.filter { it.name.contains(q, ignoreCase = true) }
-    if (shown.isEmpty()) {
-        Text(
-            stringResource(R.string.wz_sections_no_match),
-            color = Rahal.colors.inkMuted,
-            style = Rahal.type.body,
-            modifier = Modifier.padding(vertical = Rahal.space.md),
-        )
-        return
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.md)) {
-        shown.chunked(3).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
-                row.forEach { sec ->
-                    SectionTile(
-                        sec = sec,
-                        on = sec.id in picked,
-                        enabled = enabled,
-                        modifier = Modifier.weight(1f),
-                    ) { onToggle(sec.id) }
-                }
-                // **والسطرُ الناقصُ لا يمدّ مربّعاته** — تبقى بعرض أخواتها.
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SectionTile(
-    sec: PlatformSectionRef,
-    on: Boolean,
-    enabled: Boolean,
-    modifier: Modifier,
-    onClick: () -> Unit,
-) {
-    Column(
-        modifier
-            .clip(Rahal.shape.md)
-            .clickable(enabled = enabled, role = Role.Checkbox, onClick = onClick)
-            .padding(Rahal.space.xs),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f),
-        ) {
-            // **وقسمٌ بلا صورةٍ يُرسم بحرفه الأوّل على أرضٍ باهتة** (`RemoteImage`).
-            com.rahalgo.ui.RemoteImage(
-                url = com.rahalgo.ui.AppCore.get().media(
-                    sec.imageThumbUrl?.takeIf { it.isNotBlank() } ?: sec.imageUrl,
-                ),
-                name = sec.name,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(Rahal.shape.md)
-                    .border(
-                        if (on) Rahal.stroke.focus else Rahal.stroke.hair,
-                        if (on) Rahal.colors.brand else Rahal.colors.line,
-                        Rahal.shape.md,
-                    ),
-            )
-            if (on) {
-                CheckBadge(
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(Rahal.space.xs),
-                )
-            }
-        }
-        Spacer(Modifier.height(Rahal.space.xs))
-        Text(
-            sec.name,
-            color = if (on) Rahal.colors.brand else Rahal.colors.ink,
-            fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
-            style = Rahal.type.body,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
 }
 
 // ══════════════════════════════════════════════════════════════════════

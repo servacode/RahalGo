@@ -57,21 +57,15 @@ fun ClientSections(vm: ClientsViewModel) {
             style = Rahal.type.body,
         )
         Spacer(Modifier.height(Rahal.space.md))
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
-            verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
-        ) {
-            vm.allSections.forEach { sec ->
-                val on = sec.id in picked
-                FilterChip(
-                    selected = on,
-                    enabled = !suspended,
-                    onClick = { picked = if (on) picked - sec.id else picked + sec.id },
-                    label = { Text(sec.name, style = Rahal.type.label) },
-                    shape = Rahal.shape.pill,
-                )
-            }
-        }
+        // **صورٌ لا رقاقات** (قرارُ المالك ٢٠٢٦-١١-١١: «لازم تكون صور نفس الاقسام العادية») —
+        // الشبكةُ نفسُها التي يختار بها صاحبُ المتجر (`MarketSectionGrid`).
+        com.rahalgo.ui.MarketSectionGrid(
+            all = vm.allSections.map {
+                com.rahalgo.ui.SectionChoice(it.id, it.name, it.imageThumbUrl?.takeIf { u -> u.isNotBlank() } ?: it.imageUrl)
+            },
+            picked = picked,
+            enabled = !suspended,
+        ) { id -> picked = if (id in picked) picked - id else picked + id }
         if (picked.isEmpty()) {
             Spacer(Modifier.height(Rahal.space.sm))
             Text(
