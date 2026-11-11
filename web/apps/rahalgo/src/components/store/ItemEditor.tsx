@@ -543,11 +543,11 @@ export default function ItemEditor({
       <ToolHeader title={item ? I.edit : I.new} href="/store/menu" />
 
       {/* ── عمودان على الحاسوب: النموذج | معاينةٌ حيّةٌ كما يراها الزبون. جوّالاً النموذجُ وحدَه بترتيبه ── */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_20rem] md:items-start md:gap-5">
-      <div className="flex min-w-0 flex-col gap-4">
+      <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-[minmax(0,1fr)_20rem] md:items-start md:gap-5">
+      <div className="flex min-w-0 flex-col gap-rg-lg">
 
       {/* ── ١ · الصورةُ يميناً، والاسمُ عن يسارها — ولا وصفَ (قرارُ المالك ٢٠٢٦-١٠-٣٠) ── */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-rg-md">
         <ImageUpload
           kind="menu_item"
           label={I.image}
@@ -568,7 +568,7 @@ export default function ItemEditor({
           zoomUrl={item?.image_url}
           zoomLabel={m.shop.item.zoomBtn}
         />
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-rg-sm">
           <div>
             <Input
               id="item-name"
@@ -582,15 +582,15 @@ export default function ItemEditor({
             />
             {/* **العدّادُ قربَ الحدّ وحدَه** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — لا سطرٌ دائم. */}
             {!nameOver && nameLen >= itemNameMax - NAME_NEAR && (
-              <p className="mt-1 text-xs tabular-nums text-ink-muted" dir="ltr">{`${nameLen} / ${itemNameMax}`}</p>
+              <p className="mt-rg-xs text-caption tabular-nums text-ink-muted" dir="ltr">{`${nameLen} / ${itemNameMax}`}</p>
             )}
           </div>
         </div>
       </div>
 
       {/* ── ٢ · السعرُ وجنبه دائرتا العملة ── */}
-      <div className="flex flex-col gap-1">
-        <div className="flex items-end gap-3">
+      <div className="flex flex-col gap-rg-xs">
+        <div className="flex items-end gap-rg-md">
           {usd ? (
             <Input
               id="item-price-usd"
@@ -635,7 +635,7 @@ export default function ItemEditor({
           />
         </div>
         {usd && (
-          <p className={`text-xs ${rate != null && rate > 0 ? "text-ink-muted" : "text-danger"}`}>
+          <p className={`text-caption ${rate != null && rate > 0 ? "text-ink-muted" : "text-danger"}`}>
             {rate == null || rate <= 0
               ? I.usdNeedRate
               : usdValue == null
@@ -646,8 +646,8 @@ export default function ItemEditor({
       </div>
 
       {/* ── ٣ · قسمُ السوق — مربّعاتٌ بصورها في الصفحة نفسِها، ثلاثةٌ بكلّ سطر (طلبُ المالك ٢٠٢٦-١٠-٢٩) ── */}
-      <div className="flex flex-col gap-2" data-testid="item-section">
-        <span className="text-sm font-bold">{I.section}</span>
+      <div className="flex flex-col gap-rg-sm" data-testid="item-section">
+        <span className="text-body font-bold">{I.section}</span>
         <SectionPicker
           sections={sections}
           selected={section}
@@ -662,7 +662,7 @@ export default function ItemEditor({
       {/* ── ٣ب · رقمُ المادّة بالأمين — يربط الصنفَ بملف الأسعار (٢٠٢٦-١١-٠٤)، وأرقامُه لاتينيّةٌ
           كما تُكتب (مرآةُ `amenCodeInput` في التطبيق، ٢٠٢٦-١١-٠٥): «٠١٧٠٦٤» لا يطابق ملفَّ الأمين ── */}
       {usesAmeen && (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="item-amen-link">
+      <div className="grid grid-cols-1 gap-rg-md sm:grid-cols-2" data-testid="item-amen-link">
         <div>
           <Input
             id="item-amen-code"
@@ -679,7 +679,7 @@ export default function ItemEditor({
               dirty();
             }}
           />
-          <p className="mt-1 text-xs text-ink-muted">{I.amenCodeHint}</p>
+          <p className="mt-rg-xs text-caption text-ink-muted">{I.amenCodeHint}</p>
         </div>
         <Input
           id="item-barcode"
@@ -700,11 +700,11 @@ export default function ItemEditor({
       )}
 
       {/* ── ٤ · الإضافاتُ والخيارات ── */}
-      <section className="flex flex-col gap-3" aria-label={I.modTitle}>
+      <section className="flex flex-col gap-rg-md" aria-label={I.modTitle}>
         <h3 className="heading-card">{I.modTitle}</h3>
         {/* **«أضف مشروباتي»** (هجرة 0483) — أتظهر قائمةُ المشروبات مع هذا الصنف. */}
         {drinksAllowed === true && (
-          <div className="rounded-control bg-accent-tint px-3 py-2" data-testid="item-drinks">
+          <div className="rounded-control bg-accent-tint px-rg-md py-rg-sm" data-testid="item-drinks">
             <Toggle
               checked={storeDrinks}
               disabled={busy}
@@ -716,9 +716,9 @@ export default function ItemEditor({
             />
           </div>
         )}
-        {presetsFailed && <p className="text-xs text-warning">{I.presetsFailed}</p>}
+        {presetsFailed && <p className="text-caption text-warning">{I.presetsFailed}</p>}
         {/* **مجموعاتٌ جاهزةٌ — مربّعاتٌ متساويةٌ فوق بعض.** */}
-        <div className="flex flex-col gap-2" data-testid="item-presets">
+        <div className="flex flex-col gap-rg-sm" data-testid="item-presets">
           {(presets ?? []).map((p) => {
             const on = groups.some((g) => sameName(g.name, p.name));
             const values = p.options.map((o) => o.name).join(" · ");
@@ -739,7 +739,7 @@ export default function ItemEditor({
                     edit((gs) => gs.filter((g) => !sameName(g.name, p.name)));
                   }
                 }}
-                className={`flex h-[3.75rem] w-full items-center gap-3 rounded-control border px-3 text-start transition-colors disabled:opacity-60 ${
+                className={`flex h-[3.75rem] w-full items-center gap-rg-md rounded-control border px-rg-md text-start transition-colors disabled:opacity-60 ${
                   on ? "border-2 border-accent bg-accent-tint" : "border-line bg-surface hover:bg-row-hover"
                 }`}
               >
@@ -753,7 +753,7 @@ export default function ItemEditor({
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-bold text-ink">{p.name}</span>
-                  {values && <span className="break-words text-xs text-ink-muted">{values}</span>}
+                  {values && <span className="break-words text-caption text-ink-muted">{values}</span>}
                 </span>
               </button>
             );
@@ -762,7 +762,7 @@ export default function ItemEditor({
         <Button
           type="button"
           variant="secondary"
-          className="inline-flex w-fit items-center gap-1.5 font-bold"
+          className="inline-flex w-fit items-center gap-rg-sm font-bold"
           data-testid="item-custom-group"
           disabled={busy}
           onClick={() =>
@@ -777,12 +777,12 @@ export default function ItemEditor({
         </Button>
 
         {groups.map((g, gi) => (
-          <div key={gi} className="surface flex flex-col gap-2 rounded-card border border-line p-3" data-testid="item-group">
+          <div key={gi} className="surface flex flex-col gap-rg-sm rounded-card border border-line p-rg-md" data-testid="item-group">
             {/* ── الرأس: اسمٌ ورقاقتان وحذفٌ أحمر ── */}
-            <div className="flex items-start gap-2">
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex items-start gap-rg-sm">
+              <div className="flex min-w-0 flex-1 flex-col gap-rg-xs">
                 <span className="truncate font-bold">{g.name.trim() || I.customUntitled}</span>
-                <span className="flex flex-wrap gap-1">
+                <span className="flex flex-wrap gap-rg-xs">
                   {g.price_mode === "none" ? (
                     <TagChip text={I.chipNone} tone="muted" />
                   ) : g.price_mode === "weight" ? (
@@ -825,8 +825,8 @@ export default function ItemEditor({
 
             {g.price_mode === "weight" ? (
               <>
-                <div className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 text-sm">{I.weightBaseLabel}</span>
+                <div className="flex items-center gap-rg-sm">
+                  <span className="min-w-0 flex-1 text-body">{I.weightBaseLabel}</span>
                   <RowField
                     id={`g-base-${gi}`}
                     value={g.base_grams ? String(g.base_grams) : ""}
@@ -861,12 +861,12 @@ export default function ItemEditor({
                       disabled={busy}
                       className="w-24 shrink-0"
                     />
-                    <span className="flex min-w-0 flex-1 flex-col text-sm">
+                    <span className="flex min-w-0 flex-1 flex-col text-body">
                       {o.grams ? (
                         <>
                           <span className="truncate font-bold">{weightName(o.grams)}</span>
                           {itemSyp != null && (
-                            <span className="truncate text-xs text-accent-text">
+                            <span className="truncate text-caption text-accent-text">
                               {fill(I.weightPrice, { price: fmtMoney(weightPrice(itemSyp, o.grams, g.base_grams)) })}
                             </span>
                           )}
@@ -875,8 +875,8 @@ export default function ItemEditor({
                     </span>
                   </OptionRow>
                 ))}
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-ink-muted">{I.weightQuick}</span>
+                <div className="flex flex-wrap items-center gap-rg-sm">
+                  <span className="text-caption text-ink-muted">{I.weightQuick}</span>
                   {quickGrams(g.base_grams).map((q) => {
                     const has = g.options.some((o) => o.grams === q);
                     return (
@@ -892,7 +892,7 @@ export default function ItemEditor({
                                 options: [...g.options, { name: weightName(q), grams: q, price_delta: 0, usd: "", available: true }],
                               })
                         }
-                        className={`inline-flex min-h-10 items-center gap-1 rounded-full border px-3 text-sm ${
+                        className={`inline-flex min-h-10 items-center gap-rg-xs rounded-full border px-rg-md text-body ${
                           has ? "border-accent bg-accent-tint font-bold text-accent-text" : "border-line bg-surface text-ink hover:bg-row-hover"
                         }`}
                       >
@@ -906,7 +906,7 @@ export default function ItemEditor({
             ) : (
               <>
                 {g.price_mode === "priced" && g.options.length > 0 && (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-rg-sm">
                     <ColumnLabel text={I.optionName} className="min-w-0 flex-1" />
                     <ColumnLabel text={usd ? I.optPriceUsd : I.optPrice} className="w-24 shrink-0" />
                     <span className="w-[6.5rem] shrink-0" />
@@ -953,7 +953,7 @@ export default function ItemEditor({
             <Button
               type="button"
               variant="secondary"
-              className="inline-flex w-fit items-center gap-1.5"
+              className="inline-flex w-fit items-center gap-rg-sm"
               disabled={busy}
               onClick={() => setGroup(gi, { options: [...g.options, { name: "", price_delta: 0, usd: "", available: true }] })}
             >
@@ -962,17 +962,17 @@ export default function ItemEditor({
             </Button>
           </div>
         ))}
-        {rateLost && <p className="text-xs text-danger">{I.usdNoRate}</p>}
+        {rateLost && <p className="text-caption text-danger">{I.usdNoRate}</p>}
       </section>
 
       {/* ── ٥ · النسخُ والحذف في آخر الصفحة — والحفظُ في شريطٍ ثابتٍ تحتها ── */}
       {item && !readOnly && (
         <>
-          <div className="flex gap-2">
+          <div className="flex gap-rg-sm">
             <Button
               type="button"
               variant="secondary"
-              className="inline-flex flex-1 items-center justify-center gap-1.5 font-bold"
+              className="inline-flex flex-1 items-center justify-center gap-rg-sm font-bold"
               disabled={busy || touched}
               onClick={() => void duplicate()}
               data-testid="item-duplicate"
@@ -983,7 +983,7 @@ export default function ItemEditor({
             <Button
               type="button"
               variant="secondary"
-              className="inline-flex flex-1 items-center justify-center gap-1.5 border-danger-edge font-bold text-danger"
+              className="inline-flex flex-1 items-center justify-center gap-rg-sm border-danger-edge font-bold text-danger"
               disabled={busy}
               onClick={() => setAskDelete(true)}
               data-testid="item-delete"
@@ -1008,33 +1008,33 @@ export default function ItemEditor({
 
       {/* ══ **المعاينة الحيّة** — بطاقةُ الصنف كما تظهر للزبون، تتبدّل مع كلّ حرفٍ يُكتب. حاسوبٌ فقط. ══ */}
       <aside className="hidden md:sticky md:top-14 md:block lg:top-[calc(var(--topbar-h)+0.75rem)]" aria-label={K.previewTitle} data-testid="item-preview">
-        <h2 className="console-h2 mb-2 px-1">{K.previewTitle}</h2>
+        <h2 className="console-h2 mb-rg-sm px-rg-xs">{K.previewTitle}</h2>
         <div className="panel-lite flex flex-col overflow-hidden">
           <div className="relative block aspect-[4/5] w-full bg-field">
             {previewImg && imageId === null ? (
               <img src={previewImg} alt="" className="absolute inset-0 h-full w-full object-cover" />
             ) : (
-              <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 text-center text-ink-muted" aria-hidden>
+              <span className="absolute inset-0 flex flex-col items-center justify-center gap-rg-xs px-rg-lg text-center text-ink-muted" aria-hidden>
                 <span className="text-4xl font-medium">{name.trim().charAt(0) || "?"}</span>
-                {imageId ? <span className="text-xs">{K.previewImageNew}</span> : null}
+                {imageId ? <span className="text-caption">{K.previewImageNew}</span> : null}
               </span>
             )}
           </div>
-          <div className="flex flex-col gap-1 p-3">
-            <span className="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-5 text-ink">{name.trim() || I.name}</span>
+          <div className="flex flex-col gap-rg-xs p-rg-md">
+            <span className="line-clamp-2 min-h-[2.5rem] text-body font-bold leading-5 text-ink">{name.trim() || I.name}</span>
             {groups.filter((g) => g.name.trim()).length > 0 && (
-              <span className="line-clamp-2 text-xs leading-4 text-ink-muted">
+              <span className="line-clamp-2 text-caption leading-4 text-ink-muted">
                 {groups
                   .map((g) => g.name.trim())
                   .filter(Boolean)
                   .join(" · ")}
               </span>
             )}
-            <span className="mt-1 text-sm font-bold tabular-nums text-accent-text">{previewPrice}</span>
+            <span className="mt-rg-xs text-body font-bold tabular-nums text-accent-text">{previewPrice}</span>
             {current && <span className="console-meta">{current.name}</span>}
           </div>
         </div>
-        <p className="console-meta mt-2 px-1">{K.previewHint}</p>
+        <p className="console-meta mt-rg-sm px-rg-xs">{K.previewHint}</p>
       </aside>
       </div>
 
@@ -1079,9 +1079,9 @@ function OptionRow({
   children: ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-1.5" data-testid="item-option">
+    <div className="flex items-center gap-rg-sm" data-testid="item-option">
       {children}
-      <span className="flex w-16 shrink-0 flex-col items-center gap-0.5">
+      <span className="flex w-16 shrink-0 flex-col items-center gap-rg-xxs">
         <button
           type="button"
           role="switch"
@@ -1099,7 +1099,7 @@ function OptionRow({
             }`}
           />
         </button>
-        <span className={`text-2xs font-bold ${available ? "text-success" : "text-danger"}`}>
+        <span className={`text-meta font-bold ${available ? "text-success" : "text-danger"}`}>
           {available ? I.optAvailable : I.unavailable}
         </span>
       </span>
@@ -1136,7 +1136,7 @@ function SectionPicker({
   const needle = q.trim();
   const shown = needle ? sections.filter((s) => s.name.includes(needle)) : sections;
   return (
-    <div className="flex flex-col gap-3" data-testid="section-picker">
+    <div className="flex flex-col gap-rg-md" data-testid="section-picker">
         {sections.length > 6 && (
           <Input
             type="search"
@@ -1148,11 +1148,11 @@ function SectionPicker({
           />
         )}
         {sections.length === 0 ? (
-          <p className="text-sm text-ink-muted">{I.sectionEmpty}</p>
+          <p className="text-body text-ink-muted">{I.sectionEmpty}</p>
         ) : shown.length === 0 ? (
-          <p className="text-sm text-ink-muted">{I.sectionNoMatch}</p>
+          <p className="text-body text-ink-muted">{I.sectionNoMatch}</p>
         ) : (
-          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          <ul className="grid grid-cols-3 gap-rg-sm sm:grid-cols-4">
             {shown.map((s) => {
               const on = s.id === selected;
               const img = mediaUrl(s.image_thumb_url ?? s.image_url);
@@ -1164,7 +1164,7 @@ function SectionPicker({
                     disabled={disabled}
                     onClick={() => onPick(s.id)}
                     data-testid="section-tile"
-                    className={`flex w-full flex-col items-center gap-1 rounded-control border p-1 ${
+                    className={`flex w-full flex-col items-center gap-rg-xs rounded-control border p-rg-xs ${
                       on ? "border-2 border-accent bg-accent-tint" : "border-line hover:bg-row-hover"
                     }`}
                   >
@@ -1172,7 +1172,7 @@ function SectionPicker({
                       {img ? (
                         <img src={img} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
                       ) : (
-                        <span className="absolute inset-0 flex items-center justify-center text-2xl font-medium text-ink-muted" aria-hidden>
+                        <span className="absolute inset-0 flex items-center justify-center text-headline font-medium text-ink-muted" aria-hidden>
                           {s.name.trim().charAt(0)}
                         </span>
                       )}
@@ -1182,7 +1182,7 @@ function SectionPicker({
                         </span>
                       )}
                     </span>
-                    <span className={`break-words text-center text-xs ${on ? "font-bold text-accent-text" : "text-ink"}`}>{s.name}</span>
+                    <span className={`break-words text-center text-caption ${on ? "font-bold text-accent-text" : "text-ink"}`}>{s.name}</span>
                   </button>
                 </li>
               );

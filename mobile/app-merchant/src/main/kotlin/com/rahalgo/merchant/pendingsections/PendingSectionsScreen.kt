@@ -15,9 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -29,13 +27,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.rahalgo.design.Rahal
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.PendingSyncItem
 import com.rahalgo.shared.merchant.PlatformSectionRef
-import com.rahalgo.ui.Card
+import com.rahalgo.ui.BottomActionBar
+import com.rahalgo.ui.CardVariant
+import com.rahalgo.ui.LabeledField
+import com.rahalgo.ui.ListRow
+import com.rahalgo.ui.RahalCard
+import com.rahalgo.ui.SheetHeader
+import com.rahalgo.ui.StatusTone
 import com.rahalgo.ui.ConfirmDialog
 import com.rahalgo.ui.Empty
 import com.rahalgo.ui.LoadState
@@ -60,18 +63,19 @@ fun PendingSectionsScreen(state: PendingSectionsState) {
     var pick by remember { mutableStateOf<PickFor?>(null) }
     val list = state.list
 
-    Column(Modifier.fillMaxSize().padding(horizontal = Rahal.space.lg).padding(top = Rahal.space.lg)) {
+    Column(Modifier.fillMaxSize()) {
+      Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = Rahal.space.gutter).padding(top = Rahal.space.lg)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(
                     stringResource(R.string.ps_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = Rahal.type.screenTitle,
+                    color = Rahal.colors.ink,
                 )
                 if (list.total > 0) {
                     Text(
                         stringResource(R.string.ps_waiting, list.total),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                         color = Rahal.colors.brand,
                     )
                 }
@@ -110,15 +114,18 @@ fun PendingSectionsScreen(state: PendingSectionsState) {
                 }
             }
         }
+      }
 
         if (state.selecting && list.selectedCount > 0) {
-            Card(Modifier.padding(vertical = Rahal.space.sm)) {
-                Text(
-                    stringResource(R.string.ps_selected, list.selectedCount),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.height(Rahal.space.sm))
+            BottomActionBar(
+                summary = {
+                    Text(
+                        stringResource(R.string.ps_selected, list.selectedCount),
+                        style = Rahal.type.bodyStrong,
+                        color = Rahal.colors.ink,
+                    )
+                },
+            ) {
                 RahalButton(
                     onClick = { pick = PickFor.Selected },
                     enabled = !state.busy,
@@ -165,30 +172,30 @@ private fun TopPart(state: PendingSectionsState) {
         ) { Text(stringResource(R.string.ps_auto)) }
         Text(
             stringResource(R.string.ps_auto_hint),
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
             color = Rahal.colors.inkMuted,
         )
         when (val r = state.result) {
-            is PendingSectionsState.Result.Sorted -> Text(
-                stringResource(R.string.ps_sorted, r.r.byName, r.r.byGroup, r.r.waiting),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Rahal.colors.success,
-                fontWeight = FontWeight.Bold,
-            )
-            is PendingSectionsState.Result.Moved -> Text(
-                stringResource(R.string.ps_moved, r.n),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Rahal.colors.success,
-                fontWeight = FontWeight.Bold,
-            )
+            is PendingSectionsState.Result.Sorted -> RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Success) {
+                Text(
+                    stringResource(R.string.ps_sorted, r.r.byName, r.r.byGroup, r.r.waiting),
+                    style = Rahal.type.bodyStrong,
+                    color = Rahal.colors.success,
+                )
+            }
+            is PendingSectionsState.Result.Moved -> RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Success) {
+                Text(
+                    stringResource(R.string.ps_moved, r.n),
+                    style = Rahal.type.bodyStrong,
+                    color = Rahal.colors.success,
+                )
+            }
             null -> {}
         }
-        OutlinedTextField(
+        LabeledField(
+            label = stringResource(R.string.ps_search),
             value = state.query,
             onValueChange = { state.onQuery(it) },
-            label = { Text(stringResource(R.string.ps_search)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
         )
         if (state.list.items.isNotEmpty()) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -200,6 +207,8 @@ private fun TopPart(state: PendingSectionsState) {
                     )
                     Text(
                         stringResource(R.string.ps_select_all),
+                        style = Rahal.type.body,
+                        color = Rahal.colors.ink,
                         modifier = Modifier.weight(1f).clickable { state.toggleAll() },
                     )
                     RahalTextButton(onClick = { state.stopSelecting() }) {
@@ -224,8 +233,9 @@ private fun ItemRow(state: PendingSectionsState, item: PendingSyncItem, onPick: 
         ?: item.suggestedSectionName?.takeIf { sectionId == item.suggestedSectionId }
         ?: ""
     val isSuggestion = sectionId.isNotEmpty() && sectionId == item.suggestedSectionId
-    Card(
-        Modifier.then(if (state.selecting) Modifier.clickable { state.toggle(item.id) } else Modifier),
+    RahalCard(
+        variant = CardVariant.Outlined,
+        onClick = if (state.selecting) ({ state.toggle(item.id) }) else null,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (state.selecting) {
@@ -238,15 +248,15 @@ private fun ItemRow(state: PendingSectionsState, item: PendingSyncItem, onPick: 
             Column(Modifier.weight(1f)) {
                 Text(
                     item.name,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = Rahal.type.cardTitle,
+                    color = Rahal.colors.ink,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 val code = item.code?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.ps_code, it) }
                 Text(
                     listOfNotNull(code, priceLine(item.price, null)).joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                     color = Rahal.colors.inkMuted,
                 )
             }
@@ -307,24 +317,12 @@ private fun SectionSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Rahal.colors.canvas,
+        dragHandle = null,
     ) {
-        Text(
-            stringResource(R.string.ps_sheet_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = Rahal.space.lg, vertical = Rahal.space.sm),
-        )
-        LazyColumn(Modifier.fillMaxWidth()) {
+        SheetHeader(stringResource(R.string.ps_sheet_title), onClose = onDismiss)
+        LazyColumn(Modifier.fillMaxWidth().padding(horizontal = Rahal.space.sm)) {
             items(sections, key = { it.id }) { s ->
-                Text(
-                    s.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Rahal.colors.ink,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onPick(s.id) }
-                        .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
-                )
+                ListRow(title = s.name, onClick = { onPick(s.id) })
             }
         }
     }

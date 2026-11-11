@@ -20,7 +20,7 @@ import {
   fmtNum,
   fmtDateTime,
 } from "@rahalgo/i18n";
-import { Alert, Button, Checkbox, Confirm, IconCheck, IconRotate, IconUpload, Kpi, KpiGrid, LoadingState, Pill, Select } from "@rahalgo/ui";
+import { Alert, Button, Checkbox, Confirm, IconCheck, IconRotate, IconUpload, Kpi, KpiGrid, LoadingState, Select, StatusChip } from "@rahalgo/ui";
 import { api, apiFile } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { fill } from "@/lib/customer/texts";
@@ -28,6 +28,8 @@ import { PageHeader } from "@/components/store/SetupParts";
 import { PriceSyncSections } from "@/components/store/PriceSyncSections";
 import { agentState, lastRealSync } from "@/components/store/AmeenStatus";
 
+/** نبرةُ الحال في اللوحة ← نبرةُ الشارة الموحّدة. */
+const CHIP = { good: "success", attention: "warning", danger: "danger" } as const;
 const m = getMessages(defaultLocale);
 const P = m.store.priceSync;
 const K = m.store.console;
@@ -345,17 +347,17 @@ export default function PriceSyncPage() {
         data-testid="sync-agent"
         data-state={st.key}
       >
-        <div className="flex items-start gap-4 p-4 lg:p-5">
-          <span className="icon-chip size-12 rounded-2xl lg:size-14" data-tone={st.tone} aria-hidden>
+        <div className="flex items-start gap-rg-lg p-rg-lg lg:p-5">
+          <span className="icon-chip size-12 rounded-rg-lg lg:size-14" data-tone={st.tone} aria-hidden>
             <IconRotate size={26} />
           </span>
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <span className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-rg-sm">
+            <span className="flex flex-wrap items-center gap-rg-sm">
               <h2 className="console-h2">{P.agentTitle}</h2>
-              <Pill tone={st.tone}>{st.label}</Pill>
+              <StatusChip tone={st.tone ? CHIP[st.tone] : "neutral"}>{st.label}</StatusChip>
             </span>
             {st.key === "error" ? (
-              <div className="rounded-2xl border border-danger-edge bg-danger-tint p-3 text-sm" role="alert">
+              <div className="rounded-rg-lg border border-danger-edge bg-danger-tint p-rg-md text-body" role="alert">
                 <span className="block font-bold text-danger">{st.detail}</span>
                 <span className="block text-ink">{st.why}</span>
               </div>
@@ -366,18 +368,18 @@ export default function PriceSyncPage() {
               </Alert>
             ) : (
               <p
-                className={`text-sm ${st.key === "alive" ? "text-success" : st.key === "dead" ? "text-danger" : "text-ink-muted"}`}
+                className={`text-body ${st.key === "alive" ? "text-success" : st.key === "dead" ? "text-danger" : "text-ink-muted"}`}
               >
                 {st.detail}
               </p>
             )}
             {last && <p className="console-meta">{last}</p>}
-            {needsInstall && <p className="text-sm text-ink-muted">{P.agentSteps}</p>}
+            {needsInstall && <p className="text-body text-ink-muted">{P.agentSteps}</p>}
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-line-soft bg-field p-4 lg:flex-row lg:flex-wrap lg:items-end lg:px-5">
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-rg-md border-t border-line-soft bg-field p-rg-lg lg:flex-row lg:flex-wrap lg:items-end lg:px-5">
+          <div className="flex flex-wrap gap-rg-sm">
             {linked &&
               (info?.paused ? (
                 <Button className="min-h-11" onClick={() => void setPaused(false)} disabled={busy}>
@@ -386,7 +388,7 @@ export default function PriceSyncPage() {
               ) : (
                 <>
                   {info?.sync_requested ? (
-                    <p className="flex min-h-11 items-center gap-2 px-2 text-sm font-bold text-success">
+                    <p className="flex min-h-11 items-center gap-rg-sm px-rg-sm text-body font-bold text-success">
                       <IconCheck size={18} />
                       {P.syncAsked}
                     </p>
@@ -426,13 +428,13 @@ export default function PriceSyncPage() {
               </Select>
             </div>
           )}
-          <div className="flex min-w-0 flex-1 flex-col gap-1 lg:items-end">
+          <div className="flex min-w-0 flex-1 flex-col gap-rg-xs lg:items-end">
             <p className="console-meta">{P.agentRedownload}</p>
             {/* **الحذفُ من الكمبيوتر أقلُّ بروزاً ومؤكَّد** — بعده تحميلٌ جديد (٢٠٢٦-١١-٠٧). */}
             {linked && (
               <button
                 type="button"
-                className="flex min-h-11 w-fit items-center text-xs text-danger underline disabled:opacity-60"
+                className="flex min-h-11 w-fit items-center text-caption text-danger underline disabled:opacity-60"
                 onClick={() => setAskUninstall(true)}
                 disabled={busy}
               >
@@ -455,10 +457,10 @@ export default function PriceSyncPage() {
       {error && <Alert>{error}</Alert>}
 
       {/* ══ عمودان على الحاسوب: الملفّ والأعمدة والتقرير | توزيع الأقسام. جوّالاً متتابعان. ══ */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start md:gap-5">
-        <div className="flex min-w-0 flex-col gap-4">
-          <label className="panel flex min-h-32 cursor-pointer flex-col items-center justify-center gap-3 dropzone p-6 text-center transition-colors hover:bg-row-hover focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
-            <span className="icon-chip size-12 rounded-2xl" data-tone="accent" aria-hidden>
+      <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-2 md:items-start md:gap-5">
+        <div className="flex min-w-0 flex-col gap-rg-lg">
+          <label className="panel flex min-h-32 cursor-pointer flex-col items-center justify-center gap-rg-md dropzone p-rg-xl text-center transition-colors hover:bg-row-hover focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
+            <span className="icon-chip size-12 rounded-rg-lg" data-tone="accent" aria-hidden>
               <IconUpload size={24} />
             </span>
             <span className="font-bold text-accent-text">{busy ? P.reading : P.pick}</span>
@@ -482,7 +484,7 @@ export default function PriceSyncPage() {
 
           {/* **أنشئ المواد غير الموجودة أصنافاً مخفية** (٢٠٢٦-١١-٠٤) — يُبدَّل فيُعاد «جرّب» ليُرى العدد. */}
           {file && (
-            <div className="panel flex flex-col gap-1 p-4">
+            <div className="panel flex flex-col gap-rg-xs p-rg-lg">
               <Checkbox
                 id="sync-create-missing"
                 data-testid="sync-create-missing"
@@ -500,12 +502,12 @@ export default function PriceSyncPage() {
           )}
 
           {preview && (
-            <div className="panel flex flex-col gap-3 p-4">
+            <div className="panel flex flex-col gap-rg-md p-rg-lg">
               <h3 className="console-h2">{P.columnsTitle}</h3>
               <p className="console-meta">
                 {P.columnsHint} · {fill(P.rows, { n: fmtNum(preview.rows) })}
               </p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-rg-md sm:grid-cols-2">
                 {col("code", P.colCode)}
                 {col("price", P.colPrice, true)}
                 {col("qty", P.colQty)}
@@ -523,7 +525,7 @@ export default function PriceSyncPage() {
                 </Select>
               </div>
               <div className="overflow-x-auto rounded-control border border-line-soft">
-                <table className="console-table text-xs">
+                <table className="console-table text-caption">
                   <thead>
                     <tr>
                       {preview.headers.map((h, i) => (
@@ -551,7 +553,7 @@ export default function PriceSyncPage() {
           )}
 
           {report && (
-            <div className="panel flex flex-col gap-3 p-4 text-sm" data-testid="sync-report">
+            <div className="panel flex flex-col gap-rg-md p-rg-lg text-body" data-testid="sync-report">
               <h3 className="console-h2">{report.dry_run ? P.dryTitle : P.doneTitle}</h3>
               <KpiGrid>
                 <Kpi label={K.rpMatched} value={report.matched} />
@@ -599,8 +601,8 @@ export default function PriceSyncPage() {
                   <summary className="flex min-h-11 cursor-pointer items-center text-warning">
                     {fill(P.unmatched, { n: fmtNum(report.unmatched) })}
                   </summary>
-                  <p className="console-meta mt-1">{P.unmatchedHint}</p>
-                  <ul className="mt-1 list-disc ps-5 text-xs">
+                  <p className="console-meta mt-rg-xs">{P.unmatchedHint}</p>
+                  <ul className="mt-rg-xs list-disc ps-5 text-caption">
                     {report.unmatched_sample.map((u) => (
                       <li key={u.row}>{[u.code, u.name].filter(Boolean).join(" · ")}</li>
                     ))}
@@ -612,7 +614,7 @@ export default function PriceSyncPage() {
                   <summary className="flex min-h-11 cursor-pointer items-center text-warning">
                     {fill(P.linkRejected, { n: fmtNum(report.link_rejected ?? 0) })}
                   </summary>
-                  <ul className="mt-1 list-disc ps-5 text-xs">
+                  <ul className="mt-rg-xs list-disc ps-5 text-caption">
                     {(report.link_rejected_sample ?? []).map((u) => (
                       <li key={`${u.row}-${u.reason}`}>
                         {[u.code, u.name].filter(Boolean).join(" · ")} —{" "}
@@ -623,7 +625,7 @@ export default function PriceSyncPage() {
                 </details>
               )}
               {report.skipped.length > 0 && (
-                <div className="text-xs">
+                <div className="text-caption">
                   <p className="font-bold">{P.skipped}</p>
                   <ul className="list-disc ps-5">
                     {report.skipped.map((u) => (
@@ -650,8 +652,8 @@ export default function PriceSyncPage() {
 
       {/* **حذفُ المستورد — آخرَ الصفحة وبتأكيد** (٢٠٢٦-١١-٠٨): لمن غلط بالاستيراد أو خلّص تجربة. */}
       {((info?.imported_count ?? 0) > 0 || deletedN !== null) && (
-        <section className="panel flex flex-col gap-2 p-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 flex-col gap-1">
+        <section className="panel flex flex-col gap-rg-sm p-rg-lg lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-rg-xs">
             <p className="font-bold text-ink">{P.importedTitle}</p>
             <p className="console-meta">
               {deletedN !== null

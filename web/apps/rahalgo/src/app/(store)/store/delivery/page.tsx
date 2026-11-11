@@ -65,7 +65,7 @@ function closedText(e: unknown): string | null {
 /** **دائرتا العملة بجانب خانة المبلغ** — المختارةُ مملوءةٌ بلون العلامة. */
 function CurrencyDots({ value, disabled, onPick }: { value: "SYP" | "USD"; disabled: boolean; onPick: (c: "SYP" | "USD") => void }) {
   return (
-    <div className="flex shrink-0 gap-2" role="radiogroup" aria-label={D.collectAmount}>
+    <div className="flex shrink-0 gap-rg-sm" role="radiogroup" aria-label={D.collectAmount}>
       {(["SYP", "USD"] as const).map((c) => (
         <button
           key={c}
@@ -75,7 +75,7 @@ function CurrencyDots({ value, disabled, onPick }: { value: "SYP" | "USD"; disab
           aria-label={c === "SYP" ? D.currencySyp : D.currencyUsd}
           disabled={disabled}
           onClick={() => onPick(c)}
-          className={`flex h-11 w-11 items-center justify-center rounded-full border text-sm font-bold transition-colors ${
+          className={`flex h-11 w-11 items-center justify-center rounded-full border text-body font-bold transition-colors ${
             value === c ? "border-accent bg-accent text-on-bright" : "border-line bg-field text-ink hover:bg-row-hover"
           }`}
         >
@@ -94,7 +94,7 @@ function ModeButton({ on, title, onClick, disabled }: { on: boolean; title: stri
       disabled={disabled}
       aria-pressed={on}
       data-testid="delivery-mode"
-      className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-1 rounded-card border p-4 text-center transition-colors ${
+      className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-rg-xs rounded-card border p-rg-lg text-center transition-colors ${
         on ? "border-2 border-accent bg-accent-tint" : "border-line bg-surface hover:bg-row-hover"
       }`}
     >
@@ -123,7 +123,7 @@ function PayerOption({
       aria-checked={on}
       disabled={disabled}
       onClick={onPick}
-      className={`flex w-full items-center gap-3 rounded-control border p-3 text-start transition-colors disabled:opacity-60 ${
+      className={`flex w-full items-center gap-rg-md rounded-control border p-rg-md text-start transition-colors disabled:opacity-60 ${
         on ? "border-2 border-accent bg-accent-tint" : "border-line bg-surface hover:bg-row-hover"
       }`}
     >
@@ -133,8 +133,8 @@ function PayerOption({
         {on && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}
       </span>
       <span className="min-w-0">
-        <span className="block text-sm font-bold">{title}</span>
-        {sub && <span className="block text-xs text-danger">{sub}</span>}
+        <span className="block text-body font-bold">{title}</span>
+        {sub && <span className="block text-caption text-danger">{sub}</span>}
       </span>
     </button>
   );
@@ -579,20 +579,20 @@ export default function DeliveryPage() {
         <Link
           href={`/store/delivery/${live.id}`}
           data-testid="delivery-live"
-          className="flex items-center gap-2 rounded-control bg-accent-tint px-3 py-2 transition-opacity hover:opacity-90"
+          className="flex items-center gap-rg-sm rounded-control bg-accent-tint px-rg-md py-rg-sm transition-opacity hover:opacity-90"
         >
           <IconMoto size={20} className="shrink-0 text-accent-text" />
-          <span className="min-w-0 flex-1 text-sm">{fill(D.active, { n: live.number, status: statusText(live.status) })}</span>
-          <span className="shrink-0 text-sm font-bold text-accent-text">{D.follow}</span>
+          <span className="min-w-0 flex-1 text-body">{fill(D.active, { n: live.number, status: statusText(live.status) })}</span>
+          <span className="shrink-0 text-body font-bold text-accent-text">{D.follow}</span>
         </Link>
       )}
 
       {quoteError && (
-        <div className="flex items-center gap-3 rounded-card border border-danger-edge bg-danger-tint p-3">
+        <div className="flex items-center gap-rg-md rounded-card border border-danger-edge bg-danger-tint p-rg-md">
           <IconMoto size={22} className="shrink-0 text-danger" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-danger">{closed ? D.closedTitle : D.blockedTitle}</p>
-            <p className="text-xs">{quoteError}</p>
+            <p className="text-body font-bold text-danger">{closed ? D.closedTitle : D.blockedTitle}</p>
+            <p className="text-caption">{quoteError}</p>
           </div>
           {!closed && (
             <Button variant="secondary" onClick={() => void fetchQuote(point, mode)}>
@@ -603,9 +603,9 @@ export default function DeliveryPage() {
       )}
 
       {/* ── عمودان على الحاسوب: الطلب | توصيلاتي. جوّالاً متتابعان بالترتيب نفسه. ── */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] md:items-start md:gap-5">
-      <div className="flex min-w-0 flex-col gap-3">
-      <div className="flex gap-3">
+      <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] md:items-start md:gap-5">
+      <div className="flex min-w-0 flex-col gap-rg-md">
+      <div className="flex gap-rg-md">
         <ModeButton on={mode === "send"} title={D.modeSend} disabled={busy} onClick={() => pickMode("send")} />
         <ModeButton on={mode === "fetch"} title={D.modeFetch} disabled={busy} onClick={() => pickMode("fetch")} />
       </div>
@@ -614,7 +614,7 @@ export default function DeliveryPage() {
 
       {mode && (
         <form
-          className="panel flex flex-col gap-3 p-4 lg:p-5"
+          className="panel flex flex-col gap-rg-md p-rg-lg lg:p-5"
           onSubmit={(e) => {
             e.preventDefault();
             void send();
@@ -622,7 +622,7 @@ export default function DeliveryPage() {
         >
           {/* **مستلموه السابقون تحت الحقل الذي يكتب فيه** (قرارُ المالك ٢٠٢٦-١١-٠٥) — حرفان
               في الاسم أو الرقم، واللمسةُ تملأ النموذج. **وتُطوى حين يخرج من الحقل.** */}
-          <div className="flex flex-col gap-2" onBlur={closeOnLeave}>
+          <div className="flex flex-col gap-rg-sm" onBlur={closeOnLeave}>
             <Input
               label={isFetch ? D.nameFetch : D.name}
               error={tried && !name.trim() ? D.required : undefined}
@@ -639,7 +639,7 @@ export default function DeliveryPage() {
               <RecipientSuggestions items={saved.items} disabled={busy} onPick={pickRecipient} onHide={saved.hide} />
             )}
           </div>
-          <div className="flex flex-col gap-2" onBlur={closeOnLeave}>
+          <div className="flex flex-col gap-rg-sm" onBlur={closeOnLeave}>
             <Input
               label={isFetch ? D.phoneFetch : D.phone}
               error={tried && !phone.trim() ? D.required : undefined}
@@ -679,21 +679,21 @@ export default function DeliveryPage() {
           />
           {/* **ونقطةُ آخر توصيلةٍ لمن اختير تُقال** — وتُزال بلمسة فتعود الأجرةُ بلا نقطة. */}
           {pointFromSaved && (
-            <div className="-mt-1 flex items-center gap-2 rounded-control border border-success-edge bg-success-tint px-3 py-2" data-testid="delivery-saved-point">
-              <p className="min-w-0 flex-1 text-xs font-bold text-success">{isFetch ? D.savedPointFetch : D.savedPoint}</p>
+            <div className="-mt-rg-xs flex items-center gap-rg-sm rounded-control border border-success-edge bg-success-tint px-rg-md py-rg-sm" data-testid="delivery-saved-point">
+              <p className="min-w-0 flex-1 text-caption font-bold text-success">{isFetch ? D.savedPointFetch : D.savedPoint}</p>
               <button type="button" className="shrink-0 inline-action" disabled={busy} onClick={clearSavedPoint}>
                 {D.savedPointRemove}
               </button>
             </div>
           )}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-rg-sm">
             {/* **طريقا الموقع في صفٍّ واحد** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩): «اطلب الموقع» — الطريقُ
                 الأوّل (قرارُ المالك ٢٠٢٦-١٠-٢٩) — **وبجانبه «لصق رابط» يفتح خانةَ الرابط وقتَ الحاجة.** */}
-            <div className="flex gap-2">
+            <div className="flex gap-rg-sm">
               <Button
                 type="button"
                 variant="secondary"
-                className="flex min-w-0 flex-1 items-center justify-center gap-2"
+                className="flex min-w-0 flex-1 items-center justify-center gap-rg-sm"
                 disabled={busy || ask === "sending" || ask === "waiting"}
                 onClick={() => void askLocation()}
               >
@@ -703,7 +703,7 @@ export default function DeliveryPage() {
               <Button
                 type="button"
                 variant="secondary"
-                className="flex shrink-0 items-center gap-1.5"
+                className="flex shrink-0 items-center gap-rg-sm"
                 aria-expanded={linkOpen}
                 disabled={busy}
                 onClick={() => setLinkOpen((v) => !v)}
@@ -714,12 +714,12 @@ export default function DeliveryPage() {
               </Button>
             </div>
             {ask === "waiting" && askReq && (
-              <div className="flex flex-col gap-2 rounded-control border border-line bg-field p-3">
-                <p className="text-xs text-ink-muted">{askReq.whatsapp_sent ? D.askLocWaiting : D.askLocNotSent}</p>
+              <div className="flex flex-col gap-rg-sm rounded-control border border-line bg-field p-rg-md">
+                <p className="text-caption text-ink-muted">{askReq.whatsapp_sent ? D.askLocWaiting : D.askLocNotSent}</p>
                 {!askReq.whatsapp_sent && (
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-rg-md">
                     <a
-                      className="text-sm font-bold text-accent-text"
+                      className="text-body font-bold text-accent-text"
                       href={askReq.wa_url}
                       target="_blank"
                       rel="noreferrer"
@@ -734,15 +734,15 @@ export default function DeliveryPage() {
               </div>
             )}
             {ask === "received" && (
-              <div className="rounded-control border border-success-edge bg-success-tint p-3">
-                <p className="text-sm font-bold text-success">{isFetch ? D.askLocReceivedFetch : D.askLocReceived}</p>
-                {askAcc != null && <p className="text-xs">{fill(D.askLocAccuracy, { m: fmtNum(askAcc) })}</p>}
+              <div className="rounded-control border border-success-edge bg-success-tint p-rg-md">
+                <p className="text-body font-bold text-success">{isFetch ? D.askLocReceivedFetch : D.askLocReceived}</p>
+                {askAcc != null && <p className="text-caption">{fill(D.askLocAccuracy, { m: fmtNum(askAcc) })}</p>}
               </div>
             )}
-            {ask === "expired" && <p className="text-xs text-danger">{D.askLocExpired}</p>}
-            {askError && <p className="text-xs text-danger">{askError}</p>}
+            {ask === "expired" && <p className="text-caption text-danger">{D.askLocExpired}</p>}
+            {askError && <p className="text-caption text-danger">{askError}</p>}
             {linkOpen && (
-            <div className="flex items-end gap-2">
+            <div className="flex items-end gap-rg-sm">
               <div className="min-w-0 flex-1">
                 <Input
                   label={isFetch ? D.linkFetch : D.link}
@@ -763,7 +763,7 @@ export default function DeliveryPage() {
               </Button>
             </div>
             )}
-            {linkNote && <p className={`text-xs ${linkNote.cls}`}>{linkNote.text}</p>}
+            {linkNote && <p className={`text-caption ${linkNote.cls}`}>{linkNote.text}</p>}
           </div>
           <Textarea
             id="delivery-parcel"
@@ -802,7 +802,7 @@ export default function DeliveryPage() {
             }}
           />
           {collectOn && (
-            <div className="flex items-end gap-2">
+            <div className="flex items-end gap-rg-sm">
               <div className="min-w-0 flex-1">
               <Input
                 label={`${isFetch ? D.collectAmountFetch : D.collectAmount} (${currency === "USD" ? "$" : m.common.currency})`}
@@ -835,8 +835,8 @@ export default function DeliveryPage() {
             </div>
           )}
 
-          <div className="flex flex-col gap-2" role="radiogroup" aria-label={D.whoPays}>
-            <p className={`text-sm font-bold ${tried && !payer ? "text-danger" : ""}`}>{D.whoPaysQ}</p>
+          <div className="flex flex-col gap-rg-sm" role="radiogroup" aria-label={D.whoPays}>
+            <p className={`text-body font-bold ${tried && !payer ? "text-danger" : ""}`}>{D.whoPaysQ}</p>
             {payers.map((p) => {
               const short = p.key === "merchant" && quote?.merchant_can_pay === false;
               return (
@@ -857,19 +857,19 @@ export default function DeliveryPage() {
 
           {!quoteError && quote && (
             /* **أرضٌ محايدة** — الأخضرُ يقول «تمّ/دُفع»، والأجرةُ لم تُدفع بعد. */
-            <div className="rounded-control border border-line bg-field p-3">
+            <div className="rounded-control border border-line bg-field p-rg-md">
               <p className="font-bold text-ink">{fill(D.fee, { fee: fmtNum(quote.fee) })}</p>
-              {feeSub && <p className="text-xs text-ink-muted">{feeSub}</p>}
+              {feeSub && <p className="text-caption text-ink-muted">{feeSub}</p>}
               {quote.fee_basis === "no_point" ? (
-                <p className="text-xs text-ink-muted">{isFetch ? D.feeNoPointFetch : D.feeNoPoint}</p>
+                <p className="text-caption text-ink-muted">{isFetch ? D.feeNoPointFetch : D.feeNoPoint}</p>
               ) : quote.fee_basis === "distance" && quote.distance_m > 0 ? (
-                <p className="text-xs text-ink-muted">{fill(D.feeDistance, { km: (quote.distance_m / 1000).toFixed(1) })}</p>
+                <p className="text-caption text-ink-muted">{fill(D.feeDistance, { km: (quote.distance_m / 1000).toFixed(1) })}</p>
               ) : null}
             </div>
           )}
           {payer === "merchant" && quote && !quote.merchant_can_pay && <Alert>{D.cannotPay}</Alert>}
           {missing.length > 0 && (
-            <p className={`text-xs ${tried ? "font-bold text-danger" : "text-ink-muted"}`}>{fill(D.missing, { list: missing.join(m.common.listSep) })}</p>
+            <p className={`text-caption ${tried ? "font-bold text-danger" : "text-ink-muted"}`}>{fill(D.missing, { list: missing.join(m.common.listSep) })}</p>
           )}
           {error && <Alert>{error}</Alert>}
           <Button type="submit" size="lg" className="w-full" disabled={busy || blocked || !storeId}>
@@ -880,8 +880,8 @@ export default function DeliveryPage() {
 
       </div>
 
-      <section className="flex min-w-0 flex-col gap-2" aria-label={D.mine}>
-        <h2 className="console-h2 px-1">{D.mine}</h2>
+      <section className="flex min-w-0 flex-col gap-rg-sm" aria-label={D.mine}>
+        <h2 className="console-h2 px-rg-xs">{D.mine}</h2>
         {(listError || cancelError) && <Alert>{cancelError || errorText(listError)}</Alert>}
         {rows == null && !listError && <LoadingState variant="inline" label={D.loading} />}
         {rows != null && rows.length === 0 && (

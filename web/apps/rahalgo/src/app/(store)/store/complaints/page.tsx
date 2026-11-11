@@ -24,16 +24,16 @@ const C = m.store.complaints;
 function Row({ t }: { t: MerchantReport }) {
   const status = (C.status as Record<string, string>)[t.status] ?? t.status;
   return (
-    <li className="flex min-h-14 flex-col gap-1 px-4 py-3" data-testid="store-ticket">
-      <span className="flex items-center justify-between gap-2">
+    <li className="flex min-h-14 flex-col gap-rg-xs px-rg-lg py-rg-md" data-testid="store-ticket">
+      <span className="flex items-center justify-between gap-rg-sm">
         <span className="font-bold">{`#${t.number} · ${reasonText(t.reason)}`}</span>
         <Badge variant={t.status === "resolved" ? "success" : "neutral"} className="shrink-0">
           {status}
         </Badge>
       </span>
-      {t.order_number != null && <span className="text-xs text-ink-muted">{fill(C.onOrder, { n: `#${t.order_number}` })}</span>}
-      {t.resolution && <span className="text-sm">{t.resolution}</span>}
-      <span className="text-2xs text-ink-muted">{fmtRelDay(t.created_at)}</span>
+      {t.order_number != null && <span className="text-caption text-ink-muted">{fill(C.onOrder, { n: `#${t.order_number}` })}</span>}
+      {t.resolution && <span className="text-body">{t.resolution}</span>}
+      <span className="text-meta text-ink-muted">{fmtRelDay(t.created_at)}</span>
     </li>
   );
 }

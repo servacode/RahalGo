@@ -127,12 +127,12 @@ export default function BulkPricePage() {
   if (!store) return null;
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 md:mx-0 md:max-w-none" data-testid="bulk-price">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-rg-lg md:mx-0 md:max-w-none" data-testid="bulk-price">
       <ToolHeader title={B.title} href={BACK} />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start md:gap-5">
-      <div className="flex min-w-0 flex-col gap-4">
-      <div role="radiogroup" aria-label={B.title} className="flex gap-2">
+      <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-2 md:items-start md:gap-5">
+      <div className="flex min-w-0 flex-col gap-rg-lg">
+      <div role="radiogroup" aria-label={B.title} className="flex gap-rg-sm">
         <ChoiceBox icon={IconAdd} label={B.up} tone="success" on={up} disabled={busy} onPick={() => { setUp(true); changed(); }} testId="bulk-up" />
         <ChoiceBox icon={IconMinus} label={B.down} tone="danger" on={!up} disabled={busy} onPick={() => { setUp(false); changed(); }} testId="bulk-down" />
       </div>
@@ -152,9 +152,9 @@ export default function BulkPricePage() {
         }}
       />
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium">{byAmount ? B.amount : B.percent}</span>
-        <span className="flex h-12 items-center gap-2 rounded-control border border-line bg-field px-3 focus-within:border-accent">
+      <label className="flex flex-col gap-rg-xs">
+        <span className="text-body font-medium">{byAmount ? B.amount : B.percent}</span>
+        <span className="flex h-12 items-center gap-rg-sm rounded-control border border-line bg-field px-rg-md focus-within:border-accent">
           <input
             value={value}
             onChange={(e) => {
@@ -165,20 +165,20 @@ export default function BulkPricePage() {
             dir="ltr"
             disabled={busy}
             data-testid="bulk-value"
-            className="min-w-0 flex-1 bg-transparent text-base text-ink outline-none"
+            className="min-w-0 flex-1 bg-transparent text-body-lg text-ink outline-none"
           />
           <span className="shrink-0 font-bold text-ink-muted">{byAmount ? B.unitSyp : B.unitPct}</span>
         </span>
       </label>
       </div>
 
-      <fieldset className="flex min-w-0 flex-col gap-1">
-        <legend className="mb-1 text-sm font-bold">{B.scope}</legend>
-        <div className="surface grid grid-cols-1 gap-x-2 gap-y-1 rounded-card border border-line p-2 sm:grid-cols-2 ">
+      <fieldset className="flex min-w-0 flex-col gap-rg-xs">
+        <legend className="mb-rg-xs text-body font-bold">{B.scope}</legend>
+        <div className="surface grid grid-cols-1 gap-x-rg-sm gap-y-rg-xs rounded-card border border-line p-rg-sm sm:grid-cols-2 ">
           <Radio
             id="bulk-sec-all"
             name="bulk-section"
-            className="min-h-11 px-1 lg:min-h-9"
+            className="min-h-11 px-rg-xs lg:min-h-9"
             checked={section === ""}
             disabled={busy}
             onChange={() => { setSection(""); changed(); }}
@@ -189,7 +189,7 @@ export default function BulkPricePage() {
               key={s.id}
               id={`bulk-sec-${s.id}`}
               name="bulk-section"
-              className="min-h-11 px-1 lg:min-h-9"
+              className="min-h-11 px-rg-xs lg:min-h-9"
               checked={section === s.id}
               disabled={busy}
               onChange={() => { setSection(s.id); changed(); }}

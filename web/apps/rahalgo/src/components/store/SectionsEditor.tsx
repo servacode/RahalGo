@@ -47,7 +47,7 @@ export default function SectionsEditor({
 
   if (!store || all.length === 0) return null;
   return (
-    <section className="flex flex-col gap-3" aria-label={X.title} data-testid="store-sections">
+    <section className="flex flex-col gap-rg-md" aria-label={X.title} data-testid="store-sections">
       <SectionGrid
         all={all}
         picked={picked}
@@ -61,7 +61,7 @@ export default function SectionsEditor({
           })
         }
       />
-      {picked.size === 0 && <p className="text-sm text-danger">{X.empty}</p>}
+      {picked.size === 0 && <p className="text-body text-danger">{X.empty}</p>}
     </section>
   );
 }

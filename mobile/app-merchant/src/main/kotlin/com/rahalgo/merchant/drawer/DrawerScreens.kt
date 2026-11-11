@@ -4,6 +4,8 @@ import com.rahalgo.ui.DocPrint
 import com.rahalgo.merchant.noStoreMsg
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
@@ -15,8 +17,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,8 +26,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
@@ -41,7 +39,9 @@ import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.TicketRow
 import com.rahalgo.ui.TicketsScreen
-import com.rahalgo.ui.Card
+import com.rahalgo.ui.CardVariant
+import com.rahalgo.ui.RahalCard
+import com.rahalgo.ui.StatusTone
 import com.rahalgo.ui.StatRow
 import com.rahalgo.ui.StatBox
 import com.rahalgo.ui.Empty
@@ -126,7 +126,7 @@ fun WarningsScreen(vm: WarningsViewModel) {
             }
             // **كلُّ إنذارٍ بطاقةٌ بأيقونةٍ ملوّنة** (مراجعةُ التصميم ٢٠٢٦-١١-٠٩).
             vm.items.forEach { w ->
-                Card(tone = Rahal.colors.accent) {
+                RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Warning) {
                   Row(verticalAlignment = Alignment.CenterVertically) {
                     com.rahalgo.ui.IconBox(
                         icon = com.rahalgo.ui.R.drawable.ic_warning,
@@ -134,18 +134,22 @@ fun WarningsScreen(vm: WarningsViewModel) {
                     )
                     Spacer(Modifier.width(Rahal.space.md))
                     Column(Modifier.weight(1f)) {
-                        Text(stringResource(com.rahalgo.ui.WarnReasons.res(w.reason)), fontWeight = FontWeight.Bold)
+                        Text(
+                            stringResource(com.rahalgo.ui.WarnReasons.res(w.reason)),
+                            style = Rahal.type.cardTitle,
+                            color = Rahal.colors.ink,
+                        )
                         if (w.note.isNotBlank()) {
                             Text(
                                 w.note,
                                 color = Rahal.colors.inkMuted,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = Rahal.type.caption,
                             )
                         }
                         Text(
                             day(LocalContext.current, w.createdAt),
                             color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = Rahal.type.meta,
                         )
                     }
                   }
@@ -405,6 +409,7 @@ class SalesViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SalesScreen(vm: SalesViewModel) {
     val context = LocalContext.current
@@ -412,7 +417,7 @@ fun SalesScreen(vm: SalesViewModel) {
         Screen {
             // **والعنوانُ في رأس الصفحة** (`OverlayPage`) — ولا سطرَ شرح.
 
-            Row(
+            FlowRow(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
             ) {
@@ -454,7 +459,7 @@ fun SalesScreen(vm: SalesViewModel) {
                         com.rahalgo.merchant.Dates.ymd(context, vm.toShown),
                     ),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
             }
             Spacer(Modifier.height(Rahal.space.md))
@@ -470,7 +475,7 @@ fun SalesScreen(vm: SalesViewModel) {
             //
             // **وصفٌّ للعدد وصفٌّ للمال** — ولا يُخلطان: **ثلاثةٌ تُعدّ
             // وثلاثةٌ تُقبض.**
-            Card {
+            RahalCard(variant = CardVariant.Outlined) {
                 StatRow {
                     StatBox(
                         label = stringResource(com.rahalgo.merchant.R.string.nav_orders_all),

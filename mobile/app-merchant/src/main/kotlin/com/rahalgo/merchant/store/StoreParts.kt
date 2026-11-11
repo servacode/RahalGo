@@ -20,10 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
@@ -157,7 +155,7 @@ internal fun SectionGrid(
         stringResource(R.string.wz_sections_picked, picked.size),
         color = if (picked.isEmpty()) Rahal.colors.inkMuted else Rahal.colors.brand,
         fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.bodyMedium,
+        style = Rahal.type.body,
     )
     Spacer(Modifier.height(Rahal.space.sm))
     val q = query.trim()
@@ -166,7 +164,7 @@ internal fun SectionGrid(
         Text(
             stringResource(R.string.wz_sections_no_match),
             color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             modifier = Modifier.padding(vertical = Rahal.space.md),
         )
         return
@@ -237,7 +235,7 @@ private fun SectionTile(
             sec.name,
             color = if (on) Rahal.colors.brand else Rahal.colors.ink,
             fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -294,7 +292,7 @@ internal fun SectionsEditor(vm: StoreViewModel) {
         Text(
             stringResource(R.string.store_sections_empty),
             color = Rahal.colors.danger,
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
         )
     }
 }
@@ -327,7 +325,7 @@ internal fun HoursEditor(vm: StoreViewModel) {
             enabled = !vm.saving,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
+                .heightIn(min = Rahal.size.touch),
         ) { Text(stringResource(com.rahalgo.ui.R.string.act_save), fontWeight = FontWeight.Bold) }
     }
     Spacer(Modifier.height(Rahal.space.xl))
@@ -365,7 +363,7 @@ internal fun AddressEditor(vm: StoreViewModel) {
             enabled = !vm.saving,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
+                .heightIn(min = Rahal.size.touch),
         ) { Text(stringResource(com.rahalgo.ui.R.string.act_save), fontWeight = FontWeight.Bold) }
     }
 }

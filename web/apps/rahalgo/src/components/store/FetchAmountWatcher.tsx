@@ -60,21 +60,21 @@ export default function FetchAmountWatcher() {
       title={fill(D.amountTitle, { n: d.number })}
       top
     >
-      <div className="flex flex-col items-center gap-2 text-center">
-        <p className="text-sm text-ink-muted">{D.amountPaid}</p>
+      <div className="flex flex-col items-center gap-rg-sm text-center">
+        <p className="text-body text-ink-muted">{D.amountPaid}</p>
         <p className="figure text-accent-text">
           {fill(D.amountValue, { amount: amountText(d.fetch_amount ?? 0, d.amount_currency) })}
         </p>
         {d.collect_amount != null && d.collect_amount > 0 && (
-          <p className="text-sm text-ink-muted">{fill(D.amountEstimate, { amount: amountText(d.collect_amount, d.amount_currency) })}</p>
+          <p className="text-body text-ink-muted">{fill(D.amountEstimate, { amount: amountText(d.collect_amount, d.amount_currency) })}</p>
         )}
-        <p className="text-sm">{D.amountBody}</p>
+        <p className="text-body">{D.amountBody}</p>
         {error && <Alert className="w-full">{error}</Alert>}
         <button
           type="button"
           disabled={busy}
           onClick={() => void decide(true)}
-          className="mt-2 w-full rounded-control bg-success px-4 py-3 text-base font-bold text-on-bright transition-opacity hover:opacity-90 disabled:opacity-60"
+          className="mt-rg-sm w-full rounded-control bg-success px-rg-lg py-rg-md text-body-lg font-bold text-on-bright transition-opacity hover:opacity-90 disabled:opacity-60"
         >
           {D.amountApprove}
         </button>
@@ -82,7 +82,7 @@ export default function FetchAmountWatcher() {
           type="button"
           disabled={busy}
           onClick={() => void decide(false)}
-          className="w-full rounded-control bg-danger-solid px-4 py-3 text-base font-bold text-on-solid transition-opacity hover:opacity-90 disabled:opacity-60"
+          className="w-full rounded-control bg-danger-solid px-rg-lg py-rg-md text-body-lg font-bold text-on-solid transition-opacity hover:opacity-90 disabled:opacity-60"
         >
           {D.amountReject}
         </button>

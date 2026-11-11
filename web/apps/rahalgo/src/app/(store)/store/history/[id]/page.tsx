@@ -40,27 +40,27 @@ export default function HistoryOrderPage() {
         actions={<Badge variant={o.status === "delivered" ? "success" : noPayout(o.status) ? "danger" : "neutral"}>{orderStatus(o.status)}</Badge>}
       />
       {(o.shared_stops ?? 0) >= 2 && (
-        <p className="text-xs font-bold text-accent-text">{fill(S.orders.sharedStops, { n: fmtNum(o.shared_stops ?? 0) })}</p>
+        <p className="text-caption font-bold text-accent-text">{fill(S.orders.sharedStops, { n: fmtNum(o.shared_stops ?? 0) })}</p>
       )}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] md:items-start md:gap-5">
-      <section className="panel flex flex-col gap-2 p-4">
+      <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] md:items-start md:gap-5">
+      <section className="panel flex flex-col gap-rg-sm p-rg-lg">
         <h2 className="console-h2">{S.orders.items}</h2>
         {/* **سطرٌ لكلّ عنصر** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 3 ...... 90 ل.س». */}
         <InvoiceLines items={o.items} />
         {o.notes && (
-          <p className="rounded-control bg-field p-2 text-sm">
+          <p className="rounded-control bg-field p-rg-sm text-body">
             <span className="font-bold">{S.orders.note}: </span>
             {o.notes}
           </p>
         )}
       </section>
-      <section className="panel flex flex-col gap-2 p-4">
+      <section className="panel flex flex-col gap-rg-sm p-rg-lg">
         <h2 className="console-h2">{K.histMoney}</h2>
         <MoneyLines o={o} />
       </section>
       </div>
       {o.cancel_reason && (
-        <p className="text-sm text-ink-muted">
+        <p className="text-body text-ink-muted">
           <span className="font-bold">{H.cancelReason}: </span>
           {o.cancel_reason}
         </p>

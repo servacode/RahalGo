@@ -135,14 +135,14 @@ export default function DrinksEditor() {
   const suspended = store.status === "suspended";
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 md:mx-0 md:max-w-none" data-testid="store-drinks">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-rg-lg md:mx-0 md:max-w-none" data-testid="store-drinks">
       <ToolHeader title={D.title} href={BACK} />
       {failed ? (
         <ReloadState onRetry={() => void load()} />
       ) : rows === null ? (
         <LoadingState variant="list" rows={3} />
       ) : !allowed ? (
-        <p className="text-sm text-ink-muted" data-testid="drinks-not-allowed">{D.notAllowed}</p>
+        <p className="text-body text-ink-muted" data-testid="drinks-not-allowed">{D.notAllowed}</p>
       ) : (
         <>
           <Segmented
@@ -156,17 +156,17 @@ export default function DrinksEditor() {
             onChange={(v) => setUsd(v === "usd")}
           />
           {rows.length === 0 ? (
-            <p className="text-sm text-ink-muted">{D.empty}</p>
+            <p className="text-body text-ink-muted">{D.empty}</p>
           ) : (
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-1.5">
+            <div className="flex flex-col gap-rg-sm">
+              <div className="flex items-center gap-rg-sm">
                 <span className="w-11 shrink-0" />
                 <ColumnLabel text={D.name} className="min-w-0 flex-1" />
                 <ColumnLabel text={usd ? D.priceUsd : D.priceSyp} className="w-24 shrink-0" />
                 <span className="w-11 shrink-0" />
               </div>
               {rows.map((r, i) => (
-                <div key={r.key} className="flex items-center gap-1.5" data-testid="drink-row">
+                <div key={r.key} className="flex items-center gap-rg-sm" data-testid="drink-row">
                   <ImageUpload
                     kind="menu_item"
                     label={D.image}
@@ -217,7 +217,7 @@ export default function DrinksEditor() {
           <Button
             type="button"
             variant="secondary"
-            className="inline-flex w-fit items-center gap-1.5 font-bold"
+            className="inline-flex w-fit items-center gap-rg-sm font-bold"
             disabled={busy || suspended}
             onClick={() => setRows([...rows, newRow()])}
           >

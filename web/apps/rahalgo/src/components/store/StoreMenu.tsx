@@ -66,7 +66,7 @@ const PLATFORM: readonly (readonly [string, string])[] = [
   ["/privacy", N.privacy],
 ];
 
-const ROW = "flex min-h-11 min-w-0 items-center gap-3 rounded-control px-3 text-sm hover:bg-row-hover";
+const ROW = "flex min-h-11 min-w-0 items-center gap-rg-md rounded-control px-rg-md text-body hover:bg-row-hover";
 
 export default function StoreMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { logout } = useAuth();
@@ -75,9 +75,9 @@ export default function StoreMenu({ open, onClose }: { open: boolean; onClose: (
   const role = useTeamRole();
   return (
     <Drawer open={open} onClose={onClose} title={N.more}>
-      <nav className="flex flex-col gap-2" aria-label={N.more} data-testid="store-menu">
+      <nav className="flex flex-col gap-rg-sm" aria-label={N.more} data-testid="store-menu">
         <section>
-          <p className="px-3 pb-1 text-xs font-bold text-ink-muted">{N.mine}</p>
+          <p className="px-rg-md pb-rg-xs text-caption font-bold text-ink-muted">{N.mine}</p>
           <ul className="flex flex-col">
             {MINE.filter(([href]) => !(role === "staff" && href === "/store/team")).map(([href, label, Ico]) => (
               <li key={href}>
@@ -90,7 +90,7 @@ export default function StoreMenu({ open, onClose }: { open: boolean; onClose: (
           </ul>
         </section>
         <section>
-          <p className="px-3 pb-1 text-xs font-bold text-ink-muted">{N.platform}</p>
+          <p className="px-rg-md pb-rg-xs text-caption font-bold text-ink-muted">{N.platform}</p>
           <ul className="grid grid-cols-2">
             <li>
               <a href={tutorial} target="_blank" rel="noopener noreferrer" onClick={onClose} className={ROW}>

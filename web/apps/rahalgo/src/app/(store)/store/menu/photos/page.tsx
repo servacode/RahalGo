@@ -103,24 +103,24 @@ export default function QuickPhotoPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4" data-testid="quick-photo">
+    <div className="flex flex-col gap-rg-lg" data-testid="quick-photo">
       <ToolHeader title={Q.title} href="/store/menu" />
       {error && <Alert tone="error">{error}</Alert>}
       {!items && !error && <LoadingState variant="list" rows={3} />}
-      {items && total === 0 && <p className="heading-section py-6 text-center">{Q.none}</p>}
+      {items && total === 0 && <p className="heading-section py-rg-xl text-center">{Q.none}</p>}
       {items && total > 0 && !current && (
-        <div className="flex flex-col items-center gap-3 py-6">
+        <div className="flex flex-col items-center gap-rg-md py-rg-xl">
           <p className="heading-section text-center">{Q.done}</p>
           <Button onClick={() => void load()}>{Q.again}</Button>
         </div>
       )}
       {current && (
-        <section className="surface flex flex-col items-center gap-3 rounded-card p-4">
-          <p className="text-sm font-bold text-accent-text" data-testid="quick-photo-counter">
+        <section className="surface flex flex-col items-center gap-rg-md rounded-card p-rg-lg">
+          <p className="text-body font-bold text-accent-text" data-testid="quick-photo-counter">
             {fill(Q.counter, { n: fmtNum(cursor + 1), total: fmtNum(total) })}
           </p>
           <h2 className="heading-page text-center">{current.name}</h2>
-          <p className="text-center text-xs text-ink-muted">{price}</p>
+          <p className="text-center text-caption text-ink-muted">{price}</p>
           <ImageUpload
             key={current.id}
             kind="menu_item"
@@ -135,7 +135,7 @@ export default function QuickPhotoPage() {
             capture
             tile={{ pick: Q.shoot, change: Q.retake, clear: Q.clear }}
           />
-          <div className="flex w-full gap-2">
+          <div className="flex w-full gap-rg-sm">
             <Button variant="secondary" onClick={skip} disabled={saving}>
               {Q.skip}
             </Button>

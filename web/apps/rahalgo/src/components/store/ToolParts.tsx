@@ -53,7 +53,7 @@ export function ToolHeader({
  */
 export function StickyBar({ children }: { children: ReactNode }) {
   return (
-    <div className="surface sticky bottom-[calc(3.3rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-2 border-t border-line-soft p-3 lg:bottom-0">
+    <div className="surface sticky bottom-[calc(3.3rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-rg-sm border-t border-line-soft p-rg-md lg:bottom-0">
       {children}
     </div>
   );
@@ -93,7 +93,7 @@ export function ChoiceBox({
       disabled={disabled}
       onClick={onPick}
       data-testid={testId}
-      className={`relative flex min-h-16 flex-1 items-center justify-center gap-2 rounded-card border px-3 py-2 transition-colors disabled:opacity-60 ${
+      className={`relative flex min-h-16 flex-1 items-center justify-center gap-rg-sm rounded-card border px-rg-md py-rg-sm transition-colors disabled:opacity-60 ${
         on ? "border-2 border-accent bg-accent-tint" : "border-line bg-surface hover:bg-row-hover"
       }`}
     >
@@ -139,7 +139,7 @@ export function Segmented<T extends string>({
           aria-checked={value === v}
           disabled={disabled}
           onClick={() => value !== v && onChange(v)}
-          className={`flex-1 text-sm font-bold transition-colors disabled:opacity-60 ${
+          className={`flex-1 text-body font-bold transition-colors disabled:opacity-60 ${
             value === v ? "bg-accent text-on-bright" : "bg-surface text-ink hover:bg-row-hover"
           }`}
         >
@@ -167,7 +167,7 @@ export function CurrencyCircles({
   usd: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex shrink-0 gap-2">
+    <div role="radiogroup" aria-label={label} className="flex shrink-0 gap-rg-sm">
       {(
         [
           ["SYP", syp],
@@ -182,7 +182,7 @@ export function CurrencyCircles({
           disabled={disabled}
           onClick={() => value !== code && onChange(code)}
           data-testid={`currency-${code}`}
-          className={`flex h-12 w-12 items-center justify-center rounded-full border text-sm font-bold transition-colors disabled:opacity-60 ${
+          className={`flex h-12 w-12 items-center justify-center rounded-full border text-body font-bold transition-colors disabled:opacity-60 ${
             value === code ? "border-accent bg-accent text-on-bright" : "border-line bg-field text-ink hover:bg-row-hover"
           }`}
         >
@@ -200,7 +200,7 @@ export function TagChip({ text, tone }: { text: string; tone: "accent" | "warnin
     warning: "bg-warning-tint text-warning",
     muted: "bg-field text-ink-muted",
   }[tone];
-  return <span className={`inline-block rounded-full px-2 py-0.5 text-2xs font-bold ${cls}`}>{text}</span>;
+  return <span className={`inline-block rounded-full px-rg-sm py-rg-xxs text-meta font-bold ${cls}`}>{text}</span>;
 }
 
 /** **حقلُ السطر** — ارتفاعٌ واحدٌ لحقول الخيارات والمشروبات، بلا تسميةٍ عائمة. */
@@ -228,7 +228,7 @@ export function RowField({
   id?: string;
 }) {
   return (
-    <label className={`flex h-11 items-center gap-1 rounded-control border border-line bg-field px-2 focus-within:border-accent ${className}`}>
+    <label className={`flex h-11 items-center gap-rg-xs rounded-control border border-line bg-field px-rg-sm focus-within:border-accent ${className}`}>
       <input
         id={id}
         value={value}
@@ -238,14 +238,14 @@ export function RowField({
         disabled={disabled}
         inputMode={decimal ? "decimal" : numeric ? "numeric" : undefined}
         dir={numeric || decimal ? "ltr" : undefined}
-        className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-muted"
+        className="min-w-0 flex-1 bg-transparent text-body text-ink outline-none placeholder:text-ink-muted"
       />
-      {suffix && <span className="shrink-0 text-xs text-ink-muted">{suffix}</span>}
+      {suffix && <span className="shrink-0 text-caption text-ink-muted">{suffix}</span>}
     </label>
   );
 }
 
 /** **عنوانُ عمودٍ فوق الأسطر** — مرّةً لا في كلّ حقل. */
 export function ColumnLabel({ text, className = "" }: { text: string; className?: string }) {
-  return <span className={`truncate text-2xs text-ink-muted ${className}`}>{text}</span>;
+  return <span className={`truncate text-meta text-ink-muted ${className}`}>{text}</span>;
 }

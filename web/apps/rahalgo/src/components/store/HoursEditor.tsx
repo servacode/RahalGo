@@ -53,7 +53,7 @@ function Planner({ saved, onSaved }: { saved: DayHours[]; onSaved: (days: DayHou
   const nightDay = night?.find(nightOpen);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-rg-lg">
       <HoursPlanner plan={plan} disabled={suspended || busy} />
       {dirty && !suspended && (
         <Button

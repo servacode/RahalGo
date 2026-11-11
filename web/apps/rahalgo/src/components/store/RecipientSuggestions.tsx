@@ -33,22 +33,22 @@ export function RecipientSuggestions({
 }) {
   if (items.length === 0) return null;
   return (
-    <div className="surface-inset -mt-1 overflow-hidden" data-testid="delivery-recipients">
-      <p className="px-3 pt-2 text-xs text-ink-muted">{D.savedTitle}</p>
+    <div className="surface-inset -mt-rg-xs overflow-hidden" data-testid="delivery-recipients">
+      <p className="px-rg-md pt-rg-sm text-caption text-ink-muted">{D.savedTitle}</p>
       <ul className="flex flex-col">
         {items.map((r) => (
-          <li key={r.phone} className="flex items-center gap-1">
+          <li key={r.phone} className="flex items-center gap-rg-xs">
             <button
               type="button"
               disabled={disabled}
               onMouseDown={keepFocus}
               onClick={() => onPick(r)}
-              className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-start transition-colors hover:bg-row-hover disabled:opacity-60"
+              className="flex min-w-0 flex-1 items-center gap-rg-sm px-rg-md py-rg-sm text-start transition-colors hover:bg-row-hover disabled:opacity-60"
             >
               <IconUser size={18} className="shrink-0 text-accent-text" />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-bold text-ink">{r.name}</span>
-                <span className="block truncate text-xs text-ink-muted">
+                <span className="block truncate text-body font-bold text-ink">{r.name}</span>
+                <span className="block truncate text-caption text-ink-muted">
                   {fill(D.savedLine, { phone: localPhone(r.phone), address: r.address_text })}
                 </span>
               </span>

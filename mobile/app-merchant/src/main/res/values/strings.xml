@@ -607,4 +607,7 @@
     <string name="home_val_logo_set">مضاف</string>
     <string name="home_val_logo_none">لم يُضف بعد</string>
     <string name="home_missing">ناقص</string>
+    <!-- رقاقةُ حال الطلب (تصميمُ ٢٠٢٦-١١-١١) -->
+    <string name="ord_chip_new">جديد</string>
+    <string name="ord_chip_preparing">قيد التحضير</string>
 </resources>

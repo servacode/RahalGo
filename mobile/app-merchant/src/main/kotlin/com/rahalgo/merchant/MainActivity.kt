@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.rahalgo.ui.RahalButton
@@ -851,30 +850,15 @@ private fun NeedSections(
     body: String = stringResource(R.string.need_sections_body),
     onGo: () -> Unit,
 ) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(Rahal.space.xl),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            title,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
-            textAlign = TextAlign.Center,
+    // **حالةُ الفراغ الموحّدة** (تصميمُ ٢٠٢٦-١١-١١) — أيقونةٌ وعنوانٌ وسطرٌ وزرٌّ واحد.
+    Box(Modifier.fillMaxSize().padding(Rahal.space.xl), contentAlignment = Alignment.Center) {
+        com.rahalgo.ui.EmptyState(
+            title = title,
+            line = body,
+            icon = com.rahalgo.ui.R.drawable.ic_offer,
+            actionLabel = stringResource(R.string.need_sections_go),
+            onAction = onGo,
         )
-        Spacer(Modifier.height(Rahal.space.sm))
-        Text(
-            body,
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(20.dp))
-        RahalButton(onClick = onGo) {
-            Text(stringResource(R.string.need_sections_go))
-        }
     }
 }
 
@@ -893,18 +877,14 @@ private fun RoleBadge() {
     androidx.compose.foundation.layout.Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
+            .padding(horizontal = Rahal.space.gutter, vertical = Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
+        // **رقاقةُ الحال الموحّدة** (تصميمُ ٢٠٢٦-١١-١١) — المالكُ بلون العلامة، والموظّفُ رماديّ.
+        com.rahalgo.ui.StatusChip(
             stringResource(if (staff) R.string.acc_role_staff else R.string.acc_role_owner),
-            color = if (staff) Rahal.colors.ink else Rahal.colors.brand,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier
-                .clip(Rahal.shape.pill)
-                .background(if (staff) Rahal.colors.line else Rahal.colors.brand.copy(alpha = 0.12f))
-                .padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs),
+            if (staff) com.rahalgo.ui.StatusTone.Neutral else com.rahalgo.ui.StatusTone.Info,
+            icon = com.rahalgo.ui.R.drawable.ic_user,
         )
     }
 }

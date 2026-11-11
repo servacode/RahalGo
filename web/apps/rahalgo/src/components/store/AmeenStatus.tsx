@@ -16,11 +16,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtDateTime, fmtSince } from "@rahalgo/i18n";
-import { ButtonLink, IconRotate, Pill } from "@rahalgo/ui";
+import { ButtonLink, IconRotate, StatusChip } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { fill } from "@/lib/customer/texts";
 
+/** نبرةُ الحال في اللوحة ← نبرةُ الشارة الموحّدة. */
+const CHIP = { good: "success", attention: "warning", danger: "danger" } as const;
 const m = getMessages(defaultLocale);
 const P = m.store.priceSync;
 const K = m.store.console;
@@ -146,11 +148,11 @@ export function AmeenSideCard() {
       href="/store/price-sync"
       data-testid="ameen-side-card"
       data-state={st.key}
-      className="flex items-start gap-2.5 rounded-control border border-line-soft bg-surface p-2.5 text-xs leading-snug text-ink-muted transition-colors hover:bg-row-hover"
+      className="flex items-start gap-rg-md rounded-control border border-line-soft bg-surface p-rg-md text-caption leading-snug text-ink-muted transition-colors hover:bg-row-hover"
     >
-      <span className="dot mt-1.5" data-tone={st.tone === "danger" ? "bad" : st.tone === "attention" ? "warn" : st.tone === "good" ? undefined : "off"} aria-hidden />
+      <span className="dot mt-rg-sm" data-tone={st.tone === "danger" ? "bad" : st.tone === "attention" ? "warn" : st.tone === "good" ? undefined : "off"} aria-hidden />
       <span className="min-w-0">
-        <b className="block text-sm text-ink">{fill(SH.sideTitle, { s: st.label })}</b>
+        <b className="block text-body text-ink">{fill(SH.sideTitle, { s: st.label })}</b>
         <span className="break-words">{last}</span>
       </span>
     </Link>
@@ -168,7 +170,7 @@ export function AmeenStatusTile({ className = "" }: { className?: string }) {
   const last = lastRealSync(info);
   return (
     <section
-      className={`panel flex flex-wrap items-center gap-3 p-3.5 ${className}`}
+      className={`panel flex flex-wrap items-center gap-rg-md p-rg-lg ${className}`}
       aria-label={K.ameenTile}
       data-testid="ameen-status-tile"
       data-state={st.key}
@@ -176,10 +178,10 @@ export function AmeenStatusTile({ className = "" }: { className?: string }) {
       <span className="icon-chip size-10" data-tone={st.tone} aria-hidden>
         <IconRotate size={20} />
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-rg-xxs">
+        <span className="flex flex-wrap items-center gap-rg-sm">
           <h2 className="console-h2">{K.ameenTile}</h2>
-          <Pill tone={st.tone}>{st.label}</Pill>
+          <StatusChip tone={st.tone ? CHIP[st.tone] : "neutral"}>{st.label}</StatusChip>
         </span>
         <p className={`console-meta ${st.key === "error" ? "!text-danger" : ""}`}>
           {st.key === "error" && st.why ? `${st.detail} — ${st.why}` : st.detail}

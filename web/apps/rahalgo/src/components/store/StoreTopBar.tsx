@@ -95,7 +95,7 @@ export default function StoreTopBar({
 
   return (
     <header className="console-top" data-testid="store-topbar">
-      <div className="flex items-center gap-2 text-sm text-ink-dim">
+      <div className="flex items-center gap-rg-sm text-body text-ink-muted">
         {stores.length > 1 ? (
           <ActionMenu
             variant="ghost"
@@ -103,7 +103,7 @@ export default function StoreTopBar({
             chevron={false}
             ariaLabel={SH.switchStore}
             label={
-              <span className="flex items-center gap-2 font-bold text-ink">
+              <span className="flex items-center gap-rg-sm font-bold text-ink">
                 {mark}
                 {name}
                 <IconUpDown size={13} />
@@ -126,7 +126,7 @@ export default function StoreTopBar({
       </div>
 
       <form onSubmit={submit} role="search" className="relative mx-auto w-[min(24rem,40vw)]">
-        <span className="pointer-events-none absolute inset-y-0 start-2.5 flex items-center text-ink-dim" aria-hidden>
+        <span className="pointer-events-none absolute inset-y-0 start-2.5 flex items-center text-ink-muted" aria-hidden>
           <IconSearch size={16} />
         </span>
         <input
@@ -144,7 +144,7 @@ export default function StoreTopBar({
         </kbd>
       </form>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-rg-xs">
         <IconButton
           icon={theme === "dark" ? IconSun : IconMoon}
           label={theme === "dark" ? SH.themeLight : SH.themeDark}
@@ -153,12 +153,12 @@ export default function StoreTopBar({
         />
         <IconButton icon={IconHelp} label={SH.help} href="/help" Link={Link} />
         <IconButton icon={IconBell} label={SH.notifications} href="/store/notifications" Link={Link} dot={unread > 0} testId="store-bell" />
-        <span className="mx-1.5 h-5 w-px bg-line-soft" aria-hidden />
+        <span className="mx-rg-sm h-5 w-px bg-line-soft" aria-hidden />
         <ButtonLink Link={Link} href="/shop" variant="ghost" size="sm">
           <IconCart size={15} />
           {N.shopAsCustomer}
         </ButtonLink>
-        <button type="button" onClick={onMenu} aria-label={N.more} className="ms-1 rounded-full" data-testid="store-topbar-avatar">
+        <button type="button" onClick={onMenu} aria-label={N.more} className="ms-rg-xs rounded-full" data-testid="store-topbar-avatar">
           <span className="avatar">{initials(user?.full_name || name)}</span>
         </button>
       </div>

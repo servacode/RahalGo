@@ -1,5 +1,6 @@
 package com.rahalgo.merchant.store
 
+import com.rahalgo.ui.cardVariant
 import com.rahalgo.ui.hours.IconChoice
 import com.rahalgo.ui.hours.IconChoicePair
 import com.rahalgo.ui.hours.TimeField
@@ -20,10 +21,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
-import com.rahalgo.ui.cardSurface
 import com.rahalgo.merchant.Dates
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.MerchantApi
@@ -118,7 +116,7 @@ private fun TeamHeader(title: String, onBack: (() -> Unit)?) {
         Text(
             title,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleLarge,
+            style = Rahal.type.sectionTitle,
             modifier = Modifier.padding(vertical = Rahal.space.sm),
         )
         Spacer(Modifier.height(Rahal.space.sm))
@@ -132,19 +130,12 @@ private fun WhiteCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (title.isNotEmpty()) {
-        Text(
-            title,
-            color = Rahal.colors.inkMuted,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.padding(horizontal = Rahal.space.xs),
-        )
-        Spacer(Modifier.height(Rahal.space.sm))
+        com.rahalgo.ui.SectionHeader(title, modifier = Modifier.padding(horizontal = Rahal.space.xs))
     }
     Column(
         Modifier
             .fillMaxWidth()
-            .cardSurface(Rahal.shape.lg)
+            .cardVariant(com.rahalgo.ui.CardVariant.Elevated)
             .padding(Rahal.space.lg),
         content = content,
     )
@@ -157,7 +148,7 @@ private fun FieldError(text: String?) {
     Text(
         text,
         color = Rahal.colors.danger,
-        style = MaterialTheme.typography.bodySmall,
+        style = Rahal.type.caption,
         modifier = Modifier.padding(start = Rahal.space.md, top = Rahal.space.xs),
     )
 }
@@ -165,7 +156,7 @@ private fun FieldError(text: String?) {
 /** **أيقونةٌ قبل نصّ الزرّ.** */
 @Composable
 private fun ButtonIcon(icon: Int) {
-    Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(20.dp))
+    Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(Rahal.icon.sm))
     Spacer(Modifier.width(Rahal.space.sm))
 }
 
@@ -276,21 +267,17 @@ fun StaffScreen(vm: StaffViewModel, canManage: Boolean, onBack: (() -> Unit)? = 
         if (vm.items.isEmpty()) {
             StaffEmpty()
         } else {
-            Text(
+            com.rahalgo.ui.SectionHeader(
                 stringResource(R.string.staff_list_title),
-                color = Rahal.colors.inkMuted,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(horizontal = Rahal.space.xs),
             )
-            Spacer(Modifier.height(Rahal.space.sm))
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .cardSurface(Rahal.shape.lg),
+                    .cardVariant(com.rahalgo.ui.CardVariant.Elevated),
             ) {
                 vm.items.forEachIndexed { i, row ->
-                    if (i > 0) HorizontalDivider(color = Rahal.colors.line, thickness = Rahal.stroke.hair)
+                    if (i > 0) com.rahalgo.ui.RahalDivider()
                     StaffRow(
                         row = row,
                         canRemove = canManage,
@@ -338,7 +325,7 @@ fun StaffScreen(vm: StaffViewModel, canManage: Boolean, onBack: (() -> Unit)? = 
                     enabled = !vm.busy,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
+                        .heightIn(min = Rahal.size.touch),
                 ) {
                     ButtonIcon(com.rahalgo.ui.R.drawable.ic_plus)
                     Text(stringResource(R.string.staff_add), fontWeight = FontWeight.Bold)
@@ -374,33 +361,11 @@ fun StaffScreen(vm: StaffViewModel, canManage: Boolean, onBack: (() -> Unit)? = 
 /** **لا موظّفين بعد** — أيقونةٌ في دائرةٍ وسطرٌ واحد. */
 @Composable
 private fun StaffEmpty() {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .cardSurface(Rahal.shape.lg)
-            .padding(vertical = Rahal.space.xl, horizontal = Rahal.space.lg),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            Modifier
-                .size(56.dp)
-                .clip(Rahal.shape.pill)
-                .background(Rahal.colors.brand.copy(alpha = 0.10f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painterResource(com.rahalgo.ui.R.drawable.ic_user),
-                contentDescription = null,
-                tint = Rahal.colors.brand,
-                modifier = Modifier.size(28.dp),
-            )
-        }
-        Spacer(Modifier.height(Rahal.space.md))
-        Text(
-            stringResource(R.string.staff_none),
-            color = Rahal.colors.inkMuted,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyLarge,
+    // **حالةُ الفراغ الموحّدة** (تصميمُ ٢٠٢٦-١١-١١).
+    com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined) {
+        com.rahalgo.ui.EmptyState(
+            title = stringResource(R.string.staff_none),
+            icon = com.rahalgo.ui.R.drawable.ic_user,
         )
     }
 }
@@ -420,13 +385,13 @@ private fun StaffRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 72.dp)
+            .heightIn(min = Rahal.size.avatarLg)
             .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             Modifier
-                .size(44.dp)
+                .size(Rahal.size.iconBox)
                 .clip(Rahal.shape.pill)
                 .background(Rahal.colors.brand.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center,
@@ -435,7 +400,7 @@ private fun StaffRow(
                 initial,
                 color = Rahal.colors.brand,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
+                style = Rahal.type.sectionTitle,
             )
         }
         Spacer(Modifier.width(Rahal.space.md))
@@ -444,7 +409,7 @@ private fun StaffRow(
                 row.name.ifBlank { ltr(row.phone) },
                 color = Rahal.colors.ink,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyLarge,
+                style = Rahal.type.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -452,7 +417,7 @@ private fun StaffRow(
                 Text(
                     ltr(row.phone),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                     maxLines = 1,
                 )
             }
@@ -461,7 +426,7 @@ private fun StaffRow(
                     stringResource(R.string.staff_last_login, Dates.stamp(context, it))
                 } ?: stringResource(R.string.staff_never_login),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.labelSmall,
+                style = Rahal.type.meta,
                 maxLines = 1,
             )
         }
@@ -471,7 +436,7 @@ private fun StaffRow(
                 onClick = onRemove,
                 enabled = enabled,
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(Rahal.size.touch)
                     .clip(Rahal.shape.pill)
                     .background(Rahal.colors.danger.copy(alpha = 0.10f)),
             ) {
@@ -479,7 +444,7 @@ private fun StaffRow(
                     painterResource(com.rahalgo.ui.R.drawable.ic_trash),
                     contentDescription = stringResource(R.string.staff_remove),
                     tint = Rahal.colors.danger,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(Rahal.icon.md),
                 )
             }
         }
@@ -598,7 +563,7 @@ fun OrderPhonesScreen(
                 )
                 FieldError(phoneError(p.evening, tried))
                 Spacer(Modifier.height(Rahal.space.lg))
-                HorizontalDivider(color = Rahal.colors.line, thickness = Rahal.stroke.hair)
+                com.rahalgo.ui.RahalDivider()
                 Spacer(Modifier.height(Rahal.space.md))
                 Row(
                     Modifier.fillMaxWidth(),
@@ -608,13 +573,13 @@ fun OrderPhonesScreen(
                         painterResource(com.rahalgo.ui.R.drawable.ic_time),
                         contentDescription = null,
                         tint = Rahal.colors.brand,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(Rahal.icon.sm),
                     )
                     Spacer(Modifier.width(Rahal.space.sm))
                     Text(
                         stringResource(R.string.order_phones_evening_from),
                         color = Rahal.colors.ink,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = Rahal.type.body,
                         modifier = Modifier.weight(1f),
                     )
                     Spacer(Modifier.width(Rahal.space.sm))
@@ -634,7 +599,7 @@ fun OrderPhonesScreen(
                 enabled = !vm.busy,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .heightIn(min = Rahal.size.touch),
             ) {
                 ButtonIcon(R.drawable.ic_check)
                 Text(stringResource(R.string.order_phones_save), fontWeight = FontWeight.Bold)
@@ -682,6 +647,7 @@ private fun TimeChip(value: String, enabled: Boolean, onChange: (String) -> Unit
             .background(Rahal.colors.brand.copy(alpha = 0.08f))
             .border(Rahal.stroke.hair, Rahal.colors.brand.copy(alpha = 0.35f), Rahal.shape.pill)
             .clickable(enabled = enabled, role = Role.Button, onClick = open)
+            .heightIn(min = Rahal.size.touch)
             .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -689,7 +655,7 @@ private fun TimeChip(value: String, enabled: Boolean, onChange: (String) -> Unit
             clock12(shown),
             color = if (enabled) Rahal.colors.brand else Rahal.colors.inkMuted,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyLarge,
+            style = Rahal.type.bodyLarge,
         )
     }
 }

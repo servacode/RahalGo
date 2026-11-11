@@ -73,7 +73,8 @@ import {
   MiniBars,
   Modal,
   PageHead,
-  Pill,
+  StatTile,
+  StatusChip,
   SalesChart,
   Segmented,
   SwitchTrack,
@@ -175,7 +176,7 @@ function RenameForm({ store, onDone }: { store: MerchantStore; onDone: () => voi
   const [draft, setDraft] = useState(store.name);
   return (
     <form
-      className="flex w-full max-w-md flex-col gap-2 rounded-control bg-field p-3"
+      className="flex w-full max-w-md flex-col gap-rg-sm rounded-control bg-field p-rg-md"
       onSubmit={(e) => {
         e.preventDefault();
         const name = draft.trim();
@@ -234,20 +235,20 @@ function LiveOrders() {
     <section className="panel flex flex-col" aria-label={HM.liveTitle} data-testid="store-live">
       <div className="panel-head">
         <h2 className="console-h2">{HM.liveTitle}</h2>
-        <Pill tone="good">{SH.live}</Pill>
-        <Link href="/store/orders" className="ms-auto flex items-center gap-1 text-sm font-bold text-primary hover:underline">
+        <StatusChip tone="success">{SH.live}</StatusChip>
+        <Link href="/store/orders" className="ms-auto flex items-center gap-rg-xs text-body font-bold text-primary hover:underline">
           {SH.viewAll}
           <IconNext size={14} />
         </Link>
       </div>
-      <div className="stat-row mx-4 mt-2 rounded-control border border-line-soft">
+      <div className="stat-row mx-rg-lg mt-rg-sm rounded-control border border-line-soft">
         {cells.map((c, i) => (
           <Link
             key={c.key}
             href="/store/orders"
-            className={`px-3 py-2 transition-colors hover:bg-row-hover ${i > 0 ? "border-s border-line-soft" : ""}`}
+            className={`px-rg-md py-rg-sm transition-colors hover:bg-row-hover ${i > 0 ? "border-s border-line-soft" : ""}`}
           >
-            <span className="flex items-center gap-1.5 text-sm text-ink-muted">
+            <span className="flex items-center gap-rg-sm text-body text-ink-muted">
               <span className="dot" data-tone={c.tone} aria-hidden />
               {c.label}
             </span>
@@ -256,12 +257,12 @@ function LiveOrders() {
         ))}
       </div>
       {all.length > 0 ? (
-        <ul className="my-2 flex flex-col">
+        <ul className="my-rg-sm flex flex-col">
           {all.slice(0, 4).map((o) => {
             const late = groupOf(o) === "new" && now - sentAt(o) > LATE_MIN * 60_000;
             return (
               <li key={o.id} className="border-t border-line-soft first:border-0">
-                <Link href="/store/orders" className="flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors hover:bg-row-hover">
+                <Link href="/store/orders" className="flex items-center gap-rg-md px-rg-lg py-rg-md text-body transition-colors hover:bg-row-hover">
                   <b className="w-12 shrink-0" dir="ltr">
                     #{o.number}
                   </b>
@@ -271,20 +272,20 @@ function LiveOrders() {
                       {fill(SH.itemsCount, { n: fmtNum(o.items.length) })} · {fmtMoney(o.subtotal)}
                     </span>
                   </span>
-                  <span className={`shrink-0 text-xs ${late ? "font-bold text-danger" : "text-ink-dim"}`}>
+                  <span className={`shrink-0 text-caption ${late ? "font-bold text-danger" : "text-ink-muted"}`}>
                     {late ? `${SH.late} · ` : ""}
                     {fmtSince(o.sent_to_merchant_at ?? o.created_at, now)}
                   </span>
-                  <Pill tone={groupOf(o) === "new" ? "info" : groupOf(o) === "preparing" ? "attention" : "good"} dot={false}>
+                  <StatusChip tone={groupOf(o) === "new" ? "info" : groupOf(o) === "preparing" ? "warning" : "success"}>
                     {S.orders.status[o.status as keyof typeof S.orders.status] ?? S.orders.readyDone}
-                  </Pill>
+                  </StatusChip>
                 </Link>
               </li>
             );
           })}
         </ul>
       ) : (
-        <p className="px-4 py-6 text-center text-sm text-ink-dim">{HM.liveNone}</p>
+        <p className="px-rg-lg py-rg-xl text-center text-body text-ink-muted">{HM.liveNone}</p>
       )}
     </section>
   );
@@ -311,29 +312,29 @@ function NeedsPanel({ needs }: { needs: Need[] }) {
     <section className="panel flex min-w-0 flex-col" aria-label={HM.alertsTitle} data-testid="store-needs">
       <div className="panel-head">
         <h2 className="console-h2">{HM.alertsTitle}</h2>
-        {needs.length > 0 && <Pill tone="danger" dot={false}>{fmtNum(needs.length)}</Pill>}
+        {needs.length > 0 && <StatusChip tone="danger">{fmtNum(needs.length)}</StatusChip>}
       </div>
       {needs.length === 0 ? (
-        <p className="flex items-center justify-center gap-2 px-4 py-7 text-center text-sm text-ink-dim">
+        <p className="flex items-center justify-center gap-rg-sm px-rg-lg py-7 text-center text-body text-ink-muted">
           <IconCheck size={18} className="text-success" />
           {HM.alertsClear}
         </p>
       ) : (
-        <ul className="my-1.5 flex flex-col">
+        <ul className="my-rg-sm flex flex-col">
           {needs.map((n) => {
             const Ico = n.icon;
             return (
               <li key={n.key} className="border-t border-line-soft first:border-0">
-                <Link href={n.href} className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-row-hover">
+                <Link href={n.href} className="flex items-center gap-rg-md px-rg-lg py-rg-md transition-colors hover:bg-row-hover">
                   <span className="icon-chip" data-tone={n.tone === "danger" ? "danger" : "attention"} aria-hidden>
                     <Ico size={17} />
                   </span>
-                  <span className="min-w-0 flex-1 text-sm font-bold">{n.text}</span>
-                  {n.num != null && <span className="text-base font-bold tabular-nums">{fmtNum(n.num)}</span>}
+                  <span className="min-w-0 flex-1 text-body font-bold">{n.text}</span>
+                  {n.num != null && <span className="text-body-lg font-bold tabular-nums">{fmtNum(n.num)}</span>}
                   {n.cta ? (
-                    <span className="surface shrink-0 px-2.5 py-1 text-xs font-bold">{n.cta}</span>
+                    <span className="surface shrink-0 px-rg-md py-rg-xs text-caption font-bold">{n.cta}</span>
                   ) : (
-                    <IconNext size={15} className="shrink-0 text-ink-dim" />
+                    <IconNext size={15} className="shrink-0 text-ink-muted" />
                   )}
                 </Link>
               </li>
@@ -359,18 +360,18 @@ function QuickActions({ unavailable, noPhoto }: { unavailable: number; noPhoto: 
       <div className="panel-head">
         <h2 className="console-h2">{HM.quickTitle}</h2>
       </div>
-      <div className="grid grid-cols-2 gap-2 px-4 pb-4 pt-2">
+      <div className="grid grid-cols-2 gap-rg-sm px-rg-lg pb-rg-lg pt-rg-sm">
         {items.map((q) => {
           const Ico = q.icon;
           return (
             <Link
               key={q.href}
               href={q.href}
-              className="group flex h-11 items-center gap-2.5 rounded-control border border-line-soft bg-field px-3 text-sm font-bold transition-colors hover:border-primary-edge hover:bg-primary-soft hover:text-primary"
+              className="group flex h-11 items-center gap-rg-md rounded-control border border-line-soft bg-field px-rg-md text-body font-bold transition-colors hover:border-primary-edge hover:bg-primary-soft hover:text-primary"
             >
-              <Ico size={17} className="text-ink-dim group-hover:text-primary" />
+              <Ico size={17} className="text-ink-muted group-hover:text-primary" />
               <span className="min-w-0 flex-1 truncate">{q.label}</span>
-              {!!q.badge && <span className="text-xs font-bold tabular-nums text-ink-dim">{fmtNum(q.badge)}</span>}
+              {!!q.badge && <span className="text-caption font-bold tabular-nums text-ink-muted">{fmtNum(q.badge)}</span>}
             </Link>
           );
         })}
@@ -440,35 +441,35 @@ function SalesCard({ storeId, wk }: { storeId: string; wk: { cur: SalesRow[] | n
           />
         </span>
       </div>
-      <div className="flex flex-wrap items-end gap-7 px-4 pt-2">
+      <div className="flex flex-wrap items-end gap-7 px-rg-lg pt-rg-sm">
         <div>
           <p className="console-meta">{range === 7 ? SH.weekTotal : SH.monthTotal}</p>
           <p className="figure">
             {fmtNum(total)}
-            <small className="ms-1 text-sm font-medium text-ink-dim">{m.common.currency}</small>
+            <small className="ms-rg-xs text-body font-medium text-ink-muted">{m.common.currency}</small>
           </p>
         </div>
         <div>
           <p className="console-meta">{SH.dayAvg}</p>
           <p className="stat-num">
             {fmtNum(Math.round(total / days))}
-            <small className="ms-1 text-sm font-medium text-ink-dim">{m.common.currency}</small>
+            <small className="ms-rg-xs text-body font-medium text-ink-muted">{m.common.currency}</small>
           </p>
         </div>
-        <div className="ms-auto flex gap-3.5 pb-1 text-xs text-ink-dim">
-          <span className="flex items-center gap-1.5">
+        <div className="ms-auto flex gap-rg-lg pb-rg-xs text-caption text-ink-muted">
+          <span className="flex items-center gap-rg-sm">
             <i className="inline-block h-0.5 w-2.5 rounded bg-primary" />
             {SH.thisPeriod}
           </span>
           {s.prev && (
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-rg-sm">
               <i className="inline-block h-0.5 w-2.5 rounded bg-line" />
               {SH.prevPeriod}
             </span>
           )}
         </div>
       </div>
-      <div className="px-4 pb-4 pt-1.5">
+      <div className="px-rg-lg pb-rg-lg pt-rg-sm">
         {s.cur ? (
           <>
             <SalesChart
@@ -477,7 +478,7 @@ function SalesCard({ storeId, wk }: { storeId: string; wk: { cur: SalesRow[] | n
               prev={s.prev?.map((r) => r.sales)}
               tickLabel={(v) => (v >= 1000 ? `${fmtNum(v / 1000)}${SH.kUnit}` : fmtNum(v))}
             />
-            {total === 0 && <p className="console-meta mt-2 text-center">{HM.weekNone}</p>}
+            {total === 0 && <p className="console-meta mt-rg-sm text-center">{HM.weekNone}</p>}
           </>
         ) : (
           <LoadingState variant="inline" />
@@ -636,7 +637,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
 
   const logoModal = (
     <Modal open={logoOpen} onClose={() => setLogoOpen(false)} title={T.logo}>
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-rg-md">
         <LogoCard />
         <Button variant="secondary" onClick={() => setLogoOpen(false)}>
           {m.common.close}
@@ -649,14 +650,14 @@ function HomeBody({ store }: { store: MerchantStore }) {
   if (desk) {
     return (
       <div className="console-page" data-testid="store-home">
-        <header className="flex flex-wrap items-center gap-3.5">
+        <header className="flex flex-wrap items-center gap-rg-lg">
           <StoreLogo store={store} suspended={suspended} onLogo={() => setLogoOpen(true)} />
           <div className="min-w-0">
             {renaming ? (
               <RenameForm store={store} onDone={() => setRenaming(false)} />
             ) : (
               <>
-                <h1 className="console-title flex items-center gap-1.5">
+                <h1 className="console-title flex items-center gap-rg-sm">
                   <span className="truncate">{store.name}</span>
                   {!suspended && (
                     <IconButton icon={IconEdit} label={SH.editName} onClick={() => setRenaming(true)} size={15} />
@@ -666,9 +667,9 @@ function HomeBody({ store }: { store: MerchantStore }) {
               </>
             )}
           </div>
-          <div className="ms-auto flex flex-wrap items-center gap-2.5">
+          <div className="ms-auto flex flex-wrap items-center gap-rg-md">
             {suspended ? (
-              <Pill tone="danger">{HM.suspended}</Pill>
+              <StatusChip tone="danger">{HM.suspended}</StatusChip>
             ) : (
               <>
                 <Segmented
@@ -757,7 +758,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
         )}
 
         {selfManage ? (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
+          <div className="grid grid-cols-1 gap-rg-lg lg:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)]">
             <SalesCard storeId={id} wk={wk} />
             <LiveOrders />
           </div>
@@ -765,12 +766,12 @@ function HomeBody({ store }: { store: MerchantStore }) {
           <SalesCard storeId={id} wk={wk} />
         )}
 
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 items-start gap-rg-lg lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           {needsNode}
           {!suspended && <QuickActions unavailable={unavailable} noPhoto={noPhoto} />}
         </div>
 
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">{settings}</div>
+        <div className="grid grid-cols-1 items-start gap-rg-lg lg:grid-cols-2">{settings}</div>
         {emergency.dialog}
         {logoModal}
       </div>
@@ -793,14 +794,14 @@ function HomeBody({ store }: { store: MerchantStore }) {
         <Alert tone="error">{S.suspendedBanner}</Alert>
       )}
       <div className="igroup tab-span">
-        <div className="flex items-center gap-3.5 px-4 py-3.5">
+        <div className="flex items-center gap-rg-lg px-rg-lg py-rg-lg">
           <StoreLogo store={store} suspended={suspended} onLogo={() => setLogoOpen(true)} size="lg" />
           <div className="min-w-0 flex-1">
             {renaming ? (
               <RenameForm store={store} onDone={() => setRenaming(false)} />
             ) : (
               <>
-                <h2 className="hero-name flex items-center gap-1">
+                <h2 className="hero-name flex items-center gap-rg-xs">
                   <span className="line-clamp-2">{store.name}</span>
                   {!suspended && <IconButton icon={IconEdit} label={SH.editName} onClick={() => setRenaming(true)} size={16} />}
                 </h2>
@@ -819,8 +820,8 @@ function HomeBody({ store }: { store: MerchantStore }) {
             data-testid="store-status"
             className="irow disabled:opacity-60"
           >
-            <span className="min-w-0 flex-1 py-2">
-              <span className="block text-base font-medium">{state.label}</span>
+            <span className="min-w-0 flex-1 py-rg-sm">
+              <span className="block text-body-lg font-medium">{state.label}</span>
               <span className="console-meta block">{state.sub}</span>
             </span>
             <SwitchTrack on={state.isOpen} />
@@ -835,38 +836,36 @@ function HomeBody({ store }: { store: MerchantStore }) {
       <div className="tab-span">
         <div className="sec-head">{SH.todayHead}</div>
         <div className="igroup">
-          <div className="px-4 pb-1 pt-3.5">
-            <p className="flex items-center gap-1.5 text-sm text-ink-dim">
+          <div className="px-rg-lg pb-rg-xs pt-rg-lg">
+            <p className="flex items-center gap-rg-sm text-body text-ink-muted">
               <IconTrendUp size={16} />
               {HM.salesToday}
             </p>
             <p className="hero-figure">
               {fmtNum(S0?.sales ?? 0)}
-              <small className="ms-1.5 text-base font-medium text-ink-dim">{m.common.currency}</small>
+              <small className="ms-rg-sm text-body-lg font-medium text-ink-muted">{m.common.currency}</small>
             </p>
             {salesPct != null && (
-              <p className="flex items-center text-sm">
+              <p className="flex items-center text-body">
                 <Delta pct={salesPct} label={SH.vsLastWeek} />
               </p>
             )}
             {bars.length > 0 && (
-              <div className="mt-2 pb-2.5">
+              <div className="mt-rg-sm pb-rg-md">
                 <MiniBars ariaLabel={HM.weekChart} data={bars} height={(S0?.sales ?? 0) > 0 || (rows ?? []).some((r) => r.sales > 0) ? 54 : 28} />
               </div>
             )}
           </div>
-          <div className="stat-row relative before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-line-soft">
-            <div className="px-4 py-3">
-              <p className="console-meta">{HM.todayOrders}</p>
-              <p className="stat-num">{fmtNum(S0?.orders ?? 0)}</p>
+          {/* **أرقامُ اليوم مربّعاتٌ موحّدة** (`StatTile`) — الاسمُ فوق والرقمُ تحت، بلا خطوطٍ فاصلة. */}
+          <div className="flex items-stretch gap-rg-sm px-rg-lg pb-rg-lg pt-rg-xs" data-testid="store-today-tiles">
+            <div className="min-w-0 flex-1">
+              <StatTile label={HM.todayOrders} value={S0?.orders ?? 0} />
             </div>
-            <div className="border-s border-line-soft px-4 py-3">
-              <p className="console-meta">{HM.dueToday}</p>
-              <p className="stat-num">{fmtNum(due)}</p>
+            <div className="min-w-0 flex-1">
+              <StatTile label={HM.dueToday} value={fmtNum(due)} tone="success" />
             </div>
-            <div className="border-s border-line-soft px-4 py-3">
-              <p className="console-meta">{HM.cancelledToday}</p>
-              <p className="stat-num">{fmtNum(S0?.cancelled ?? 0)}</p>
+            <div className="min-w-0 flex-1">
+              <StatTile label={HM.cancelledToday} value={S0?.cancelled ?? 0} tone={(S0?.cancelled ?? 0) > 0 ? "danger" : "default"} />
             </div>
           </div>
         </div>
@@ -878,7 +877,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
             icon={IconOrder}
             tone="info"
             title={SH.newOrders}
-            value={<b className="rounded-full bg-info-solid px-2 text-sm text-on-solid">{fmtNum(live.fresh.length)}</b>}
+            value={<b className="rounded-full bg-info-solid px-rg-sm text-body text-on-solid">{fmtNum(live.fresh.length)}</b>}
             href="/store/orders"
             Link={Link}
           />
@@ -906,7 +905,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
       {!suspended && (
         <div className="tab-span">
         <IGroup title={HM.quickTitle}>
-          <div className="qa-row px-1.5 py-3.5">
+          <div className="qa-row px-rg-sm py-rg-lg">
             {[
               { href: "/store/menu/new", icon: IconAdd, label: HM.quickAdd, tone: undefined },
               { href: "/store/menu/photos", icon: IconCamera, label: SH.quickPhotos, tone: "violet" as const },
@@ -915,7 +914,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
             ].map((q) => {
               const Ico = q.icon;
               return (
-                <Link key={q.href} href={q.href} className="flex flex-col items-center gap-1.5 text-center text-xs">
+                <Link key={q.href} href={q.href} className="flex flex-col items-center gap-rg-sm text-center text-caption">
                   <span className="tile" data-size="lg" data-tone={q.tone}>
                     <Ico size={22} />
                   </span>

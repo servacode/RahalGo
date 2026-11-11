@@ -63,7 +63,7 @@ export default function ItemEditorPage({ itemId }: { itemId?: string }) {
       <EmptyState
         icon={IconStore}
         title={S.state.suspended}
-        action={<p className="text-sm text-ink-muted">{S.suspendedBanner}</p>}
+        action={<p className="text-body text-ink-muted">{S.suspendedBanner}</p>}
       />
     );
   }
@@ -82,8 +82,8 @@ export default function ItemEditorPage({ itemId }: { itemId?: string }) {
         icon={IconList}
         title={I.needSectionsTitle}
         action={
-          <div className="flex flex-col items-center gap-3">
-            <p className="whitespace-pre-line text-sm text-ink-muted">{I.needSectionsBody}</p>
+          <div className="flex flex-col items-center gap-rg-md">
+            <p className="whitespace-pre-line text-body text-ink-muted">{I.needSectionsBody}</p>
             <ButtonLink href="/store#spot-sections">{I.needSectionsGo}</ButtonLink>
           </div>
         }

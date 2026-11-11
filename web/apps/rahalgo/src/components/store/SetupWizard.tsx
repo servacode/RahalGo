@@ -66,26 +66,26 @@ interface Sections {
 function Welcome({ steps, onStart }: { steps: SetupStep[]; onStart: () => void }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex flex-col gap-3 rounded-b-card bg-primary-solid px-6 pb-8 pt-10 text-on-solid">
+      <header className="flex flex-col gap-rg-md rounded-b-card bg-primary-solid px-rg-xl pb-rg-xxl pt-10 text-on-solid">
         <span className="flex h-18 w-18 items-center justify-center rounded-card bg-paper">
           <BrandMark size={60} />
         </span>
         <h1 className="heading-page">{W.welcomeTitle}</h1>
-        <p className="text-base opacity-85">{W.welcomeBody}</p>
+        <p className="text-body-lg opacity-85">{W.welcomeBody}</p>
       </header>
-      <ol className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-4 px-6 py-6">
+      <ol className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-rg-lg px-rg-xl py-rg-xl">
         <li className="font-bold text-ink-muted">{fill(W.welcomeCount, { n: fmtNum(steps.length) })}</li>
         {steps.map((s, i) => (
-          <li key={s} className="flex items-center gap-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-tint text-sm font-bold text-primary">
+          <li key={s} className="flex items-center gap-rg-md">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-tint text-body font-bold text-primary">
               {fmtNum(i + 1)}
             </span>
-            <span className="min-w-0 flex-1 text-base">{LABEL[s]}</span>
-            {s === "logo" && <span className="text-sm text-ink-muted">{W.optional}</span>}
+            <span className="min-w-0 flex-1 text-body-lg">{LABEL[s]}</span>
+            {s === "logo" && <span className="text-body text-ink-muted">{W.optional}</span>}
           </li>
         ))}
       </ol>
-      <div className="mx-auto w-full max-w-xl px-6 pb-6">
+      <div className="mx-auto w-full max-w-xl px-rg-xl pb-rg-xl">
         <Button size="lg" className="w-full font-bold" onClick={onStart} data-testid="wizard-start">
           {W.start}
         </Button>
@@ -119,24 +119,24 @@ function StepFrame({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="mx-auto w-full max-w-2xl px-4 pb-2 pt-4">
-        <div className="flex items-center gap-2 text-sm">
+      <header className="mx-auto w-full max-w-2xl px-rg-lg pb-rg-sm pt-rg-lg">
+        <div className="flex items-center gap-rg-sm text-body">
           <span className="min-w-0 flex-1 text-ink-muted">{W.header}</span>
           <span className="font-bold text-primary">{fill(W.progress, { i: fmtNum(index + 1), n: fmtNum(total) })}</span>
         </div>
-        <div className="mt-3 flex gap-1.5" aria-hidden>
+        <div className="mt-rg-md flex gap-rg-sm" aria-hidden>
           {Array.from({ length: total }, (_, i) => (
             <span key={i} className={`h-1.5 flex-1 rounded-badge ${i <= index ? "bg-primary-solid" : "bg-line"}`} />
           ))}
         </div>
       </header>
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-3">
-        <section className="surface flex flex-col gap-4 rounded-card p-4 elev-1" data-testid="wizard-step">
+      <main className="mx-auto w-full max-w-2xl flex-1 px-rg-lg py-rg-md">
+        <section className="surface flex flex-col gap-rg-lg rounded-card p-rg-lg elev-1" data-testid="wizard-step">
           <h2 className="heading-section">{title}</h2>
           {children}
         </section>
       </main>
-      <footer className="mx-auto flex w-full max-w-2xl gap-2 px-4 pb-6 pt-2">
+      <footer className="mx-auto flex w-full max-w-2xl gap-rg-sm px-rg-lg pb-rg-xl pt-rg-sm">
         <Button variant="secondary" size="lg" className="w-28 font-bold" onClick={onPrev} disabled={busy}>
           {W.prev}
         </Button>
@@ -205,7 +205,7 @@ function SectionsStep(p: StepProps & { sec: Sections }) {
       }}
     >
       {sec.all.length === 0 ? (
-        <p className="text-sm text-danger">{W.sectionsNone}</p>
+        <p className="text-body text-danger">{W.sectionsNone}</p>
       ) : (
         <SectionGrid
           all={sec.all}
@@ -350,13 +350,13 @@ function SettlementStep(p: StepProps) {
         })
       }
     >
-      <div className="panel flex items-center gap-3 p-4">
+      <div className="panel flex items-center gap-rg-md p-rg-lg">
         <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
           <IconCash size={20} />
         </span>
         <span className="min-w-0">
           <span className="block font-bold">{W.payCash}</span>
-          <span className="block text-sm text-ink-muted">{W.cashOnly}</span>
+          <span className="block text-body text-ink-muted">{W.cashOnly}</span>
         </span>
       </div>
     </StepFrame>
@@ -410,7 +410,7 @@ function Ready({ onFinish }: { onFinish: () => void }) {
     return () => clearTimeout(t);
   }, []);
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-6" role="status" data-testid="wizard-ready">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-rg-xl p-rg-xl" role="status" data-testid="wizard-ready">
       <span className="flex h-32 w-32 animate-[pulse_1s_ease-out_1] items-center justify-center rounded-badge bg-success-solid text-on-solid">
         <IconCheck size={72} />
       </span>

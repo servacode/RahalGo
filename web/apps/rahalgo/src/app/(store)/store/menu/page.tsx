@@ -146,16 +146,16 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
       )}
       {img && viewing && <ImageViewer src={img} alt={item.name} onClose={() => setViewing(false)} />}
       <Link href={`/store/menu/${item.id}`} aria-label={`${M.edit} · ${item.name}`} data-testid="store-menu-edit" className="flex flex-1 flex-col">
-        <span className={`flex flex-col gap-0.5 px-3 pt-3 ${dim}`}>
-          <span className="line-clamp-2 min-h-10 text-sm font-bold leading-5 text-ink">{item.name}</span>
+        <span className={`flex flex-col gap-rg-xxs px-rg-md pt-rg-md ${dim}`}>
+          <span className="line-clamp-2 min-h-10 text-body font-bold leading-5 text-ink">{item.name}</span>
           {item.created_via === "whatsapp" && (
             <span className="pill self-start" data-tone="brand" data-testid="store-menu-wa-badge">
               {M.fromWhatsapp}
             </span>
           )}
-          <span className="line-clamp-2 min-h-8 text-xs leading-4 text-ink-dim">{desc}</span>
-          <DualPrice usd={itemUsd(item)} syp={item.price} stacked className="mt-1 text-base" />
-          {item.approved === false && item.review_note && <span className="line-clamp-2 text-xs text-danger">{item.review_note}</span>}
+          <span className="line-clamp-2 min-h-8 text-caption leading-4 text-ink-muted">{desc}</span>
+          <DualPrice usd={itemUsd(item)} syp={item.price} stacked className="mt-rg-xs text-body-lg" />
+          {item.approved === false && item.review_note && <span className="line-clamp-2 text-caption text-danger">{item.review_note}</span>}
         </span>
       </Link>
       {/* **سطرُ التوفّر كلُّه زرٌّ** (≥ ٤٤) — كان المفتاحُ وحدَه ٢٤ بكسلاً. */}
@@ -167,9 +167,9 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
         disabled={disabled}
         onClick={onToggle}
         data-testid="store-menu-toggle"
-        className="mx-3 mt-2 flex min-h-11 items-center gap-2 border-t border-line-soft text-start disabled:opacity-50"
+        className="mx-rg-md mt-rg-sm flex min-h-11 items-center gap-rg-sm border-t border-line-soft text-start disabled:opacity-50"
       >
-        <span className={`min-w-0 flex-1 truncate text-xs font-bold ${item.available ? "text-success" : "text-ink-dim"}`}>
+        <span className={`min-w-0 flex-1 truncate text-caption font-bold ${item.available ? "text-success" : "text-ink-muted"}`}>
           {item.available ? M.available : M.unavailable}
         </span>
         <SwitchTrack on={item.available} />
@@ -577,7 +577,7 @@ export default function MenuPage() {
         onCancel={() => setAskDelete(false)}
       />
       <Modal open={askSection} onClose={() => setAskSection(false)} title={SH.bulkSection}>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-rg-md">
           <Select id="bulk-section" label={SH.pickSection} value={sectionPick} onChange={(e) => setSectionPick(e.target.value)}>
             <option value="">{SH.pickSection}</option>
             {sections.map((s) => (
@@ -609,12 +609,12 @@ export default function MenuPage() {
     />
   );
   const none = (
-    <p className="py-8 text-center text-sm text-ink-dim" data-testid="menu-none">
+    <p className="py-rg-xxl text-center text-body text-ink-muted" data-testid="menu-none">
       {tab === "off" && !needle ? M.offNone : M.noMatch}
     </p>
   );
   const sentinelNode = next ? (
-    <div ref={sentinel} data-testid="menu-more" className="flex flex-col items-center gap-2">
+    <div ref={sentinel} data-testid="menu-more" className="flex flex-col items-center gap-rg-sm">
       <LoadingState variant="list" rows={1} />
     </div>
   ) : null;
@@ -648,7 +648,7 @@ export default function MenuPage() {
           }
         />
 
-        {!suspended && <p className="text-xs text-ink-dim" data-testid="store-menu-wa-hint">{M.whatsappHint}</p>}
+        {!suspended && <p className="text-caption text-ink-muted" data-testid="store-menu-wa-hint">{M.whatsappHint}</p>}
 
         {/* ── التبويبات: الكلّ · غير المتوفر · بلا صورة (كلُّها من الخادم) ── */}
         <LineTabs items={tabs} value={tab} onChange={(k) => setTab(k)} ariaLabel={M.filters} />
@@ -656,7 +656,7 @@ export default function MenuPage() {
         {/* ── البحث والترشيح ── */}
         <div className="toolbar">
           <div className="relative w-80 max-w-full">
-            <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-ink-dim" aria-hidden>
+            <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-ink-muted" aria-hidden>
               <IconSearch size={16} />
             </span>
             <input
@@ -669,7 +669,7 @@ export default function MenuPage() {
               className="search-field"
             />
             {q && (
-              <button type="button" onClick={() => setQ("")} aria-label={M.clearSearch} className="absolute inset-y-0 end-1 flex w-8 items-center justify-center text-ink-dim hover:text-ink">
+              <button type="button" onClick={() => setQ("")} aria-label={M.clearSearch} className="absolute inset-y-0 end-1 flex w-8 items-center justify-center text-ink-muted hover:text-ink">
                 <IconClose size={15} />
               </button>
             )}
@@ -691,7 +691,7 @@ export default function MenuPage() {
               {SH.reset}
             </Button>
           )}
-          <div className="ms-auto flex items-center gap-2">
+          <div className="ms-auto flex items-center gap-rg-sm">
             <Segmented
               ariaLabel={M.viewTable}
               value={view}
@@ -719,7 +719,7 @@ export default function MenuPage() {
               <div className="bulk-bar" data-testid="menu-bulk">
                 <CheckMark state={allState} onChange={flipAll} label={SH.selectAll} />
                 <span className="text-primary">{fill(SH.selectedCount, { n: fmtNum(picked.size) })}</span>
-                <span className="mx-1 h-5 w-px bg-primary-edge" aria-hidden />
+                <span className="mx-rg-xs h-5 w-px bg-primary-edge" aria-hidden />
                 {bulkButtons}
                 <Button size="sm" variant="ghost" className="ms-auto" onClick={clearPick}>
                   <IconClose size={14} />
@@ -749,7 +749,7 @@ export default function MenuPage() {
                         <CheckMark state={picked.has(i.id)} onChange={() => flipPick(i.id)} label={i.name} />
                       </td>
                       <td className="w-[40%] min-w-[16rem]">
-                        <div className={`flex min-w-0 items-center gap-3 ${i.available ? "" : "opacity-60"}`}>
+                        <div className={`flex min-w-0 items-center gap-rg-md ${i.available ? "" : "opacity-60"}`}>
                           <RowThumb item={i} size={36} />
                           <div className="min-w-0">
                             <Link
@@ -761,25 +761,25 @@ export default function MenuPage() {
                               {i.name}
                             </Link>
                             {i.created_via === "whatsapp" && (
-                              <span className="pill ms-2" data-tone="brand" data-testid="store-menu-wa-badge">
+                              <span className="pill ms-rg-sm" data-tone="brand" data-testid="store-menu-wa-badge">
                                 {M.fromWhatsapp}
                               </span>
                             )}
                             {i.approved === false ? (
-                              <span className="block text-xs font-bold text-warning">
+                              <span className="block text-caption font-bold text-warning">
                                 {M.pendingReview}
                                 {i.review_note ? ` — ${i.review_note}` : ""}
                               </span>
                             ) : descOf(i) ? (
-                              <span className="line-clamp-1 block text-xs text-ink-dim">{descOf(i)}</span>
+                              <span className="line-clamp-1 block text-caption text-ink-muted">{descOf(i)}</span>
                             ) : !i.image_thumb_url && !i.image_url ? (
-                              <span className="block text-xs text-warning">{M.noPhoto}</span>
+                              <span className="block text-caption text-warning">{M.noPhoto}</span>
                             ) : null}
                           </div>
                         </div>
                       </td>
                       <td>
-                        <span dir="ltr" className="inline-block text-xs text-ink-muted">
+                        <span dir="ltr" className="inline-block text-caption text-ink-muted">
                           {i.external_code || i.barcode || "—"}
                         </span>
                       </td>
@@ -810,14 +810,14 @@ export default function MenuPage() {
                           disabled={suspended}
                           onClick={() => void toggle(i)}
                           data-testid="store-menu-toggle"
-                          className="flex min-h-9 items-center gap-2.5 whitespace-nowrap text-sm disabled:opacity-50"
+                          className="flex min-h-9 items-center gap-rg-md whitespace-nowrap text-body disabled:opacity-50"
                         >
                           <SwitchTrack on={i.available} size="sm" />
-                          <span className={i.available ? "" : "text-ink-dim"}>{i.available ? M.available : M.unavailable}</span>
+                          <span className={i.available ? "" : "text-ink-muted"}>{i.available ? M.available : M.unavailable}</span>
                         </button>
                       </td>
                       <td>
-                        <div className="flex justify-end gap-0.5">
+                        <div className="flex justify-end gap-rg-xxs">
                           <IconButton icon={IconEdit} label={`${M.edit} · ${i.name}`} href={`/store/menu/${i.id}`} Link={Link} size={16} />
                           {!suspended && (
                             <IconButton icon={IconCopy} label={`${M.duplicate} · ${i.name}`} onClick={() => void duplicate(i)} testId="store-menu-duplicate" size={16} />
@@ -839,7 +839,7 @@ export default function MenuPage() {
             </div>
           </div>
         ) : (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:gap-4 xl:grid-cols-5 2xl:grid-cols-6">
+          <ul className="grid grid-cols-2 gap-rg-md sm:grid-cols-3 md:grid-cols-4 lg:gap-rg-lg xl:grid-cols-5 2xl:grid-cols-6">
             {items.map((it) => (
               <ItemCard key={it.id} item={it} disabled={suspended} onToggle={() => void toggle(it)} />
             ))}
@@ -862,7 +862,7 @@ export default function MenuPage() {
       <PageHead
         title={M.title}
         navStart={
-          <button type="button" className="text-base font-medium" onClick={() => (selecting ? clearPick() : setSelecting(true))} data-testid="menu-select">
+          <button type="button" className="text-body-lg font-medium" onClick={() => (selecting ? clearPick() : setSelecting(true))} data-testid="menu-select">
             {selecting ? SH.selectDone : SH.select}
           </button>
         }
@@ -875,10 +875,10 @@ export default function MenuPage() {
           )
         }
       />
-      {!suspended && <p className="text-xs text-ink-dim" data-testid="store-menu-wa-hint">{M.whatsappHint}</p>}
-      <div className="flex gap-2.5">
+      {!suspended && <p className="text-caption text-ink-muted" data-testid="store-menu-wa-hint">{M.whatsappHint}</p>}
+      <div className="flex gap-rg-md">
         <label className="relative min-w-0 flex-1">
-          <span className="pointer-events-none absolute inset-y-0 start-2.5 flex items-center text-ink-dim" aria-hidden>
+          <span className="pointer-events-none absolute inset-y-0 start-2.5 flex items-center text-ink-muted" aria-hidden>
             <IconSearch size={17} />
           </span>
           <input
@@ -900,14 +900,14 @@ export default function MenuPage() {
             className="relative flex size-10 shrink-0 items-center justify-center rounded-control bg-field text-primary"
           >
             <IconOptions size={19} />
-            {section !== "" && <span className="absolute -start-1 -top-1 grid size-4 place-items-center rounded-full bg-primary text-2xs font-bold text-on-bright">1</span>}
+            {section !== "" && <span className="absolute -start-1 -top-1 grid size-4 place-items-center rounded-full bg-primary text-meta font-bold text-on-bright">1</span>}
           </button>
         )}
       </div>
       <div>
         <Segmented ariaLabel={M.filters} value={tab} onChange={setTab} items={segItems} block />
       </div>
-      <div className="flex items-center justify-between px-5 text-xs text-ink-dim">
+      <div className="flex items-center justify-between px-5 text-caption text-ink-muted">
         <span>{fill(M.count, { n: fmtNum(shown) })}</span>
         {section !== "" && (
           <button type="button" className="inline-action" onClick={() => setSection("")}>
@@ -928,12 +928,12 @@ export default function MenuPage() {
         <div className="igroup md:max-lg:columns-2 md:max-lg:gap-0 md:max-lg:[column-rule:1px_solid_var(--color-line-soft)] md:max-lg:[&>*]:break-inside-avoid" data-testid="store-menu-list">
           {items.map((i) => {
             const row = (
-              <div className="irow gap-3 ps-4 pe-3" style={{ minHeight: "4.125rem" }} data-testid="store-menu-item" data-item-id={i.id} data-available={i.available}>
+              <div className="irow gap-rg-md ps-rg-lg pe-rg-md" style={{ minHeight: "4.125rem" }} data-testid="store-menu-item" data-item-id={i.id} data-available={i.available}>
                 {selecting && <CheckMark state={picked.has(i.id)} onChange={() => flipPick(i.id)} label={i.name} />}
-                <Link href={`/store/menu/${i.id}`} className="flex min-w-0 flex-1 items-center gap-3 self-stretch" data-testid="store-menu-edit" aria-label={`${M.edit} · ${i.name}`}>
+                <Link href={`/store/menu/${i.id}`} className="flex min-w-0 flex-1 items-center gap-rg-md self-stretch" data-testid="store-menu-edit" aria-label={`${M.edit} · ${i.name}`}>
                   <RowThumb item={i} size={46} />
-                  <span className={`min-w-0 flex-1 py-2 ${i.available ? "" : "opacity-60"}`}>
-                    <span className="line-clamp-2 block break-words text-base font-bold leading-snug [text-wrap:balance]">{i.name}</span>
+                  <span className={`min-w-0 flex-1 py-rg-sm ${i.available ? "" : "opacity-60"}`}>
+                    <span className="line-clamp-2 block break-words text-body-lg font-bold leading-snug [text-wrap:balance]">{i.name}</span>
                     <span className="console-meta block [text-wrap:balance]">{metaLine(i)}</span>
                   </span>
                 </Link>
@@ -945,7 +945,7 @@ export default function MenuPage() {
                   disabled={suspended}
                   onClick={() => void toggle(i)}
                   data-testid="store-menu-toggle"
-                  className="flex min-h-11 min-w-11 items-center justify-center text-xs disabled:opacity-50"
+                  className="flex min-h-11 min-w-11 items-center justify-center text-caption disabled:opacity-50"
                 >
                   {i.available ? (
                     <span className="size-2.5 rounded-full bg-success-solid" aria-label={M.available} />
@@ -953,7 +953,7 @@ export default function MenuPage() {
                     <span className="pill">{M.unavailable}</span>
                   )}
                 </button>
-                <IconNext size={14} className="shrink-0 text-ink-dim opacity-70" />
+                <IconNext size={14} className="shrink-0 text-ink-muted opacity-70" />
               </div>
             );
             return suspended || selecting ? (
@@ -977,17 +977,17 @@ export default function MenuPage() {
 
       {selecting && picked.size > 0 && (
         <div
-          className="fixed inset-x-3 z-30 flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-line-soft bg-raised p-2.5 shadow-e3"
+          className="fixed inset-x-3 z-30 flex flex-wrap items-center justify-center gap-rg-sm rounded-2xl border border-line-soft bg-raised p-rg-md shadow-e3"
           style={{ bottom: "calc(4.25rem + env(safe-area-inset-bottom))" }}
           data-testid="menu-bulk"
         >
-          <b className="w-full text-center text-sm">{fill(SH.selectedCount, { n: fmtNum(picked.size) })}</b>
+          <b className="w-full text-center text-body">{fill(SH.selectedCount, { n: fmtNum(picked.size) })}</b>
           {bulkButtons}
         </div>
       )}
 
       <Sheet open={sheet} onClose={() => setSheet(false)} title={SH.filtersTitle}>
-        <div className="-mx-1 flex flex-col gap-3">
+        <div className="-mx-rg-xs flex flex-col gap-rg-md">
           <IGroup title={M.colSection}>
             {sectionOptions.map((o) => (
               <IRow

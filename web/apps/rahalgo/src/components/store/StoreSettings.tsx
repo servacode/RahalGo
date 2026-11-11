@@ -107,15 +107,15 @@ export function SettlementCard() {
   }
 
   return (
-    <section className="panel flex flex-col gap-3 p-4" aria-label={S.settlement.q}>
+    <section className="panel flex flex-col gap-rg-md p-rg-lg" aria-label={S.settlement.q}>
       <h3 className="heading-card">{S.settlement.q}</h3>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-rg-md">
         <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
           <IconCash size={20} />
         </span>
         <span className="min-w-0">
           <span className="block font-bold">{W.payCash}</span>
-          <span className="block text-sm text-ink-muted">{W.cashOnly}</span>
+          <span className="block text-body text-ink-muted">{W.cashOnly}</span>
         </span>
       </div>
       {!confirmed && store.status !== "suspended" && (
@@ -124,7 +124,7 @@ export function SettlementCard() {
         </Button>
       )}
       {store.unpaid_cash_due > 0 && (
-        <p className="flex items-center justify-between text-sm">
+        <p className="flex items-center justify-between text-body">
           <span>{S.settlement.unpaid}</span>
           <span className="font-bold text-accent-text">{fmtMoney(store.unpaid_cash_due)}</span>
         </p>
@@ -144,7 +144,7 @@ export function ReturnsCard() {
     void save({ accepts_returns: accepts }, T.returnsSaved, { accepts_returns: accepts, returns_confirmed: true });
   };
   return (
-    <section className="panel flex flex-col gap-3 p-4" aria-label={W.returnsQ}>
+    <section className="panel flex flex-col gap-rg-md p-rg-lg" aria-label={W.returnsQ}>
       <h3 className="heading-card">{W.returnsQ}</h3>
       <IconChoicePair
         disabled={busy || store.status === "suspended"}
@@ -168,9 +168,9 @@ export function AmeenCard() {
     void save({ uses_ameen: v }, T.ameenSaved, { uses_ameen: v });
   };
   return (
-    <section className="panel flex flex-col gap-3 p-4" aria-label={W.ameenQ}>
+    <section className="panel flex flex-col gap-rg-md p-rg-lg" aria-label={W.ameenQ}>
       <h3 className="heading-card">{W.ameenQ}</h3>
-      <p className="text-xs text-ink-muted">{W.ameenHint}</p>
+      <p className="text-caption text-ink-muted">{W.ameenHint}</p>
       <IconChoicePair
         disabled={busy || store.status === "suspended"}
         items={[
@@ -254,9 +254,9 @@ export function RateCard() {
 
   const usd = store.display_currency === "USD";
   return (
-    <section className="panel flex flex-col gap-3 p-4" aria-label={T.rate}>
+    <section className="panel flex flex-col gap-rg-md p-rg-lg" aria-label={T.rate}>
       <form
-        className="flex items-end gap-2"
+        className="flex items-end gap-rg-sm"
         onSubmit={(e) => {
           e.preventDefault();
           if (value != null) void saveRate(value, false);
@@ -277,8 +277,8 @@ export function RateCard() {
           {T.rateSave}
         </Button>
       </form>
-      <h3 className="heading-card pt-2">{T.displayQ}</h3>
-      <div className="grid grid-cols-2 gap-2">
+      <h3 className="heading-card pt-rg-sm">{T.displayQ}</h3>
+      <div className="grid grid-cols-2 gap-rg-sm">
         {(
           [
             ["SYP", T.displaySyp, !usd],
@@ -298,7 +298,7 @@ export function RateCard() {
               }
               void save({ display_currency: code }, T.displaySaved, { display_currency: code });
             }}
-            className={`rounded-control border px-3 py-3 text-sm font-bold transition-colors disabled:opacity-60 ${
+            className={`rounded-control border px-rg-md py-rg-md text-body font-bold transition-colors disabled:opacity-60 ${
               on ? "border-2 border-accent bg-accent-tint" : "border-line bg-field hover:bg-row-hover"
             }`}
           >
@@ -308,10 +308,10 @@ export function RateCard() {
       </div>
       <Modal open={!!jump} onClose={() => setJump(null)} title={T.rateJumpTitle}>
         {jump && (
-          <div className="flex flex-col gap-3">
-            <p className="text-sm">{fill(T.rateJumpBody, { old: jump.old, new: jump.next })}</p>
+          <div className="flex flex-col gap-rg-md">
+            <p className="text-body">{fill(T.rateJumpBody, { old: jump.old, new: jump.next })}</p>
             {jump.samples.trim() && (
-              <div className="text-sm">
+              <div className="text-body">
                 <p className="font-bold">{T.rateJumpSamples}</p>
                 <p className="whitespace-pre-line text-ink-muted">{jump.samples}</p>
               </div>
@@ -342,21 +342,21 @@ export function PrepCard() {
     void save({ default_prep_minutes: n }, T.prepSaved, { default_prep_minutes: n });
   };
   return (
-    <section className="panel flex items-center gap-2 p-4" aria-label={T.prep}>
-      <span className="min-w-0 flex-1 text-sm font-bold">{T.prep}</span>
+    <section className="panel flex items-center gap-rg-sm p-rg-lg" aria-label={T.prep}>
+      <span className="min-w-0 flex-1 text-body font-bold">{T.prep}</span>
       <Button
         variant="secondary"
-        className="size-11 px-0 text-lg"
+        className="size-12 shrink-0 px-0 text-headline"
         aria-label={T.prepLess}
         disabled={busy || suspended || minutes <= 5}
         onClick={() => set(minutes - 5)}
       >
         −
       </Button>
-      <span className="min-w-20 text-center font-bold tabular-nums">
+      <span className="min-w-24 text-center text-price-lg tabular-nums">
         {fmtNum(minutes)} {T.prepUnit}
       </span>
-      <Button variant="secondary" className="size-11 px-0 text-lg" aria-label={T.prepMore} disabled={busy || suspended} onClick={() => set(minutes + 5)}>
+      <Button variant="secondary" className="size-12 shrink-0 px-0 text-headline" aria-label={T.prepMore} disabled={busy || suspended} onClick={() => set(minutes + 5)}>
         +
       </Button>
     </section>

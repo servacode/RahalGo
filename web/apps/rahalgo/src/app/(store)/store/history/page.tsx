@@ -92,7 +92,7 @@ export default function HistoryPage() {
     <div className="console-page" data-testid="store-history">
       <PageHeader title={H.title} subtitle={total > 0 ? fill(K.histCount, { n: fmtNum(total) }) : H.hint} />
       {chips.length > 2 && (
-        <div className="rail-x -mx-3 px-3 lg:mx-0 lg:px-0" aria-label={H.all}>
+        <div className="rail-x -mx-rg-md px-rg-md lg:mx-0 lg:px-0" aria-label={H.all}>
           {chips.map((c) => (
             <Chip key={c.id} selected={status === c.id} count={c.count} onClick={() => setStatus(c.id)}>
               {c.label}
@@ -136,7 +136,7 @@ export default function HistoryPage() {
               cell: (o) => (
                 <span className="flex flex-col">
                   <span>{fmtRelDay(o.created_at)}</span>
-                  <span className="text-xs text-ink-muted" dir="ltr">
+                  <span className="text-caption text-ink-muted" dir="ltr">
                     {fmtDamascusTime(o.created_at)}
                   </span>
                 </span>
@@ -153,26 +153,26 @@ export default function HistoryPage() {
               header: S.orders.sum,
               align: "end",
               widthClass: "w-32",
-              cell: (o) => (noPayout(o.status) ? <span className="text-ink-dim">—</span> : fmtMoney(o.subtotal)),
+              cell: (o) => (noPayout(o.status) ? <span className="text-ink-muted">—</span> : fmtMoney(o.subtotal)),
             },
             {
               id: "cut",
               header: K.colCommission,
               align: "end",
               widthClass: "w-32",
-              cell: (o) => (noPayout(o.status) ? <span className="text-ink-dim">—</span> : <span className="text-ink-muted">{`− ${fmtMoney(o.platform_commission)}`}</span>),
+              cell: (o) => (noPayout(o.status) ? <span className="text-ink-muted">—</span> : <span className="text-ink-muted">{`− ${fmtMoney(o.platform_commission)}`}</span>),
             },
             {
               id: "due",
               header: S.orders.due,
               align: "end",
               widthClass: "w-36",
-              cell: (o) => (noPayout(o.status) ? <span className="text-ink-dim">—</span> : <span className="font-bold text-accent-text">{fmtMoney(o.merchant_net)}</span>),
+              cell: (o) => (noPayout(o.status) ? <span className="text-ink-muted">—</span> : <span className="font-bold text-accent-text">{fmtMoney(o.merchant_net)}</span>),
             },
           ]}
           actions={(o) =>
             reportable.has(o.id) ? (
-              <Button variant="ghost" className="flex min-h-9 items-center gap-1 text-danger" onClick={() => setReporting(o)}>
+              <Button variant="ghost" className="flex min-h-9 items-center gap-rg-xs text-danger" onClick={() => setReporting(o)}>
                 <IconWarning size={14} />
                 {H.report}
               </Button>
@@ -184,20 +184,20 @@ export default function HistoryPage() {
       {/* ── الجوّال: بعناوين أيّامٍ وبطاقةٍ لكلّ طلب (مرآةُ `HistoryScreen.kt`، تدقيقُ ٢٠٢٦-١٠-٢٧) —
           «طلبُ مبارح العصر» يُوجد تحت يومه، وبرأسه ساعتُه. ── */}
       {rows != null && rows.length > 0 && narrow && (
-        <ul className="flex flex-col gap-2 md:grid md:grid-cols-2 md:items-start">
+        <ul className="flex flex-col gap-rg-sm md:grid md:grid-cols-2 md:items-start">
           {rows.map((o, i, all) => {
             const day = fmtRelDay(o.created_at);
             const prev = all[i - 1];
             const head = !prev || fmtRelDay(prev.created_at) !== day;
             return (
-              <li key={o.id} className="flex flex-col gap-2">
-                {head && <h3 className="console-h2 px-1 pt-2 text-ink-muted">{day}</h3>}
-                <div className="panel-lite flex flex-col gap-2 p-3" data-testid="history-order">
-                  <Link href={`/store/history/${o.id}`} className="flex flex-col gap-2">
-                    <header className="flex items-center justify-between gap-2">
-                      <span className="flex items-baseline gap-2">
+              <li key={o.id} className="flex flex-col gap-rg-sm">
+                {head && <h3 className="console-h2 px-rg-xs pt-rg-sm text-ink-muted">{day}</h3>}
+                <div className="panel-lite flex flex-col gap-rg-sm p-rg-md" data-testid="history-order">
+                  <Link href={`/store/history/${o.id}`} className="flex flex-col gap-rg-sm">
+                    <header className="flex items-center justify-between gap-rg-sm">
+                      <span className="flex items-baseline gap-rg-sm">
                         <span className="font-bold">{`#${o.number}`}</span>
-                        <span className="text-xs text-ink-muted" dir="ltr">
+                        <span className="text-caption text-ink-muted" dir="ltr">
                           {fmtDamascusTime(o.created_at)}
                         </span>
                       </span>
@@ -205,11 +205,11 @@ export default function HistoryPage() {
                     </header>
                     {/* **سطرٌ لكلّ عنصر ثمّ الحسبة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «بندورة × 1 كيلو ...... 600 ل.س»،
                         **وبما اختاره الزبون** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — «بندورة» بلا «كيلو» لا تُجهَّز. */}
-                    {o.items.length > 0 && <InvoiceLines items={o.items} className="border-b border-line-soft pb-2" />}
+                    {o.items.length > 0 && <InvoiceLines items={o.items} className="border-b border-line-soft pb-rg-sm" />}
                     <MoneyLines o={o} />
                   </Link>
                   {reportable.has(o.id) && (
-                    <Button variant="ghost" className="flex min-h-11 w-fit items-center gap-1 text-danger" onClick={() => setReporting(o)}>
+                    <Button variant="ghost" className="flex min-h-11 w-fit items-center gap-rg-xs text-danger" onClick={() => setReporting(o)}>
                       <IconWarning size={14} />
                       {H.report}
                     </Button>

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,8 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
@@ -34,7 +31,9 @@ import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.DeliveriesApi
 import com.rahalgo.shared.merchant.Delivery
 import com.rahalgo.ui.AppCore
-import com.rahalgo.ui.Card
+import com.rahalgo.ui.CardVariant
+import com.rahalgo.ui.RahalCard
+import com.rahalgo.ui.StatusTone
 import com.rahalgo.ui.Note
 import com.rahalgo.ui.RahalTextButton
 import com.rahalgo.ui.Refresh
@@ -154,16 +153,15 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
         // ══════════════════════════════════════════════════════════════
         d.deliveryCode?.takeIf { it.isNotBlank() && d.deliveryMode == "fetch" }?.let { code ->
             Spacer(Modifier.height(Rahal.space.md))
-            Card(tone = Rahal.colors.success) {
-                Text(stringResource(R.string.md_code_title), fontWeight = FontWeight.Bold)
+            RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Success) {
+                Text(stringResource(R.string.md_code_title), style = Rahal.type.cardTitle, color = Rahal.colors.ink)
                 Spacer(Modifier.height(Rahal.space.xs))
                 Text(
                     code,
                     color = Rahal.colors.success,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.headlineLarge,
+                    style = Rahal.type.display,
                 )
-                Text(stringResource(R.string.md_code_hint), color = Rahal.colors.inkMuted)
+                Text(stringResource(R.string.md_code_hint), color = Rahal.colors.inkMuted, style = Rahal.type.caption)
             }
         }
 
@@ -188,23 +186,23 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                 SearchingBanner()
                 Spacer(Modifier.height(Rahal.space.md))
             }
-            Card {
+            RahalCard(variant = CardVariant.Outlined) {
                 // **وفي «إحضار» إلى مكان الاستلام ثمّ إليك** (قرارُ المالك ٢٠٢٦-١٠-١٦) — لا «إلى المستلم».
                 val steps = DeliveryTexts.trackSteps(d.deliveryMode == "fetch")
                 steps.forEachIndexed { i, label ->
                     val done = i < at || (i == at && at == LAST_STEP)
                     val now = i == at && at < LAST_STEP
                     Row(
-                        Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                        Modifier.fillMaxWidth().padding(vertical = Rahal.space.sm),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         // **والخطوةُ الحاليّةُ تنبض** — والمنجَزةُ خضراء.
                         if (now) {
-                            PulseDot(if (at == 0) Rahal.colors.accent else Rahal.colors.brand, 14.dp)
+                            PulseDot(if (at == 0) Rahal.colors.accent else Rahal.colors.brand, Rahal.icon.xs)
                         } else {
                             Box(
                                 Modifier
-                                    .size(14.dp)
+                                    .size(Rahal.icon.xs)
                                     .clip(CircleShape)
                                     .background(
                                         if (done) Rahal.colors.success
@@ -212,10 +210,10 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                                     ),
                             )
                         }
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(Rahal.space.md))
                         Text(
                             stringResource(label),
-                            fontWeight = if (now) FontWeight.Bold else FontWeight.Normal,
+                            style = if (now) Rahal.type.bodyStrong else Rahal.type.body,
                             color = if (done || now) Rahal.colors.ink else Rahal.colors.inkMuted,
                         )
                         Spacer(Modifier.weight(1f))
@@ -226,7 +224,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                             else -> null
                         }
                         if ((done || now) && !time.isNullOrBlank()) {
-                            Text(clock(time), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+                            Text(clock(time), color = Rahal.colors.inkMuted, style = Rahal.type.meta)
                         }
                     }
                 }
@@ -235,11 +233,12 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
 
         // ── تفاصيلُها ─────────────────────────────────────────────────
         Spacer(Modifier.height(Rahal.space.md))
-        Card {
+        RahalCard(variant = CardVariant.Outlined) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     stringResource(R.string.md_track_details),
-                    fontWeight = FontWeight.Bold,
+                    style = Rahal.type.cardTitle,
+                    color = Rahal.colors.ink,
                     modifier = Modifier.weight(1f),
                 )
                 StatusPill(d.status)
@@ -274,7 +273,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
         // **والمبلغُ الحقيقيُّ الذي كتبه السائقُ وحالُ موافقتك** (٢٠٢٦-١٠-١٦).
         if (d.deliveryMode == "fetch") {
             DeliveryTexts.amountRow(d.fetchAmountStatus)?.let { row ->
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 Note(
                     stringResource(row, DeliveryTexts.amount(d, d.fetchAmount ?: 0L)),
                     when (d.fetchAmountStatus) {
@@ -286,7 +285,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
             }
         }
         if (d.status in cancellable) {
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(Rahal.space.lg))
             CancelDeliveryButton(busy = vm.busy) { vm.cancel(id) }
         }
         Spacer(Modifier.height(Rahal.space.xl))

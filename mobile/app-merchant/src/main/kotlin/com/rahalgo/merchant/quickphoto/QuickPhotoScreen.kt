@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -20,13 +19,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.rahalgo.design.Rahal
-import com.rahalgo.ui.cardSurface
+import com.rahalgo.ui.CardVariant
+import com.rahalgo.ui.cardVariant
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.NoPhotoItem
 import com.rahalgo.ui.LoadState
@@ -50,14 +48,14 @@ fun QuickPhotoScreen(state: QuickPhotoState) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 stringResource(R.string.qp_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                style = Rahal.type.sectionTitle,
+                color = Rahal.colors.ink,
                 modifier = Modifier.weight(1f),
             )
             if (q != null && q.total > 0) {
                 Text(
                     stringResource(R.string.qp_counter, q.position, q.total),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = Rahal.type.cardTitle,
                     color = Rahal.colors.brand,
                 )
             }
@@ -68,7 +66,7 @@ fun QuickPhotoScreen(state: QuickPhotoState) {
             Spacer(Modifier.height(Rahal.space.sm))
             androidx.compose.material3.LinearProgressIndicator(
                 progress = { (q.position.toFloat() / q.total).coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth().height(6.dp).clip(Rahal.shape.pill),
+                modifier = Modifier.fillMaxWidth().height(Rahal.space.sm).clip(Rahal.shape.pill),
                 color = Rahal.colors.brand,
                 trackColor = Rahal.colors.line,
                 drawStopIndicator = {},
@@ -90,7 +88,7 @@ private fun UploadBanner(state: QuickPhotoState) {
     if (state.uploading > 0) {
         Text(
             stringResource(R.string.qp_uploading, state.uploading),
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
             color = Rahal.colors.ink,
         )
     }
@@ -98,7 +96,7 @@ private fun UploadBanner(state: QuickPhotoState) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 stringResource(R.string.qp_failed, state.failed.size),
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
                 color = Rahal.colors.danger,
                 modifier = Modifier.weight(1f),
             )
@@ -113,14 +111,14 @@ private fun UploadBanner(state: QuickPhotoState) {
 private fun ColumnScope.Capture(state: QuickPhotoState, item: NoPhotoItem, shoot: () -> Unit) {
     Text(
         item.name,
-        style = MaterialTheme.typography.headlineMedium,
-        fontWeight = FontWeight.Bold,
+        style = Rahal.type.headline,
+        color = Rahal.colors.ink,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth(),
     )
     Text(
         listOf(item.sectionName, priceLine(item.price, item.priceUsd)).filter { it.isNotBlank() }.joinToString(" · "),
-        style = MaterialTheme.typography.bodySmall,
+        style = Rahal.type.caption,
         color = Rahal.colors.inkMuted,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth(),
@@ -131,7 +129,7 @@ private fun ColumnScope.Capture(state: QuickPhotoState, item: NoPhotoItem, shoot
         Modifier
             .weight(1f)
             .fillMaxWidth()
-            .cardSurface(Rahal.shape.lg)
+            .cardVariant(CardVariant.Outlined)
             .padding(Rahal.space.sm),
         contentAlignment = Alignment.Center,
     ) {
@@ -150,12 +148,12 @@ private fun ColumnScope.Capture(state: QuickPhotoState, item: NoPhotoItem, shoot
                 com.rahalgo.ui.IconBox(
                     icon = com.rahalgo.ui.R.drawable.ic_photo,
                     tint = Rahal.colors.brand,
-                    size = 72.dp,
+                    size = Rahal.size.avatarLg,
                 )
                 Spacer(Modifier.height(Rahal.space.md))
                 Text(
                     stringResource(R.string.qp_hint),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                     color = Rahal.colors.inkMuted,
                     textAlign = TextAlign.Center,
                 )
@@ -186,13 +184,13 @@ private fun Done(state: QuickPhotoState, total: Int) {
         com.rahalgo.ui.IconBox(
             icon = com.rahalgo.ui.R.drawable.ic_check,
             tint = Rahal.colors.success,
-            size = 72.dp,
+            size = Rahal.size.avatarLg,
         )
         Spacer(Modifier.height(Rahal.space.lg))
         Text(
             stringResource(if (total == 0) R.string.qp_none else R.string.qp_done),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+            style = Rahal.type.screenTitle,
+            color = Rahal.colors.ink,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(Rahal.space.lg))

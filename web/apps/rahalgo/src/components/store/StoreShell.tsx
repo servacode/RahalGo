@@ -139,7 +139,7 @@ function Shell({ children }: { children: ReactNode }) {
           <StoreTopBar crumb={nav.crumb} unread={notif.unread} onMenu={() => setMenuOpen(true)} />
           <PhoneNavBar title={phone.title} unread={notif.unread} setStartEl={phone.setStartEl} setEndEl={phone.setEndEl} />
           <main className="console-main" data-testid="store-main">
-            <div className="flex flex-col gap-3 empty:hidden">
+            <div className="flex flex-col gap-rg-md empty:hidden">
               <PwaHints android={ANDROID_HINT} />
               {store && selfManage && <OrderAlert />}
               {/* **وبجانب زرّ الصوت «فعّل إشعارات الطلبات»** — يرنّ والموقعُ مسكّر. */}
@@ -173,7 +173,7 @@ function Gate({ children }: { children: ReactNode }) {
   if (loading || !user) return <LoadingState variant="inline" />;
   if (!hasRole(user, "merchant")) {
     return (
-      <main className="flex min-h-screen flex-1 flex-col justify-center p-4">
+      <main className="flex min-h-screen flex-1 flex-col justify-center p-rg-lg">
         <EmptyState
           icon={IconStore}
           title={S.notMerchant}
