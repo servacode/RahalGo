@@ -310,6 +310,14 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             label = stringResource(R.string.ac_district),
             chosen = vm.districts.firstOrNull { it.id == vm.pickedDistrict }?.name,
         ) {
+            // **«اختر المحافظة أولاً» في اللوح الفارغ** (رُئي على جوال المالك ٢٠٢٦-١١-١١: مربّعٌ فارغٌ لا يقول شيئاً).
+            if (vm.pickedGovernorate.isEmpty()) {
+                Text(
+                    stringResource(R.string.ac_district_pick_gov),
+                    color = Rahal.colors.inkMuted,
+                    style = Rahal.type.body,
+                )
+            }
             vm.districts.forEach { d ->
                 FilterChip(
                     selected = vm.pickedDistrict == d.id,

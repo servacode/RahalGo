@@ -184,6 +184,7 @@
          في شاشتين يجعلان من تعلّم إحداهما يتعثّر بالأخرى.** -->
     <string name="ac_governorate">المحافظة</string>
     <string name="ac_district">المنطقة</string>
+    <string name="ac_district_pick_gov">اختر المحافظة أولاً</string>
     <string name="ac_area">العنوان الكامل</string>
     <string name="ac_category">التصنيف</string>
     <string name="ac_point">نقطة المتجر</string>

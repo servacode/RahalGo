@@ -260,7 +260,7 @@ fun BoardScreen(
                     icon = com.rahalgo.ui.R.drawable.ic_star,
                     description = stringResource(com.rahalgo.ui.R.string.menu_rewards),
                     label = stringResource(com.rahalgo.ui.R.string.menu_rewards),
-                    tint = Rahal.colors.accent,
+                    // **بلونِ أخواته** (قرارُ المالك ٢٠٢٦-١١-١١) — كان برتقاليّاً وحدَه بين أربعة.
                     onClick = onOpenGoals,
                 )
             }
