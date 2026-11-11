@@ -57,11 +57,11 @@ fun DualPrice(
         )
         return
     }
+    // **والليرةُ بحجم الدولار** (طلبُ المالك ٢٠٢٦-١١-١١: «بدنا نجرب يكون الرقم السوري كبير شوي») —
+    // كانت أصغرَ بنقطتين. **ويُعرف الدولارُ بثِقَله ولونه، والليرةُ بخطٍّ عاديٍّ باهت.**
     val small = style.copy(
         fontWeight = FontWeight.Normal,
         color = sypColor,
-        fontSize = (if (style.fontSize.isSpecified) style.fontSize.value - 2f else 13f)
-            .coerceAtLeast(Rahal.type.meta.fontSize.value).sp,
     )
     val usdPart = dualUsdPart(usd)
     val sypPart = dualSypPart(syp)

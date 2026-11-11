@@ -99,7 +99,8 @@ export function DualPrice({
       <span dir="ltr" className={`shrink-0 whitespace-nowrap tabular-nums ${strong}`}>
         {usdLabel(usd)}
       </span>
-      <span className={`min-w-0 truncate whitespace-nowrap ${muted ? "" : "text-xs"} ${sypTone}`}>
+      {/* **والليرةُ بحجم الدولار** (طلبُ المالك ٢٠٢٦-١١-١١) — كانت `text-xs`. */}
+      <span className={`min-w-0 truncate whitespace-nowrap ${sypTone}`}>
         {"≈ "}
         <Money value={syp} small className={inherit ? "[&_span]:text-current!" : ""} />
       </span>

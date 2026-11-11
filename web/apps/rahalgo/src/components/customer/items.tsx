@@ -451,8 +451,9 @@ export function ItemSheet({
                 onClick={tryAdd}
                 disabled={(item.has_options && !detail && !loadError) || (!!split && nothing)}
               >
-                {/* **عبارةٌ فوق وسعرٌ تحت** — على عرض الهاتف كان السطرُ الواحدُ يلتفّ فيقطع «أضف إلى السلة» والسعرَ. */}
-                <span className="flex flex-col items-center justify-center gap-0.5 leading-tight">
+                {/* **«أضف» والإجماليُّ في سطرٍ واحد** (ملاحظةُ المالك ٢٠٢٦-١١-١١، مرآةُ `ItemOptionsSheet.kt`) —
+                    والعملتان في سطرٍ والليرةُ تُقصّ إن ضاق. */}
+                <span className="flex min-w-0 items-center justify-center gap-rg-md leading-tight">
                   <span className="whitespace-nowrap">{I.add}</span>
                   {/* **والدولارُ يتبع العدد كالليرة** — كان سعرَ الواحد مهما زاد العدد. */}
                   {totalUsd != null ? (
@@ -675,9 +676,10 @@ function CounterBlock({
       {group.options.map((o) => {
         const n = counts[o.id] ?? 0;
         return (
-          /* **العدّادُ بجانب اسمه لا في طرف السطر** (تدقيق D5). */
+          /* **العدّادُ في طرف السطر يساراً، على خطٍّ واحدٍ لكلّ الخيارات** (قرارُ المالك ٢٠٢٦-١١-١١، مرآةُ
+             `ItemOptionsSheet.kt`) — الاسمُ يأخذ ما بقي، والطويلُ ينزل سطراً ولا يدفع العدّاد. */
           <div key={o.id} className="flex items-center gap-3">
-            <span className="flex min-w-0 items-center gap-2">
+            <span className="flex min-w-0 flex-1 items-center gap-2">
             {thumbs && <DrinkThumb url={o.image_thumb_url} />}
             <span className="flex min-w-0 flex-col">
               <span className={`${o.available ? "" : "text-ink-dim line-through"} ${n > 0 ? "font-bold" : ""}`}>{o.name}</span>

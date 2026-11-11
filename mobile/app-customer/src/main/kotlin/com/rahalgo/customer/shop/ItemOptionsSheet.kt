@@ -304,18 +304,11 @@ fun ItemOptionsSheet(
             }
             }
             Spacer(Modifier.height(Rahal.space.sm))
-            // **والإجماليُّ بالعملتين فوق الزرّ لا داخلَه** (ملاحظةُ المالك ٢٠٢٦-١١-١١): نصُّ الزرّ «أضف»
-            // وحدَه فلا يُقصّ عند ٣٦٠dp. **والدولارُ جمعُ دولار الصنف وإضافاته** (٢٠٢٦-١٠-١٢)،
-            // **والإجماليُّ جمعُ السطور** — كلُّ خيارٍ بعدده (`OptionSplit.total`).
+            // **والإجماليُّ بالعملتين داخلَ زرّ «أضف»** (ملاحظةُ المالك ٢٠٢٦-١١-١١: «برايي السعر الاجمالي يكون
+            // مع زر اضف احلى») — والعملتان في سطرٍ واحدٍ تصغر الليرةُ فيه حتّى تسع (`DualPrice`).
+            // **والدولارُ جمعُ دولار الصنف وإضافاته** (٢٠٢٦-١٠-١٢)، **والإجماليُّ جمعُ السطور** (`OptionSplit.total`).
             val total = com.rahalgo.customer.cart.OptionSplit.total(item.price, picks)
             val usdTotal = item.priceUsd?.let { com.rahalgo.customer.cart.OptionSplit.totalUsd(it, picks) }
-            com.rahalgo.ui.DualPrice(
-                usd = usdTotal,
-                syp = total,
-                style = Rahal.type.sectionTitle,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(Rahal.space.sm))
             Row(verticalAlignment = Alignment.CenterVertically) {
             // **أداةُ الكمّيّة جنب الزرّ** — والسعرُ على الزرّ يتبعها. ولا تُرسم مع العدّادات.
             if (split == null) Row(
@@ -334,7 +327,16 @@ fun ItemOptionsSheet(
                 modifier = Modifier.weight(1f),
                 enabled = ready && blockedReason == null && picks.any { it.qty > 0 },
             ) {
-                Text(stringResource(R.string.options_add_short), maxLines = 1)
+                val ink = androidx.compose.material3.LocalContentColor.current
+                Text(stringResource(R.string.options_add_short), maxLines = 1, softWrap = false)
+                Spacer(Modifier.size(Rahal.space.md))
+                com.rahalgo.ui.DualPrice(
+                    usd = usdTotal,
+                    syp = total,
+                    style = Rahal.type.button,
+                    usdColor = ink,
+                    sypColor = ink.copy(alpha = 0.85f),
+                )
             }
             }
             Spacer(Modifier.height(Rahal.space.xl))
@@ -407,7 +409,10 @@ private fun CounterBlock(
                     com.rahalgo.ui.DrinkThumb(thumb(o))
                     Spacer(Modifier.size(Rahal.space.md))
                 }
-                Column(Modifier.weight(1f, fill = false)) {
+                // **والاسمُ يأخذ ما بقي فيبقى العدّادُ في آخر السطر يساراً** (قرارُ المالك ٢٠٢٦-١١-١١: «الازرار
+                // الزائد والناقص لازم محاذاة لليسار مشان اذا الاسم طويل مايخرب شكلهن») — كلُّ العدّادات على خطٍّ
+                // واحد، والاسمُ الطويلُ ينزل سطراً ولا يدفعها. (كان «بجانب اسمه» بتدقيق D5؛ قرارُ المالك يسبقه.)
+                Column(Modifier.weight(1f)) {
                     Text(
                         o.name,
                         color = if (o.available) Rahal.colors.ink else Rahal.colors.inkMuted,
@@ -425,7 +430,6 @@ private fun CounterBlock(
                         style = Rahal.type.caption,
                     )
                 }
-                // **العدّادُ بجانب اسمه لا في آخر السطر** (تدقيق D5) — كان بينهما عرضُ الشاشة.
                 Spacer(Modifier.size(Rahal.space.md))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
