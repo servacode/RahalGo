@@ -131,8 +131,11 @@ export function RateDialog({
   return (
     <Modal open onClose={onClose} title={R.title}>
       <div className="space-y-4">
-        <p className="text-xs text-ink-muted tabular-nums" dir="ltr">
-          #{fmtRef(order.number)}
+        {/* **أيُّ طلبٍ يُقيَّم** — «طلبك من مطعم X · #1205» (قرارُ المالك ٢٠٢٦-١١-١١)، ومن غير اسمٍ «طلبك رقم #1205». */}
+        <p className="text-caption text-ink-muted">
+          {order.merchant_name
+            ? fill(R.forOrder, { store: order.merchant_name, n: fmtRef(order.number) })
+            : fill(R.forOrderPlain, { n: fmtRef(order.number) })}
         </p>
         <Stars value={stars} onPick={setStars} label={R.service} />
         {driver && (

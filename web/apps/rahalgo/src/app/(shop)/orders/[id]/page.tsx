@@ -40,6 +40,7 @@ import { OrderSections } from "@/components/customer/OrderSections";
 import { NeedLogin } from "@/components/customer/NeedLogin";
 import { useShopToast } from "@/components/customer/toast";
 import { ComplaintBox, RateButton } from "@/components/customer/feedback";
+import { ReorderButton } from "@/components/customer/ReorderButton";
 import { LiveStartButton } from "@/components/customer/LiveShare";
 import WebPushCard from "@/components/WebPushCard";
 
@@ -296,6 +297,7 @@ export default function OrderPage() {
           }}
         />
         <RateButton order={order} />
+        <ReorderButton order={order} />
       </div>
       </div>
       </div>

@@ -148,7 +148,7 @@ var OrderPrivacy = map[string]FieldRule{
 	// المتجر في **التصفّح والعروض** (`publicItem` و`offers.Offer`) — وهما خارجَ
 	// هذا العقد، **فلم يُمسّ حكمُ الطلب هنا.**
 	"merchant_id":    {Ref: "customer_privacy.go:41", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
-	"merchant_name":  {Ref: "customer_privacy.go:42", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
+	"merchant_name":  {Ref: "قرارُ المالك ٢٠٢٦-١١-١١: اسمُ المتجر في «طلباتي» — والطلبُ بعدّة محطّات يُحذف منه في ViewFor", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"merchant_phone": {Ref: "هاتفُ صاحب المتجر — للمكتب وحدَه، زرُّ اتّصالٍ على البطاقة (٢٠٢٦-١١-٠٣)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	// **عنوانُ المتجر المفصّل ونقطةُ الاستلام** — للمكتب وحدَه: زرُّ خريطةٍ في قسم المتجر على بطاقة
 	// اللوحة (٢٠٢٦-١١-٠٣). والسائقُ يأخذ وجهتَه من بابه (`pickup_address`/`nav_*` في `driver_handlers.go`).

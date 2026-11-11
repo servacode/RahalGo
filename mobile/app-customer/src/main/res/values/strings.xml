@@ -113,7 +113,17 @@
     <string name="stt_accepted">مقبول</string>
     <string name="stt_preparing">يحضر</string>
     <string name="stt_assigned">مع سائق</string>
-    <string name="stt_cancelled">ألغي</string>
+    <string name="stt_cancelled">ملغى</string>
+
+    <!-- ── دفعة الزبون A (قرار المالك ٢٠٢٦-١١-١١) ── -->
+    <string name="cart_unit_price">%1$s للحبّة</string>
+    <string name="cart_note_label">ملاحظة للمتجر (اختياري)</string>
+    <string name="cart_note_hint">مثلاً: بلا بصل</string>
+    <string name="ord_reorder">اطلب مرة تانية</string>
+    <string name="ord_reorder_partial">بعض الأصناف ما عادت متوفرة</string>
+    <string name="ord_reorder_none">هالأصناف ما عادت متوفرة</string>
+    <string name="ord_rate_for">طلبك من %1$s · #%2$s</string>
+    <string name="ord_rate_for_plain">طلبك رقم #%1$s</string>
 
     <!-- **الطلبُ الخاصّ** -->
     <string name="cst_what">تفاصيل الطلب</string>

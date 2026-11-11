@@ -186,7 +186,11 @@ fun CartScreen(
         // **والخطأُ لا يُرسم هنا** — يُرسم فوق زرّ الطلب. انظر أدناه.
         Spacer(Modifier.height(Rahal.space.xs))
         com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined) {
-            Cart.lines.forEach { line ->
+            // **اسمُ المتجر فوق أصنافه** (قرارُ المالك ٢٠٢٦-١١-١١) — والسلّةُ بأكثر من متجرٍ تُجمَّع أصنافُها
+            // تحت كلّ متجر بترتيب دخولها. (لا شعارَ: صنفُ السلّة لا يحمله.)
+            Cart.lines.groupBy { it.item.merchantId.ifBlank { it.item.merchantName.orEmpty() } }.values.forEach { group ->
+            CartStoreHeader(group.first().item.merchantName.orEmpty())
+            group.forEach { line ->
                 val bad = badLines[line.item.id]
                 Row(
                     Modifier
@@ -231,6 +235,12 @@ fun CartScreen(
                                 style = Rahal.type.caption,
                             )
                         }
+                        // **وسعرُ الحبّة تحت الاسم** (قرارُ المالك ٢٠٢٦-١١-١١) — والمجموعُ في آخر السطر.
+                        Text(
+                            stringResource(R.string.cart_unit_price, money(line.unitPrice)),
+                            color = Rahal.colors.inkMuted,
+                            style = Rahal.type.caption,
+                        )
                         // **وصنفٌ بالدولار يُقال دولارُه تحت اسمه** (طلبُ المالك ٢٠٢٦-١١-٠٧) —
                         // والليرةُ في عمود السعر، وهي ما يُدفع.
                         // **والسعرُ أكبرُ وفي العمود نفسِه مع الاسم والخيار** (تدقيق D13).
@@ -273,6 +283,7 @@ fun CartScreen(
                     )
                 }
                 RahalDivider()
+            }
             }
             // ══════════════════════════════════════════════════════════
             // **والمشروباتُ كلُّها تحت الأصناف — سطرٌ لكلّ مشروب** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
@@ -389,6 +400,21 @@ fun CartScreen(
                 style = Rahal.type.caption,
             )
         }
+
+        // ══════════════════════════════════════════════════════════════
+        // **ملاحظةٌ للمتجر — «بلا بصل»** (قرارُ المالك ٢٠٢٦-١١-١١)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // اختياريةٌ وحتّى مئتي حرف، وتصل مع الطلب إلى المتجر (`notes`).
+        Spacer(Modifier.height(Rahal.space.md))
+        OutlinedTextField(
+            value = vm.notes,
+            onValueChange = { vm.notes = it.take(CartViewModel.NOTES_MAX) },
+            label = { Text(stringResource(R.string.cart_note_label)) },
+            placeholder = { Text(stringResource(R.string.cart_note_hint)) },
+            maxLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+        )
 
         // ══════════════════════════════════════════════════════════════
         // **والدفعُ نقدٌ أو محفظة — ولا خليط**
@@ -982,6 +1008,32 @@ private fun LineControls(
     }
 }
 
+/** **رأسُ متجرٍ في السلّة** — أيقونةٌ واسمٌ، وبلا اسمٍ (خادمٌ قديم) لا شيء. */
+@Composable
+private fun CartStoreHeader(name: String) {
+    if (name.isBlank()) return
+    Row(
+        Modifier.fillMaxWidth().padding(top = Rahal.space.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(com.rahalgo.ui.R.drawable.ic_store),
+            contentDescription = null,
+            tint = Rahal.colors.brand,
+            modifier = Modifier.size(Rahal.icon.sm),
+        )
+        Spacer(Modifier.size(Rahal.space.sm))
+        Text(
+            name,
+            color = Rahal.colors.ink,
+            style = Rahal.type.cardTitle,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
+    }
+    RahalDivider()
+}
+
 /** **سعرُ السطر بأرقامٍ متساوية العرض** — أكبرُ من اسمه (تدقيق D13). */
 @Composable
 private fun LinePrice(price: String) {
@@ -1001,6 +1053,11 @@ private fun tooManySourcesText(max: Int): String =
     else stringResource(R.string.cart_too_many_sources, max.toString())
 
 class CartViewModel(app: Application) : AndroidViewModel(app) {
+
+    companion object {
+        /** **سقفُ ملاحظة الطلب للمتجر** (قرارُ المالك ٢٠٢٦-١١-١١). والمحرّكُ يقبل حتّى ٥٠٠. */
+        const val NOTES_MAX = 200
+    }
 
     private val api = CustomerApi(AppCore.get().api)
     private val auth = com.rahalgo.shared.auth.AuthApi(AppCore.get().api)
@@ -1023,6 +1080,9 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
     // **وموضعُها النموذجُ لا الشاشة** — يعيش ما دام التطبيقُ حيّا.
     var address by mutableStateOf("")
     var promo by mutableStateOf("")
+
+    /** **ملاحظةُ الزبون للمتجر** — تعيش مع النموذج كالعنوان والكود، وتُمحى بعد نجاح الطلب. */
+    var notes by mutableStateOf("")
 
     /**
      * **أثرُ الكود بعد تطبيقه** — وفارغٌ يعني «لم يُطبَّق بعد».
@@ -1345,6 +1405,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                         paymentMethod = payment,
                         walletScope = walletScope,
                         promoCode = code,
+                        notes = notes.trim(),
                     ),
                     attemptKey = key,
                 )
@@ -1354,6 +1415,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                 // **والسلّةُ تُفرَغ بعد أن يُقيَّد الطلبُ لا قبله** —
                 // **ومن فرّغها قبل الجواب خسر سلّةَ من سقط نداؤه.**
                 Cart.clear()
+                notes = ""
                 onDone()
             } catch (e: Exception) {
                 // ══════════════════════════════════════════════════════
