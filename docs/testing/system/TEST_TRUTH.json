@@ -33,8 +33,8 @@
     "setting_defs": 285,
     "behaviour_settings": 240,
     "order_fields": 147,
-    "test_files": 835,
-    "test_funcs": 3202
+    "test_files": 836,
+    "test_funcs": 3203
   },
   "flows": [
     {
@@ -11303,6 +11303,12 @@
         "db"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestCustomerSeesStoreNameOnlyForSingleStore",
+      "file": "internal/orders/customer_store_name_view_test.go",
+      "package": "orders_test",
+      "orphan": true
     },
     {
       "name": "TestDiscount_MerchantBorne_CutsBothSides",

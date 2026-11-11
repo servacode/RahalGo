@@ -398,6 +398,27 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** **«اطلب مرة تانية»** — يعيد أصناف الطلب المُسلَّم إلى السلّة ويفتحها إن دخل شيء (`Reorder`). */
+    var reordering by mutableStateOf(false)
+        private set
+
+    fun reorder(order: MyOrder, openCart: () -> Unit) {
+        if (reordering) return
+        reordering = true
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val r = Reorder.run(api, order)
+            reordering = false
+            when {
+                r.added == 0 -> Flash.fail(app.getString(R.string.ord_reorder_none))
+                else -> {
+                    if (r.skipped > 0) Flash.fail(app.getString(R.string.ord_reorder_partial))
+                    openCart()
+                }
+            }
+        }
+    }
+
     fun rate(orderId: String, stars: Int, driverStars: Int?, onDone: () -> Unit = {}) {
         if (acting) return
         acting = true

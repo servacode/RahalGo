@@ -1047,7 +1047,7 @@ private fun SignedIn(
                     // من ترجمة الحال ومن حسبة المهلة.**
                     over is Overlay.Menu && over.key == CustomerItems.HISTORY ->
                         OverlayPage(menuTitle(over.key), onBack = { overlay.clear() }) {
-                            HistoryScreen(ordersVm)
+                            HistoryScreen(ordersVm, onOpenCart = { overlay.clear(); tab = Tab.Cart })
                         }
 
                     over is Overlay.Menu && over.key == CustomerItems.CHATS -> {
@@ -1188,6 +1188,7 @@ private fun SignedIn(
                         ordersVm,
                         walletBalance = shell.balance,
                         onBrowse = { tab = Tab.Shop },
+                        onOpenCart = { tab = Tab.Cart },
                     )
 
                     // **ونجاحُ الطلب الخاصّ ينقله إلى «طلباتي»** —
@@ -1356,6 +1357,7 @@ private fun SignedIn(
                         // **وصله طلبٌ** — فتعود بطاقةُ «عجبتك الخدمة؟ ادعُ صديقاً» مرّةً (٢٠٢٦-١٠-٣٠).
                         LaunchedEffect(Unit) { InviteNudge.markDelivered(context) }
                         RateDialog(
+                            orderLabel = com.rahalgo.customer.orders.rateOrderLabel(o),
                             hasDriver = !o.driverName.isNullOrEmpty(),
                             sending = ordersVm.acting,
                             error = ordersVm.actionError,

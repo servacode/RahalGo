@@ -18,7 +18,7 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import {
@@ -57,6 +57,8 @@ import { OUTLINE_CARD, StickyActionBar } from "@/components/customer/kit";
 
 const m = getMessages(defaultLocale);
 const C = m.shop.cart;
+/** **سقفُ ملاحظة الطلب للمتجر** (قرارُ المالك ٢٠٢٦-١١-١١) — توأمُ `CartViewModel.NOTES_MAX`. والمحرّكُ يقبل حتّى ٥٠٠. */
+const NOTES_MAX = 200;
 const ORDER_SLOT = "order";
 
 /** **أمتّصلٌ بالشبكة؟** — مرآةُ `Net.online`: لا يُرسَل طلبٌ بلا شبكة، ويُقال السببُ تحت. */
@@ -110,6 +112,18 @@ export default function CartPage() {
   const point = address ? `${address.lat},${address.lng}` : "";
   const linesKey = cart.lines.map((l) => `${lineKey(l)}:${l.qty}`).join(",");
   const drinks = useMemo(() => drinkRows(cart.lines), [cart.lines]);
+  /* **أصنافُ السلّة مجمّعةً بمتجرها** — بترتيب أوّل ظهورٍ لكلّ متجر. */
+  const storeGroups = useMemo(() => {
+    const out: { id: string; name: string; lines: typeof cart.lines }[] = [];
+    for (const l of cart.lines) {
+      const id = l.item.merchant_id ?? "";
+      const name = l.item.merchant_name ?? "";
+      const hit = out.find((g) => (id ? g.id === id : g.name === name));
+      if (hit) hit.lines.push(l);
+      else out.push({ id, name, lines: [l] });
+    }
+    return out;
+  }, [cart.lines]);
 
   /* ── التسعيرة: تُطلب عند كلّ تبدّلٍ في السلّة أو العنوان ── */
   const requote = useCallback(
@@ -317,21 +331,25 @@ export default function CartPage() {
               نفسُه من أكثر من صنفٍ سطرٌ واحدٌ بعدده المجموع: «+» و«−» لأوّل صنفٍ هو معه، والحذفُ من كلّها.
               **والسعرُ في عمودٍ واحدٍ ثابتٍ آخرَ السطر** لكلّ الأسطر، والعدّادُ والحذفُ قبله. ══ */}
           <div className="overflow-hidden rounded-rg-lg border border-line bg-surface">
-            {cart.lines[0]?.item.merchant_name && (
-              <div className="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-3">
-                <span className="flex min-w-0 items-center gap-2 font-bold">
-                  <IconStore size={18} className="shrink-0 text-accent-text" />
-                  <span className="truncate">{cart.lines[0].item.merchant_name}</span>
-                </span>
-                {cart.merchantId && (
-                  <Link href={`/stores/${cart.merchantId}`} className="shrink-0 text-sm font-bold text-accent-text">
-                    {C.addMore}
-                  </Link>
-                )}
-              </div>
-            )}
           <ul className="divide-y divide-line-soft xl:grid xl:grid-cols-2 xl:divide-y-0 xl:[&>li]:border-b xl:[&>li]:border-line-soft">
-            {cart.lines.map((l) => {
+            {/* **اسمُ المتجر فوق أصنافه** (قرارُ المالك ٢٠٢٦-١١-١١) — والسلّةُ بأكثر من متجرٍ تُجمَّع أصنافُها
+                تحت كلّ متجر بترتيب دخولها. (ولا شعارَ: صنفُ السلّة لا يحمله.) */}
+            {storeGroups.map((g, gi) => (
+              <Fragment key={g.id || `g${gi}`}>
+                {g.name && (
+                  <li className="flex items-center justify-between gap-3 px-4 py-3 xl:col-span-2">
+                    <span className="flex min-w-0 items-center gap-2 font-bold">
+                      <IconStore size={18} className="shrink-0 text-accent-text" />
+                      <span className="truncate">{g.name}</span>
+                    </span>
+                    {g.id && (
+                      <Link href={`/stores/${g.id}`} className="shrink-0 text-sm font-bold text-accent-text">
+                        {C.addMore}
+                      </Link>
+                    )}
+                  </li>
+                )}
+            {g.lines.map((l) => {
               const k = lineKey(l);
               const bad = badLines.get(l.item.id);
               return (
@@ -351,17 +369,15 @@ export default function CartPage() {
                     {l.options.length > 0 && (
                       <p className="truncate text-xs text-ink-muted">{l.options.map((o) => o.name).join(m.common.listSep)}</p>
                     )}
-                    {l.item.merchant_name && (
-                      <p className="flex items-center gap-1 truncate text-xs text-ink-muted">
-                        <IconStore size={11} />
-                        {l.item.merchant_name}
-                      </p>
-                    )}
+                    {/* **وسعرُ الحبّة تحت الاسم** (قرارُ المالك ٢٠٢٦-١١-١١) — والمجموعُ في آخر السطر. */}
+                    <p className="text-xs text-ink-muted">{fill(C.unitPrice, { price: fmtMoney(unitPrice(l)) })}</p>
                     {bad && <p className="text-xs font-bold text-danger">{lineProblem(bad)}</p>}
                   </CartRow>
                 </li>
               );
             })}
+              </Fragment>
+            ))}
             {drinks.map((d) => {
               const room = d.refs.find((r) => r.qty < MAX_DRINK);
               const first = d.refs[0];
@@ -475,7 +491,8 @@ export default function CartPage() {
                   label={C.notes}
                   placeholder={C.notesHint}
                   value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  maxLength={NOTES_MAX}
+                  onChange={(e) => setNotes(e.target.value.slice(0, NOTES_MAX))}
                   rows={2}
                 />
               </div>

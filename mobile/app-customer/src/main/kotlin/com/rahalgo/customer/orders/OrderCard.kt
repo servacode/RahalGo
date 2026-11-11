@@ -101,6 +101,8 @@ fun OrderCard(
      * يوصل الكابتن للباب. و`null` لا تبديلَ هنا (السجلّ).
      */
     onChangeWalletScope: ((String) -> Unit)? = null,
+    /** **«اطلب مرة تانية»** (قرارُ المالك ٢٠٢٦-١١-١١) — للمُسلَّم العاديّ وحدَه، و`null` لا زرّ. */
+    onReorder: (() -> Unit)? = null,
 ) {
     // ══════════════════════════════════════════════════════════════════
     // **المنتهي بطاقةٌ مطويّةٌ تُفتح بلمسة** (قرارُ المالك ٢٠٢٦-١١-١١، تدقيق D3)
@@ -202,6 +204,12 @@ fun OrderCard(
                 Spacer(Modifier.height(Rahal.space.md))
                 RahalButton(onClick = it, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.ord_rate))
+                }
+            }
+            onReorder?.let {
+                Spacer(Modifier.height(Rahal.space.sm))
+                com.rahalgo.ui.RahalOutlineButton(onClick = it, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.ord_reorder))
                 }
             }
             return@RahalCard
@@ -422,7 +430,7 @@ fun OrderCard(
             )
         }
 
-        val actions = listOfNotNull(onCancel, onComplain, onRate, onChat)
+        val actions = listOfNotNull(onCancel, onComplain, onRate, onChat, onReorder)
         if (actions.isEmpty()) return@RahalCard
 
         // ══════════════════════════════════════════════════════════════
@@ -464,6 +472,12 @@ fun OrderCard(
             Spacer(Modifier.height(Rahal.space.sm))
             RahalButton(onClick = it, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.ord_rate))
+            }
+        }
+        onReorder?.let {
+            Spacer(Modifier.height(Rahal.space.sm))
+            com.rahalgo.ui.RahalOutlineButton(onClick = it, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.ord_reorder))
             }
         }
     }
@@ -1024,9 +1038,6 @@ private fun orderTitle(order: MyOrder): String {
         return stringResource(if (order.customMode == "amanah") R.string.ord_title_amanah else R.string.ord_title_custom)
     }
     if (order.merchantName.isNotBlank()) return order.merchantName
-    val first = order.items.orEmpty().firstOrNull()?.name?.takeIf { it.isNotBlank() }
-        ?: order.itemsPreview.substringBefore('،').substringBefore(',').trim()
-    if (first.isEmpty()) return stringResource(R.string.ord_title_fallback)
-    val more = order.itemsCount - 1
-    return if (more > 0) "$first +$more" else first
+    // **«+N» أصنافٌ أخرى لا قطع** (قرارُ المالك ٢٠٢٦-١١-١١) — انظر `ItemsTitle`.
+    return ItemsTitle.of(order).text().ifEmpty { stringResource(R.string.ord_title_fallback) }
 }

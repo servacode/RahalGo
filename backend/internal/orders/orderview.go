@@ -141,6 +141,10 @@ var audienceAllow = map[Audience]map[string]bool{
 		"zone_name":                true,
 		// **أقسامُ طلبه بلا اسم متجرٍ ولا معرّفه** (`P-1`) — الطلبُ بعدّة محطّات وحدَه.
 		"sections": true,
+		// **واسمُ المتجر يراه الزبونُ في «طلباتي»** (قرارُ المالك ٢٠٢٦-١١-١١، الدفعة A) — كما يراه في
+		// التصفّح والسلّة منذ ٢٠٢٦-١٠-١٥. **ومعرّفُه وشعارُه وهاتفُه يبقون محجوبين.** والطلبُ بعدّة
+		// محطّاتٍ لا اسمَ فيه (انظر `ViewFor`): أقسامُه بلا أسماء.
+		"merchant_name": true,
 	},
 	AudienceMerchant: {
 		"accepted_at":              true,
@@ -524,6 +528,11 @@ func ViewFor(a Audience, o *Order) map[string]any {
 	// ٢٠٢٦-١٠-٠٢) — **في الخادم لا في الشاشة**: اسمٌ يُرسَل ويُخفى في التطبيق
 	// يُقرأ من الشبكة.
 	if a == AudienceCustomer {
+		// **الطلبُ بعدّة محطّات: لا اسمَ واحداً يمثّله** — أقسامُه بلا أسماء متاجر (`P-1`)، واسمُ
+		// المتجر الأوّل وحدَه يكذب. فيُحذف ويعرض التطبيقُ أصنافَه.
+		if len(o.Sections) > 1 {
+			delete(out, "merchant_name")
+		}
 		if n, ok := out["driver_name"].(string); ok && n != "" {
 			out["driver_name"] = CustomerDriverLabel
 		}

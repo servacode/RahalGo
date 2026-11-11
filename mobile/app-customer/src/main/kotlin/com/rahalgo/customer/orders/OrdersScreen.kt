@@ -60,6 +60,8 @@ fun OrdersScreen(
     walletBalance: Long = 0,
     /** **«تصفّح السوق» من الفراغ** — ينقل لتبويب التسوّق. */
     onBrowse: () -> Unit = {},
+    /** **«اطلب مرة تانية» يفتح السلّة** بعد أن تدخلها الأصناف. */
+    onOpenCart: () -> Unit = {},
 ) {
     // ══════════════════════════════════════════════════════════════════
     // **«جارية · منتهية» فوق «طلباتي»** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧)
@@ -80,6 +82,7 @@ fun OrdersScreen(
         // **والسجلُّ منتهٍ — لا تأكيدَ عرضٍ فيه، فلا حاجةَ لرصيد.**
         walletBalance = if (showHistory) 0 else walletBalance,
         onBrowse = if (showHistory) null else onBrowse,
+        onOpenCart = onOpenCart,
         tabs = {
             // **مفتاحٌ مقسومٌ بعرض الشاشة** (إعادةُ التصميم ٢٠٢٦-١١-١١) — `Segmented` نفسُه في الطلب الخاصّ.
             com.rahalgo.ui.SegmentedToggle(
@@ -123,7 +126,7 @@ private fun remain(secs: Int, at: Long): Int {
 
 /** **سجلُّ الطلبات — ما انتهى بفواتيره.** */
 @Composable
-fun HistoryScreen(vm: OrdersViewModel) {
+fun HistoryScreen(vm: OrdersViewModel, onOpenCart: () -> Unit = {}) {
     OrdersList(
         vm = vm,
         list = vm.history,
@@ -134,6 +137,7 @@ fun HistoryScreen(vm: OrdersViewModel) {
         history = true,
         // **والسجلُّ منتهٍ — لا تأكيدَ عرضٍ فيه، فلا حاجةَ لرصيد.**
         walletBalance = 0,
+        onOpenCart = onOpenCart,
     )
 }
 
@@ -148,6 +152,7 @@ private fun OrdersList(
     walletBalance: Long,
     /** **زرُّ «تصفّح السوق» تحت الفراغ** — و`null` لا زرّ. */
     onBrowse: (() -> Unit)? = null,
+    onOpenCart: () -> Unit = {},
     /** **حبّتا «جارية · منتهية»** تحت العنوان — و`null` في شاشة السجلّ وحدَها. */
     tabs: (@Composable () -> Unit)? = null,
 ) {
@@ -287,6 +292,12 @@ private fun OrdersList(
                 } else {
                     null
                 },
+                // **«اطلب مرة تانية» للمُسلَّم العاديّ وحدَه** (قرارُ المالك ٢٠٢٦-١١-١١) — بنودُه ترجع للسلّة.
+                onReorder = if (o.status == "delivered" && o.kind != "custom" && !o.items.isNullOrEmpty()) {
+                    { vm.reorder(o, onOpenCart) }
+                } else {
+                    null
+                },
                 // **وتأكيدُ عرض الطلب المخصَّص** (Batch 2c) — في الجاري وحدَه.
                 walletBalance = walletBalance,
                 onConfirmQuote = if (!history && o.kind == "custom") {
@@ -349,6 +360,7 @@ private fun OrdersList(
         // لا يُسأل عمّن أوصله.
         val hasDriver = list.any { it.id == id && !it.driverName.isNullOrEmpty() }
         RateDialog(
+            orderLabel = list.firstOrNull { it.id == id }?.let { rateOrderLabel(it) }.orEmpty(),
             hasDriver = hasDriver,
             sending = vm.acting,
             error = vm.actionError,
@@ -447,6 +459,8 @@ private fun DialogError(error: String) {
  */
 @Composable
 internal fun RateDialog(
+    /** **أيُّ طلبٍ يُقيَّم** — «طلبك من مطعم X · #1205» (قرارُ المالك ٢٠٢٦-١١-١١). وفارغٌ لا سطر. */
+    orderLabel: String = "",
     hasDriver: Boolean,
     sending: Boolean = false,
     error: String = "",
@@ -467,6 +481,14 @@ internal fun RateDialog(
         title = { Text(stringResource(R.string.ord_rate_title)) },
         text = {
             androidx.compose.foundation.layout.Column {
+                if (orderLabel.isNotEmpty()) {
+                    Text(
+                        text = orderLabel,
+                        color = Rahal.colors.inkMuted,
+                        style = Rahal.type.caption,
+                    )
+                    Spacer(Modifier.height(Rahal.space.md))
+                }
                 Text(
                     text = stringResource(R.string.ord_rate_service),
                     color = Rahal.colors.ink,
@@ -503,6 +525,15 @@ internal fun RateDialog(
         },
     )
 }
+
+/** **«طلبك من مطعم X · #1205»** — ومن غير اسم متجرٍ (طلبٌ بعدّة محطّات) «طلبك رقم #1205». */
+@Composable
+internal fun rateOrderLabel(order: com.rahalgo.shared.customer.MyOrder): String =
+    if (order.merchantName.isNotBlank()) {
+        stringResource(R.string.ord_rate_for, order.merchantName, order.number.toString())
+    } else {
+        stringResource(R.string.ord_rate_for_plain, order.number.toString())
+    }
 
 /** **صفُّ نجومٍ واحد** — ونسختان منه تفترقان يومَ يتبدّل شكلُ النجمة. */
 @Composable

@@ -172,7 +172,7 @@ func TestD21_CustomerRedactionAgainstContract(t *testing.T) {
 	}
 
 	// **وما يدلّ على المصدر لا يخرج** — وهو حكمُ العقد نفسِه.
-	for _, k := range []string{"merchant_id", "merchant_name",
+	for _, k := range []string{"merchant_id",
 		"merchant_logo_thumb_url", "offered_driver_name", "driver_phone"} {
 		if _, ok := view[k]; ok {
 			t.Errorf("**%q وصل الزبونَ** — %v", k, view[k])

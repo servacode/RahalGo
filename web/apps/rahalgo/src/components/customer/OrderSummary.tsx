@@ -13,7 +13,9 @@ import { getMessages, defaultLocale, fmtDateTime, fmtRef, fmtNum } from "@rahalg
 import { Money, StatusChip, IconNext, IconChevronDown } from "@rahalgo/ui";
 import { statusLabel } from "@/lib/customer/texts";
 import { ENDED, type MyOrder } from "@/lib/customer/types";
+import { itemsTitleParts, itemsTitleText } from "@/lib/customer/orderTitle";
 import { OUTLINE_CARD, orderStatusTone } from "./kit";
+import { ReorderButton } from "./ReorderButton";
 import { OrderEta, OrderInvoice, OrderStages } from "./orderParts";
 import { CustomPhotoGrid } from "@/components/CustomPhotos";
 
@@ -29,17 +31,14 @@ export function OrderStatusChip({ status }: { status: string }) {
 }
 
 /**
- * **عنوانُ البطاقة** (تدقيق D3) — مرآةُ `orderTitle` في `OrderCard.kt`: اسمُ المتجر إن وصل، وللخاصّ لفظُه،
- * وإلّا أوّلُ صنفٍ و«+ كذا». **والمحرّكُ اليوم لا يرسل اسمَ المتجر للزبون** (خارجَ مسموحات
- * `AudienceCustomer`) فلا يُختلَق ولا يُغيَّر العقد؛ وحين يُسمح به يظهر هنا بلا تعديلٍ ثانٍ.
+ * **عنوانُ البطاقة** (تدقيق D3) — مرآةُ `orderTitle` في `OrderCard.kt`: اسمُ المتجر، وللخاصّ لفظُه،
+ * وإلّا أوّلُ صنفٍ وبعده «+N» أصنافٍ أخرى (لا قطع) أو «× كميّته» (`orderTitle.ts`). **واسمُ المتجر يصل الزبونَ
+ * من المحرّك منذ ٢٠٢٦-١١-١١** (قرارُ المالك)، وطلبُ عدّة محطّاتٍ بلا اسمٍ فيُعرض أوّلُ صنفٍ.
  */
 export function orderTitle(order: MyOrder): string {
   if (order.kind === "custom") return order.custom_mode === "amanah" ? O.titleAmanah : O.titleCustom;
   if (order.merchant_name) return order.merchant_name;
-  const first = (order.items ?? [])[0]?.name || (order.items_preview ?? "").split(m.common.listSep.trim())[0]?.trim();
-  if (!first) return O.titleFallback;
-  const more = (order.items_count ?? 0) - 1;
-  return more > 0 ? `${first} +${fmtNum(more)}` : first;
+  return itemsTitleText(itemsTitleParts(order.items, order.items_preview, m.common.listSep.trim()), fmtNum) || O.titleFallback;
 }
 
 export function OrderSummary({ order }: { order: MyOrder }) {
@@ -54,12 +53,13 @@ export function OrderSummary({ order }: { order: MyOrder }) {
   const invoice = order.kind !== "custom" && (order.items ?? []).length > 0;
   if (collapsed) {
     return (
+      <div className={`${OUTLINE_CARD} flex flex-col gap-rg-sm`}>
       <button
         type="button"
         onClick={() => setExpanded(true)}
         aria-expanded={false}
         aria-label={`${orderTitle(order)} — ${O.expand}`}
-        className={`${OUTLINE_CARD} flex w-full flex-col gap-rg-sm text-start`}
+        className="flex w-full flex-col gap-rg-sm text-start"
       >
         <span className="flex items-center justify-between gap-rg-sm">
           <span className="flex min-w-0 items-baseline gap-rg-sm">
@@ -76,6 +76,8 @@ export function OrderSummary({ order }: { order: MyOrder }) {
         </span>
         <span className="text-caption text-ink-muted">{fmtDateTime(order.created_at)}</span>
       </button>
+      <ReorderButton order={order} />
+      </div>
     );
   }
   return (
@@ -108,6 +110,7 @@ export function OrderSummary({ order }: { order: MyOrder }) {
           <IconNext size={16} className="text-ink-muted" />
         </span>
       </Link>
+      <ReorderButton order={order} />
       {!live && (
         <button type="button" onClick={() => setExpanded(false)} className="self-start text-xs text-ink-muted underline">
           {O.collapse}
