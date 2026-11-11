@@ -34,9 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -132,7 +130,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
                     if (dy > 6f) stripOpen = true
                 }
             }
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (moving) {
@@ -187,7 +185,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
                 },
                 color = Rahal.colors.onPanel,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
+                style = Rahal.type.sectionTitle,
             )
             // **و«لدي توصيلة» بلا نقطةٍ على الخريطة** (الخطوة ١٨) — المسارُ
             // المرسومُ إلى نقطة المتجر لا إلى المستلِم، **فيُقال له ألّا يتبعه.**
@@ -237,7 +235,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
                     stringResource(R.string.amanah_place),
                     color = Rahal.colors.brand,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                 )
             }
             if (noPoint || arrived) {
@@ -267,7 +265,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
                     }
                     if (minutes.isNotEmpty()) {
                         PanelChip(R.drawable.ic_time, minutes)
-                        Spacer(Modifier.size(14.dp))
+                        Spacer(Modifier.size(Rahal.space.md))
                     }
                     PanelChip(R.drawable.ic_pin, distanceText(meters))
                     // ══════════════════════════════════════════════════
@@ -289,8 +287,8 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
                 }
             }
             if (stripOpen) {
-                Spacer(Modifier.height(10.dp))
-                HorizontalDivider(color = Rahal.colors.onPanel.copy(alpha = 0.12f))
+                Spacer(Modifier.height(Rahal.space.md))
+                PanelDivider()
             }
         } else if (!isReturnTrip(order)) {
             // **والعنوان لا يغيب عند الوقوف** (المالك ٢٠٢٦-١١-١٠) — كان يختفي عند المتجر والزبون فيقفز
@@ -299,18 +297,18 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
                 text = stringResource(phaseLabel(state.step, isFetch(order)), ""),
                 color = Rahal.colors.onPanel,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
+                style = Rahal.type.sectionTitle,
             )
             if (stripOpen) {
-                Spacer(Modifier.height(10.dp))
-                HorizontalDivider(color = Rahal.colors.onPanel.copy(alpha = 0.12f))
+                Spacer(Modifier.height(Rahal.space.md))
+                PanelDivider()
             }
         }
 
         // **ولا شريطَ مراحل لمشوار الإرجاع** — الطلبُ أُنهي، والمراحلُ مراحلُ التوصيل.
         androidx.compose.animation.AnimatedVisibility(visible = stripOpen && !isReturnTrip(order)) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 LegStrip(
                     status = order.status,
                     custom = order.kind == "custom",
@@ -346,16 +344,24 @@ internal fun PanelChip(icon: Int, text: String) {
             painter = painterResource(icon),
             contentDescription = null,
             tint = Rahal.colors.accent,
-            modifier = Modifier.size(15.dp),
+            modifier = Modifier.size(Rahal.icon.xs),
         )
-        Spacer(Modifier.size(5.dp))
+        Spacer(Modifier.size(Rahal.space.xs))
         Text(
             text = text,
             color = Rahal.colors.onPanel,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.price,
         )
     }
+}
+
+/**
+ * **فاصلُ اللوح الداكن** — `RahalDivider` بلون الخطّ الفاتح لا يُرى على الكحليّ، فيُرسم هنا بلون
+ * الكتابة على اللوح. // TODO(shared): لونٌ اختياريٌّ في `RahalDivider`.
+ */
+@Composable
+private fun PanelDivider() {
+    Box(Modifier.fillMaxWidth().height(Rahal.stroke.hair).background(Rahal.colors.onPanel.copy(alpha = 0.12f)))
 }
 
 /**
@@ -418,13 +424,13 @@ internal fun LegStrip(
         val n = legs2.size.coerceAtLeast(1)
         val narrow = maxWidth / n < 56.dp
         // **والخطُّ في مستوى الدوائر** — من مركز الأولى إلى مركز الأخيرة.
-        Row(Modifier.fillMaxWidth().padding(top = (LEG_DOT / 2) - 1.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = (LEG_DOT / 2) - Rahal.space.xxs)) {
             Spacer(Modifier.weight(0.5f))
             for (i in 1 until n) {
                 Box(
                     Modifier
                         .weight(1f)
-                        .height(2.dp)
+                        .height(Rahal.space.xxs)
                         .background(
                             if (i <= at) Rahal.colors.brand else Rahal.colors.onPanel.copy(alpha = 0.18f),
                         ),
@@ -479,7 +485,7 @@ internal fun LegDot(
                 painter = painterResource(if (done) R.drawable.ic_check_circle else icon),
                 contentDescription = null,
                 tint = if (here || done) Rahal.colors.onPanel else Rahal.colors.onPanel.copy(alpha = 0.45f),
-                modifier = Modifier.size(15.dp),
+                modifier = Modifier.size(Rahal.icon.xs),
             )
         }
         Spacer(Modifier.height(Rahal.space.xs))
@@ -491,7 +497,7 @@ internal fun LegDot(
                 else -> Rahal.colors.onPanel.copy(alpha = 0.4f)
             },
             fontWeight = if (here) FontWeight.Bold else FontWeight.Normal,
-            style = MaterialTheme.typography.labelSmall,
+            style = Rahal.type.meta,
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
@@ -649,12 +655,12 @@ internal fun eta(meters: Double, avgSpeedKmh: Long): String =
  */
 @Composable
 private fun NoLocationBox(text: String) {
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     Text(
         text = text,
         color = Rahal.colors.danger,
         fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.bodyMedium,
+        style = Rahal.type.body,
         modifier = Modifier
             .fillMaxWidth()
             .clip(Rahal.shape.sm)

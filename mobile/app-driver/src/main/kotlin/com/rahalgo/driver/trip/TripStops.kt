@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,7 +20,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.driver.R
 import com.rahalgo.shared.model.DriverOrder
@@ -50,7 +48,7 @@ internal fun StopsBlock(
             stringResource(R.string.stops_title),
             color = Rahal.colors.inkMuted,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
         )
         stops.sortedBy { it.seq }.forEach { s ->
             StopCard(order, s, s.merchantId == currentId, busy, onStep)
@@ -87,8 +85,8 @@ private fun StopCard(
             .fillMaxWidth()
             .clip(Rahal.shape.md)
             .background(tint.copy(alpha = 0.10f))
-            .padding(horizontal = Rahal.space.md, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
+        verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
     ) {
         Row(
             Modifier.fillMaxWidth(),
@@ -100,14 +98,14 @@ private fun StopCard(
                 color = if (removed) Rahal.colors.inkMuted else Rahal.colors.ink,
                 fontWeight = FontWeight.Bold,
                 textDecoration = if (removed) TextDecoration.LineThrough else null,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 modifier = Modifier.weight(1f),
             )
             Box(
                 Modifier
                     .clip(Rahal.shape.pill)
                     .background(tint.copy(alpha = 0.18f))
-                    .padding(horizontal = 10.dp, vertical = 3.dp),
+                    .padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs),
             ) {
                 Text(
                     stringResource(
@@ -122,13 +120,13 @@ private fun StopCard(
                     ),
                     color = tint,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
             }
         }
         if (removed) return@Column
         if (s.address.isNotBlank()) {
-            Text(s.address, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+            Text(s.address, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
         }
         // **ما يدفعه لهذه المحطّة** — أو «مدفوع بالمحفظة». وما استُلمت لا يُدفع لها ثانيةً.
         if (!s.mine) {
@@ -137,14 +135,14 @@ private fun StopCard(
                     stringResource(R.string.stop_pay_wallet),
                     color = Rahal.colors.success,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                 )
             } else if (s.payAmount > 0) {
                 Text(
                     stringResource(R.string.stop_pay_cash, money(s.payAmount)),
                     color = Rahal.colors.brand,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                 )
             }
         }
@@ -154,7 +152,7 @@ private fun StopCard(
                 stringResource(R.string.trip_order_items) + " (" + s.items.sumOf { it.qty } + ")",
                 color = Rahal.colors.brand,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
                 modifier = Modifier.clickable { open = !open },
             )
             if (open) InvoiceLines(driverInvoiceLines(order.copy(items = s.items)))

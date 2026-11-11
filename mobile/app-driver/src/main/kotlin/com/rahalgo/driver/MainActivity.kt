@@ -24,6 +24,7 @@ import com.rahalgo.ui.AppFrame
 import com.rahalgo.ui.AuthGate
 import com.rahalgo.ui.ThemeState
 import com.rahalgo.design.Rahal
+import com.rahalgo.ui.RahalNavTab
 import com.rahalgo.ui.rememberOverlay
 import com.rahalgo.ui.Overlay
 import androidx.compose.foundation.layout.width
@@ -76,8 +77,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -865,9 +864,11 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
             //
             // (مواصفة المالك ٢٠٢٦-٠٨-١٢: «أوّل قسم يكون الخريطة نسمّيها
             //  الرحلة، والقسم الثاني الطلبات».)
-            NavigationBar {
+            // **الشريطُ الموحّد** (`RahalNavigationBar`) — كالمتجر والمندوب: أرضٌ بيضاءُ وخطٌّ رفيعٌ ولونُ
+            // العلامة للمختار (إعادةُ التصميم ٢٠٢٦-١١-١١).
+            com.rahalgo.ui.RahalNavigationBar {
                 if (hasTrip) {
-                    NavigationBarItem(
+                    RahalNavTab(
                         // ══════════════════════════════════════════════
                         // **والتبويبُ يخرج من الحساب — كما في الويب**
                         // ══════════════════════════════════════════════
@@ -887,10 +888,8 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         // **والصامتُ يقول «معطّل».**
                         selected = tab == 0 && overlay.isClear,
                         onClick = { overlay.clear(); tab = 0; orders.refresh() },
-                        icon = {
-                            Icon(painterResource(R.drawable.ic_trip), contentDescription = null)
-                        },
-                        label = { Text(stringResource(R.string.nav_trip)) },
+                        icon = R.drawable.ic_trip,
+                        label = R.string.nav_trip,
                     )
                 }
                 // ══════════════════════════════════════════════════════
@@ -907,13 +906,11 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                 //
                 // **والشريطُ لا يتبدّل تحت إبهامه** مع كلّ ورديّةٍ
                 // تُفتح وتُغلق — فيضغط ما لم يقصد.
-                NavigationBarItem(
+                RahalNavTab(
                     selected = tab == 1 && overlay.isClear,
                     onClick = { overlay.clear(); tab = 1; orders.refresh() },
-                    icon = {
-                        Icon(painterResource(R.drawable.ic_orders), contentDescription = null)
-                    },
-                    label = { Text(stringResource(R.string.nav_orders_all)) },
+                    icon = R.drawable.ic_orders,
+                    label = R.string.nav_orders_all,
                 )
                 // **ولا تبويبَ للسجلّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٣:
                 // «احذف أيقونة السجلّ ما ظلّ إلها داعٍ صح، لأنّها صارت
@@ -921,15 +918,12 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                 //
                 // **وبابان لشاشةٍ واحدةٍ يزاحمان** — والشريطُ السفليُّ
                 // لما يُفتح كلَّ دقيقة، **والسجلُّ يُفتح بسؤال.**
-                NavigationBarItem(
+                // **ومربّعاتُ لوحةٍ لا بيت** — البيتُ يقول «الرئيسيّة»، وموضعُها ثالث.
+                RahalNavTab(
                     selected = tab == 2 && overlay.isClear,
                     onClick = { overlay.clear(); tab = 2; home.refresh() },
-                    icon = {
-                        // **ومربّعاتُ لوحةٍ لا بيت** — البيتُ يقول
-                        // «الرئيسيّة»، وموضعُها ثالث.
-                        Icon(painterResource(R.drawable.ic_dashboard), contentDescription = null)
-                    },
-                    label = { Text(stringResource(R.string.act_my_board)) },
+                    icon = R.drawable.ic_dashboard,
+                    label = R.string.act_my_board,
                 )
                 // ══════════════════════════════════════════════════════
                 // **و«ملفي» تبويبٌ دائمٌ بصورته هو**
@@ -947,27 +941,13 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                 // **وهو دائمٌ فيُثبّت الشريط**: كان يهبط إلى أيقونةٍ
                 // واحدةٍ حين ينصرف بلا رحلة — **وشريطٌ بأيقونةٍ واحدةٍ
                 // يُقرأ عطبا.**
-                NavigationBarItem(
+                // **وحسابي أيقونةُ شخصٍ لا صورةَ بروفايل** (قرارُ المالك ٢٠٢٦-٠٨-٢٣: «أيقونةُ حسابي ألغِ
+                // اللوغو ووحّدها بشكلٍ مركزيٍّ مع المتجر والزبون والسائق والمندوب»).
+                RahalNavTab(
                     selected = overlay.current == Overlay.Account,
                     onClick = { overlay.show(Overlay.Account) },
-                    icon = {
-// ══════════════════════════════════
-// **وحسابي أيقونةُ شخصٍ لا صورةَ بروفايل**
-// ══════════════════════════════════
-//
-// (قرارُ المالك ٢٠٢٦-٠٨-٢٣: «أيقونةُ حسابي
-//  ألغِ اللوغو ووحّدها بشكلٍ مركزيٍّ مع
-//  المتجر والزبون والسائق والمندوب».)
-//
-// **وصورةُ الحساب فارغةٌ عند أكثر الناس**
-// فتُرسم حرفاً في دائرة — **وحرفٌ بين
-// أيقوناتٍ يُقرأ شيئاً ناقصاً لا تبويباً.**
-                        Icon(
-                            painter = painterResource(com.rahalgo.ui.R.drawable.ic_user),
-                            contentDescription = null,
-                        )
-                    },
-                    label = { Text(stringResource(R.string.nav_profile)) },
+                    icon = com.rahalgo.ui.R.drawable.ic_user,
+                    label = R.string.nav_profile,
                 )
             }
         },

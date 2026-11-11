@@ -17,7 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -162,7 +161,7 @@ fun RouteChoicePanel(
             Text(
                 text = stringResource(R.string.route_no_longer_available),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 modifier = Modifier.padding(top = RahalSpaceTokens.xs),
             )
         }
@@ -219,7 +218,7 @@ private fun RouteCard(
         modifier = Modifier
             .fillMaxWidth()
             // **البند ١٠** — أدنى هدفِ لمسٍ يوصي به أندرويد.
-            .defaultMinSize(minHeight = 48.dp)
+            .defaultMinSize(minHeight = Rahal.size.touch)
             .clip(RahalShapeTokens.sm)
             .border(
                 width = if (selected) 2.dp else 1.dp,
@@ -239,13 +238,13 @@ private fun RouteCard(
             Text(
                 text = title,
                 color = color,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             )
             if (deltas.isEmpty()) {
-                Text(text = metricsLine, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
+                Text(text = metricsLine, color = Rahal.colors.inkMuted, style = Rahal.type.body)
             } else {
-                Text(text = deltaLine, color = Rahal.colors.ink, style = MaterialTheme.typography.bodyMedium)
+                Text(text = deltaLine, color = Rahal.colors.ink, style = Rahal.type.body)
             }
         }
     }
@@ -261,7 +260,7 @@ private fun PanelButton(
 ) {
     Row(
         modifier = modifier
-            .defaultMinSize(minHeight = 48.dp)
+            .defaultMinSize(minHeight = Rahal.size.touch)
             .clip(RahalShapeTokens.pill)
             .background(if (enabled) accent else Rahal.colors.line)
             .clickable(enabled = enabled, onClick = onClick)
@@ -269,7 +268,7 @@ private fun PanelButton(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = label, color = Rahal.colors.onBrand, style = MaterialTheme.typography.labelLarge)
+        Text(text = label, color = Rahal.colors.onBrand, style = Rahal.type.button)
     }
 }
 

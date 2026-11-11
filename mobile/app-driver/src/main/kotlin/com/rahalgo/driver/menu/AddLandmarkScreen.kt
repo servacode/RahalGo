@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.driver.R
 import com.rahalgo.ui.RahalButton
@@ -74,32 +72,31 @@ fun AddLandmarkScreen(
             Text(
                 text = stringResource(R.string.landmark_today, today.today, today.quota),
                 color = if (today.today >= today.quota) Rahal.colors.brand else Rahal.colors.ink,
-                fontWeight = FontWeight.Bold,
+                style = Rahal.type.bodyStrong,
             )
         }
-        OutlinedTextField(
+        // **الحقلُ الموحّد** — اسمُه فوقه دائماً (إعادةُ التصميم ٢٠٢٦-١١-١١).
+        com.rahalgo.ui.LabeledField(
+            label = stringResource(R.string.landmark_name),
             value = name,
             onValueChange = { if (it.length <= 80) name = it },
-            label = { Text(stringResource(R.string.landmark_name)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm), verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
             LandmarkKinds.forEach { (key, label) ->
                 val on = kind == key
                 Box(
                     modifier = Modifier
-                        .clip(Rahal.shape.sm)
+                        .clip(Rahal.shape.pill)
                         .background(if (on) Rahal.colors.brand else Rahal.colors.field)
-                        .clickable { kind = key }
-                        .heightIn(min = 44.dp)
-                        .padding(horizontal = 14.dp),
+                        .clickable(role = androidx.compose.ui.semantics.Role.RadioButton) { kind = key }
+                        .heightIn(min = Rahal.size.touch)
+                        .padding(horizontal = Rahal.space.md),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = stringResource(label),
                         color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
-                        fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                        style = if (on) Rahal.type.bodyStrong else Rahal.type.body,
                     )
                 }
             }
@@ -111,9 +108,9 @@ fun AddLandmarkScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (sending) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = androidx.compose.ui.graphics.Color.White)
+                CircularProgressIndicator(Modifier.size(Rahal.icon.sm), strokeWidth = Rahal.stroke.focus, color = Rahal.colors.onBrand)
             } else {
-                Text(stringResource(R.string.landmark_send))
+                Text(stringResource(R.string.landmark_send), style = Rahal.type.button)
             }
         }
     }

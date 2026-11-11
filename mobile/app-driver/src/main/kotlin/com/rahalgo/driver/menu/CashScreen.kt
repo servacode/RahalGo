@@ -1,5 +1,6 @@
 package com.rahalgo.driver.menu
 
+import com.rahalgo.ui.RahalDivider
 import androidx.compose.foundation.layout.Arrangement
 import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Column
@@ -8,15 +9,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
@@ -77,51 +75,55 @@ fun CashScreen(vm: SectionsViewModel) {
         val left = limit - held
         val ratio = if (limit > 0) held.toFloat() / limit else 0f
 
-        Card(tone = Rahal.colors.accent) {
-            Text(stringResource(R.string.cash_held), color = Rahal.colors.inkMuted)
+        // **بطاقةُ الرأس بالنظام الموحّد** (إعادةُ التصميم ٢٠٢٦-١١-١١) — الرقمُ بأكبر دورٍ في السلّم،
+        // وبالبرتقاليّ الغامق للكتابة (`accentInk`) لا البرتقاليّ الذي لا يُقرأ على الفاتح.
+        com.rahalgo.ui.RahalCard(
+            variant = com.rahalgo.ui.CardVariant.Tinted,
+            tone = com.rahalgo.ui.StatusTone.Warning,
+            padding = Rahal.space.lg,
+        ) {
+            Text(stringResource(R.string.cash_held), color = Rahal.colors.inkMuted, style = Rahal.type.label)
             Spacer(Modifier.height(Rahal.space.xs))
             Text(
-                text = money(held),
-                color = Rahal.colors.accent,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
+                text = com.rahalgo.driver.Bidi.isolate(money(held)),
+                color = Rahal.colors.accentInk,
+                style = Rahal.type.display,
             )
             Spacer(Modifier.height(Rahal.space.md))
             // **ولونُ الشريط يقول قربَه من الحافّة** قبل أن يُقرأ رقم.
             Bar(ratio = ratio, color = cashBarColor(ratio))
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(R.string.cash_limit) + " " + money(limit),
+                    text = stringResource(R.string.cash_limit) + " " + com.rahalgo.driver.Bidi.isolate(money(limit)),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
                 Text(
                     text = if (left > 0) {
-                        stringResource(R.string.cash_left) + " " + money(left)
+                        stringResource(R.string.cash_left) + " " + com.rahalgo.driver.Bidi.isolate(money(left))
                     } else {
-                        stringResource(R.string.cash_over) + " " + money(-left)
+                        stringResource(R.string.cash_over) + " " + com.rahalgo.driver.Bidi.isolate(money(-left))
                     },
                     color = if (left > 0) Rahal.colors.success else Rahal.colors.danger,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold,
+                    style = Rahal.type.label,
                 )
             }
         }
 
         // **والتحذيرُ عند الحدّ لا بعده** — من بلغ السقفَ وقف طابورُه.
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         when {
             limit > 0 && ratio >= 1f -> Note(stringResource(R.string.cash_full), Rahal.colors.danger)
             ratio > 0.8f -> Note(stringResource(R.string.cash_near), Rahal.colors.accent)
         }
 
         if (page.entries.isEmpty()) {
-            Empty(stringResource(R.string.cash_empty))
+            com.rahalgo.ui.EmptyState(title = stringResource(R.string.cash_empty), icon = R.drawable.ic_cash)
             return@Screen
         }
 
@@ -151,7 +153,7 @@ fun CashScreen(vm: SectionsViewModel) {
                     page.total.toString(),
                 ),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
             Spacer(Modifier.height(Rahal.space.sm))
             RahalOutlineButton(
@@ -160,9 +162,9 @@ fun CashScreen(vm: SectionsViewModel) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 if (vm.cashMoreBusy) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(Modifier.size(Rahal.icon.sm), strokeWidth = Rahal.stroke.focus)
                 } else {
-                    Text(stringResource(R.string.cash_load_older))
+                    Text(stringResource(R.string.cash_load_older), style = Rahal.type.button)
                 }
             }
         }
@@ -190,17 +192,25 @@ internal fun cashBarColor(ratio: Float): Color = when {
 @Composable
 private fun CashRow(e: CashEntry) {
     val inbound = e.amount > 0
-    val color = if (inbound) Rahal.colors.accent else Rahal.colors.success
-    Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
+    // **البرتقاليُّ الغامقُ للكتابة** — البرتقاليُّ العاديُّ لا يُقرأ رقماً على الأبيض.
+    val color = if (inbound) Rahal.colors.accentInk else Rahal.colors.success
+    // **صفُّ حركةٍ بأيقونة اتّجاهه** (إعادةُ التصميم ٢٠٢٦-١١-١١): مربّعٌ ملوّنٌ يميناً، والجملةُ
+    // في الوسط، **والمبلغُ في الطرف** — كأيّ كشف حسابٍ رآه في حياته.
+    Row(Modifier.fillMaxWidth().padding(vertical = Rahal.space.md), verticalAlignment = Alignment.Top) {
+        com.rahalgo.ui.IconBox(
+            icon = if (inbound) R.drawable.ic_cash else R.drawable.ic_check_circle,
+            tint = color,
+        )
+        Spacer(Modifier.size(Rahal.space.md))
+    Column(Modifier.weight(1f)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
-                text = (if (inbound) "+" else "−") + money(kotlin.math.abs(e.amount)),
+                text = com.rahalgo.driver.Bidi.isolate((if (inbound) "+" else "−") + money(kotlin.math.abs(e.amount))),
                 color = color,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
+                style = Rahal.type.price,
             )
             e.orderNumber?.let {
-                Text("#$it", color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+                Text(com.rahalgo.driver.Bidi.isolate("#$it"), color = Rahal.colors.inkMuted, style = Rahal.type.meta)
             }
         }
         // **والاسمُ عربيٌّ دائماً** — ورمزٌ لا اسمَ له تقوله ملاحظتُه،
@@ -217,7 +227,7 @@ private fun CashRow(e: CashEntry) {
         } else {
             cashKind(e.kind)
         }
-        Text(label.ifEmpty { e.note }, style = MaterialTheme.typography.bodyMedium)
+        Text(label.ifEmpty { e.note }, style = Rahal.type.body, color = Rahal.colors.ink)
         // **وتفصيلُ التحصيل** (يرسله الخادمُ منذ ٢٠٢٦-١٠-٢٦) — كم منها أجرةٌ وكم عمولة،
         // ومن أيّ متجر، **وأكان التوصيلُ مجانيّاً للزبون.**
         //
@@ -237,16 +247,16 @@ private fun CashRow(e: CashEntry) {
             }
         }
         if (parts.isNotEmpty()) {
-            Text(parts.joinToString(" · "), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+            Text(parts.joinToString(" · "), color = Rahal.colors.inkMuted, style = Rahal.type.caption)
         }
         // **والملاحظةُ لا تُكرّر الاسم** — تظهر إن قالت زيادة.
         if (e.note.isNotEmpty() && e.note != label) {
-            Text(e.note, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+            Text(e.note, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
         }
-        Text(timeText(e.createdAt), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
-        Spacer(Modifier.height(6.dp))
-        HorizontalDivider()
+        Text(timeText(e.createdAt), color = Rahal.colors.inkMuted, style = Rahal.type.meta)
     }
+    }
+    RahalDivider(inset = Rahal.size.iconBox + Rahal.space.md)
 }
 
 /**

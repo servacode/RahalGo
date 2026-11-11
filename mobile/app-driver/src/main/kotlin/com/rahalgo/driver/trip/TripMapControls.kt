@@ -33,9 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -61,7 +59,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.rahalgo.driver.R
 import com.rahalgo.ui.money
 import com.rahalgo.shared.model.DriverOrder
@@ -106,7 +103,7 @@ internal fun MapButtons(
     onVoice: () -> Unit = {},
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.Bottom,
     ) {
@@ -199,8 +196,8 @@ internal fun MapButton(
         // من ستٍّ إلى ثلاث**، وضاق ما بينها.
         Box(
             Modifier
-                .size(48.dp)
-                .shadow(3.dp, CircleShape)
+                .size(Rahal.size.touch)
+                .shadow(Rahal.elevation.card, CircleShape)
                 .clip(CircleShape)
                 .background(
                     when {
@@ -220,7 +217,7 @@ internal fun MapButton(
                     on -> Rahal.colors.onBrand
                     else -> Rahal.colors.ink
                 },
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(Rahal.icon.md),
             )
         }
         // **والشارةُ تطفو على حافّته** — كما في كلّ تطبيق: **ومن وضعها
@@ -230,14 +227,14 @@ internal fun MapButton(
                 Modifier
                     .clip(CircleShape)
                     .background(Rahal.colors.danger)
-                    .padding(horizontal = 6.dp, vertical = 1.dp),
+                    .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
             ) {
                 Text(
                     // **«9+» لا «+9»** — هكذا تُقرأ بالعربيّة.
                     text = if (badge > 9) "9+" else badge.toString(),
                     color = Rahal.colors.onPanel,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = Rahal.type.meta,
                 )
             }
         }
@@ -271,9 +268,9 @@ internal fun ReplayButton(
     ) {
         Text(
             text = if (running) com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.driver.R.string.replay_stop) else com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.driver.R.string.replay_start),
-            style = MaterialTheme.typography.labelMedium,
+            style = Rahal.type.label,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
         )
     }
 }

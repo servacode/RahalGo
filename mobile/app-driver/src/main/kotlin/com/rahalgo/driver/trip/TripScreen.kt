@@ -1,5 +1,6 @@
 package com.rahalgo.driver.trip
 
+import com.rahalgo.ui.RahalDivider
 import com.rahalgo.navigation.TripMap
 import com.rahalgo.navigation.MarkerIcons
 import androidx.compose.animation.AnimatedVisibility
@@ -43,9 +44,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -792,12 +791,12 @@ fun TripScreen(
                 Text(
                     text = stringResource(R.string.replay_banner),
                     color = Rahal.colors.canvas,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = Rahal.type.label,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = Rahal.space.sm)
                         .background(Rahal.colors.ink.copy(alpha = 0.85f), Rahal.shape.sm)
-                        .padding(horizontal = Rahal.space.md, vertical = 6.dp),
+                        .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
                 )
             }
         }
@@ -1014,10 +1013,10 @@ fun TripScreen(
             locating.problem?.let { why ->
                 androidx.compose.material3.Text(
                     text = com.rahalgo.ui.LocatingText.message(hereContext, why),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                     color = Rahal.colors.ink,
                     modifier = Modifier
-                        .padding(horizontal = 14.dp)
+                        .padding(horizontal = Rahal.space.md)
                         .clip(Rahal.shape.md)
                         .background(Rahal.colors.warnTint)
                         .clickable {
@@ -1216,7 +1215,7 @@ private fun OnRouteBanner(
             .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm)
             .clip(Rahal.shape.md)
             .background(Rahal.colors.brand)
-            .padding(14.dp),
+            .padding(Rahal.space.md),
     ) {
         Row(
             Modifier.fillMaxWidth(),
@@ -1262,7 +1261,7 @@ private fun OnRouteBanner(
                 if (offer.freeWaived > 0) " · " + stringResource(R.string.card_fee_free) else "",
             color = Color.White.copy(alpha = 0.9f),
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         // ══════════════════════════════════════════════════════════════
         // **«موافق» و«لاحقا» — لا «رفض»**
         // ══════════════════════════════════════════════════════════════
@@ -1281,7 +1280,7 @@ private fun OnRouteBanner(
         // «موافق» في الطلبات يتردّد أمام «خذ الطلب» في الرحلة.
         Row(
             Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
         ) {
             RahalButton(
                 onClick = onTake,
@@ -1311,7 +1310,7 @@ private fun OnRouteBanner(
             Text(
                 text = error,
                 color = Color.White,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -1337,17 +1336,17 @@ private fun StopsRow(stops: List<Stop>, current: String, onPick: (String) -> Uni
             val now = stop.id == current
             Box(
                 modifier = Modifier
-                    .clip(Rahal.shape.sm)
+                    .clip(Rahal.shape.pill)
                     .background(if (now) Rahal.colors.brand else Rahal.colors.field)
                     .clickable { onPick(stop.id) }
-                    .heightIn(min = 44.dp)
+                    .heightIn(min = Rahal.size.touch)
                     .padding(horizontal = Rahal.space.lg),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "#" + stop.number,
+                    text = com.rahalgo.driver.Bidi.isolate("#" + stop.number),
                     color = if (now) Rahal.colors.onBrand else Rahal.colors.inkMuted,
-                    fontWeight = if (now) FontWeight.Bold else FontWeight.Normal,
+                    style = if (now) Rahal.type.bodyStrong else Rahal.type.body,
                 )
             }
         }
@@ -1393,11 +1392,11 @@ private fun QuickAction(
     val tint = if (danger) Rahal.colors.danger else Rahal.colors.ink
     Column(
         modifier = modifier
-            .clip(Rahal.shape.sm)
+            .clip(Rahal.shape.md)
             .background(if (danger) Rahal.colors.danger.copy(alpha = 0.12f) else Rahal.colors.field)
-            .clickable(onClick = onClick)
-            .heightIn(min = 56.dp)
-            .padding(horizontal = Rahal.space.xs, vertical = 6.dp),
+            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+            .heightIn(min = Rahal.size.touch + Rahal.space.sm)
+            .padding(horizontal = Rahal.space.xs, vertical = Rahal.space.sm),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -1405,13 +1404,12 @@ private fun QuickAction(
             painter = painterResource(icon),
             contentDescription = stringResource(description),
             tint = tint,
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier.size(Rahal.icon.md),
         )
         Text(
             text = stringResource(label),
             color = tint,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
+            style = Rahal.type.badge,
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -1536,7 +1534,7 @@ private fun RoadClosureAction(onReport: (String) -> Unit, modifier: Modifier) {
                                     open = false
                                     onReport(key)
                                 }
-                                .padding(horizontal = 14.dp, vertical = Rahal.space.md),
+                                .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
                         )
                     }
                 }
@@ -1580,13 +1578,13 @@ private fun LiveCustomerNotice(state: TripState) {
         Text(
             text = if (state.livePrecise) line else line + stringResource(R.string.trip_live_approx),
             color = onGround(Rahal.colors.success),
-            style = MaterialTheme.typography.labelMedium,
+            style = Rahal.type.label,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .padding(vertical = Rahal.space.xs)
                 .clip(Rahal.shape.sm)
                 .background(Rahal.colors.success)
-                .padding(horizontal = Rahal.space.md, vertical = 6.dp),
+                .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
         )
     }
 }
@@ -1599,13 +1597,13 @@ internal fun TopNotice(text: String, ground: Color) {
         // ولا على الأخضر والأحمر والسماويّ المرفوعة فيها.
         color = onGround(ground),
         fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.bodyMedium,
+        style = Rahal.type.body,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs)
             .clip(Rahal.shape.md)
             .background(ground)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
     )
 }
 
@@ -1631,16 +1629,16 @@ private fun MapPill(
             .clip(Rahal.shape.sm)
             .background(ground)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .heightIn(min = 44.dp)
-            .padding(horizontal = 14.dp),
+            .heightIn(min = Rahal.size.touch)
+            .padding(horizontal = Rahal.space.md),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text,
             color = onGround(ground),
-            style = MaterialTheme.typography.labelMedium,
+            style = Rahal.type.label,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 6.dp),
+            modifier = Modifier.padding(vertical = Rahal.space.sm),
         )
     }
 }
@@ -1711,7 +1709,7 @@ private fun TripCard(
                     if (dy < -6f) TripCollapse.bottom = true
                 }
             }
-            .padding(horizontal = 20.dp, vertical = Rahal.space.md),
+            .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
     ) {
         // **ومقبضٌ يُرى** — شريطٌ رماديٌّ يقول «هذه تُسحب»، **وبطاقةٌ
         // تُسحب ولا تقول** لا يعرف أحدٌ أنّها تُسحب.
@@ -1723,7 +1721,7 @@ private fun TripCard(
                 .size(width = 44.dp, height = 5.dp)
                 .clickable { TripCollapse.bottom = !TripCollapse.bottom },
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.md))
 
         // ══════════════════════════════════════════════════════════════
         // **الطلبُ الخاصّ على خطوتين** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — الأجرةُ ثمّ (في المشتريات)
@@ -1927,9 +1925,9 @@ private fun TripCard(
                             ),
                             contentDescription = null,
                             tint = if (toCustomer) Rahal.colors.brand else Rahal.colors.accent,
-                            modifier = Modifier.size(22.dp),
+                            modifier = Modifier.size(Rahal.icon.md),
                         )
-                        Spacer(Modifier.size(6.dp))
+                        Spacer(Modifier.size(Rahal.space.sm))
                         Text(
                             // **والعنوان يقول الوجهة الحاليّة** — لا اسم الطلب:
                             // **من قرأ «طيف» وهو في طريقه للزبون** قرأ ما مضى.
@@ -1945,18 +1943,22 @@ private fun TripCard(
                                     ?.let { stringResource(R.string.trip_head_pickup, com.rahalgo.driver.Bidi.isolate(it)) }
                                     ?: stringResource(kindLabel(order))
                             },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            style = Rahal.type.sectionTitle,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     // **ونوعُه بجانب رقمه** (٢٠٢٦-١٠-١٢).
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("#${order.number}", color = Rahal.colors.inkMuted)
                         Text(
-                            stringResource(kindLabel(order)),
-                            color = Rahal.colors.accent,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodySmall,
+                            com.rahalgo.driver.Bidi.isolate("#${order.number}"),
+                            color = Rahal.colors.inkMuted,
+                            style = Rahal.type.meta,
+                        )
+                        Spacer(Modifier.height(Rahal.space.xxs))
+                        com.rahalgo.ui.Badge(
+                            text = stringResource(kindLabel(order)),
+                            tone = com.rahalgo.ui.StatusTone.Warning,
                         )
                     }
                 }
@@ -1972,7 +1974,7 @@ private fun TripCard(
                 // **ورقمُ الزبون لا يصل السائقَ أبداً** — حديثُه قرصٌ عائمٌ كذلك.
                 AnimatedVisibility(visible = expanded) {
                     Column(
-                        Modifier.fillMaxWidth().padding(top = 10.dp),
+                        Modifier.fillMaxWidth().padding(top = Rahal.space.md),
                         verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
                     ) {
                         val pickedUp = state.step >= TripStep.PICKED_UP
@@ -2195,22 +2197,19 @@ private fun TripCard(
                         // **وبعد الاستلام يختفي** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢): «بعدما نستلم الأمانة خلص
                         // يختفي المطلوب… يظل شقد بدنا نقبض وعنوانه».
                         if (order.kind == "custom" && order.customRequest.isNotEmpty() && !pickedUp) {
-                            Column(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(Rahal.shape.sm)
-                                    .background(Rahal.colors.warnTint)
-                                    .padding(Rahal.space.md),
+                            com.rahalgo.ui.RahalCard(
+                                variant = com.rahalgo.ui.CardVariant.Tinted,
+                                tone = com.rahalgo.ui.StatusTone.Warning,
                             ) {
                                 Text(
                                     text = stringResource(R.string.card_custom_what),
                                     color = Rahal.colors.inkMuted,
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = Rahal.type.label,
                                 )
                                 Spacer(Modifier.height(Rahal.space.xxs))
                                 Text(
                                     text = order.customRequest,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    style = Rahal.type.bodyLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = Rahal.colors.ink,
                                 )
@@ -2284,7 +2283,7 @@ private fun TripCard(
                             Text(
                                 customHint,
                                 color = if (awaitingConfirm) Rahal.colors.inkMuted else Rahal.colors.success,
-                                fontWeight = FontWeight.Bold,
+                                style = Rahal.type.bodyStrong,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth(),
                             )
@@ -2441,7 +2440,7 @@ private fun TripCard(
                                 stringResource(R.string.amanah_holder_line, order.holderName.ifBlank { "—" }, holder),
                                 color = Rahal.colors.ink,
                                 fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = Rahal.type.body,
                             )
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                                 ContactButton(
@@ -2504,6 +2503,7 @@ private fun TripCard(
             Text(
                 state.error,
                 color = Rahal.colors.danger,
+                style = Rahal.type.bodyStrong,
                 modifier = Modifier.padding(bottom = Rahal.space.sm),
             )
         }
@@ -2524,17 +2524,23 @@ internal fun replayLabAllowed(): Boolean =
 /** **زرُّ المرحلة** — كبيرٌ بعرض البطاقة، وهو ما يُضغط في تسعٍ من عشر. */
 @Composable
 private fun TripPrimary(label: Int, onClick: () -> Unit, enabled: Boolean, busy: Boolean, text: String? = null) {
-    RahalButton(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+    // **زرٌّ ضخمٌ يُضغط بالإبهام وهو على الدرّاجة** (إعادةُ التصميم ٢٠٢٦-١١-١١) — ٥٦ ارتفاعاً
+    // وخطُّ عنوان القسم، **ولا يقفز**: الدوّارةُ مكانَ الأيقونة بنفس المقاس.
+    RahalButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().heightIn(min = Rahal.size.touch + Rahal.space.sm),
+    ) {
         if (busy) {
-            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
+            CircularProgressIndicator(Modifier.size(Rahal.icon.md), strokeWidth = Rahal.stroke.focus, color = Rahal.colors.onBrand)
         } else {
             Icon(
                 painter = painterResource(R.drawable.ic_check_circle),
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(Rahal.icon.md),
             )
             Spacer(Modifier.width(Rahal.space.sm))
-            Text(text ?: stringResource(label), fontWeight = FontWeight.Bold)
+            Text(text ?: stringResource(label), style = Rahal.type.sectionTitle, textAlign = TextAlign.Center)
         }
     }
 }
@@ -2551,16 +2557,15 @@ private fun InfoBox(icon: Int, text: String, tint: Color, bold: Boolean = false)
             .fillMaxWidth()
             .clip(Rahal.shape.md)
             .background(tint.copy(alpha = 0.10f))
-            .padding(horizontal = Rahal.space.md, vertical = 10.dp),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(painter = painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(10.dp))
+        Icon(painter = painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(Rahal.icon.sm))
+        Spacer(Modifier.width(Rahal.space.md))
         Text(
             text,
             color = Rahal.colors.ink,
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-            style = MaterialTheme.typography.bodyMedium,
+            style = if (bold) Rahal.type.bodyStrong else Rahal.type.body,
             modifier = Modifier.weight(1f),
         )
     }
@@ -2578,27 +2583,26 @@ private fun InvoiceBox(order: DriverOrder) {
             .fillMaxWidth()
             .clip(Rahal.shape.md)
             .background(tint.copy(alpha = 0.10f))
-            .padding(horizontal = Rahal.space.md, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
+        verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 painter = painterResource(com.rahalgo.ui.R.drawable.ic_cart),
                 contentDescription = null,
                 tint = tint,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(Rahal.icon.sm),
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(Rahal.space.md))
             Text(
                 stringResource(R.string.trip_order_items),
                 color = Rahal.colors.ink,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.cardTitle,
             )
         }
         com.rahalgo.ui.InvoiceLines(driverInvoiceLines(order))
         driverInvoiceTotals(order)?.let { t ->
-            HorizontalDivider(color = Rahal.colors.ink.copy(alpha = 0.12f))
+            RahalDivider()
             com.rahalgo.ui.InvoiceRow(stringResource(R.string.trip_invoice_subtotal), money(t.subtotal))
             com.rahalgo.ui.InvoiceRow(
                 stringResource(R.string.trip_invoice_delivery),
@@ -2625,19 +2629,25 @@ private fun MoneyBox(label: String, amount: String, tint: Color) {
             .fillMaxWidth()
             .clip(Rahal.shape.md)
             .background(tint.copy(alpha = 0.12f))
-            .padding(horizontal = Rahal.space.md, vertical = 10.dp),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(painter = painterResource(R.drawable.ic_cash), contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(10.dp))
+        Icon(painter = painterResource(R.drawable.ic_cash), contentDescription = null, tint = tint, modifier = Modifier.size(Rahal.icon.md))
+        Spacer(Modifier.width(Rahal.space.md))
         Text(
             label,
             color = Rahal.colors.ink,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.bodyStrong,
             modifier = Modifier.weight(1f),
         )
         Spacer(Modifier.width(Rahal.space.sm))
-        Text(amount, color = tint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+        Text(
+            com.rahalgo.driver.Bidi.isolate(amount),
+            color = tint,
+            style = Rahal.type.priceLarge,
+            maxLines = 1,
+            softWrap = false,
+        )
     }
 }
 
@@ -2645,9 +2655,9 @@ private fun MoneyBox(label: String, amount: String, tint: Color) {
 @Composable
 private fun ContactButton(icon: Int, label: Int, modifier: Modifier, onClick: () -> Unit) {
     com.rahalgo.ui.RahalOutlineButton(tone = Tone.Success, modifier = modifier, onClick = onClick) {
-        Icon(painter = painterResource(icon), contentDescription = null, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(stringResource(label), fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        Icon(painter = painterResource(icon), contentDescription = null, modifier = Modifier.size(Rahal.icon.sm))
+        Spacer(Modifier.width(Rahal.space.sm))
+        Text(stringResource(label), style = Rahal.type.button, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
     }
 }
 
@@ -2668,33 +2678,44 @@ private fun dial(ctx: android.content.Context, phone: String) {
 
 @Composable
 private fun NoTrip(onOrders: () -> Unit, delivered: DeliveredSummary? = null) {
+    // **حالةٌ فارغةٌ بالقطعة الواحدة** (إعادةُ التصميم ٢٠٢٦-١١-١١) — وملخّصُ آخر تسليمٍ فوقها
+    // بطاقةٌ خضراءُ تقول «تمّ» قبل أن يُقرأ رقمُها.
     Column(
-        Modifier.fillMaxSize().padding(Rahal.space.xxl),
+        Modifier.fillMaxSize().padding(Rahal.space.gutter),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (delivered != null) {
-            Text(
-                text = stringResource(R.string.trip_delivered_summary, delivered.number, money(delivered.fee)),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Rahal.colors.success,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(14.dp))
+            com.rahalgo.ui.RahalCard(
+                variant = com.rahalgo.ui.CardVariant.Tinted,
+                tone = com.rahalgo.ui.StatusTone.Success,
+                padding = Rahal.space.lg,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_check_circle),
+                        contentDescription = null,
+                        tint = Rahal.colors.success,
+                        modifier = Modifier.size(Rahal.icon.lg),
+                    )
+                    Spacer(Modifier.width(Rahal.space.md))
+                    Text(
+                        text = stringResource(R.string.trip_delivered_summary, delivered.number, money(delivered.fee)),
+                        style = Rahal.type.cardTitle,
+                        color = Rahal.colors.success,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
         }
-        Text(
-            text = stringResource(R.string.trip_none),
-            style = MaterialTheme.typography.titleLarge,
+        com.rahalgo.ui.EmptyState(
+            title = stringResource(R.string.trip_none),
+            line = stringResource(R.string.trip_none_hint),
+            icon = R.drawable.ic_trip,
         )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.trip_none_hint),
-            color = Rahal.colors.inkMuted,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(18.dp))
-        RahalButton(onClick = onOrders) { Text(stringResource(R.string.nav_orders_all)) }
+        RahalButton(onClick = onOrders, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.nav_orders_all), style = Rahal.type.button)
+        }
     }
 }
 
@@ -2735,7 +2756,7 @@ private fun ReturnCard(
             .fillMaxWidth()
             .clip(Rahal.shape.sheet)
             .background(Rahal.colors.canvas)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
     ) {
         Row(
             Modifier.fillMaxWidth(),
@@ -2747,33 +2768,32 @@ private fun ReturnCard(
                     painter = painterResource(R.drawable.ic_store),
                     contentDescription = null,
                     tint = Rahal.colors.accent,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(Rahal.icon.md),
                 )
-                Spacer(Modifier.size(6.dp))
+                Spacer(Modifier.size(Rahal.space.sm))
                 Text(
                     text = returnTitle(order),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = Rahal.type.sectionTitle,
                 )
             }
-            Text("#${order.number}", color = Rahal.colors.inkMuted)
+            Text(com.rahalgo.driver.Bidi.isolate("#${order.number}"), color = Rahal.colors.inkMuted, style = Rahal.type.meta)
         }
         if (order.addressText.isNotBlank()) {
             Spacer(Modifier.height(Rahal.space.xs))
-            Text(text = cleanAddress(order.addressText), color = Rahal.colors.inkMuted)
+            Text(text = cleanAddress(order.addressText), color = Rahal.colors.inkMuted, style = Rahal.type.body)
         }
         if (!order.dropoffKnown) {
             Spacer(Modifier.height(Rahal.space.xs))
-            Text(text = stringResource(R.string.trip_return_no_point), color = Rahal.colors.inkMuted)
+            Text(text = stringResource(R.string.trip_return_no_point), color = Rahal.colors.inkMuted, style = Rahal.type.body)
         }
         if (state.error.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
-            Text(text = state.error, color = Rahal.colors.danger)
+            Spacer(Modifier.height(Rahal.space.sm))
+            Text(text = state.error, color = Rahal.colors.danger, style = Rahal.type.bodyStrong)
         }
         // **ولا «سلّمت البضاعة»** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «ما في تمّ التسليم، خلص يُعتبر الطلب
         // منتهي») — المشوارُ يُغلق وحدَه عند الوصول إلى المكتب (`watchArrival`). **والزرُّ يبقى
         // للمكتب غير المدبَّس وحدَه** — وإلّا بقي السائقُ معلّقاً بمشوارٍ لا نهايةَ له.
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         TripActionBar(order, state, actions)
         if (!order.dropoffKnown) {
             TripPrimary(
@@ -2844,13 +2864,12 @@ private fun DeliverConfirmDialog(
         text = {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 if (due) {
-                    Text(stringResource(R.string.deliver_confirm_due_body, who), color = Rahal.colors.inkMuted)
-                    Spacer(Modifier.height(10.dp))
+                    Text(stringResource(R.string.deliver_confirm_due_body, who), color = Rahal.colors.inkMuted, style = Rahal.type.body, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(Rahal.space.md))
                     Text(
-                        amount,
+                        com.rahalgo.driver.Bidi.isolate(amount),
                         color = CollectTint(),
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = Rahal.type.display,
                     )
                 } else {
                     Text(
@@ -2871,7 +2890,7 @@ private fun DeliverConfirmDialog(
                 )
                 // **كودُ التسليم يمليه الزبون** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — أربعةُ أرقامٍ لا يعرفها غيره.
                 if (needCode) {
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(Rahal.space.md))
                     Text(
                         stringResource(codeAsk),
                         fontWeight = FontWeight.Bold,
@@ -2882,7 +2901,7 @@ private fun DeliverConfirmDialog(
                         value = code,
                         onValueChange = { v -> code = v.filter { it.isDigit() }.take(4) },
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.headlineSmall.copy(
+                        textStyle = Rahal.type.headline.copy(
                             textAlign = TextAlign.Center,
                             fontWeight = FontWeight.Bold,
                         ),
@@ -2902,7 +2921,7 @@ private fun DeliverConfirmDialog(
             ) {
                 Text(
                     stringResource(if (due) R.string.deliver_confirm_due_yes else R.string.deliver_confirm_paid_yes),
-                    fontWeight = FontWeight.Bold,
+                    style = Rahal.type.button,
                 )
             }
         },

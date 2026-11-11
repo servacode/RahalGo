@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -54,7 +53,7 @@ fun TermsSheet(
                     .heightIn(max = 460.dp)
                     .verticalScroll(rememberScrollState()),
             ) {
-                Text(stringResource(R.string.terms_body), style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.terms_body), style = Rahal.type.body)
                 if (terms.clause.isNotBlank()) {
                     Spacer(Modifier.height(Rahal.space.md))
                     Column(
@@ -62,13 +61,13 @@ fun TermsSheet(
                             .fillMaxWidth()
                             .clip(Rahal.shape.md)
                             .background(Rahal.colors.brand.copy(alpha = 0.10f))
-                            .padding(14.dp),
+                            .padding(Rahal.space.md),
                     ) {
                         Text(
                             text = stringResource(R.string.terms_new_clause),
                             color = Rahal.colors.brand,
                             fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = Rahal.type.label,
                         )
                         Spacer(Modifier.height(Rahal.space.xs))
                         Text(terms.clause, fontWeight = FontWeight.Bold)
@@ -77,11 +76,11 @@ fun TermsSheet(
                 blocks.forEach { b ->
                     Spacer(Modifier.height(Rahal.space.md))
                     if (b.head.isNotEmpty()) {
-                        Text(b.head, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Text(b.head, style = Rahal.type.cardTitle, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(Rahal.space.xs))
                     }
                     b.body.forEach { p ->
-                        Text(p, style = MaterialTheme.typography.bodyMedium)
+                        Text(p, style = Rahal.type.body)
                     }
                 }
                 if (error.isNotEmpty()) {
