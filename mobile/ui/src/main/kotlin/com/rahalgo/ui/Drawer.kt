@@ -135,55 +135,36 @@ fun Drawer(
             Line(item, onPick)
         }
 
-        // **وصفحاتُ المنصّة والقانونيّةُ في عمودين** — خمسةُ بنودٍ في ثلاثة أسطر، فيبقى الدرجُ بلا تمرير
-        // مع الترويسة. (والتمريرُ ممنوعٌ بقرار المالك.)
+        // **وكلُّ بندٍ بسطرِه، بالحجم نفسِه من فوق لتحت** (ملاحظةُ المالك ٢٠٢٦-١١-١١: «لازم كل وحدة
+        // بسطر مو جامعهن هيك وباقي القائمة فارغة») — كانت صفحاتُ المنصّة والسمةُ والخروجُ في عمودين
+        // بخطٍّ أصغر، والدرجُ تحتها فارغ. **والدرجُ يسعها سطوراً بلا تمرير.**
         if (platform.isNotEmpty()) {
             Spacer(Modifier.height(Rahal.space.xxs))
             RahalDivider()
             Spacer(Modifier.height(Rahal.space.xxs))
-            platform.chunked(2).forEach { pair ->
-                Row(Modifier.fillMaxWidth()) {
-                    pair.forEach { item ->
-                        DrawerRow(
-                            icon = item.icon,
-                            label = stringResource(item.label),
-                            tint = Rahal.colors.brand,
-                            onClick = { onPick(item) },
-                            modifier = Modifier.weight(1f),
-                            compact = true,
-                        )
-                    }
-                    if (pair.size == 1) Spacer(Modifier.weight(1f))
-                }
-            }
+            platform.forEach { Line(it, onPick) }
         }
 
-        // **والسمةُ ثمّ الخروج — في سطرٍ واحدٍ بعمودين في القاع** (بعيداً عن طريق الإبهام).
+        // **والسمةُ ثمّ الخروج في القاع** (بعيداً عن طريق الإبهام).
         // **والأيقونةُ تُظهر الوجهةَ لا الحال** — هلالٌ يقول «انتقل إلى الغامقة»، وشمسٌ «عُد إلى الفاتحة».
         Spacer(Modifier.height(Rahal.space.xxs))
         RahalDivider()
         Spacer(Modifier.height(Rahal.space.xxs))
-        Row(Modifier.fillMaxWidth()) {
-            if (dark != null) {
-                DrawerRow(
-                    icon = if (dark) R.drawable.ic_theme_light else R.drawable.ic_theme,
-                    label = stringResource(if (dark) R.string.top_theme_light else R.string.top_theme),
-                    tint = Rahal.colors.inkMuted,
-                    onClick = onTheme,
-                    modifier = Modifier.weight(1f),
-                    compact = true,
-                )
-            }
+        if (dark != null) {
             DrawerRow(
-                icon = if (logoutLabel == null) R.drawable.ic_logout else R.drawable.ic_login,
-                label = stringResource(logoutLabel ?: R.string.login_logout),
-                tint = if (logoutLabel == null) Rahal.colors.danger else Rahal.colors.brand,
-                labelColor = if (logoutLabel == null) Rahal.colors.danger else Rahal.colors.brand,
-                onClick = onLogout,
-                modifier = Modifier.weight(1f),
-                compact = true,
+                icon = if (dark) R.drawable.ic_theme_light else R.drawable.ic_theme,
+                label = stringResource(if (dark) R.string.top_theme_light else R.string.top_theme),
+                tint = Rahal.colors.inkMuted,
+                onClick = onTheme,
             )
         }
+        DrawerRow(
+            icon = if (logoutLabel == null) R.drawable.ic_logout else R.drawable.ic_login,
+            label = stringResource(logoutLabel ?: R.string.login_logout),
+            tint = if (logoutLabel == null) Rahal.colors.danger else Rahal.colors.brand,
+            labelColor = if (logoutLabel == null) Rahal.colors.danger else Rahal.colors.brand,
+            onClick = onLogout,
+        )
         Spacer(Modifier.height(Rahal.space.xs))
     }
 }

@@ -44,10 +44,12 @@ import androidx.compose.ui.unit.dp
  * @param topSpace المسافةُ فوقَ الشعار.
  * @param bottomSpace المسافةُ تحتَه قبلَ العنوان.
  */
+// **والدخولُ يسع شاشةً واحدةً بلا تمرير** (ملاحظةُ المالك ٢٠٢٦-١١-١١: «انشاء حساب مختفية») —
+// شعارُ ١٤٠dp بمسافةٍ كبيرةٍ فوقه كان يدفع زرَّ «إنشاء حساب جديد» تحت الشريط السفليّ.
 @Composable
 fun AuthHeader(
-    logoSize: Dp = 140.dp,
-    topSpace: Dp = Rahal.space.xxl + Rahal.space.sm,
+    logoSize: Dp = 80.dp,
+    topSpace: Dp = Rahal.space.lg,
     bottomSpace: Dp = Rahal.space.xs + Rahal.space.xxs,
 ) {
     Spacer(Modifier.height(topSpace))

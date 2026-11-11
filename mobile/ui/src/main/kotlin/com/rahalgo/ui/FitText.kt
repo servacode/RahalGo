@@ -61,7 +61,10 @@ fun FitText(
     Layout(
         modifier = modifier
             .semantics { this.text = AnnotatedString(text) }
-            .drawBehind { last[0]?.let { drawText(it) } },
+            // **واللونُ يُمرَّر عند الرسم** (ملاحظةُ المالك ٢٠٢٦-١١-١١: «تسوق» تظلّ برتقاليّةً) —
+            // تبديلُ التبويب يغيّر اللونَ لا الحجم، فلا يُعاد القياس ويبقى المرسومُ بلونه القديم.
+            // **ولامدا جديدةٌ بلونٍ جديدٍ تُعيد الرسم.**
+            .drawBehind { last[0]?.let { drawText(it, color = ink) } },
         measurePolicy = policy,
     )
 }

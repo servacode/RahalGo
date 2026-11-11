@@ -110,21 +110,21 @@ fun AuthScreen(
             style = Rahal.type.screenTitle,
             fontWeight = FontWeight.Bold,
         )
-        Spacer(Modifier.height(Rahal.space.xl))
+        Spacer(Modifier.height(Rahal.space.lg))
 
         if (notice.isNotEmpty()) {
             Text(
                 text = notice,
                 color = Rahal.colors.ink,
-                fontWeight = FontWeight.Bold,
+                style = Rahal.type.body,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(Rahal.shape.sm)
                     .background(Rahal.colors.warnTint)
-                    .padding(Rahal.space.md),
+                    .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
             )
-            Spacer(Modifier.height(Rahal.space.lg))
+            Spacer(Modifier.height(Rahal.space.md))
         }
 
         AuthCard {
@@ -296,7 +296,7 @@ fun AuthScreen(
                 }
             }
         }
-        Spacer(Modifier.height(Rahal.space.xxl + Rahal.space.sm))
+        Spacer(Modifier.height(Rahal.space.lg))
     }
 }
 
