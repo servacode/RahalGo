@@ -190,7 +190,7 @@ type Order struct {
 	DeliveryFee   *int64  `json:"delivery_fee,omitempty"`
 
 	// StuckReason **سببُ العلوق أو غيابُه** — بشرط لوحة الطلبات
-	// (`orders.StuckReasonSQL`): `emergency` · `no_accept` · `not_sent` ·
+	// (`orders.StuckReasonSQL`): `emergency` · `no_accept` · `not_sent` · `wa_pickup` ·
 	// `no_driver` · `too_long`. **والأحمرُ على الخريطة منه وحدَه.**
 	StuckReason *string `json:"stuck_reason,omitempty"`
 

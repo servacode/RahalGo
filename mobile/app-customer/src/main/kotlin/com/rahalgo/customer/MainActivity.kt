@@ -72,6 +72,7 @@ import com.rahalgo.ui.WalletViewModel
 import com.rahalgo.ui.AccountScreen
 import com.rahalgo.ui.AccountViewModel
 import com.rahalgo.ui.Refresh
+import com.rahalgo.ui.RahalNavTab
 import com.rahalgo.ui.selectedAddress
 import com.rahalgo.ui.DeliveryAddress
 import com.rahalgo.ui.AddressHost
@@ -849,7 +850,7 @@ private fun SignedIn(
                 //
                 // **وقاعدةٌ تفصل الشريطين**: الأعلى أخبارٌ تُقرأ
                 // بنظرةٍ — رصيدٌ وجرس. **والأسفلُ أماكنُ يُنتقل إليها.**
-                NavigationBar {
+                com.rahalgo.ui.RahalNavigationBar {
                     // **وتسوّق أوّلا فهي في اليمين** — الشاشةُ من اليمين
                     // إلى اليسار، **وأوّلُ البنود أيمنُها.** ومن رتّبها
                     // بعينه رتّبها معكوسةً في العربيّة.
@@ -891,29 +892,17 @@ private fun SignedIn(
                     //
                     // **ولا تُعرض للزائر** (قرارُ المالك ٢٠٢٦-١٠-١٦): الزائرُ لا يضيف
                     // إلى السلّة أصلاً — «+» يطلب منه الدخول — **فتبويبُها له فارغٌ أبداً.**
-                    if (!guest) NavigationBarItem(
+                    // **والعددُ يطفو على الأيقونة** — `CountBadge` نفسُها التي في الجرس،
+                    // **ونسختان تفترقان يومَ يتبدّل شكلُ إحداهما.** **وبندُ الشريط المشترك
+                    // (`RahalNavTab`) كغيره** — كان هذا البندُ وحسابي بلا لونِ المختار
+                    // المشترك، فلا يُضيء اسمُهما كباقي البنود.
+                    if (!guest) Tab(
                         selected = tab == Tab.Cart && over == Overlay.None,
                         onClick = { tab = Tab.Cart; overlay.clear() },
-                        icon = {
-                            // **والعددُ يطفو على الأيقونة** — `CountBadge`
-                            // نفسُها التي في الجرس، **ونسختان تفترقان
-                            // يومَ يتبدّل شكلُ إحداهما.**
-                            Box {
-                                Icon(
-                                    painter = painterResource(
-                                        com.rahalgo.ui.R.drawable.ic_cart,
-                                    ),
-                                    contentDescription = null,
-                                )
-                                CountBadge(
-                                    count = com.rahalgo.customer.cart.Cart.count,
-                                    color = Rahal.colors.accent,
-                                    size = Rahal.icon.xs,
-                                    modifier = Modifier.align(Alignment.TopEnd),
-                                )
-                            }
-                        },
-                        label = { Text(stringResource(R.string.cart_title), maxLines = 1, softWrap = false) },
+                        icon = com.rahalgo.ui.R.drawable.ic_cart,
+                        label = R.string.cart_title,
+                        badge = com.rahalgo.customer.cart.Cart.count,
+                        badgeColor = Rahal.colors.accent,
                     )
 
                     // **وطلباتي بينهما** — يُفتح كثيراً بعد الطلب
@@ -971,29 +960,13 @@ private fun SignedIn(
                     // يدخل تسأل «حسابُ من؟».**
                     // **و«حسابي» للزائر بابُ الدخول أو إنشاء الحساب** (قرارُ المالك
                     // ٢٠٢٦-١٠-١٦: «حسابي تسجيل الدخول أو إنشاء حساب»).
-                    NavigationBarItem(
+                    Tab(
                         selected = tab == Tab.Account && over == Overlay.None,
                         onClick = { tab = Tab.Account; overlay.clear() },
-                        icon = {
-                            // ══════════════════════════════════════════
-                            // **وحسابي أيقونةُ شخصٍ لا صورةَ بروفايل**
-                            // ══════════════════════════════════════════
-                            //
-                            // (قرارُ المالك ٢٠٢٦-٠٨-٢٣: «أيقونةُ حسابي
-                            //  ألغِ اللوغو ووحّدها بشكلٍ مركزيٍّ مع
-                            //  المتجر والزبون والسائق والمندوب».)
-                            //
-                            // **وكان الشرطُ هنا: صورتُه إن رفعها
-                            // وأيقونةٌ إن لم يرفع** — **وشريطٌ يتبدّل
-                            // شكلُ بندٍ فيه من مستخدمٍ إلى مستخدمٍ لا
-                            // يُتعلَّم**: من رأى شاشةَ غيره لم يعرف
-                            // أيَّها حسابُه.
-                            Icon(
-                                painter = painterResource(com.rahalgo.ui.R.drawable.ic_user),
-                                contentDescription = null,
-                            )
-                        },
-                        label = { Text(stringResource(R.string.nav_profile), maxLines = 1, softWrap = false) },
+                        // **وحسابي أيقونةُ شخصٍ لا صورةَ بروفايل** (قرارُ المالك ٢٠٢٦-٠٨-٢٣:
+                        // «ألغِ اللوغو ووحّدها بشكلٍ مركزيٍّ مع المتجر والزبون والسائق والمندوب»).
+                        icon = com.rahalgo.ui.R.drawable.ic_user,
+                        label = R.string.nav_profile,
                     )
                 }
             },
@@ -1541,18 +1514,27 @@ private fun OverlayPage(title: String, onBack: () -> Unit, content: @Composable 
 
 /** **بندٌ برسمٍ واسم** — وثلاثةُ نسخٍ منه في شريطٍ واحدٍ حشوٌ يُنسخ. */
 @Composable
-private fun RowScope.Tab(selected: Boolean, onClick: () -> Unit, icon: Int, label: Int) {
+private fun RowScope.Tab(
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: Int,
+    label: Int,
+    badge: Int = 0,
+    badgeColor: androidx.compose.ui.graphics.Color = Rahal.colors.danger,
+) {
     // **وسمٌ ثابتٌ للأتمتة** (`SR-QA`) — اسمُ مورد اللافتة (nav_shop…) يظهر
     // `resource-id` عبر adb، فيُقاد التبويبُ آليّاً.
     val tag = LocalContext.current.resources.getResourceEntryName(label)
-    NavigationBarItem(
-        modifier = Modifier.testTag(tag),
+    // **والبندُ من الشريط المشترك** (`RahalNavTab`): لونُ المختار وخطُّه الغليظ واسمُه في سطرٍ
+    // واحدٍ يصغر ولا يُقصّ — موضعٌ واحدٌ لكلّ التطبيقات.
+    RahalNavTab(
         selected = selected,
         onClick = onClick,
-        icon = { Icon(painterResource(icon), contentDescription = null) },
-        // **سطرٌ واحدٌ دائماً (تدقيق D2)**: «طلب خاص» كانت تنكسر سطرين على ٣٦٠ بخطٍّ مكبَّر.
-        // **ويصغر بدل أن يُقصّ** (الفحصُ البصريّ ٢٠٢٦-١١-١١: «طلب خا…» على ٣٦٠ بخطٍّ ١٫٣).
-        label = { com.rahalgo.ui.FitText(stringResource(label), maxLines = 1) },
+        icon = icon,
+        label = label,
+        badge = badge,
+        modifier = Modifier.testTag(tag),
+        badgeColor = badgeColor,
     )
 }
 

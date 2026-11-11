@@ -57,8 +57,13 @@ fun RowScope.RahalNavTab(
     icon: Int,
     label: Int,
     badge: Int = 0,
+    /** **وسمُ الأتمتة وغيرُه** — يُمرَّر لبند الشريط. */
+    modifier: Modifier = Modifier,
+    /** **لونُ شارة العدد** — أحمرُ افتراضاً، والسلّةُ بلون العلامة. */
+    badgeColor: androidx.compose.ui.graphics.Color = Rahal.colors.danger,
 ) {
     NavigationBarItem(
+        modifier = modifier,
         selected = selected,
         onClick = onClick,
         icon = {
@@ -67,7 +72,7 @@ fun RowScope.RahalNavTab(
                 if (badge > 0) {
                     CountBadge(
                         count = badge,
-                        color = Rahal.colors.danger,
+                        color = badgeColor,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .offset(x = 8.dp, y = (-6).dp),

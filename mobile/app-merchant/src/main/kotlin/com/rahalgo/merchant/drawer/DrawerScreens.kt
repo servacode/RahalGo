@@ -51,6 +51,8 @@ import com.rahalgo.ui.Note
 import com.rahalgo.ui.Refreshable
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.money
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 /**
@@ -209,20 +211,27 @@ class MyReportsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun load() {
         viewModelScope.launch {
-            runCatching { items = api.myReports().reports }
-                .onFailure { error = err(it) }
-                .onSuccess { error = "" }
+            // **والنداءان معاً لا واحدٌ بعد واحد** — كانت `myReports` ثمّ `stores` ثمّ `reportsAgainst`
+            // على التوالي، فيتراكم زمنُ الشبكة الثلاثةُ قبل أن يرى شيئاً.
+            val (mine, agn) = coroutineScope {
+                val mineJob = async { runCatching { api.myReports().reports } }
+                val againstJob = async {
+                    runCatching {
+                        // **والفرعُ المختار** لا أوّلُ متجر (تقريرُ فحص المتجر).
+                        val id = com.rahalgo.merchant.SelectedStore.resolve(api.stores().stores)?.id.orEmpty()
+                        if (id.isNotEmpty()) api.reportsAgainst(id).reports else emptyList()
+                    }
+                }
+                mineJob.await() to againstJob.await()
+            }
+            mine.onSuccess { items = it; error = "" }.onFailure { error = err(it) }
             // **وما رُفع عليه زينةٌ حول الحال** — وعطبُه لا يحرمه من
             // رؤية شكاواه هو.
             // **وفشلُ «التي عليّ» يُقال** — كان يُبتلع صامتاً، **فتُعرض
             // «لا شكاوى عليك» والنداءُ لم يصل أصلاً.** ومن رآها اطمأنّ
             // إلى شيءٍ لم يُقرأ.
             againstError = ""
-            runCatching {
-                // **والفرعُ المختار** لا أوّلُ متجر (تقريرُ فحص المتجر).
-                val id = com.rahalgo.merchant.SelectedStore.resolve(api.stores().stores)?.id.orEmpty()
-                if (id.isNotEmpty()) against = api.reportsAgainst(id).reports
-            }.onFailure {
+            agn.onSuccess { against = it }.onFailure {
                 // **وكان يُحفظ ولا يُعرض** حين تكون عنده بلاغاتٌ رفعها هو —
                 // **فتُقرأ «لا شكاوى عليك» كاذبة.** (تقريرُ فحص المتجر.)
                 againstError = err(it)
@@ -235,9 +244,14 @@ class MyReportsViewModel(app: Application) : AndroidViewModel(app) {
 
 @Composable
 fun MyReportsScreen(vm: MyReportsViewModel) {
-    if (vm.loading || (vm.error.isNotEmpty() && vm.items.isEmpty())) {
+    // **هيكلُ القائمة المشترك لا شعارُ التحميل** — الشاشةُ قائمةٌ، فيرى شكلَها قبل بياناتها.
+    if (vm.loading) {
+        Screen { com.rahalgo.ui.SkeletonList(count = 4) }
+        return
+    }
+    if (vm.error.isNotEmpty() && vm.items.isEmpty()) {
         Screen {
-            LoadState(vm.loading, vm.error) { vm.load() }
+            LoadState(false, vm.error) { vm.load() }
         }
         return
     }

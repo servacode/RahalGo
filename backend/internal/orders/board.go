@@ -72,8 +72,19 @@ func NoAcceptSQL(l StuckLimits) string {
 //
 // (قِيس على التجهيز ٢٠٢٦-١٠-٠٤: ‎#1400‎ «مقبول» منذ ٣٢٣ دقيقة — **ولم يظهر إلّا
 // بعد ساعةٍ تحت «متأخّر جدّاً».**)
+//
+// **وأمانةُ الواتساب التي تنتظر موقعَ صاحبها لا متجرَ لها** — فلا تُعدّ «لم يُرسَل
+// للمتجر» (`WaPickupWaitSQL`).
 func NotSentSQL(l StuckLimits) string {
 	return `(o.status = 'accepted' AND o.sent_to_merchant_at IS NULL
+		AND NOT (o.wa_amanah AND o.pickup_override IS NULL)
+		AND COALESCE(o.accepted_at, o.created_at) < now() - ` + mins(l.AcceptMin) + `)`
+}
+
+// WaPickupWaitSQL **أمانةُ واتساب مقبولةٌ تنتظر موقعَ صاحب الأمانة** بعد المهلة نفسِها —
+// ليس لها متجرٌ تُرسَل إليه، وتنزل للسائقين وحدَها حين يصل الموقع (`wa_pickup_pending`).
+func WaPickupWaitSQL(l StuckLimits) string {
+	return `(o.status = 'accepted' AND o.wa_amanah AND o.pickup_override IS NULL
 		AND COALESCE(o.accepted_at, o.created_at) < now() - ` + mins(l.AcceptMin) + `)`
 }
 
@@ -96,8 +107,10 @@ const (
 	StuckEmergency = "emergency"
 	StuckNoAccept  = "no_accept"
 	StuckNotSent   = "not_sent"
-	StuckNoDriver  = "no_driver"
-	StuckTooLong   = "too_long"
+	// StuckWaPickup أمانةُ واتساب تنتظر موقعَ صاحب الأمانة (لا متجرَ لها).
+	StuckWaPickup = "wa_pickup"
+	StuckNoDriver = "no_driver"
+	StuckTooLong  = "too_long"
 )
 
 // StuckReasonSQL **سببُ علوق الطلب أو NULL** — المصدرُ الواحدُ للإنذار والصندوق
@@ -110,6 +123,7 @@ func StuckReasonSQL(l StuckLimits) string {
 		WHEN ` + EmergencyOpenSQL + ` THEN '` + StuckEmergency + `'
 		WHEN ` + NoAcceptSQL(l) + ` THEN '` + StuckNoAccept + `'
 		WHEN ` + NotSentSQL(l) + ` THEN '` + StuckNotSent + `'
+		WHEN ` + WaPickupWaitSQL(l) + ` THEN '` + StuckWaPickup + `'
 		WHEN ` + NoDriverSQL(l) + ` THEN '` + StuckNoDriver + `'
 		WHEN ` + TooLongSQL(l) + ` THEN '` + StuckTooLong + `'
 	END)`
@@ -123,6 +137,7 @@ func StuckSinceSQL(l StuckLimits) string {
 		WHEN '` + StuckEmergency + `' THEN COALESCE((SELECT min(de.created_at) FROM driver_emergencies de
 			WHERE de.order_id = o.id AND de.status = 'open'), o.created_at)
 		WHEN '` + StuckNotSent + `' THEN COALESCE(o.accepted_at, o.created_at)
+		WHEN '` + StuckWaPickup + `' THEN COALESCE(o.accepted_at, o.created_at)
 		WHEN '` + StuckNoDriver + `' THEN COALESCE(o.dispatched_at, o.updated_at)
 		ELSE o.created_at
 	END)`

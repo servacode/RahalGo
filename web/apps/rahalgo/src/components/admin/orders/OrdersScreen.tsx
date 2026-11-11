@@ -427,7 +427,7 @@ interface Alert {
   customer_phone: string;
   /** **مخفيّاً لمن لا يملك تفاصيلَ الزبون** — يحجبه الخادم (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧). */
   customer_phone_masked?: string;
-  reason: "emergency" | "no_accept" | "not_sent" | "no_driver" | "too_long";
+  reason: "emergency" | "no_accept" | "not_sent" | "wa_pickup" | "no_driver" | "too_long";
   minutes: number;
   /** **منذ متى يصدق السبب** — والدقائقُ تُعدّ منه حيّةً (المشكلة ١٩). */
   since?: string;
