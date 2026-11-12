@@ -52,6 +52,16 @@ class DriverTrial1112Test {
         assertTrue(sheet.contains(".heightIn(max = tall)") && sheet.contains(".fillMaxHeight()"))
     }
 
+    /** **دردشةُ الرحلة بالمكوّن المشترك نفسِه** — لا حقلٌ ولا قائمةٌ خاصّان بالسائق. */
+    @Test
+    fun `trip chat uses the shared list and composer`() {
+        val sheet = src("src/main/kotlin/com/rahalgo/driver/trip/ChatSheet.kt")
+        assertTrue(sheet.contains("com.rahalgo.ui.ChatMessageList("))
+        assertTrue(sheet.contains("com.rahalgo.ui.ChatComposer("))
+        assertFalse("حقلُ كتابةٍ خاصٌّ بالسائق رجع", sheet.contains("OutlinedTextField("))
+        assertFalse("قائمةٌ خاصّةٌ بالسائق رجعت", sheet.contains("LazyColumn("))
+    }
+
     @Test
     fun `chat button says darsha not hadith`() {
         val strings = src("src/main/res/values/strings.xml")

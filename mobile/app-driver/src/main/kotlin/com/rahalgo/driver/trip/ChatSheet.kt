@@ -5,9 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import com.rahalgo.design.Rahal
-import com.rahalgo.ui.chatDay
-import com.rahalgo.ui.ChatDayChip
-import com.rahalgo.ui.ChatBubble
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,13 +17,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,7 +33,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.rahalgo.driver.R
 import com.rahalgo.shared.model.ChatMessage
@@ -124,37 +115,13 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                 modifier = Modifier.fillMaxWidth().padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
             )
         }
-        LazyColumn(
-            // **والقائمةُ تملأ ما بين العنوان والكتابة وتمرّر داخلها** — والكتابةُ مثبّتةٌ تحت.
+        // **والقائمةُ نفسُها في كلّ التطبيقات** (`ui/ChatConversation.kt`، قرارُ المالك ٢٠٢٦-١١-١٢) —
+        // تملأ ما بين العنوان والكتابة وتمرّر داخلها، والكتابةُ مثبّتةٌ تحت. ولكلّ رسالةٍ وقتُها
+        // ولكلّ يومٍ تاريخُه (قرارُ المالك ٢٠٢٦-٠٨-١٢: إثباتٌ بالوقت للشكاوى).
+        com.rahalgo.ui.ChatMessageList(
+            state.messages,
             Modifier.weight(1f).fillMaxWidth().padding(horizontal = Rahal.space.md),
-            // **والأحدث في الأسفل** — كما في كلّ حديث، **ويُقلب الترتيب
-            // ليبقى آخرُه أمام العين.**
-            reverseLayout = true,
-        ) {
-            // ══════════════════════════════════════════════════════════
-            // **ولكلّ رسالةٍ وقتُها ولكلّ يومٍ تاريخُه**
-            // ══════════════════════════════════════════════════════════
-            //
-            // (قرار المالك ٢٠٢٦-٠٨-١٢: «يجب ذكر الوقت وتاريخ الرسالة
-            //  كإثبات بالوقت من أجل الشكاوى والنزاعات».)
-            //
-            // **وشكوى «قلتُ له وما ردّ» تُحسم بالساعة لا بالكلام**:
-            // «كتبتُ ٣:٢٠ وردّ ٣:٥٥» جوابٌ، **و«كتبتُ له» ليست جوابا.**
-            //
-            // **والتاريخ سطرٌ لليوم لا رقمٌ في كلّ فقاعة**: عشرون رسالةً
-            // في ساعةٍ تحمل تاريخا واحدا، **وتكرارُه في كلٍّ منها** يدفن
-            // النصَّ في أرقام.
-            val ordered = state.messages.asReversed()
-            itemsIndexed(ordered) { i, message ->
-                Column(Modifier.fillMaxWidth()) {
-                    val older = ordered.getOrNull(i + 1)
-                    if (older == null || chatDay(older.createdAt) != chatDay(message.createdAt)) {
-                        ChatDayChip(chatDay(message.createdAt))
-                    }
-                    ChatBubble(message)
-                }
-            }
-        }
+        )
 
         if (state.open) {
             // ══════════════════════════════════════════════════════════
@@ -227,37 +194,17 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             // ══════════════════════════════════════════════════════════
             // **وصورةٌ ورسالةٌ صوتيّة** (قرارُ المالك ٢٠٢٦-١١-١٢) — وهو يقود، الصوتُ أسهلُ من الكتابة.
             // ══════════════════════════════════════════════════════════
-            val voice = com.rahalgo.ui.rememberChatVoiceState()
-            com.rahalgo.ui.ChatVoiceHint(
-                voice,
-                Modifier.fillMaxWidth().padding(start = Rahal.space.md, end = Rahal.space.md, top = Rahal.space.sm),
+            // **وشريطُ الكتابة نفسُه في كلّ التطبيقات** (`ui/ChatConversation.kt`) — صورةٌ وحقلٌ
+            // ومايكٌ مكانَ «إرسال»، ومفتاحُ اللوحة يُرسل (قرارُ المالك ٢٠٢٦-٠٨-١٢).
+            com.rahalgo.ui.ChatComposer(
+                draft = draft,
+                onDraft = { draft = it },
+                busy = state.busy,
+                onSend = send,
+                onPhoto = actions.sendPhoto,
+                onVoice = actions.sendVoice,
+                modifier = Modifier.fillMaxWidth().padding(Rahal.space.md),
             )
-            Row(
-                Modifier.fillMaxWidth().padding(start = Rahal.space.sm, end = Rahal.space.md),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                com.rahalgo.ui.ChatPhotoButton(enabled = !state.busy) { actions.sendPhoto(it) }
-                com.rahalgo.ui.ChatMicButton(voice, enabled = !state.busy) { bytes, ms -> actions.sendVoice(bytes, ms) }
-            OutlinedTextField(
-                value = draft,
-                onValueChange = { draft = it },
-                placeholder = { Text(stringResource(R.string.chat_hint)) },
-                modifier = Modifier.weight(1f).padding(start = Rahal.space.sm, top = Rahal.space.md, bottom = Rahal.space.md),
-                singleLine = true,
-                shape = Rahal.shape.lg,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = { send() }),
-                trailingIcon = {
-                    IconButton(onClick = send, enabled = draft.isNotBlank() && !state.busy) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_arrow_send),
-                            contentDescription = stringResource(R.string.chat_send),
-                            tint = if (draft.isBlank()) Rahal.colors.inkMuted else Rahal.colors.brand,
-                        )
-                    }
-                },
-            )
-            }
         } else {
             // **وحديثٌ مغلقٌ يُقال إنّه مغلق** — لا حقلُ كتابةٍ لا يعمل.
             Text(

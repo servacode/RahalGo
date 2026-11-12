@@ -13,14 +13,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -494,26 +492,9 @@ fun OrderChatSheet(
                             //
                             // **ويُنزَل عند كلّ رسالةٍ جديدةٍ أيضاً** —
                             // **ورسالةٌ تصل تحت الطيّة كأنّها لم تصل.**
-                            val scroll = rememberScrollState()
-                            LaunchedEffect(vm.messages.size) {
-                                // **وبلا حركةٍ عند الفتح** — القفزُ
-                                // المتحرّكُ من أوّل الحديث إلى آخره
-                                // **يُقرأ ارتجافا.**
-                                scroll.scrollTo(scroll.maxValue)
-                            }
-                            Column(
-                                Modifier.fillMaxWidth().verticalScroll(scroll),
-                            ) {
-                                // **وفاصلُ اليوم بين رسائل أيّامٍ مختلفة** (بتوقيت دمشق) — فلا تُقرأ
-                                // ٣:٠٥ اليوم بعد ٣:٢٩ أمس كأنّها من يومٍ واحد.
-                                vm.messages.forEachIndexed { i, m ->
-                                    val day = chatDay(m.createdAt)
-                                    if (i == 0 || chatDay(vm.messages[i - 1].createdAt) != day) {
-                                        ChatDayChip(day)
-                                    }
-                                    ChatBubble(m)
-                                }
-                            }
+                            // **والقائمةُ نفسُها في كلّ التطبيقات** (`ChatConversation.kt`) —
+                            // `reverseLayout` يُبقي الأحدثَ أمام العين عند الفتح ومع كلّ رسالة.
+                            ChatMessageList(vm.messages, Modifier.fillMaxWidth().fillMaxHeight())
                         }
                     }
                 }
@@ -527,37 +508,19 @@ fun OrderChatSheet(
                 // تحته يقبل الكتابة، **ثمّ لا يحدث شيء.** **وحقلٌ يُكتب فيه
                 // ولا يُرسل يُقرأ عطباً** — فسطرٌ واحدٌ يقول إنّها انتهت.
                 if (chatCanWrite(vm.head)) {
-                    val voice = rememberChatVoiceState()
-                    ChatVoiceHint(voice, Modifier.fillMaxWidth().padding(bottom = Rahal.space.xs))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // **صورةٌ وصوت** (قرارُ المالك ٢٠٢٦-١١-١٢) — بجانب الحقل.
-                        ChatPhotoButton(enabled = !vm.busy) { vm.sendPhoto(orderId, it) }
-                        OutlinedTextField(
-                            value = draft,
-                            // **وبحدّ المحرّك** — انظر `TextLimits`.
-                            onValueChange = { draft = TextLimits.fit(it, TextLimits.CHAT_BODY) },
-                            placeholder = { Text(stringResource(R.string.chat_write)) },
-                            singleLine = true,
-                            shape = Rahal.shape.pill,
-                            modifier = Modifier.weight(1f),
-                        )
-                        // **والمايك مكانَ «إرسال» ما دام الحقلُ فارغاً** — كما في كلّ تطبيق محادثة.
-                        if (draft.isBlank() || voice.recording) {
-                            ChatMicButton(voice, enabled = !vm.busy) { bytes, ms -> vm.sendVoice(orderId, bytes, ms) }
-                        } else {
-                            RahalButton(
-                                onClick = {
-                                    vm.send(orderId, draft)
-                                    draft = ""
-                                },
-                                enabled = !vm.busy && draft.isNotBlank(),
-                                compact = true,
-                            ) { Text(stringResource(R.string.chat_send)) }
-                        }
-                    }
+                    // **وشريطُ الكتابة نفسُه في كلّ التطبيقات** (`ChatConversation.kt`، قرارُ المالك ٢٠٢٦-١١-١٢).
+                    ChatComposer(
+                        draft = draft,
+                        onDraft = { draft = it },
+                        busy = vm.busy,
+                        onSend = {
+                            vm.send(orderId, draft)
+                            draft = ""
+                        },
+                        onPhoto = { vm.sendPhoto(orderId, it) },
+                        onVoice = { bytes, ms -> vm.sendVoice(orderId, bytes, ms) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 } else {
                     Text(
                         text = stringResource(R.string.chat_ended),
