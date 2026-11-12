@@ -547,7 +547,7 @@ private fun OrderCard(
                 else com.rahalgo.driver.Bidi.isolate(order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) }),
             ),
             value = if (amanahPoint) "" else order.pickupAddress,
-            far = legDistanceText(order.toPickupM),
+            far = approxDistanceText(order.toPickupM),
             // **والزمن بجانب المسافة** — (قرار المالك ٢٠٢٦-٠٨-١٢).
             //
             // **والمسافة وحدها لا تقرّر**: «٣ كم» تعني ربع ساعة في زحمة
@@ -565,10 +565,20 @@ private fun OrderCard(
                 com.rahalgo.driver.trip.customerShownName(order.customerName) ?: stringResource(R.string.card_customer),
             ),
             value = com.rahalgo.driver.trip.cleanAddress(order.addressText),
-            far = legDistanceText(order.legM),
+            far = approxDistanceText(order.legM),
             mins = legEta(order.legM, avgSpeedKmh),
             tint = Rahal.colors.accent,
         )
+        // **ومسافاتُ البطاقة بخطٍّ مستقيمٍ تُقال كذلك** (تجربةُ المالك ٢٠٢٦-١١-١٢): البطاقةُ
+        // قالت «371 م · 4 دقائق» وشاشةُ الرحلة «1.1 كم · 13 د» على الطريق — فظنّ السائقُ
+        // أنّ الرقم غلط. **فيُكتب «≈» ويُقال بسطرٍ واحدٍ أنّ الطريق يظهر بالرحلة.**
+        if (approxDistanceText(order.toPickupM).isNotEmpty() || approxDistanceText(order.legM).isNotEmpty()) {
+            Text(
+                stringResource(R.string.card_dist_approx),
+                color = Rahal.colors.inkMuted,
+                style = Rahal.type.caption,
+            )
+        }
 
         Spacer(Modifier.height(Rahal.space.md))
         // **والصناديق متساوية الارتفاع** — `IntrinsicSize.Min` تقيسها
@@ -976,6 +986,13 @@ private fun distance(meters: Double): String = dist(meters)
  * أقلّ من متر.** فلا يُكتب «(0 م)» — يُحذف القوسان معه.
  */
 internal fun legDistanceText(meters: Double): String = if (meters >= 1.0) dist(meters) else ""
+
+/**
+ * **مسافةُ بطاقة العرض تقريبيّة** — `to_pickup_m` و`leg_m` بخطٍّ مستقيم من الخادم، لا على الطريق
+ * (تجربةُ المالك ٢٠٢٦-١١-١٢). **فتُسبق بـ«≈»** ليعرف السائقُ أنّ الطريق أطول.
+ */
+internal fun approxDistanceText(meters: Double): String =
+    legDistanceText(meters).let { if (it.isEmpty()) it else "≈ " + it }
 
 /**
  * **حال الطلب بالعربيّة.**

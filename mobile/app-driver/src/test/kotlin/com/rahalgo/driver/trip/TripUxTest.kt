@@ -1,5 +1,6 @@
 package com.rahalgo.driver.trip
 
+import com.rahalgo.driver.orders.approxDistanceText
 import com.rahalgo.driver.orders.legDistanceText
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -27,6 +28,18 @@ class TripUxTest {
         assertEquals("", legDistanceText(-1.0))
         assertEquals("56 م", legDistanceText(56.0))
         assertEquals("1.4 كم", legDistanceText(1400.0))
+    }
+
+    /** **بطاقةُ العرض بخطٍّ مستقيم — تُقال تقريبيّة** (تجربةُ المالك ٢٠٢٦-١١-١٢). */
+    @Test
+    fun `offer card distance is marked approximate`() {
+        assertEquals("≈ 371 م", approxDistanceText(371.0))
+        assertEquals("", approxDistanceText(-1.0))
+        val src = File("src/main/kotlin/com/rahalgo/driver/orders/OrdersScreen.kt").takeIf { it.exists() }
+            ?: File("app-driver/src/main/kotlin/com/rahalgo/driver/orders/OrdersScreen.kt")
+        val text = src.readText()
+        assertTrue("البطاقة تكتب المسافة بلا «≈»", !text.contains("far = legDistanceText("))
+        assertTrue("سطرُ «تقريبية» غائب", text.contains("R.string.card_dist_approx"))
     }
 
     @Test

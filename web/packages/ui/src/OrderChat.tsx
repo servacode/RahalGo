@@ -368,36 +368,23 @@ export function OrderChat({
               ) : (
                 <p className="whitespace-pre-wrap break-words">{x.body}</p>
               )}
+              {/* **والوقتُ وعلامتا القراءة داخلَ الفقّاعة في طرفها** — كفقاعة التطبيقات (`ChatBubble.kt`،
+                  قرارُ المالك ٢٠٢٦-١١-١٢: الدردشةُ واحدةٌ في كلّ مكان). صحٌّ واحدٌ «وصلت»، وصحّان «قرأها»
+                  (قرارُ المالك ٢٠٢٦-٠٨-١٠)، **ولمن أرسل وحدَه.** */}
+              <p
+                className={`mt-0.5 flex items-center justify-end gap-1 text-2xs ${
+                  x.mine ? "opacity-75" : "text-ink-muted"
+                }`}
+              >
+                <span dir="ltr">{fmtTime(x.created_at)}</span>
+                {x.mine &&
+                  (x.read_at ? (
+                    <IconCheckAll size={14} aria-label={C.seen} />
+                  ) : (
+                    <IconCheck size={14} className="opacity-60" aria-label={C.sent} />
+                  ))}
+              </p>
             </div>
-            {/* **والوقتُ تحت الفقّاعة لا فيها** — **رمادِيٌّ داخلَ لونٍ
-                مصمتٍ يسقط تباينُه**، ويُقرأ الوقتُ جزءاً من الكلام. */}
-            <p className="mt-1 flex items-center gap-1 px-1 text-2xs text-ink-muted">
-              <span dir="ltr">{fmtTime(x.created_at)}</span>
-              {/* ══════════════════════════════════════════════════════
-                  **وعلامتان لا كلمة**
-                  ══════════════════════════════════════════════════════
-
-                  (قرارُ المالك ٢٠٢٦-٠٨-١٠: «إشارتين صح زرقاء مثل الواتساب».)
-
-                  **كانت كلمةَ «قُرئت»** — تُقرأ فتُشغل موضعَ كلمة، **ومن
-                  ينظر إلى عشرين سطراً لا يقرأ عشرين كلمة.** والعلامةُ
-                  تُدرَك بلا قراءة.
-
-                  **وحالتان لا ثلاث**: صحٌّ واحدٌ «وصلت الخادمَ»، وصحّان
-                  زرقاوان «قرأها». **ولا حالةَ وسطى** — لا نعرف متى بلغت
-                  جهازَه ولم يفتحها بعد، **وعلامةٌ نضعها بلا أن نعرف كذبٌ
-                  يُبنى عليه**: من رآها ظنّ أنّ الرسالةَ في يده وهي في
-                  الشبكة.
-
-                  **ولمن أرسل وحدَه** — ولا معنى لها عند المتلقّي: يعرف
-                  أنّه قرأ. */}
-              {x.mine &&
-                (x.read_at ? (
-                  <IconCheckAll size={14} className="text-info" aria-label={C.seen} />
-                ) : (
-                  <IconCheck size={14} className="text-ink-muted" aria-label={C.sent} />
-                ))}
-            </p>
           </div>
           </div>
         ))
@@ -445,8 +432,29 @@ export function OrderChat({
         e.preventDefault();
         void submit();
       }}
-      className="mt-2 flex items-end gap-1.5 surface-inset rounded-badge py-1 pe-1 ps-3"
+      className="mt-2 flex items-end gap-1.5 surface-inset rounded-badge p-1"
     >
+      {/* **والأيقونةُ داخلَ الشريط لا بجانبه** — **وزرٌّ خارجَه يزيد جسماً
+          ثالثاً في سطرٍ فيه اثنان.**
+
+          **وتخفت حتّى يُكتب شيء**: قرصٌ مضيءٌ فوق حقلٍ فارغٍ يدعو إلى ضغطةٍ
+          لا تفعل. */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => onPhoto(e.target.files?.[0])}
+      />
+      <button
+        type="button"
+        disabled={busy || recording}
+        onClick={() => fileRef.current?.click()}
+        aria-label={C.photo}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-badge text-accent disabled:opacity-40"
+      >
+        <IconPhoto size={19} />
+      </button>
       <textarea
         ref={boxRef}
         rows={1}
@@ -471,30 +479,11 @@ export function OrderChat({
         }}
         placeholder={C.placeholder}
         maxLength={500}
-        className="max-h-24 flex-1 resize-none bg-transparent py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
+        className="max-h-24 flex-1 resize-none bg-transparent px-1 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
       />
-      {/* **والأيقونةُ داخلَ الشريط لا بجانبه** — **وزرٌّ خارجَه يزيد جسماً
-          ثالثاً في سطرٍ فيه اثنان.**
-
-          **وتخفت حتّى يُكتب شيء**: قرصٌ مضيءٌ فوق حقلٍ فارغٍ يدعو إلى ضغطةٍ
-          لا تفعل. */}
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        hidden
-        onChange={(e) => onPhoto(e.target.files?.[0])}
-      />
-      <button
-        type="button"
-        disabled={busy || recording}
-        onClick={() => fileRef.current?.click()}
-        aria-label={C.photo}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-badge text-ink-muted disabled:opacity-40"
-      >
-        <IconPhoto size={19} />
-      </button>
-      {canRecord && (
+      {/* **والمايكُ مكانَ «إرسال» ما دام الحقلُ فارغاً** — الترتيبُ نفسُه في التطبيقات
+          (`ChatConversation.kt`): صورة · حقل · مايك/إرسال. */}
+      {canRecord && (recording || !draft.trim()) ? (
         <button
           type="button"
           disabled={busy && !recording}
@@ -502,12 +491,12 @@ export function OrderChat({
           aria-label={recording ? C.sendVoice : C.voice}
           title={recording ? C.sendVoice : C.voice}
           className={`flex h-9 w-9 shrink-0 touch-none select-none items-center justify-center rounded-badge disabled:opacity-40 ${
-            recording ? "bg-danger-solid text-on-bright" : "text-ink-muted"
+            recording ? "bg-danger-solid text-on-bright" : "bg-field text-accent"
           }`}
         >
-          <IconMic size={19} />
+          {recording ? <IconCheck size={19} /> : <IconMic size={19} />}
         </button>
-      )}
+      ) : (
       <button
         type="submit"
         disabled={busy || !draft.trim()}
@@ -522,6 +511,7 @@ export function OrderChat({
             العربيّة يُقرأ رجوعاً لا إرسالاً.** */}
         <IconSend size={17} className="rtl:-scale-x-100" />
       </button>
+      )}
     </form>
     </>
   ) : (

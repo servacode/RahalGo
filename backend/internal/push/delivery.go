@@ -360,6 +360,11 @@ func (s *Service) attempt(ctx context.Context, j deliveryJob) outcome {
 		TTL:      ttl,
 		Collapse: j.Collapse,
 	}
+	// **وأجلُ الخبر يُقال للتطبيق** (تجربةُ المالك ٢٠٢٦-١١-١٢) — فيرنّ تنبيهُ
+	// العرض بإلحاحٍ حتّى ينقضي ثمّ يسكت وحدَه، لا يرنّ بعد موت العرض.
+	if j.ExpiresAt != nil {
+		msg.Data["expires_at"] = j.ExpiresAt.UTC().Format(time.RFC3339)
+	}
 	dead, err := t.Send(ctx, []string{j.Token}, msg)
 
 	switch {

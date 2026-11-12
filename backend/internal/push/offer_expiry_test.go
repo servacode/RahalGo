@@ -72,6 +72,14 @@ func TestOfferPush_UrgentWithTTLAndCollapse(t *testing.T) {
 	if msg.Data["kind"] != "order_offer" {
 		t.Errorf("النوعُ في الحمولة %q — والتطبيقُ يعرف `order_offer` عاجلاً", msg.Data["kind"])
 	}
+	// **وأجلُ العرض في الحمولة** (٢٠٢٦-١١-١٢) — فيسكت تنبيهُ السائق المُلحّ بموت العرض.
+	exp, err := time.Parse(time.RFC3339, msg.Data["expires_at"])
+	if err != nil {
+		t.Fatalf("أجلُ العرض غائبٌ عن الحمولة (%q) — فيرنّ التنبيهُ بعد موت العرض", msg.Data["expires_at"])
+	}
+	if d := time.Until(exp); d <= 0 || d > 61*time.Second {
+		t.Errorf("أجلُ العرض في الحمولة بعد %v — والمتوقّعُ ما بقي من الدقيقة", d)
+	}
 }
 
 // TestOfferPush_ExpiredIsNotSent **عرضٌ مات لا يُرسَل.**

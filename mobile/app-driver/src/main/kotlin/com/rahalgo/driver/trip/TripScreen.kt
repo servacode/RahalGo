@@ -1106,7 +1106,7 @@ fun TripScreen(
             // **والأزرارُ فوقه تبقى** — أيقونةُ الحديث هي البابُ نفسُه:
             // **تُضغط فيُفتح وتُضغط فيُطوى.**
             if (chat != null) {
-                ChatSheet(state = chat, actions = chatActions)
+                ChatSheet(state = chat, actions = chatActions, modifier = Modifier.weight(1f, fill = false))
             } else {
                 TripCard(order = order, state = state, actions = actions, modifier = Modifier.weight(1f, fill = false))
             }
