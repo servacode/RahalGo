@@ -154,6 +154,8 @@ func (s *Server) autoTransfer(ctx context.Context, orderID, actorID string) {
 					"order", orderID, "error", e)
 			}
 		}
+		// **وتطبيقُ المتجر يرنّ مع التحويل** (تجربةُ المالك ٢٠٢٦-١١-١٢).
+		s.orders.NotifyMerchantHandoff(ctx, orderID, "")
 	}
 
 	// **والآن — لا قبل الآن — يُستدعى السائق.**
@@ -216,6 +218,8 @@ func (s *Server) autoTransferParts(ctx context.Context, orderID, actorID string)
 		if _, err := s.orders.MarkPartSent(ctx, "", orderID, tk.merchantID, "whatsapp"); err != nil {
 			s.logger.Error("التحويلُ التلقائيّ: تعذّر وسمُ إرسال قسم", "order", orderID,
 				"merchant", tk.merchantID, "error", err)
+		} else {
+			s.orders.NotifyMerchantHandoff(ctx, orderID, tk.merchantID)
 		}
 		s.touch("order", "merchant:"+tk.merchantID)
 	}

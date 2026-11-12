@@ -54,6 +54,15 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     /**
+     * **الطلباتُ الجاريةُ للقراءة — لبطاقة «عندك طلب» في «متجري»** (تجربةُ المالك ٢٠٢٦-١١-١٢).
+     *
+     * **في وضع المنصّة لا تبويبَ طلبات** والمحرّكُ يحجب الجاريةَ عن `orders` — فكان لا يعرف
+     * أنّ طلباً وصله. **فتُقرأ من السجلّ** (`with_active`) وتُرشَّح على غير المنتهية.
+     */
+    var active by mutableStateOf<List<MerchantOrder>>(emptyList())
+        private set
+
+    /**
      * **أيدير المتجرُ طلباتِه بنفسه؟** — `platform.orders_mode`.
      *
      * **يأتي مع المتاجر في النداء نفسِه** (`self_manage_orders`) —
@@ -140,6 +149,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             store = mine
             // **والجاريةُ وحدَها** (تدقيقُ ٢٠٢٦-١٠-٢٧) — والمنتهي في «سجلّ الطلبات».
             orders = api.orders(mine.id, openOnly = true).orders
+            active = if (page.selfManageOrders) orders else
+                runCatching { api.history(mine.id).orders.filter { it.status !in FINAL_STATUSES } }
+                    .getOrDefault(active)
             error = ""
         }.onFailure {
             // **وإخفاقُ إنعاشٍ لا يمسح ما على الشاشة** — **قائمةٌ تختفي
@@ -250,3 +262,6 @@ private fun lastKnownSelfManage(): Boolean =
 private fun rememberSelfManage(value: Boolean) {
     runCatching { prefs().edit().putBoolean(SELF_MANAGE_KEY, value).apply() }
 }
+
+/** **حالاتٌ لا رجعةَ منها** — طلبٌ فيها ليس «جارياً». */
+private val FINAL_STATUSES = setOf("delivered", "rejected", "cancelled", "failed", "refunded")

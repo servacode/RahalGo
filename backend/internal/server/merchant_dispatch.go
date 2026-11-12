@@ -346,9 +346,13 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 		s.audit(r, "ops.order_notify", "order", orderID, map[string]any{
 			"phone": phone, "number": msg.Number, "channel": req.Channel, "merchant_id": partID,
 		})
+		firstPart := s.partUnsent(r.Context(), orderID, partID)
 		if _, err := s.orders.MarkPartSent(r.Context(), userIDFrom(r), orderID, partID, req.Channel); err != nil {
 			s.respondErr(w, err)
 			return
+		}
+		if firstPart {
+			s.orders.NotifyMerchantHandoff(r.Context(), orderID, partID)
 		}
 		s.touch("order", "ops", "merchant:"+partID)
 		httpx.JSON(w, http.StatusOK, map[string]any{
@@ -362,9 +366,14 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 	s.audit(r, "ops.order_notify", "order", orderID, map[string]any{
 		"phone": phone, "number": msg.Number, "channel": req.Channel,
 	})
+	firstSend := s.orderUnsent(r.Context(), orderID)
 	if _, err := s.pg.Exec(r.Context(),
 		`UPDATE orders SET sent_to_merchant_at = now() WHERE id = $1`, orderID); err != nil {
 		s.logger.Error("dispatch: تعذّر وسم الإرسال", "order", orderID, "error", err)
+	}
+	// **وتطبيقُ المتجر يرنّ مع التحويل** (تجربةُ المالك ٢٠٢٦-١١-١٢) — مرّةً، لا مع «أعد الإرسال».
+	if firstSend {
+		s.orders.NotifyMerchantHandoff(r.Context(), orderID, "")
 	}
 	// **الآن — لا قبل الآن — يُستدعى السائق.**
 	//
@@ -411,4 +420,26 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"sent": true, "phone": phone, "channel": req.Channel,
 	})
+}
+
+// orderUnsent **was the order not yet handed to its store?** — so the app rings on the first
+// handoff only, not on every «أعد الإرسال».
+func (s *Server) orderUnsent(ctx context.Context, orderID string) bool {
+	var unsent bool
+	if err := s.pg.QueryRow(ctx,
+		`SELECT sent_to_merchant_at IS NULL FROM orders WHERE id = $1`, orderID).Scan(&unsent); err != nil {
+		return false
+	}
+	return unsent
+}
+
+// partUnsent **was this store's part of a multi-stop order not yet sent?** — as orderUnsent.
+func (s *Server) partUnsent(ctx context.Context, orderID, merchantID string) bool {
+	var unsent bool
+	if err := s.pg.QueryRow(ctx,
+		`SELECT sent_at IS NULL FROM order_parts WHERE order_id = $1 AND merchant_id = $2::uuid`,
+		orderID, merchantID).Scan(&unsent); err != nil {
+		return false
+	}
+	return unsent
 }

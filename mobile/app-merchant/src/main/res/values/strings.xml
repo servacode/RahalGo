@@ -607,6 +607,9 @@
     <string name="home_temp_closed_sub">أغلقته إغلاقاً طارئاً، ولا يستقبل طلبات حتى تعيد فتحه</string>
     <string name="home_suspended_sub">لا يستقبل طلبات. تواصل مع إدارة المنصة</string>
     <string name="home_today">اليوم</string>
+    <string name="home_active_one">عندك طلب جديد #%1$s</string>
+    <string name="home_active_many">عندك %1$s طلبات جارية</string>
+    <string name="home_active_open">اضغط لتشوف الطلبات</string>
     <string name="home_delivered_today">سُلّم اليوم</string>
     <string name="home_cancelled_sub">ملغى %1$s</string>
     <string name="home_quick_offers">العروض</string>

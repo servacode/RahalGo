@@ -167,6 +167,16 @@ export function RateDialog({
  */
 let askedThisSession = false;
 
+/** **نافذةُ السؤال التلقائيّ** — ما سُلّم قبلها لا يُسأل عنه تلقائيّاً (زرُّ «قيّم» في بطاقته يبقى). */
+const RATE_PROMPT_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+/** **سُلّم في آخر ٤٨ ساعة؟** — وبلا وقت تسليمٍ لا سؤال. */
+function deliveredRecently(o: MyOrder, now: number): boolean {
+  if (!o.delivered_at) return false;
+  const at = Date.parse(o.delivered_at);
+  return Number.isFinite(at) && now - at <= RATE_PROMPT_WINDOW_MS;
+}
+
 export function RatingWatcher() {
   const { rated, mark, ready } = useRated();
   const [ask, setAsk] = useState<MyOrder | null>(null);
@@ -181,7 +191,12 @@ export function RatingWatcher() {
         if ((p.orders ?? []).some((o) => o.status === "delivered")) markInviteDelivered();
         const prompted = readJSON<string[]>(PROMPTED_KEY, []);
         const seen = Array.isArray(prompted) ? prompted : [];
-        const cand = (p.orders ?? []).find((o) => o.status === "delivered" && !rated.has(o.id) && !seen.includes(o.id));
+        /* **والقديمُ لا يُسأل** (تجربةُ المالك ٢٠٢٦-١١-١٢) — كان يُسأل عن طلبٍ أقدمَ في كلّ زيارة.
+           **فلا سؤالَ إلّا لما سُلّم في آخر ٤٨ ساعة** (مرآةُ `deliveredRecently` في `OrdersViewModel.kt`). */
+        const now = Date.now();
+        const cand = (p.orders ?? []).find(
+          (o) => o.status === "delivered" && !rated.has(o.id) && !seen.includes(o.id) && deliveredRecently(o, now),
+        );
         if (!cand) return;
         askedThisSession = true;
         writeJSON(PROMPTED_KEY, [...seen.filter((x) => x !== cand.id), cand.id].slice(-MAX_PROMPTED));

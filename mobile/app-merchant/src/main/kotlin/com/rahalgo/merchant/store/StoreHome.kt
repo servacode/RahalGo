@@ -94,6 +94,9 @@ fun StoreScreen(
     onOffers: () -> Unit = {},
     onPrices: () -> Unit = {},
     onTodayOrders: () -> Unit = {},
+    /** **الطلباتُ الجارية** — وفوق الصفر بطاقةٌ بارزةٌ تفتح الطلبات (تجربةُ المالك ٢٠٢٦-١١-١٢). */
+    activeOrders: List<com.rahalgo.shared.merchant.MerchantOrder> = emptyList(),
+    onActiveOrders: () -> Unit = {},
     stores: List<Store> = emptyList(),
     onSwitch: (String) -> Unit = {},
 ) {
@@ -179,6 +182,10 @@ fun StoreScreen(
                     onEmergency = { confirming = true },
                     onReopen = { vm.setOpen(true) },
                 )
+
+                // ── (أ٢) «عندك طلب جديد» — بطاقةٌ بارزةٌ ما دام طلبٌ جارياً (تجربةُ المالك ٢٠٢٦-١١-١٢) ──
+                // **في وضع المنصّة المكتبُ يقبل والمتجرُ يتفرّج** — فكان لا يعرف أنّ طلباً وصله.
+                if (activeOrders.isNotEmpty()) ActiveOrdersCard(activeOrders, onActiveOrders)
 
                 // ── (ب) الأزرارُ السريعة — والموقوفُ لا يملكها (B6) ──
                 if (!suspended) {
@@ -886,6 +893,34 @@ private fun RateCard(vm: StoreViewModel, store: Store, suspended: Boolean) {
                     Text(stringResource(R.string.store_rate_jump_no))
                 }
             },
+        )
+    }
+}
+
+/** **بطاقةُ الطلبات الجارية** — رقمُ الطلب إن كان واحداً، وعددُها إن كانت أكثر. */
+@Composable
+private fun ActiveOrdersCard(
+    orders: List<com.rahalgo.shared.merchant.MerchantOrder>,
+    onClick: () -> Unit,
+) {
+    com.rahalgo.ui.RahalCard(
+        variant = com.rahalgo.ui.CardVariant.Tinted,
+        tone = com.rahalgo.ui.StatusTone.Warning,
+        onClick = onClick,
+    ) {
+        Text(
+            text = if (orders.size == 1) {
+                stringResource(R.string.home_active_one, orders.first().number.toString())
+            } else {
+                stringResource(R.string.home_active_many, orders.size.toString())
+            },
+            color = Rahal.colors.ink,
+            style = Rahal.type.sectionTitle,
+        )
+        Text(
+            text = stringResource(R.string.home_active_open),
+            color = Rahal.colors.inkMuted,
+            style = Rahal.type.caption,
         )
     }
 }
