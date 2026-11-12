@@ -119,6 +119,13 @@ export interface CardOrder {
   pay_merchants?: { merchant_name: string; amount: number; currency?: string }[];
   /** **المسافةُ كما قادها السائق** (قرارُ المالك ٢٠٢٦-١١-٠٥) — صفٌّ لكلّ سائقٍ حمله. */
   drive?: DriveRow[];
+  /**
+   * **«أمانة من شخص» بالواتساب** (قرارُ المالك ٢٠٢٦-١١-١٢) — «الاستلام من» (`merchant_*` و`pickup_lat`)
+   * و«التسليم لـ» (`customer_*` و`lat`). **وموقعُ الاستلام لم يصل ما دام `pickup_lat` فارغاً.**
+   */
+  wa_amanah?: boolean;
+  /** **أنقطةُ التسليم معروفة؟** — خطأٌ: المستلِمُ لم يرسل موقعَه بعد. */
+  dropoff_known?: boolean;
 }
 
 /**
@@ -242,6 +249,9 @@ export function PartyLine({
 export function routeText(o: CardOrder): string {
   const customer = o.customer_name || "—";
   const store = o.merchant_name || "—";
+  if (o.wa_amanah) {
+    return C.routeAmanah.replace("{from}", store).replace("{to}", customer);
+  }
   if (o.kind === "merchant_delivery" && o.delivery_mode === "fetch") {
     return C.routeFromTo.replace("{from}", customer).replace("{to}", store);
   }
@@ -327,6 +337,72 @@ export function StoreSection({ o, live }: { o: CardOrder; live: boolean }) {
       {fromDriver && <span className="text-xs text-ink-muted">{C.storeFromDriver.replace("{d}", fromDriver)}</span>}
       {fromCustomer && <span className="text-xs text-ink-muted">{C.storeFromCustomer.replace("{d}", fromCustomer)}</span>}
     </Box>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ٢ب · أمانةُ الواتساب — «الاستلام من» و«التسليم لـ» جنب بعض (قرارُ المالك ٢٠٢٦-١١-١٢)
+// ══════════════════════════════════════════════════════════════════════
+
+/** **حالُ الموقع** — «ناطرين الموقع» أو «وصل الموقع» وزرُّ الخريطة إن وصل. */
+function PointState({ lat, lng, known }: { lat?: number | null; lng?: number | null; known: boolean }) {
+  return (
+    <span className="flex items-center justify-between gap-2">
+      <span className={`text-xs font-bold ${known ? "text-success" : "text-warning"}`}>
+        {known ? C.pointArrived : C.pointPending}
+      </span>
+      {known && <MapLink lat={lat} lng={lng} />}
+    </span>
+  );
+}
+
+/**
+ * **صندوقان جنب بعض** — مَن عنده الأمانة ومَن منسلّمها، لكلٍّ اسمُه ورقمُه وحالُ موقعه.
+ * **ويتراكبان على الشاشة الضيّقة.** (والبوتُ يطلب الموقعَ من الاتنين.)
+ */
+export type AmanahPoints = Pick<
+  CardOrder,
+  | "merchant_name"
+  | "merchant_phone"
+  | "pickup_lat"
+  | "pickup_lng"
+  | "pickup_address"
+  | "customer_name"
+  | "customer_phone"
+  | "customer_phone_masked"
+  | "address_text"
+  | "lat"
+  | "lng"
+  | "dropoff_known"
+> & { notes?: string };
+
+export function AmanahPointsSection({ o, live }: { o: AmanahPoints; live: boolean }) {
+  const pickKnown = o.pickup_lat != null && o.pickup_lng != null;
+  const dropKnown = o.dropoff_known !== false && o.lat != null && o.lng != null;
+  return (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <Box look="store" icon={<IconStore size={13} />} title={C.amanahFrom}>
+        <PartyLine name={o.merchant_name} phone={o.merchant_phone} callLabel={OP.callStoreShort} live={live} />
+        {o.pickup_address && (
+          <span className="whitespace-pre-line break-words text-ink-muted">{o.pickup_address}</span>
+        )}
+        <PointState lat={o.pickup_lat} lng={o.pickup_lng} known={pickKnown} />
+      </Box>
+      <Box look="customer" icon={<IconUser size={13} />} title={C.amanahTo}>
+        <PartyLine
+          name={o.customer_name}
+          phone={o.customer_phone}
+          masked={o.customer_phone_masked}
+          callLabel={OP.callCustomerShort}
+          live={live}
+        />
+        {o.address_text && (
+          <span className="whitespace-pre-line break-words text-ink-muted">{o.address_text}</span>
+        )}
+        <PointState lat={o.lat} lng={o.lng} known={dropKnown} />
+        {o.notes && <span className="text-xs text-accent-dark">{o.notes}</span>}
+      </Box>
+    </div>
   );
 }
 

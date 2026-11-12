@@ -44,6 +44,7 @@ import {
 import { api } from "@/lib/api";
 import { fill } from "@/lib/customer/texts";
 import { AssignDialog } from "../orders/AssignDialog";
+import { AmanahPointsSection } from "../orders/CardSections";
 
 const m = getMessages(defaultLocale);
 const W = m.admin.whatsappOrders;
@@ -65,6 +66,15 @@ interface WaRow {
   /** **«أمانة من شخص»، وانتظارُها موقعَ صاحبها** (قرارُ المالك ٢٠٢٦-١١-١١) — غلافُ القائمة. */
   wa_amanah?: boolean;
   pickup_pending?: boolean;
+  /** **نقطتا الأمانة وطرفاها** (قرارُ المالك ٢٠٢٦-١١-١٢) — صندوقا «الاستلام من» و«التسليم لـ». */
+  merchant_phone?: string;
+  customer_phone?: string;
+  customer_phone_masked?: string;
+  pickup_lat?: number | null;
+  pickup_lng?: number | null;
+  pickup_address?: string;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 /** **قبل الاستلام وحدَه** — والمحرّكُ يحرسه (`wa_cancel_after_pickup`). و«مقبول» أمانةٌ تنتظر موقعَ صاحبها. */
@@ -232,6 +242,18 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
                 </span>
               }
               meta={
+                o.wa_amanah ? (
+                  <>
+                    {/* **الأمانةُ بصندوقين جنب بعض** (قرارُ المالك ٢٠٢٦-١١-١٢) — كلٌّ بحال موقعه. */}
+                    {fmtDamascusTime(o.created_at)} · {o.driver_name || W.noDriver}
+                    <span className="mt-2 block text-ink">
+                      <AmanahPointsSection
+                        o={{ ...o, customer_phone: o.customer_phone ?? "", address_text: o.address_text ?? "" }}
+                        live={ADDRESS_EDITABLE.has(o.status)}
+                      />
+                    </span>
+                  </>
+                ) : (
                 <>
                   {o.merchant_name} ← {o.customer_name} · {fmtDamascusTime(o.created_at)} ·{" "}
                   {o.driver_name || W.noDriver}
@@ -244,6 +266,7 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
                     <span className="block font-bold">{fill(W.goodsLine, { goods: fmtMoney(o.fetch_amount) })}</span>
                   )}
                 </>
+                )
               }
               trailing={
                 <span className="flex flex-col items-end gap-1">

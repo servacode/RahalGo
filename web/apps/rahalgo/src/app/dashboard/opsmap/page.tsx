@@ -262,6 +262,10 @@ interface OrderPin {
   customer_name?: string;
   /** **موضعُ الزبون الحيُّ إن شاركه** — الأحدثُ من دقيقتين (٢٠٢٦-١٠-١٩). */
   customer_live?: { lat: number; lng: number; accuracy_m?: number; at: string; pin_gap_m: number };
+  /** **«أمانة من شخص» بالواتساب** (٢٠٢٦-١١-١٢) — علامتان «أ» الاستلام و«ب» التسليم، وخطٌّ بينهما. */
+  wa_amanah?: boolean;
+  /** **نقطةُ التسليم لم تصل بعد** — المرسومةُ مرساةٌ لا عنوان، فلا علامةَ لها في الأمانة. */
+  drop_pending?: boolean;
 }
 
 interface Zone {
@@ -1155,17 +1159,48 @@ export default function OpsMapPage() {
       // **فوق كلّ طلب: رقمُه واسمُ صاحبه والسائقُ المتّجهُ إليه** (المالك ٢٠٢٦-١١-٠٩).
       labelField: "name",
       labelOverlap: true,
+      // **والأمانةُ بعلامتين** (قرارُ المالك ٢٠٢٦-١١-١٢): «أ» حيث الأمانة و«ب» حيث تُسلَّم، **والنقرُ على
+      // أيٍّ منهما يفتح الطلبَ نفسَه** (المعرّفُ واحد). والنقطةُ التي لم يصل موقعُها لا علامةَ لها.
       data: fc(
-        orderList.map((o) =>
-          pt(o.drop_lng, o.drop_lat, {
-            id: o.id,
-            icon: orderTone(o.stuck_reason),
-            name: [
-              `#${fmtNum(o.number)}${o.customer_name ? ` · ${o.customer_name}` : ""}`,
-              o.driver ? T.orderCard.pinDriver.replace("{name}", o.driver) : "",
-            ].filter(Boolean).join("\n"),
-          }),
-        ),
+        orderList.flatMap((o) => {
+          const driverLine = o.driver ? T.orderCard.pinDriver.replace("{name}", o.driver) : "";
+          if (!o.wa_amanah) {
+            return [
+              pt(o.drop_lng, o.drop_lat, {
+                id: o.id,
+                icon: orderTone(o.stuck_reason),
+                name: [`#${fmtNum(o.number)}${o.customer_name ? ` · ${o.customer_name}` : ""}`, driverLine]
+                  .filter(Boolean)
+                  .join("\n"),
+              }),
+            ];
+          }
+          const n = fmtNum(o.number);
+          const pins: ReturnType<typeof pt>[] = [];
+          if (o.pick_lng != null && o.pick_lat != null) {
+            pins.push(
+              pt(o.pick_lng, o.pick_lat, {
+                id: o.id,
+                icon: orderTone(o.stuck_reason),
+                name: [T.orderCard.pinAmanahFrom.replace("{n}", n), o.picked_up_at ? "" : driverLine]
+                  .filter(Boolean)
+                  .join("\n"),
+              }),
+            );
+          }
+          if (!o.drop_pending) {
+            pins.push(
+              pt(o.drop_lng, o.drop_lat, {
+                id: o.id,
+                icon: orderTone(o.stuck_reason),
+                name: [T.orderCard.pinAmanahTo.replace("{n}", n), o.picked_up_at ? driverLine : ""]
+                  .filter(Boolean)
+                  .join("\n"),
+              }),
+            );
+          }
+          return pins;
+        }),
       ),
     });
     out.push({
@@ -1177,7 +1212,8 @@ export default function OpsMapPage() {
       color: ["case", ["get", "stuck"], toneColor("order-stuck"), toneColor("order")],
       data: fc(
         orderList
-          .filter((o) => o.pick_lng != null && o.pick_lat != null)
+          // **وأمانةٌ لم يصل موقعُ تسليمها بلا خطّ** — المرسومةُ مرساةٌ لا عنوان.
+          .filter((o) => o.pick_lng != null && o.pick_lat != null && !(o.wa_amanah && o.drop_pending))
           .map((o) => ({
             type: "Feature" as const,
             geometry: {

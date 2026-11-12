@@ -1811,10 +1811,22 @@ private fun TripCard(
                             // **من قرأ «طيف» وهو في طريقه للزبون** قرأ ما مضى.
                             // **ولا عنوانٌ عاريٌ «زبون»** (المالك ٢٠٢٦-١١-١٠): «التسليم للزبون» مع اسمه إن وُجد،
                             // و«الاستلام من <المتجر>» في ساق المتجر.
-                            text = if (toCustomer) {
+                            text = if (toCustomer && order.waAmanah) {
+                                // **أمانةُ الواتساب: «سلّمها لـ: <الاسم>»** (قرارُ المالك ٢٠٢٦-١١-١٢).
+                                stringResource(
+                                    R.string.trip_amanah_deliver_to,
+                                    customerShownName(order.customerName) ?: stringResource(R.string.detail_customer),
+                                )
+                            } else if (toCustomer) {
                                 customerShownName(order.customerName)
                                     ?.let { stringResource(R.string.trip_head_deliver_named, it) }
                                     ?: stringResource(R.string.trip_head_deliver)
+                            } else if (order.waAmanah) {
+                                // **و«استلم الأمانة من: <الاسم>»** قبل الاستلام.
+                                stringResource(
+                                    R.string.trip_amanah_pickup_from,
+                                    com.rahalgo.driver.Bidi.isolate(order.merchantName.ifBlank { "—" }),
+                                )
                             } else {
                                 // **ولا اسمَ متجرٍ في الخاصّ** — فيُقال ما هو: أمانةٌ أم مشتريات.
                                 order.merchantName.takeIf { it.isNotBlank() }
@@ -2329,7 +2341,11 @@ private fun TripCard(
                             InfoBox(
                                 icon = com.rahalgo.ui.R.drawable.ic_cart,
                                 text = stringResource(
-                                    if (order.kind == "custom") R.string.trip_buy_from else R.string.trip_shop_pickup_from,
+                                    when {
+                                        order.kind == "custom" -> R.string.trip_buy_from
+                                        order.waAmanah -> R.string.trip_amanah_pickup_from
+                                        else -> R.string.trip_shop_pickup_from
+                                    },
                                     com.rahalgo.driver.Bidi.isolate(order.merchantName),
                                 ) + (order.pickupAddress.takeIf { it.isNotBlank() }?.let { "\n" + it } ?: ""),
                                 tint = Rahal.colors.brand,

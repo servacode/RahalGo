@@ -304,6 +304,11 @@ type Order struct {
 	// Origin **أصلُ الطلب** — `app` أو `whatsapp` (قرارُ المالك ٢٠٢٦-١١-٠٥): طلبٌ كتبه الموظّفُ
 	// من رسالة واتساب، **ويُعرض «طلب واتساب» للسائق وفي اللوحة.**
 	Origin string `json:"origin"`
+	// WAAmanah **«أمانة من شخص» بالواتساب** (قرارُ المالك ٢٠٢٦-١١-١١، هجرة ٠٥٣٧) — الاستلامُ من شخص
+	// (`merchant_name`/`merchant_phone` منسوخان من `pickup_name`/`pickup_phone`) والتسليمُ للمستلِم.
+	// **وموقعُ الاستلام لم يصل ما دام `pickup_lat` فارغاً**، وموقعُ التسليم ما دام `dropoff_known` خطأ.
+	// للسائق والمكتب — عرضٌ وحدَه (٢٠٢٦-١١-١٢: «الاستلام من» و«التسليم لـ»).
+	WAAmanah bool `json:"wa_amanah,omitempty"`
 	// CreatedByName **من كتبه من الموظّفين** — لطلب الواتساب وحدَه، للمكتب.
 	CreatedByName string `json:"created_by_name,omitempty"`
 	// PickupMerchantID **متجرٌ من متاجرنا نُسخ اسمُه وموقعُه على طلب الواتساب** — أثرٌ لا ربط:

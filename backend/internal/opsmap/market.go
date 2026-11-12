@@ -202,6 +202,12 @@ type Order struct {
 	// موقع الزبون المباشر بخريطة العمليات لنقدر نعطي احداثيات للسائق») — **والأحدثُ من
 	// دقيقتين وحدَه** (`orders.LiveFreshFor`): نقطةٌ شاخت لا تقول أين هو الآن.
 	CustomerLive *CustomerLive `json:"customer_live,omitempty"`
+
+	// WAAmanah **«أمانة من شخص» بالواتساب** (قرارُ المالك ٢٠٢٦-١١-١٢) — علامتان على الخريطة:
+	// «أ» الاستلام (`pick_lat`) و«ب» التسليم، وخطٌّ بينهما. **والنقطةُ التي لم يصل موقعُها لا علامةَ لها.**
+	WAAmanah bool `json:"wa_amanah,omitempty"`
+	// DropPending **نقطةُ التسليم لم تصل بعد** (`dropoff_known` خطأ) — فالنقطةُ المرسومةُ مرساةٌ لا عنوان.
+	DropPending bool `json:"drop_pending,omitempty"`
 }
 
 // CustomerLive **نقطةُ الزبون الحيّة** — ومسافتُها عن دبّوسه تقول إن كان الدبّوسُ خطأً.
@@ -289,7 +295,8 @@ func ActiveOrders(ctx context.Context, q Querier, box *BBox, f OrderFilter,
 		       o.total, o.payment_method, o.delivery_fee,
 		       ` + stuckColumn(f.Stuck) + `, cu.full_name,
 		       ST_Y(ll.point::geometry), ST_X(ll.point::geometry), ll.accuracy_m::float8, ll.at,
-		       ST_Distance(ll.point, o.dropoff)
+		       ST_Distance(ll.point, o.dropoff),
+		       o.wa_amanah, NOT o.dropoff_known
 		FROM orders o
 		LEFT JOIN merchants m ON m.id = o.merchant_id
 		LEFT JOIN users d ON d.id = o.driver_id
@@ -318,7 +325,8 @@ func ActiveOrders(ctx context.Context, q Querier, box *BBox, f OrderFilter,
 			&x.DriverID, &x.DriverName, &x.DriverLat, &x.DriverLng,
 			&x.CreatedAt, &x.AcceptedAt, &x.AssignedAt, &x.PickedUpAt,
 			&total, &pay, &fee, &x.StuckReason, &cust,
-			&liveLat, &liveLng, &liveAcc, &liveAt, &liveGap); err != nil {
+			&liveLat, &liveLng, &liveAcc, &liveAt, &liveGap,
+			&x.WAAmanah, &x.DropPending); err != nil {
 			return nil, err
 		}
 		if liveLat != nil && liveLng != nil && liveAt != nil {
