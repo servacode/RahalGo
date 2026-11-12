@@ -101,6 +101,8 @@ internal fun MapButtons(
     voiceMuted: Boolean = false,
     /** **زرٌّ واحدٌ يقلبه** — «إمّا الصوتُ يعمل أو لا يعمل». */
     onVoice: () -> Unit = {},
+    /** **عمودُ الطرف الآخر** (قرارُ المالك ٢٠٢٦-١١-١٢) — أزرارُ الرحلة عائمةً على يسار الخريطة. */
+    start: (@Composable () -> Unit)? = null,
 ) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
@@ -156,6 +158,33 @@ internal fun MapButtons(
             // المراحلَ والأزرارَ والصوتَ، **ويعود ليجد نفسَه حيث
             // تركها.** **وملاحتُنا تعرف الطلبَ وهو لا يعرفه.**
         }
+        if (start != null) {
+            Spacer(Modifier.weight(1f))
+            start()
+        }
+    }
+}
+
+/**
+ * **قرصٌ وتحتَه كلمتُه** — لأزرار الرحلة العائمة (قرارُ المالك ٢٠٢٦-١١-١٢): «مشكلة» و«الطريق مغلق؟»
+ * و«خرائط غوغل» و«موقع الزبون». **والكلمةُ على أرضٍ فاتحة** فتُقرأ فوق أيّ شارع.
+ */
+@Composable
+internal fun CaptionedMapButton(icon: Int, label: Int, onClick: () -> Unit, danger: Boolean = false) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        MapButton(icon = icon, label = label, onClick = onClick, danger = danger)
+        Spacer(Modifier.height(Rahal.space.xxs))
+        Text(
+            text = stringResource(label),
+            color = if (danger) Rahal.colors.danger else Rahal.colors.ink,
+            fontWeight = FontWeight.Bold,
+            style = Rahal.type.meta,
+            maxLines = 1,
+            modifier = Modifier
+                .clip(Rahal.shape.pill)
+                .background(Rahal.colors.surface.copy(alpha = 0.92f))
+                .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
+        )
     }
 }
 

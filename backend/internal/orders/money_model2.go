@@ -417,10 +417,12 @@ func (s *Service) payWhatsAppStoreFor(ctx context.Context, q dbtx.Querier, order
 	if err != nil || cut == nil {
 		return nil, err
 	}
-	p := StorePay{MerchantID: cut.merchantID, MerchantName: cut.merchantName, Amount: cut.goods - cut.commission}
+	p := StorePay{MerchantID: cut.merchantID, MerchantName: cut.merchantName, Amount: cut.goods - cut.commission,
+		Gross: cut.goods, Cut: cut.commission, CutPercent: cut.pct}
 	if cut.currency == CurrencyUSD {
 		p.Currency = CurrencyUSD
-		p.Amount = cut.goods - pricing.MerchantCommission(ctx, nil, cut.pct).Of(cut.goods)
+		p.Cut = pricing.MerchantCommission(ctx, nil, cut.pct).Of(cut.goods)
+		p.Amount = cut.goods - p.Cut
 	}
 	if p.Amount <= 0 {
 		return nil, nil

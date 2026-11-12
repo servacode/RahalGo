@@ -48,3 +48,28 @@ func TestDRVPAY_PayMerchantShownToDriver(t *testing.T) {
 		t.Fatalf("متجرٌ محفظيٌّ يُدفع له: %+v", got[ow])
 	}
 }
+
+// TestDRVPAY_CommissionShownToDriver **ولماذا يدفع أقلَّ من الفاتورة** (قرارُ المالك ٢٠٢٦-١١-١٢) —
+// الفاتورةُ والعمولةُ ونسبتُها ودَينُ المتجر المقتطَع، **من حسبة الدفعة نفسِها.**
+func TestDRVPAY_CommissionShownToDriver(t *testing.T) {
+	f := newCashFixture(t)
+	ctx := context.Background()
+	m, _ := f.merchant(t, "cash", 10)
+	f.mkDebt(t, m, 5_000)
+	oid := f.order(t, m, 50_000, 10_000, "cash")
+	got, err := f.svc.PayMerchants(ctx, f.pool, []string{oid})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := got[oid]
+	if len(p) != 1 {
+		t.Fatalf("لا دفعة: %+v", p)
+	}
+	if p[0].Gross != 50_000 || p[0].Cut != 5_000 || p[0].DebtCut != 5_000 ||
+		p[0].CutPercent == nil || p[0].CutPercent.String() != "10" {
+		t.Fatalf("**العمولةُ لا تُقال للسائق**: %+v — يُنتظر فاتورة 50000 · عمولة 5000 (10٪) · دَين 5000", p[0])
+	}
+	if p[0].Gross-p[0].Cut-p[0].DebtCut != p[0].Amount {
+		t.Fatalf("**الأرقامُ لا تجتمع**: %d − %d − %d ≠ %d", p[0].Gross, p[0].Cut, p[0].DebtCut, p[0].Amount)
+	}
+}

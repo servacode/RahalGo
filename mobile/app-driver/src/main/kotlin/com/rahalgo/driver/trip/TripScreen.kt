@@ -911,8 +911,8 @@ fun TripScreen(
             // **تحوّل الطريقُ إليه؟ يُقال لماذا** — ومن تبع خطّاً لا يذهب إلى الدبّوس بلا
             // سببٍ يظنّ الملاحةَ معطوبة. **وشاخ موقعُه فعاد إلى الدبّوس؟ يُقال كذلك.**
             if (state.step >= TripStep.PICKED_UP) LiveCustomerNotice(state)
-            // **«الطريق مغلق؟» و«خرائط غوغل» و«موقع الزبون»** انتقلت إلى صفّ الأزرار في اللوح السفليّ
-            // (`TripActionBar`) — لا شيءَ في وسط الخريطة.
+            // **«مشكلة» و«الطريق مغلق؟» و«خرائط غوغل» و«موقع الزبون»** أزرارٌ عائمةٌ على يسار الخريطة
+            // (`TripFloatActions`، قرارُ المالك ٢٠٢٦-١١-١٢) — لا شيءَ في وسطها.
             // ══════════════════════════════════════════════════════════
             // **وخطأُ الخطوة يُرى ولو طُويت البطاقة** (٢٠٢٦-١٠-٠٢)
             // ══════════════════════════════════════════════════════════
@@ -1080,6 +1080,7 @@ fun TripScreen(
                 chatUnread = chatUnread,
                 voiceMuted = voiceMuted,
                 onVoice = { actions.toggleVoice() },
+                start = state.order?.let { o -> { TripFloatActions(o, state, actions) } },
             )
 
             // ══════════════════════════════════════════════════════════
@@ -1360,96 +1361,29 @@ data class Stop(val id: String, val number: Long)
  * **«الطريق مسكّر؟»** — زرٌّ صغيرٌ ونافذةُ السبب. **والموقعُ من الجهاز**: هو واقفٌ عند المسكَّر.
  */
 /**
- * **«افتح في خرائط غوغل»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — المتجرُ قبل الاستلام والزبونُ بعده.
- * **وخرائطُ غوغل المحفوظةُ في الجهاز تعمل بلا إنترنت.**
- */
-@Composable
-private fun OpenMapsAction(onOpen: () -> Unit, modifier: Modifier) {
-    QuickAction(
-        icon = R.drawable.ic_navigation,
-        label = R.string.open_google_maps_short,
-        description = R.string.open_google_maps,
-        modifier = modifier,
-        onClick = onOpen,
-    )
-}
-
-/**
- * **زرٌّ صغيرٌ في صفّ الأزرار** — أيقونةٌ فوق كلمتين على الأكثر، **ولمسةٌ بارتفاع ٥٦ لا أقل.**
- *
- * (ملاحظةُ المالك ٢٠٢٦-١١-١٠: أزرارُ الخريطة تُوضع في اللوح فوق زرّ الخطوة لا في وسط الخريطة.)
- * **والألوانُ من التوكنز.** و`danger` للمشكلة وحدها.
- */
-@Composable
-private fun QuickAction(
-    icon: Int,
-    label: Int,
-    modifier: Modifier,
-    danger: Boolean = false,
-    description: Int = label,
-    onClick: () -> Unit,
-) {
-    val tint = if (danger) Rahal.colors.danger else Rahal.colors.ink
-    Column(
-        modifier = modifier
-            .clip(Rahal.shape.md)
-            .background(if (danger) Rahal.colors.danger.copy(alpha = 0.12f) else Rahal.colors.field)
-            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
-            .heightIn(min = Rahal.size.touch + Rahal.space.sm)
-            .padding(horizontal = Rahal.space.xs, vertical = Rahal.space.sm),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = stringResource(description),
-            tint = tint,
-            modifier = Modifier.size(Rahal.icon.md),
-        )
-        Text(
-            text = stringResource(label),
-            color = tint,
-            style = Rahal.type.badge,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-/**
- * **صفُّ أزرار الرحلة** — «مشكلة» و«الطريق مغلق؟» و«خرائط غوغل» و«موقع الزبون».
- *
- * **يقع في اللوح السفليّ فوق زرّ الخطوة مباشرةً، ولا يتمرّر.** (كانت تطفو وسط الخريطة
- * وتُقصّ خلف اللوح، و«مشكلة» دائرةً حمراءَ فوق خطوات الرحلة.) **وشروطُ كلٍّ منها كما كانت:**
+ * **أزرارُ الرحلة عائمةً على يسار الخريطة** (قرارُ المالك ٢٠٢٦-١١-١٢: «مشكلة والطريق مغلق وخرائط
+ * غوغل لازم تكون أزرار عائمة») — كانت صفّاً في اللوح تأكل مكانَ الطلب فيُمرَّر ليُرى.
+ * **وبارتفاع عمود اليمين نفسِه** فلا تُقصّ خلف اللوح. **وشروطُ كلٍّ منها كما كانت:**
  * المشكلةُ إلا في مشوار الإرجاع، وموقعُ الزبون بعد الاستلام وحين لا موقعَ حيّ أو شاخ.
+ * **وخرائطُ غوغل المحفوظةُ في الجهاز تعمل بلا إنترنت** (٢٠٢٦-١٠-٣٠).
  */
 @Composable
-private fun TripActionBar(order: DriverOrder, state: TripState, actions: TripActions) {
+private fun TripFloatActions(order: DriverOrder, state: TripState, actions: TripActions) {
     val showProblem = !isReturnTrip(order)
     val showLive = state.step >= TripStep.PICKED_UP && (state.customerLive == null || state.liveStale)
-    Row(
-        Modifier.fillMaxWidth().padding(bottom = Rahal.space.sm),
-        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
     ) {
         if (showProblem) {
-            QuickAction(
-                icon = R.drawable.ic_warning,
-                label = R.string.map_problem_caption,
-                description = R.string.trip_problem,
-                modifier = Modifier.weight(1f),
-                danger = true,
-            ) { actions.askFail() }
+            CaptionedMapButton(R.drawable.ic_warning, R.string.map_problem_caption, { actions.askFail() }, danger = true)
         }
-        RoadClosureAction(actions.reportClosure, Modifier.weight(1f))
-        OpenMapsAction(actions.openMaps, Modifier.weight(1f))
+        RoadClosureAction(actions.reportClosure) { open ->
+            CaptionedMapButton(com.rahalgo.ui.R.drawable.ic_block, R.string.closure_button, open)
+        }
+        CaptionedMapButton(R.drawable.ic_navigation, R.string.open_google_maps_short, actions.openMaps)
         if (showLive) {
-            QuickAction(
-                icon = R.drawable.ic_pin,
-                label = R.string.trip_live_request_short,
-                description = R.string.trip_live_request,
-                modifier = Modifier.weight(1f),
-            ) { actions.requestLive() }
+            CaptionedMapButton(R.drawable.ic_pin, R.string.trip_live_request_short, { actions.requestLive() })
         }
     }
 }
@@ -1501,14 +1435,9 @@ internal fun compassIndex(fromLat: Double, fromLng: Double, toLat: Double, toLng
 }
 
 @Composable
-private fun RoadClosureAction(onReport: (String) -> Unit, modifier: Modifier) {
+private fun RoadClosureAction(onReport: (String) -> Unit, trigger: @Composable (open: () -> Unit) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    QuickAction(
-        icon = com.rahalgo.ui.R.drawable.ic_block,
-        label = R.string.closure_button,
-        modifier = modifier,
-        onClick = { open = true },
-    )
+    trigger { open = true }
     if (open && roomyWindow()) {
         val reasons = listOf(
             "works" to R.string.closure_works,
@@ -1961,10 +1890,26 @@ private fun TripCard(
                             style = Rahal.type.meta,
                         )
                         Spacer(Modifier.height(Rahal.space.xxs))
-                        com.rahalgo.ui.Badge(
-                            text = stringResource(kindLabel(order)),
-                            tone = com.rahalgo.ui.StatusTone.Warning,
-                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs)) {
+                            // **والتجهيزُ شارةٌ لا مربّع** (قرارُ المالك ٢٠٢٦-١١-١٢) — قبل الاستلام وحدَه.
+                            if (state.step < TripStep.PICKED_UP && order.kind != "custom" && !isMultiStop(order) && !isFetch(order)) {
+                                when (val p = prepState(order)) {
+                                    PrepState.Ready -> com.rahalgo.ui.Badge(
+                                        text = stringResource(R.string.chip_store_ready),
+                                        tone = com.rahalgo.ui.StatusTone.Success,
+                                    )
+                                    is PrepState.Around -> com.rahalgo.ui.Badge(
+                                        text = stringResource(R.string.chip_store_ready_at, p.hhmm),
+                                        tone = com.rahalgo.ui.StatusTone.Info,
+                                    )
+                                    PrepState.Unknown -> Unit
+                                }
+                            }
+                            com.rahalgo.ui.Badge(
+                                text = stringResource(kindLabel(order)),
+                                tone = com.rahalgo.ui.StatusTone.Warning,
+                            )
+                        }
                     }
                 }
 
@@ -2048,6 +1993,7 @@ private fun TripCard(
                             // **والفاتورةُ عند الباب كذلك** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لمن يسأله «شو بالطلب؟ وقديش؟».
                             if (order.kind == "standard" && order.items.isNotEmpty()) InvoiceBox(order)
                         } else if (order.kind != "custom") {
+                            var paired = false
                             // **وقبل الاستلام: متى يجهز** — بأيقونة ساعة. **ولا «جاهز في المتجر» في
                             // «إحضار»** — يستلم من مكانٍ لا من المتجر (ملاحظةُ المالك ٢٠٢٦-١٠-١٦).
                             // **طلبٌ من عدّة متاجر: كتلةُ المحطّات بدل الجاهزيّة والفاتورة ودفع المتجر** — لكلّ محطّةٍ
@@ -2055,20 +2001,6 @@ private fun TripCard(
                             if (isMultiStop(order)) {
                                 StopsBlock(order, activeStop?.merchantId, state.busy) { to, stop -> actions.stopStep(to, stop) }
                             } else {
-                            when (val p = if (isFetch(order)) PrepState.Unknown else prepState(order)) {
-                                PrepState.Ready -> InfoBox(
-                                    icon = com.rahalgo.ui.R.drawable.ic_time,
-                                    text = stringResource(R.string.trip_store_ready),
-                                    tint = Rahal.colors.success,
-                                    bold = true,
-                                )
-                                is PrepState.Around -> InfoBox(
-                                    icon = com.rahalgo.ui.R.drawable.ic_time,
-                                    text = stringResource(R.string.trip_store_ready_at, p.hhmm),
-                                    tint = Rahal.colors.brand,
-                                )
-                                PrepState.Unknown -> Unit
-                            }
                             // **وما يستلمه باسمه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «السائق اصلا مايعرف شو الطلب»).
                             // **والفاتورةُ كاملةً بشكلها الواحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
                             if (order.items.isNotEmpty()) InvoiceBox(order)
@@ -2082,19 +2014,17 @@ private fun TripCard(
                                             amount = storePayText(p),
                                             tint = Rahal.colors.brand,
                                         )
+                                        CutLine(p)
                                     }
-                                } else if (order.payMerchants.size == 1 && isUsd(order.payMerchants[0].currency)) {
-                                    MoneyBox(
-                                        label = stringResource(R.string.trip_pay_merchant),
-                                        amount = storePayText(order.payMerchants[0]),
-                                        tint = Rahal.colors.brand,
-                                    )
                                 } else {
-                                    MoneyBox(
-                                        label = stringResource(R.string.trip_pay_merchant),
-                                        amount = money(order.payMerchant),
-                                        tint = Rahal.colors.brand,
+                                    // **«ادفع» و«اقبض» بسطرٍ واحد** (قرارُ المالك ٢٠٢٦-١١-١٢) — والعمولةُ تحتهما.
+                                    val one = order.payMerchants.firstOrNull()
+                                    MoneyPair(
+                                        payAmount = if (one != null && isUsd(one.currency)) storePayText(one) else money(order.payMerchant),
+                                        collect = order.cashDue,
                                     )
+                                    one?.let { CutLine(it) }
+                                    paired = true
                                 }
                             }
                             // **وطلبُ الواتساب من متجرنا** (النموذج ٢، قرارُ المالك ٢٠٢٦-١١-١٠): يدفع للمتجر الثمنَ
@@ -2106,11 +2036,12 @@ private fun TripCard(
                                         amount = storePayText(p),
                                         tint = Rahal.colors.brand,
                                     )
+                                    CutLine(p)
                                 }
                             }
                             }
-                            // **وكم يقبض عند الباب** — يعرفه قبل أن يمشي.
-                            if (order.kind == "standard") {
+                            // **وكم يقبض عند الباب** — يعرفه قبل أن يمشي. (وفي `MoneyPair` إن سبق.)
+                            if (order.kind == "standard" && !paired) {
                                 if (order.cashDue > 0) {
                                     MoneyBox(
                                         label = stringResource(R.string.trip_collect_later),
@@ -2418,15 +2349,7 @@ private fun TripCard(
                         }
 
                         // **«طلب تعديل»** — زرّ ثانوي من القبول لحد التسليم، وطلب جديد بيحلّ محل المعلّق.
-                        if (canRequestEdit(order)) {
-                            com.rahalgo.ui.RahalButton(
-                                onClick = actions.askEditRequest,
-                                enabled = !state.busy,
-                                // لون العلامة لا الأخضر — الأخضر لاتصال وواتساب (المالك ٢٠٢٦-١١-١٠).
-                                tone = Tone.Brand,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) { Text(stringResource(R.string.edit_req_button), fontWeight = FontWeight.Bold) }
-                        }
+                        // («طلب تعديل» بسطر التواصل أدناه — قرارُ المالك ٢٠٢٦-١١-١٢.)
                         // **وطلب الواتساب: تصحيح الثمن بعد الاستلام لحد الباب** — نفس نافذة الثمن.
                         if (whatsAppAmountEditable(order)) {
                             com.rahalgo.ui.RahalButton(
@@ -2474,29 +2397,31 @@ private fun TripCard(
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                                 ContactButton(
                                     icon = com.rahalgo.ui.R.drawable.ic_phone,
-                                    label = R.string.contact_call_holder,
+                                    label = R.string.contact_call_short,
                                     modifier = Modifier.weight(1f),
                                 ) { dial(ctx, holder) }
                                 ContactButton(
                                     icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
-                                    label = R.string.contact_wa_holder,
+                                    label = R.string.contact_wa_short,
                                     modifier = Modifier.weight(1f),
                                 ) { openWhatsApp(ctx, holder, "") }
                             }
                         }
-                        if (storePhone != null || recipient != null) {
+                        val canEdit = canRequestEdit(order)
+                        if (storePhone != null || recipient != null || canEdit) {
+                            // **«اتصل» و«واتساب» و«طلب تعديل» بسطرٍ واحدٍ صغير** (قرارُ المالك ٢٠٢٦-١١-١٢).
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                                 // **قبل الاستلام: المتجرُ اتّصالاً وواتساب** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — والرأسُ
                                 // يقول اسمَه، فيكفي الزرَّ «اتّصل» و«واتساب».
                                 if (storePhone != null) {
                                     ContactButton(
                                         icon = com.rahalgo.ui.R.drawable.ic_phone,
-                                        label = R.string.contact_call_store,
+                                        label = R.string.contact_call_short,
                                         modifier = Modifier.weight(1f),
                                     ) { dial(ctx, storePhone) }
                                     ContactButton(
                                         icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
-                                        label = R.string.contact_wa_store,
+                                        label = R.string.contact_wa_short,
                                         modifier = Modifier.weight(1f),
                                     ) { openWhatsApp(ctx, storePhone, "") }
                                 }
@@ -2507,14 +2432,26 @@ private fun TripCard(
                                     val hello = if (isFetch(order)) "" else stringResource(R.string.recipient_wa_message, order.merchantName)
                                     ContactButton(
                                         icon = com.rahalgo.ui.R.drawable.ic_phone,
-                                        label = R.string.contact_call_recipient,
+                                        label = R.string.contact_call_short,
                                         modifier = Modifier.weight(1f),
                                     ) { dial(ctx, recipient) }
                                     ContactButton(
                                         icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
-                                        label = R.string.contact_wa_recipient,
+                                        label = R.string.contact_wa_short,
                                         modifier = Modifier.weight(1f),
                                     ) { openWhatsApp(ctx, recipient, hello) }
+                                }
+                                // **ولونُ العلامة لا الأخضر** — الأخضرُ لاتّصالٍ وواتساب (المالك ٢٠٢٦-١١-١٠).
+                                if (canEdit) {
+                                    com.rahalgo.ui.RahalOutlineButton(
+                                        onClick = actions.askEditRequest,
+                                        enabled = !state.busy,
+                                        tone = Tone.Brand,
+                                        compact = true,
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Text(stringResource(R.string.edit_req_button), style = Rahal.type.button, maxLines = 1)
+                                    }
                                 }
                             }
                         }
@@ -2527,7 +2464,6 @@ private fun TripCard(
         // **الثابتُ أسفلَ اللوح**: صفُّ الأزرار فوق زرّ الخطوة مباشرةً، **وخطأُ الخطوة بينهما حتّى يُرى
         // ولا يتوارى في القائمة المتمرّرة.**
         Spacer(Modifier.height(Rahal.space.sm))
-        TripActionBar(order, state, actions)
         if (state.error.isNotEmpty()) {
             Text(
                 state.error,
@@ -2683,12 +2619,78 @@ private fun MoneyBox(label: String, amount: String, tint: Color) {
 /** **زرُّ تواصل** — إطارٌ أخضرُ وأيقونة، **وكلُّها بعرضٍ واحد.** */
 @Composable
 private fun ContactButton(icon: Int, label: Int, modifier: Modifier, onClick: () -> Unit) {
-    com.rahalgo.ui.RahalOutlineButton(tone = Tone.Success, modifier = modifier, onClick = onClick) {
+    com.rahalgo.ui.RahalOutlineButton(tone = Tone.Success, compact = true, modifier = modifier, onClick = onClick) {
         Icon(painter = painterResource(icon), contentDescription = null, modifier = Modifier.size(Rahal.icon.sm))
-        Spacer(Modifier.width(Rahal.space.sm))
-        Text(stringResource(label), style = Rahal.type.button, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        Spacer(Modifier.width(Rahal.space.xs))
+        Text(stringResource(label), style = Rahal.type.button, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
     }
 }
+
+/**
+ * **«ادفع للمتجر» و«اقبض من الزبون» بسطرٍ واحد** (قرارُ المالك ٢٠٢٦-١١-١٢) — مربّعان متساويان،
+ * **والرقمُ كبيرٌ يُقرأ في لمحة.** والمدفوعُ مسبقاً يقول ذلك مكانَ الرقم.
+ */
+@Composable
+private fun MoneyPair(payAmount: String, collect: Long) {
+    Row(
+        Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+    ) {
+        MoneyTile(stringResource(R.string.trip_pay_merchant), payAmount, Rahal.colors.brand, Modifier.weight(1f).fillMaxHeight())
+        if (collect > 0) {
+            MoneyTile(stringResource(R.string.trip_collect_customer), money(collect), CollectTint(), Modifier.weight(1f).fillMaxHeight())
+        } else {
+            MoneyTile(
+                stringResource(R.string.trip_collect_customer),
+                stringResource(R.string.trip_prepaid_short),
+                Rahal.colors.success,
+                Modifier.weight(1f).fillMaxHeight(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MoneyTile(label: String, amount: String, tint: Color, modifier: Modifier) {
+    Column(
+        modifier
+            .clip(Rahal.shape.md)
+            .background(tint.copy(alpha = 0.12f))
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+        verticalArrangement = Arrangement.spacedBy(Rahal.space.xxs),
+    ) {
+        Text(label, color = Rahal.colors.ink, style = Rahal.type.meta, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(com.rahalgo.driver.Bidi.isolate(amount), color = tint, style = Rahal.type.priceLarge, maxLines = 1, softWrap = false)
+    }
+}
+
+/**
+ * **ولماذا يدفع للمتجر أقلَّ من فاتورته** (قرارُ المالك ٢٠٢٦-١١-١٢: «مربع صغير للعمولة… ليعرف ليش
+ * الخصم من المتجر») — نسبةُ رحّال غو ومبلغُها من الفاتورة، **ودَينُ المتجر المقتطَعُ إن وُجد.**
+ * **والأرقامُ من الخادم** (`platform_cut*`) — لا حسبةَ هنا. وخادمٌ قديمٌ بلا عمولة: لا سطر.
+ */
+@Composable
+private fun CutLine(p: com.rahalgo.shared.model.StorePay) {
+    if (p.cut <= 0) return
+    val fmt = { v: Long -> storePayText(p.copy(amount = v)) }
+    val head = p.cutPercent?.let { stringResource(R.string.trip_cut_line, percentText(it), fmt(p.cut), fmt(p.gross)) }
+        ?: stringResource(R.string.trip_cut_line_nopct, fmt(p.cut), fmt(p.gross))
+    val text = if (p.debtCut > 0) head + " · " + stringResource(R.string.trip_debt_cut, fmt(p.debtCut)) else head
+    Text(
+        text,
+        color = Rahal.colors.inkMuted,
+        style = Rahal.type.meta,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.sm)
+            .background(Rahal.colors.field)
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs),
+    )
+}
+
+/** **«10» لا «10.0»، و«1.5» كما هي.** */
+private fun percentText(v: Double): String =
+    if (v == Math.floor(v)) v.toLong().toString() else (Math.round(v * 100) / 100.0).toString()
 
 private fun openWhatsApp(ctx: android.content.Context, phone: String, text: String) {
     val q = if (text.isEmpty()) "" else "?text=" + android.net.Uri.encode(text)
@@ -2832,7 +2834,6 @@ private fun ReturnCard(
         // منتهي») — المشوارُ يُغلق وحدَه عند الوصول إلى المكتب (`watchArrival`). **والزرُّ يبقى
         // للمكتب غير المدبَّس وحدَه** — وإلّا بقي السائقُ معلّقاً بمشوارٍ لا نهايةَ له.
         Spacer(Modifier.height(Rahal.space.md))
-        TripActionBar(order, state, actions)
         if (!order.dropoffKnown) {
             TripPrimary(
                 label = R.string.step_goods_handed,

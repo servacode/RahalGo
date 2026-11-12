@@ -342,6 +342,11 @@ data class StorePay(
     val amount: Long = 0,
     /** «USD» ⇐ `amount` سنتات. وفارغٌ ليرة (خادمٌ قديمٌ). */
     val currency: String = "",
+    /** **ولماذا أقلُّ من الفاتورة** (٢٠٢٦-١١-١٢) — فاتورةُ المتجر وعمولةُ المنصّة ونسبتُها ودَينُه المقتطَع، بعملة `amount`. */
+    @SerialName("store_gross") val gross: Long = 0,
+    @SerialName("platform_cut") val cut: Long = 0,
+    @SerialName("platform_cut_percent") val cutPercent: Double? = null,
+    @SerialName("debt_cut") val debtCut: Long = 0,
 )
 
 /**

@@ -33,6 +33,13 @@ type StorePay struct {
 	// Currency **«USD» حين يدفع للمتجر التابع بالدولار** (قرارُ المالك ٢٠٢٦-١١-٠٩) — و`Amount` حينها
 	// بالسنتات، **ولا يدخل مجموعَ `PayMerchant` بالليرة.** وفارغٌ: ليرة.
 	Currency string `json:"currency,omitempty"`
+	// **ولماذا أقلُّ من الفاتورة** (قرارُ المالك ٢٠٢٦-١١-١٢: «مربع صغير للعمولة… ليعرف ليش الخصم
+	// من المتجر») — عرضٌ للسائق من الحسبة نفسِها، **لا يدخل حساباً**. بعملة `Amount`.
+	Gross      int64             `json:"store_gross,omitempty"`
+	Cut        int64             `json:"platform_cut,omitempty"`
+	CutPercent *pricing.Percent2 `json:"platform_cut_percent,omitempty"`
+	// DebtCut **دَينُ المتجر القائمُ المقتطَعُ من دفعته** — يُقال كي لا يُظنّ خطأً في الرقم.
+	DebtCut int64 `json:"debt_cut,omitempty"`
 }
 
 // PayMerchants **ما يدفعه السائقُ لكلّ متجرٍ في كلّ طلب** — والطلبُ بلا دفعٍ غائبٌ.
@@ -84,7 +91,8 @@ func (s *Service) payMerchantsFor(ctx context.Context, q dbtx.Querier, orderID s
 		if sh.ownerID == nil || sh.due <= 0 {
 			continue
 		}
-		p := StorePay{MerchantID: sh.merchantID}
+		pct := sh.pct
+		p := StorePay{MerchantID: sh.merchantID, Gross: sh.due + sh.commission, Cut: sh.commission, CutPercent: &pct}
 		if err := q.QueryRow(ctx, `SELECT name FROM merchants WHERE id = $1`, sh.merchantID).
 			Scan(&p.MerchantName); err != nil {
 			return nil, err
@@ -121,6 +129,9 @@ func (s *Service) payMerchantsFor(ctx context.Context, q dbtx.Querier, orderID s
 		default:
 			return nil, err
 		}
+		if d := sh.due - p.Amount; d > 0 {
+			p.DebtCut = d
+		}
 		if p.Amount > 0 {
 			out = append(out, p)
 		}
@@ -156,17 +167,20 @@ func (s *Service) payPartnerFor(ctx context.Context, q dbtx.Querier, orderID str
 	// نفسِها؛ **والعمولةُ بالليرة في الدفتر من المعادل** (`customStoreCut`).
 	if usd != nil {
 		p.Amount, p.Currency = *usd, CurrencyUSD
+		p.Gross, p.CutPercent = *usd, pct
 		if pct != nil {
-			p.Amount -= pricing.Amount{Mode: pricing.ModePercent2, Value: int64(*pct)}.Of(*usd)
+			p.Cut = pricing.Amount{Mode: pricing.ModePercent2, Value: int64(*pct)}.Of(*usd)
+			p.Amount -= p.Cut
 		}
 		if p.Amount <= 0 {
 			return nil, nil
 		}
 		return []StorePay{p}, nil
 	}
-	if p.Amount, _, err = customStoreCut(ctx, q, orderID); err != nil {
+	if p.Amount, p.Cut, err = customStoreCut(ctx, q, orderID); err != nil {
 		return nil, err
 	}
+	p.Gross, p.CutPercent = p.Amount+p.Cut, pct
 	if p.Amount <= 0 {
 		return nil, nil
 	}

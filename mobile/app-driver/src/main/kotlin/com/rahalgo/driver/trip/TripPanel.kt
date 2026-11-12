@@ -118,12 +118,16 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
     // بدأ طوراً جديداً يريد أن يرى أين صار.
     // **والحالُ مشتركةٌ مع الأزرار** — انظر `TripCollapse`.
     var stripOpen by TripCollapse::top
+    // **مطويٌّ افتراضاً، ويُطوى من جديد مع كلّ طورٍ وطلب** (قرارُ المالك ٢٠٢٦-١١-١٢: «دائماً مصغّر…
+    // واذا السائق حب يشوف يفتحه») — سطرُ الوجهة وحدَه، **ولمسةٌ على اللوح تفتح المراحل.**
+    androidx.compose.runtime.LaunchedEffect(order.id, state.step) { TripCollapse.top = false }
 
     Column(
         Modifier
             .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm)
             .clip(Rahal.shape.lg)
             .background(Rahal.colors.panel)
+            .clickable { stripOpen = !stripOpen }
             .pointerInput(Unit) {
                 detectVerticalDragGestures { _, dy ->
                     if (dy < -6f) stripOpen = false

@@ -34,7 +34,7 @@
     "behaviour_settings": 240,
     "order_fields": 147,
     "test_files": 839,
-    "test_funcs": 3208
+    "test_funcs": 3209
   },
   "flows": [
     {
@@ -10691,6 +10691,12 @@
     {
       "name": "TestFI06d_ZeroProfitDeliveredCustomIsAccounted",
       "file": "internal/orders/cash_driver_pays_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDRVPAY_CommissionShownToDriver",
+      "file": "internal/orders/cash_driver_pays_view_test.go",
       "package": "orders_test",
       "orphan": true
     },

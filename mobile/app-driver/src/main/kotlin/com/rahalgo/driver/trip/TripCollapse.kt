@@ -25,7 +25,7 @@ import androidx.compose.runtime.setValue
  */
 internal object TripCollapse {
     /** **شريطُ المراحل الأعلى.** */
-    var top by mutableStateOf(true)
+    var top by mutableStateOf(false)
 
     /**
      * **بطاقةُ الطلب السفلى — ومعها أزرارُ المرحلة وشريطُ التبويبات.**
