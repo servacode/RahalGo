@@ -412,7 +412,10 @@
         {
           "amount": 1800,
           "merchant_id": "\u003cmerchant\u003e",
-          "merchant_name": "\u003cmerchant_name\u003e"
+          "merchant_name": "\u003cmerchant_name\u003e",
+          "platform_cut": 200,
+          "platform_cut_percent": 10,
+          "store_gross": 2000
         }
       ],
       "payment_method": "wallet",
@@ -521,7 +524,10 @@
         {
           "amount": 1800,
           "merchant_id": "\u003cmerchant\u003e",
-          "merchant_name": "\u003cmerchant_name\u003e"
+          "merchant_name": "\u003cmerchant_name\u003e",
+          "platform_cut": 200,
+          "platform_cut_percent": 10,
+          "store_gross": 2000
         }
       ],
       "payment_method": "wallet",
@@ -630,7 +636,10 @@
         {
           "amount": 1800,
           "merchant_id": "\u003cmerchant\u003e",
-          "merchant_name": "\u003cmerchant_name\u003e"
+          "merchant_name": "\u003cmerchant_name\u003e",
+          "platform_cut": 200,
+          "platform_cut_percent": 10,
+          "store_gross": 2000
         }
       ],
       "payment_method": "wallet",
@@ -739,7 +748,10 @@
         {
           "amount": 1800,
           "merchant_id": "\u003cmerchant\u003e",
-          "merchant_name": "\u003cmerchant_name\u003e"
+          "merchant_name": "\u003cmerchant_name\u003e",
+          "platform_cut": 200,
+          "platform_cut_percent": 10,
+          "store_gross": 2000
         }
       ],
       "payment_method": "wallet",
@@ -848,7 +860,10 @@
         {
           "amount": 1800,
           "merchant_id": "\u003cmerchant\u003e",
-          "merchant_name": "\u003cmerchant_name\u003e"
+          "merchant_name": "\u003cmerchant_name\u003e",
+          "platform_cut": 200,
+          "platform_cut_percent": 10,
+          "store_gross": 2000
         }
       ],
       "payment_method": "wallet",
@@ -957,7 +972,10 @@
         {
           "amount": 1800,
           "merchant_id": "\u003cmerchant\u003e",
-          "merchant_name": "\u003cmerchant_name\u003e"
+          "merchant_name": "\u003cmerchant_name\u003e",
+          "platform_cut": 200,
+          "platform_cut_percent": 10,
+          "store_gross": 2000
         }
       ],
       "payment_method": "wallet",
@@ -1387,7 +1405,10 @@
         {
           "amount": 1800,
           "merchant_id": "\u003cmerchant\u003e",
-          "merchant_name": "\u003cmerchant_name\u003e"
+          "merchant_name": "\u003cmerchant_name\u003e",
+          "platform_cut": 200,
+          "platform_cut_percent": 10,
+          "store_gross": 2000
         }
       ],
       "payment_method": "wallet",
