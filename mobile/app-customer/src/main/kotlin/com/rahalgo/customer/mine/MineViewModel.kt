@@ -113,6 +113,14 @@ class MineViewModel(app: Application) : AndroidViewModel(app) {
     var offers by mutableStateOf<List<Offer>?>(null)
         private set
 
+    /**
+     * **أصنافُ العروض بشبكة السوق نفسِها** (ملاحظةُ المالك ٢٠٢٦-١١-١٣: «لازم تكون نفس
+     * العرض بالتسوق») — `public/items?offers=1`. **ولا يُعرض بينها صنفٌ بلا حسم** ولو ردّه
+     * خادمٌ أقدمُ لا يعرف الفلتر.
+     */
+    var offerItems by mutableStateOf<List<Item>>(emptyList())
+        private set
+
     // ══════════════════════════════════════════════════════════════════
     // **وعرضٌ بعينه جاء من إشعار** (`DLINK-03`، ٢٠٢٦-٠٩-١٥)
     // ══════════════════════════════════════════════════════════════════
@@ -251,6 +259,9 @@ class MineViewModel(app: Application) : AndroidViewModel(app) {
                 if (force || offers == null) {
                     load {
                         offers = api.offers().offers
+                        offerItems = api.offerItems().items.filter {
+                            (it.discountPercent ?: 0) > 0 || it.priceBefore != null
+                        }
                         // **والمقصودُ إن لم يكن في السارية فقد ذهب** —
                         // **ولا يُخترَع له عرضٌ آخرُ مكانه.**
                         val want = focusOffer

@@ -34,3 +34,35 @@ func TestSTOREOFFERS_FilterAndCount(t *testing.T) {
 		t.Fatalf("**بلا فلتر لازم يطلع الكل**: %s", all.Body)
 	}
 }
+
+// TestOFFERSGRID_MarketItemsOffersOnly **صفحةُ العروض بشبكة التسوّق** (ملاحظةُ المالك ٢٠٢٦-١١-١٣) —
+// `/public/items?offers=1` يردّ الأصنافَ التي عليها حسمٌ ساريٌ وحدَها، **بالبطاقة نفسِها**
+// (سعرٌ قبلُ وبعد)، ولا صنفَ بلا حسم.
+func TestOFFERSGRID_MarketItemsOffersOnly(t *testing.T) {
+	h := New(t)
+	m := h.Factory().Merchant()
+	plain := h.NewItemFor(m, 1000)
+	sale := h.NewItemFor(m, 2000)
+	admin := h.NewUser("admin")
+	made := h.POST("/api/v1/admin/offers", admin.Token, map[string]any{
+		"kind": "discount", "title": "حسم", "menu_item_id": sale.ID, "discount_percent": 20,
+		"starts_at": time.Now().Add(-time.Hour).UTC().Format(time.RFC3339),
+	})
+	if made.Code >= 400 {
+		t.Fatalf("إنشاءُ العرض: %s", made)
+	}
+	got := h.GET("/api/v1/public/items?offers=1", "")
+	if got.Code != 200 || !strings.Contains(string(got.Body), sale.ID) || strings.Contains(string(got.Body), plain.ID) {
+		t.Fatalf("**العروضُ بالسوق ليست المحسومةَ وحدَها**: %s", got.Body)
+	}
+	items, _ := got.JSON()["items"].([]any)
+	if len(items) == 0 {
+		t.Fatalf("**لا أصناف**: %s", got.Body)
+	}
+	for _, x := range items {
+		it, _ := x.(map[string]any)
+		if it["price_before"] == nil {
+			t.Fatalf("**صنفٌ بلا حسمٍ بين العروض**: %v", it)
+		}
+	}
+}
