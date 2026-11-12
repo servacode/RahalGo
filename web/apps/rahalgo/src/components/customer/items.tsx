@@ -143,7 +143,6 @@ export function ItemCard({
   /* **كرتُ العرض يُرى من بعيد** (ملاحظةُ المالك ٢٠٢٦-١١-١٢، مرآةُ بطاقة التطبيق) — إطارٌ أحمر، وبطاقةُ
      «خصم ن٪» على الصورة، والسعرُ الجديدُ أحمرُ عريض، وتحته «وفّرت». */
   const onSale = item.discount_percent != null && item.discount_percent > 0;
-  const saved = saleSaving(item);
   return (
     <div className="shop-item" data-layout={layout} data-sale={onSale || undefined}>
       {/* **والصورةُ وعدسةُ التكبير أخوان لا متداخلان** — زرٌّ في زرٍّ لا يصحّ. */}
@@ -197,16 +196,24 @@ export function ItemCard({
         <div className="shop-item-foot">
           {/* **الدولارُ ثمّ الليرةُ** («$2.5 · 300 ل.س») — والليرةُ تنزل تحته إن ضاق ولا تُقصّ. */}
           {/* **والسعرُ القديمُ المشطوبُ داخلَ البطاقة تحت السعر مباشرةً** (مرآةُ شريط السعر العلويّ في التطبيق). */}
-          <span className="flex min-w-0 flex-col items-start">
-            <span className={onSale ? "shop-sale-price" : undefined}>
-              <DualPrice usd={item.price_usd} syp={item.price} stacked inherit={onSale} />
+          {/* **سطران ثابتان بعرضٍ أو بلا عرض** (ملاحظةُ المالك ٢٠٢٦-١١-١٢: «مو كلهن بنفس القياس») — الأوّلُ
+              القديمُ مشطوباً بجانب الجديد إن كان عرض، والثاني «≈ الليرة»؛ و«وفّرت» شِيل فلا يطول الكرت. */}
+          <span className="shop-price-2l flex min-w-0 flex-col items-start justify-center">
+            <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+              {onSale && item.price_before != null && (
+                <span className="text-meta text-ink-muted line-through" dir="ltr">
+                  {item.price_usd != null && item.price_before_usd != null ? dollars(item.price_before_usd) : <Money value={item.price_before} small />}
+                </span>
+              )}
+              <span className={`font-bold ${onSale ? "shop-sale-price" : "text-accent-text"}`} dir="ltr">
+                {item.price_usd != null ? dollars(item.price_usd) : <Money value={item.price} small className="text-inherit" />}
+              </span>
             </span>
-            {item.price_before != null && (
-              <span className="text-meta text-ink-muted line-through">
-                {item.price_before_usd != null ? dollars(item.price_before_usd) : <Money value={item.price_before} small />}
+            {item.price_usd != null && (
+              <span className="text-meta text-ink-muted whitespace-nowrap">
+                ≈ <Money value={item.price} small className="text-inherit" />
               </span>
             )}
-            {saved && <span className="text-meta font-bold text-danger">{fill(I.saved, { v: saved })}</span>}
           </span>
           <span className="flex items-center gap-1.5">
             <FavoriteButton
@@ -758,13 +765,3 @@ function CounterBlock({
   );
 }
 
-/** **كم وفّر الزبون** — الفرقُ بين المشطوب والحاليّ بعملة السعر نفسِه، ولا فرقَ ⇒ لا سطر. */
-function saleSaving(item: { price: number; price_before?: number | null; price_usd?: number | null; price_before_usd?: number | null }): string | null {
-  if (item.price_usd != null && item.price_before_usd != null) {
-    const d = Math.round((item.price_before_usd - item.price_usd) * 100) / 100;
-    return d > 0 ? dollars(d) : null;
-  }
-  if (item.price_before == null) return null;
-  const d = item.price_before - item.price;
-  return d > 0 ? fmtMoney(d) : null;
-}

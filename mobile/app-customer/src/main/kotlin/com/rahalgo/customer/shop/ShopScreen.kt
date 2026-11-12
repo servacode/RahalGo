@@ -948,40 +948,55 @@ internal fun ItemCard(
                 val twoLines = with(androidx.compose.ui.platform.LocalDensity.current) {
                     (Rahal.type.label.lineHeight * 2).toDp()
                 }
+                // ══════════════════════════════════════════════════════════
+                // **شريطُ السعر بسطرين ثابتين — بعرضٍ أو بلا عرض** (ملاحظةُ المالك ٢٠٢٦-١١-١٢: «كرت
+                // الاصناف مختلف مو كلهن بنفس القياس… بحيث ما يتأثر شكل الكرت»)
+                // ══════════════════════════════════════════════════════════
+                //
+                // السطرُ الأوّل: **القديمُ مشطوباً بجانب الجديد** (أحمرُ عريض) إن كان عرض، وإلّا السعرُ وحدَه؛
+                // والثاني: «≈ الليرة» للمسعَّر بالدولار، أو المشطوبُ بالليرة لصنفٍ بالليرة وحدَها.
+                // **ولا سطرَ ثالث** («وفّرت» شِيل) — والنسبةُ على بطاقة الصورة.
+                val usdNow = item.priceUsd
+                val mainNow = usdNow?.let { com.rahalgo.ui.dollars(it) } ?: money(item.price)
+                val oldMain = if (onSale) {
+                    if (usdNow != null) item.priceBeforeUsd?.let { com.rahalgo.ui.dollars(it) } else item.priceBefore?.let { money(it) }
+                } else {
+                    null
+                }
                 Column(
-                    Modifier.heightIn(min = twoLines),
+                    Modifier.height(twoLines),
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    com.rahalgo.ui.DualPrice(
-                        usd = item.priceUsd,
-                        syp = item.price,
-                        stacked = true,
-                        style = Rahal.type.label,
-                        usdColor = if (onSale) Rahal.colors.danger else Rahal.colors.brand,
-                        horizontalAlignment = Alignment.End,
-                    )
-                    // **والمشطوبُ تحت السعر داخلَ البطاقة** (إعادةُ التصميم ٢٠٢٦-١١-١١) — كان سطراً
-                    // خارجَ الإطار تحت البطاقة فيُقرأ ابنَ البطاقة التالية.
-                    item.priceBefore?.let {
-                        Text(
-                            text = item.priceBeforeUsd?.let { u -> com.rahalgo.ui.dollars(u) } ?: money(it),
-                            color = Rahal.colors.inkMuted,
-                            textDecoration = TextDecoration.LineThrough,
-                            style = Rahal.type.meta,
-                            maxLines = 1,
-                        )
-                        // **وكم وفّر** — بعملة السعر نفسِه، ولا سطرَ إن لم يكن فرق.
-                        val saved = saleSaving(item)
-                        if (saved != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (oldMain != null) {
                             Text(
-                                text = stringResource(R.string.shop_saved, saved),
-                                color = Rahal.colors.danger,
-                                fontWeight = FontWeight.Bold,
+                                text = "⁨" + oldMain + "⁩",
+                                color = Rahal.colors.inkMuted,
+                                textDecoration = TextDecoration.LineThrough,
                                 style = Rahal.type.meta,
                                 maxLines = 1,
+                                softWrap = false,
                             )
+                            Spacer(Modifier.width(Rahal.space.xs))
                         }
+                        Text(
+                            text = "⁨" + mainNow + "⁩",
+                            color = if (onSale) Rahal.colors.danger else Rahal.colors.brand,
+                            fontWeight = FontWeight.Bold,
+                            style = Rahal.type.label,
+                            maxLines = 1,
+                            softWrap = false,
+                        )
+                    }
+                    if (usdNow != null) {
+                        Text(
+                            text = "≈ " + money(item.price),
+                            color = Rahal.colors.inkMuted,
+                            style = Rahal.type.meta,
+                            maxLines = 1,
+                            softWrap = false,
+                        )
                     }
                 }
             }
@@ -1180,19 +1195,3 @@ internal fun ItemCard(
     }
 }
 
-/**
- * **كم وفّر الزبون** — الفرقُ بين المشطوب والحاليّ بعملة السعر نفسِه (الدولارُ إن كان الصنفُ به).
- * **ولا فرقَ ⇒ لا سطر.**
- */
-@Composable
-private fun saleSaving(item: Item): String? {
-    val usdNow = item.priceUsd
-    val usdBefore = item.priceBeforeUsd
-    if (usdNow != null && usdBefore != null) {
-        val d = usdBefore - usdNow
-        return if (d > 0.004) com.rahalgo.ui.dollars(Math.round(d * 100) / 100.0) else null
-    }
-    val before = item.priceBefore ?: return null
-    val d = before - item.price
-    return if (d > 0) money(d) else null
-}

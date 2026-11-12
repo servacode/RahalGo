@@ -1731,6 +1731,11 @@ html[data-shop-theme="dark"] .shop-pic {
   font-weight: 800;
   box-shadow: var(--shadow-e2);
 }
+/* **شريطُ السعر بسطرين ثابتين** — كلُّ الكروت بارتفاعٍ واحد، بعرضٍ أو بلا عرض. */
+.shop-price-2l {
+  min-height: 2.6em;
+  max-height: 2.6em;
+}
 .shop-sale-price {
   color: var(--color-danger-solid);
 }
