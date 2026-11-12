@@ -34,7 +34,7 @@
     "behaviour_settings": 240,
     "order_fields": 147,
     "test_files": 839,
-    "test_funcs": 3210
+    "test_funcs": 3211
   },
   "flows": [
     {
@@ -29163,6 +29163,12 @@
     },
     {
       "name": "TestWAAMN005_FollowUpCoversSender",
+      "file": "internal/qa/whatsapp_amanah_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAAMN006_RecipientToldOnPickup",
       "file": "internal/qa/whatsapp_amanah_test.go",
       "package": "qa",
       "orphan": true

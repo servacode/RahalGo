@@ -74,6 +74,8 @@ func FetchCodeText(number int64, code string) string {
 
 // codeRoute **أين يصل الكود** — يُحسب داخلَ معاملة الاستلام.
 type codeRoute struct {
+	// waText **نصُّ الواتساب إن عُدِّل** — خبرُ استلام أمانة الواتساب وسطرُ الكود معاً (`withWAPickupNotice`).
+	waText string
 	code   string
 	number int64
 	app    string // معرّفُ الزبون إن صحّ الإشعار
@@ -209,6 +211,9 @@ func (s *Service) sendDeliveryCode(ctx context.Context, orderID string, rt *code
 	}
 	appSent := rt.app != ""
 	waText := DeliveryCodeWhatsAppText(rt.number, rt.code)
+	if rt.waText != "" {
+		waText = rt.waText
+	}
 	go func() {
 		bg, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()

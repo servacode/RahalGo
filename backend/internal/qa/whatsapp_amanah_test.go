@@ -290,3 +290,37 @@ func TestWAAMN005_FollowUpCoversSender(t *testing.T) {
 		t.Fatalf("**الجولةُ أنزلت أمانةً بلا موقع صاحبها**: %s", st)
 	}
 }
+
+// TestWAAMN006_RecipientToldOnPickup **«تم استلام أمانتك، والسائق بالطريق إليك»** (قرارُ المالك
+// ٢٠٢٦-١١-١٢) — يصل المستلِمَ بالواتساب لحظةَ الاستلام **ولو كودُ التسليم مطفأ.**
+func TestWAAMN006_RecipientToldOnPickup(t *testing.T) {
+	h := New(t)
+	w := waSimpleFx(t, h, "منطقةُ WA-AMN-006")
+	h.Setting("delivery.code_required", "false")
+	n := armFeedback(t, h, true)
+	ops := h.NewUser("operations")
+	sender, recipient := uniqPhone(), uniqPhone()
+	b := waAmanahBody(sender, recipient, 600)
+	b["sender_lat"], b["sender_lng"] = w.storeLat, w.storeLng
+	b["sender_name"] = "أبو خالد"
+	id := waCreated(t, waPost(t, h, ops.Token, b))
+	d := h.driverOf(id)
+	for _, to := range []string{"at_pickup", "picked_up"} {
+		if tr := h.POST("/api/v1/driver/orders/"+id+"/transition", d.Token, map[string]any{"to": to}); tr.Code >= 400 {
+			t.Fatalf("الانتقالُ إلى %s: %s", to, tr)
+		}
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		for _, m := range n.to(recipient) {
+			if strings.Contains(m.text, "تم استلام أمانتك") && strings.Contains(m.text, "أبو خالد") &&
+				strings.Contains(m.text, "بالطريق إليك") && !strings.Contains(m.text, "كود الاستلام") {
+				return
+			}
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("**المستلِمُ لم يصله «تم استلام أمانتك»**: %+v", n.to(recipient))
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}

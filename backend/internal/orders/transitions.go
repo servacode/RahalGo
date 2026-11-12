@@ -716,6 +716,10 @@ func (s *Service) afterTransition(ctx context.Context, ap *appliedTransition) (*
 
 	s.publishOrder(updated)
 	// **وكودُ التسليم يصل الزبونَ** — بعد الإيداع: تعثّرُه لا يُسقط استلاماً وقع.
+	// **وخبرُ «تم استلام أمانتك» للمستلِم** (قرارُ المالك ٢٠٢٦-١١-١٢) — ولو الكودُ مطفأ.
+	if to == StPickedUp {
+		codeRt = s.withWAPickupNotice(ctx, orderID, codeRt)
+	}
 	s.sendDeliveryCode(ctx, orderID, codeRt)
 	// **وكلُّ من تحرّكت محفظتُه يُبلَّغ** — بعد الإيداع لا داخلَه.
 	s.publishWalletsOf(ctx, orderID)
