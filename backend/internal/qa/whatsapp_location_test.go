@@ -306,7 +306,7 @@ func TestWAORD025_FollowUpOnceForOfficeRequests(t *testing.T) {
 	if got := h.API.SweepWALocationFollowUp(ctxBG()); got != 1 {
 		t.Fatalf("**الجولةُ بعثت %d — والمنتظَر 1** (المنتظِرُ بعد ٣ دقائق وحدَه)", got)
 	}
-	want := "ما وصلنا موقعك لسّا 🌷 ردّ على هالرسالة بموقعك المباشر: اضغط 📎 ← الموقع ← شارك الموقع المباشر"
+	want := "ما وصلنا موقعك لسّا 🌷 ردّ على هالرسالة بموقعك: اضغط 📎 ← الموقع ← أرسل موقعك الحالي أو المباشر"
 	if msgs := n.to(waiting); len(msgs) != 2 || msgs[1].text != want {
 		t.Fatalf("**رسالةُ المتابعة**: %+v", msgs)
 	}

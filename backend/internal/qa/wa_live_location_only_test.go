@@ -11,6 +11,7 @@ import "testing"
 // يبقى ينتظر؛ ثمّ المباشرُ يملؤه. ورقمٌ بلا طلبٍ مفتوح لا يُردّ عليه بشيء.
 func TestWALiveOnly_FixedRefusedLiveAccepted(t *testing.T) {
 	h := New(t)
+	h.Setting("whatsapp.live_location_only", "true") // **والمفتاحُ مطفأٌ افتراضاً** (٢٠٢٦-١١-١٢)
 	cust := h.Customer()
 	id, _ := requestHolderLocation(t, h, cust.Token, "0944555640")
 

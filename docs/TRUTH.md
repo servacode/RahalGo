@@ -845,7 +845,7 @@ kosom` |
 | `whatsapp.order_template` | المنصة | text | `طلب جديد #{number}
 {items}` |
 | `whatsapp.send_delay_ms` | المنصة | int | `6000` |
-| `whatsapp.live_location_only` | المنصة | bool | `true` |
+| `whatsapp.live_location_only` | المنصة | bool | `false` |
 | `launch.customer_signup` |  | bool | `false` |
 | `launch.customer_browse` |  | bool | `false` |
 | `launch.customer_orders` |  | bool | `false` |
