@@ -1369,22 +1369,13 @@ data class Stop(val id: String, val number: Long)
  */
 @Composable
 private fun TripFloatActions(order: DriverOrder, state: TripState, actions: TripActions) {
-    val showProblem = !isReturnTrip(order)
-    val showLive = state.step >= TripStep.PICKED_UP && (state.customerLive == null || state.liveStale)
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
-    ) {
-        if (showProblem) {
-            CaptionedMapButton(R.drawable.ic_warning, R.string.map_problem_caption, { actions.askFail() }, danger = true)
-        }
-        RoadClosureAction(actions.reportClosure) { open ->
-            CaptionedMapButton(com.rahalgo.ui.R.drawable.ic_block, R.string.closure_button, open)
-        }
-        CaptionedMapButton(R.drawable.ic_navigation, R.string.open_google_maps_short, actions.openMaps)
-        if (showLive) {
-            CaptionedMapButton(R.drawable.ic_pin, R.string.trip_live_request_short, { actions.requestLive() })
-        }
+    // **«مشكلة» رأسُ العمود بلا كتابة** (قرارُ المالك ٢٠٢٦-١١-١٢)، و«الطريق مغلق» و«خرائط غوغل» شيلتا:
+    // «مارح نستعين فيها». **وموقعُ الزبون بعد الاستلام وحين لا موقعَ حيّ أو شاخ.**
+    if (!isReturnTrip(order)) {
+        MapButton(R.drawable.ic_warning, R.string.trip_problem, { actions.askFail() }, danger = true)
+    }
+    if (state.step >= TripStep.PICKED_UP && (state.customerLive == null || state.liveStale)) {
+        MapButton(R.drawable.ic_pin, R.string.trip_live_request, { actions.requestLive() })
     }
 }
 
@@ -1434,49 +1425,6 @@ internal fun compassIndex(fromLat: Double, fromLng: Double, toLat: Double, toLng
     return ((deg + 22.5) / 45.0).toInt() % 8
 }
 
-@Composable
-private fun RoadClosureAction(onReport: (String) -> Unit, trigger: @Composable (open: () -> Unit) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    trigger { open = true }
-    if (open && roomyWindow()) {
-        val reasons = listOf(
-            "works" to R.string.closure_works,
-            "barrier" to R.string.closure_barrier,
-            "market" to R.string.closure_market,
-            "traffic" to R.string.closure_traffic,
-            "other" to R.string.closure_other,
-        )
-        com.rahalgo.ui.RahalDialog(
-            onDismissRequest = { open = false },
-            title = { Text(stringResource(R.string.closure_title), fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
-                    reasons.forEach { (key, label) ->
-                        Text(
-                            text = stringResource(label),
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(Rahal.shape.sm)
-                                .background(Rahal.colors.field)
-                                .clickable {
-                                    open = false
-                                    onReport(key)
-                                }
-                                .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
-                        )
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                com.rahalgo.ui.RahalTextButton(onClick = { open = false }) {
-                    Text(stringResource(com.rahalgo.ui.R.string.act_cancel))
-                }
-            },
-        )
-    }
-}
 
 /** **سطرُ خبرٍ فوق الخريطة** — يُقرأ ولو طُويت البطاقة. */
 /**
@@ -1825,7 +1773,8 @@ private fun TripCard(
         }
 
         // **سقفُ القائمة المتمرّرة** — حتّى يبقى للخريطة نصيب، **وتحته يتمرّر.**
-        val scrollCap = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.4f).dp
+        // **ونصفُ الشاشة لا خُمساها** (قرارُ المالك ٢٠٢٦-١١-١٢: «الطلب لسا يعمل سكرول») — والخريطةُ تبقى بنصفها.
+        val scrollCap = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.5f).dp
         // **وما تحت المقبض يُطوى معه** — والمقبضُ وحدَه يبقى، **فلا
         // يُحبَس صاحبُه عن إعادتها.** **إلّا صفَّ الأزرار وزرَّ الخطوة** (٢٠٢٦-١٠-٠٣): من طوى ليرى
         // الطريقَ لا يُحبَس عن «وصلت» أو «تم التسليم».
@@ -1890,7 +1839,7 @@ private fun TripCard(
                             style = Rahal.type.meta,
                         )
                         Spacer(Modifier.height(Rahal.space.xxs))
-                        Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs)) {
+                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(Rahal.space.xxs)) {
                             // **والتجهيزُ شارةٌ لا مربّع** (قرارُ المالك ٢٠٢٦-١١-١٢) — قبل الاستلام وحدَه.
                             if (state.step < TripStep.PICKED_UP && order.kind != "custom" && !isMultiStop(order) && !isFetch(order)) {
                                 when (val p = prepState(order)) {
@@ -2003,7 +1952,10 @@ private fun TripCard(
                             } else {
                             // **وما يستلمه باسمه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «السائق اصلا مايعرف شو الطلب»).
                             // **والفاتورةُ كاملةً بشكلها الواحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
-                            if (order.items.isNotEmpty()) InvoiceBox(order)
+                            // **ومجموعُ الفاتورة يُقال في «اقبض» والعمولة** — فلا يُكرَّر فوقهما (٢٠٢٦-١١-١٢).
+                            val single = order.kind == "standard" && order.payMerchants.size <= 1 &&
+                                (order.payMerchant > 0 || order.payMerchants.any { isUsd(it.currency) })
+                            if (order.items.isNotEmpty()) InvoiceBox(order, totals = !single)
                             // **وكم يدفع للمتجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — من سلفة
                             // المكتب، **ولكلّ متجرٍ سطرُه** إن كان الطلبُ من مصدرين.
                             if (order.kind == "standard" && (order.payMerchant > 0 || order.payMerchants.any { isUsd(it.currency) })) {
@@ -2541,7 +2493,7 @@ private fun InfoBox(icon: Int, text: String, tint: Color, bold: Boolean = false)
  * **ثمّ المجموع · التوصيل · (الخصم) · الإجمالي.** وخادمٌ قديمٌ بلا أسعار: الأسطرُ وحدَها كما كانت.
  */
 @Composable
-private fun InvoiceBox(order: DriverOrder) {
+private fun InvoiceBox(order: DriverOrder, totals: Boolean = true) {
     val tint = Rahal.colors.brand
     Column(
         Modifier
@@ -2565,8 +2517,8 @@ private fun InvoiceBox(order: DriverOrder) {
                 style = Rahal.type.cardTitle,
             )
         }
-        com.rahalgo.ui.InvoiceLines(driverInvoiceLines(order))
-        driverInvoiceTotals(order)?.let { t ->
+        com.rahalgo.ui.InvoiceLines(driverInvoiceLines(order), thumbSize = 44.dp)
+        driverInvoiceTotals(order)?.takeIf { totals }?.let { t ->
             RahalDivider()
             com.rahalgo.ui.InvoiceRow(stringResource(R.string.trip_invoice_subtotal), money(t.subtotal))
             com.rahalgo.ui.InvoiceRow(

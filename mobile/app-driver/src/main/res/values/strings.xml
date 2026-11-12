@@ -675,6 +675,9 @@
     <string name="trip_cut_line_nopct">عمولة رحّال غو: −%1$s من %2$s</string>
     <string name="trip_debt_cut">دين سابق على المتجر −%1$s</string>
     <string name="contact_call_short">اتصل</string>
+    <string name="map_closure_caption">مغلق؟</string>
+    <string name="map_gmaps_caption">غوغل</string>
+    <string name="map_live_caption">موقعه</string>
     <string name="contact_wa_short">واتساب</string>
     <string name="chip_store_ready">جاهز</string>
     <string name="chip_store_ready_at">يجهز %1$s</string>
@@ -844,7 +847,6 @@
     <string name="terms_banner_on_shift">وافق على شروط العمل الجديدة — لازم توافق قبل ما تفتح دوامك الجاي</string>
     <string name="why_missing">ينقصك شي لتوصلك الطلبات</string>
     <string name="why_missing_button">افتح لوحتي وأصلحه</string>
-    <string name="wallet_chip_label">رصيد محفظتك</string>
     <string name="offline_map_preparing_pct">تُحضَّر خريطة مدينتك… %1$s%% (%2$s من %3$s ميغا)</string>
     <string name="offline_map_ready">الخريطة جاهزة ✓</string>
     <string name="shift_switch_on">شغّال — اضغط لتسكّر الدوام</string>

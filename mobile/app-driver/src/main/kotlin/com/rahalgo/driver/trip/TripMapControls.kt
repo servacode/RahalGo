@@ -32,6 +32,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.layout.layout
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -101,28 +102,34 @@ internal fun MapButtons(
     voiceMuted: Boolean = false,
     /** **زرٌّ واحدٌ يقلبه** — «إمّا الصوتُ يعمل أو لا يعمل». */
     onVoice: () -> Unit = {},
-    /** **عمودُ الطرف الآخر** (قرارُ المالك ٢٠٢٦-١١-١٢) — أزرارُ الرحلة عائمةً على يسار الخريطة. */
+    /** **رأسُ العمود** — «مشكلة» وموقعُ الزبون (`TripFloatActions`). */
     start: (@Composable () -> Unit)? = null,
 ) {
+    // ══════════════════════════════════════════════════════════════════
+    // **عمودٌ واحدٌ على اليمين، يطفو فوق الخريطة** (قرارُ المالك ٢٠٢٦-١١-١٢: «الازرار ع يمين بلاهن
+    // نخليهن كلهن فوق بعض ع يسار… ولدي مشكلة خليها فوق بس بدون كتابة»)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ولا ارتفاعَ له في التخطيط**: يُرسم صاعداً من حافّة اللوح، **فلا يأخذ من مكان الطلب شيئاً** —
+    // كان عمودان بارتفاع أربعة أقراص يرفعان اللوحَ فيُقصّ الطلبُ ويُمرَّر.
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
-        horizontalArrangement = Arrangement.Start,
+        Modifier
+            .fillMaxWidth()
+            .layout { measurable, constraints ->
+                val p = measurable.measure(constraints.copy(minHeight = 0, maxHeight = androidx.compose.ui.unit.Constraints.Infinity))
+                layout(p.width, 0) { p.place(0, -p.height) }
+            }
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
         verticalAlignment = Alignment.Bottom,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // **«مشكلة» انتقل إلى صفّ أزرار اللوح السفليّ** (قرارُ المالك ٢٠٢٦-١١-١٠) — كان قرصاً أحمرَ
-            // في رأس هذا العمود فيطلع على خطوات الرحلة حين يطول اللوح. (`TripActionBar`)
+        // **على اليمين** (المالك ٢٠٢٦-١١-١٢: «قائمة الازرار على اليمين مو على اليسار»).
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+        ) {
+            start?.invoke()
             MapButton(R.drawable.ic_my_location, R.string.map_recenter, onRecenter)
-            Spacer(Modifier.height(Rahal.space.sm))
-            // ══════════════════════════════════════════════════════════
-            // **وحديثُ الزبون قرصٌ عائمٌ لا سطرٌ في البطاقة**
-            // ══════════════════════════════════════════════════════════
-            //
-            // (قرار المالك ٢٠٢٦-٠٨-١٢.)
-            //
-            // **وهو ما يُفتح فجأةً**: يتّصل الزبونُ ليقول «الباب الثاني»
-            // — **فيكون في مرمى الإبهام دائما** لا يُبحث عنه في بطاقةٍ
-            // قد تكون مطويّةً تحت.
+            // **وحديثُ الزبون قرصٌ عائمٌ** (قرار المالك ٢٠٢٦-٠٨-١٢) — في مرمى الإبهام دائماً.
             if (showChat) {
                 MapButton(
                     icon = R.drawable.ic_chat,
@@ -131,60 +138,16 @@ internal fun MapButtons(
                     on = chatting,
                     badge = chatUnread,
                 )
-                Spacer(Modifier.height(Rahal.space.sm))
             }
-            // ══════════════════════════════════════════════════════════
-            // **وزرُّ الصوت — واحدٌ يقول حالَه بشكله**
-            // ══════════════════════════════════════════════════════════
-            //
-            // (طلبُ المالك ٢٠٢٦-٠٨-٢٤: «ممكن سائق ما بدّه الصوت — زرٌّ
-            //  ذكيٌّ يكفي، إمّا الصوتُ يعمل أو لا يعمل».)
-            //
-            // **والأيقونةُ تتبدّل لا الإضاءةُ وحدَها**: **مكبّرٌ مشطوبٌ
-            // يُقرأ في نظرةٍ خاطفةٍ وهو يقود**، وقرصٌ مضاءٌ وآخرُ مطفأ
-            // يحتاج أن يتذكّر أيُّهما يعني ماذا.
+            // **وزرُّ الصوت يقول حالَه بشكله** (طلبُ المالك ٢٠٢٦-٠٨-٢٤).
             MapButton(
                 icon = if (voiceMuted) R.drawable.ic_volume_off else R.drawable.ic_volume_on,
                 label = if (voiceMuted) R.string.map_voice_off else R.string.map_voice_on,
                 onClick = onVoice,
                 on = !voiceMuted,
             )
-            Spacer(Modifier.height(Rahal.space.sm))
-            // **ولا زرَّ لخرائط غوغل** — (قرارُ المالك ٢٠٢٦-٠٩-٠١:
-            // «زرُّ خرائط غوغل لا عملَ له، لأنّ خريطتَنا أفضلُ من غوغل
-            // بسوريا»).
-            //
-            // **وزرٌّ يخرج بالسائق إلى تطبيقٍ آخر يقطع رحلتَه**: يفقد
-            // المراحلَ والأزرارَ والصوتَ، **ويعود ليجد نفسَه حيث
-            // تركها.** **وملاحتُنا تعرف الطلبَ وهو لا يعرفه.**
         }
-        if (start != null) {
-            Spacer(Modifier.weight(1f))
-            start()
-        }
-    }
-}
-
-/**
- * **قرصٌ وتحتَه كلمتُه** — لأزرار الرحلة العائمة (قرارُ المالك ٢٠٢٦-١١-١٢): «مشكلة» و«الطريق مغلق؟»
- * و«خرائط غوغل» و«موقع الزبون». **والكلمةُ على أرضٍ فاتحة** فتُقرأ فوق أيّ شارع.
- */
-@Composable
-internal fun CaptionedMapButton(icon: Int, label: Int, onClick: () -> Unit, danger: Boolean = false) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        MapButton(icon = icon, label = label, onClick = onClick, danger = danger)
-        Spacer(Modifier.height(Rahal.space.xxs))
-        Text(
-            text = stringResource(label),
-            color = if (danger) Rahal.colors.danger else Rahal.colors.ink,
-            fontWeight = FontWeight.Bold,
-            style = Rahal.type.meta,
-            maxLines = 1,
-            modifier = Modifier
-                .clip(Rahal.shape.pill)
-                .background(Rahal.colors.surface.copy(alpha = 0.92f))
-                .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
-        )
+        Spacer(Modifier.weight(1f))
     }
 }
 

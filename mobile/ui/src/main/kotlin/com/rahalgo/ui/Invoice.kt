@@ -190,12 +190,22 @@ fun OrderLineThumb(imageUrl: String?, thumbUrl: String?, name: String, modifier:
 
 /** **أسطرُ الأصناف** — كلٌّ في سطرٍ: النصُّ في البداية والمبلغُ في النهاية. */
 @Composable
-fun InvoiceLines(lines: List<InvoiceLine>, modifier: Modifier = Modifier) {
+fun InvoiceLines(
+    lines: List<InvoiceLine>,
+    modifier: Modifier = Modifier,
+    /** **صورةٌ أصغر** — شاشةُ رحلة السائق تريد الطلبَ كلَّه بلا تمرير (قرارُ المالك ٢٠٢٦-١١-١٢). */
+    thumbSize: androidx.compose.ui.unit.Dp? = null,
+) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
         invoiceOrder(lines).forEach { l ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                 if (l.imageUrl != null || l.thumbUrl != null) {
-                    OrderLineThumb(l.imageUrl, l.thumbUrl, l.name)
+                    OrderLineThumb(
+                        l.imageUrl,
+                        l.thumbUrl,
+                        l.name,
+                        modifier = thumbSize?.let { Modifier.size(it) } ?: Modifier,
+                    )
                 }
                 Column(Modifier.weight(1f)) {
                     // **المرتجعُ باهتٌ مشطوبٌ كما في الويب** (`InvoiceLines.tsx`): يُشطب النصُّ وحدَه لا المبلغ.
