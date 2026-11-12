@@ -126,6 +126,7 @@ func TestXG46_OrderCreateNeedsOneConnection(t *testing.T) {
 func TestXG46_OutOfCoverageNeedsOneConnection(t *testing.T) {
 	h := oneConnHarness(t, 1)
 	treasury(t, h)
+	govOn(t, h, "دمشق") // المحافظاتُ مطفأةٌ ما عدا الرقة (0545)
 	cust := h.Customer()
 	item := h.NewItem(1000)
 

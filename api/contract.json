@@ -4710,6 +4710,26 @@
         {
           "name": "reason",
           "type": "string"
+        },
+        {
+          "name": "store_name",
+          "type": "string"
+        },
+        {
+          "name": "store_phone",
+          "type": "string"
+        },
+        {
+          "name": "store_address",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "?float64"
+        },
+        {
+          "name": "lng",
+          "type": "?float64"
         }
       ],
       "response": [

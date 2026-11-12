@@ -58,6 +58,7 @@ func TestPC01_AvailableAddressIsKnownBeforeCart(t *testing.T) {
 func TestPC03_PC04_GeographyKnownBeforeCart(t *testing.T) {
 	hh := New(t)
 	zoneForDemand(t, hh, "منطقةُ PC-03")
+	govOn(t, hh, "دمشق") // المحافظاتُ مطفأةٌ ما عدا الرقة (0545)
 
 	// **PC-04 · عنوانٌ في مدينةٍ مخدومةٍ خارجَ شكل المنطقة.**
 	if got := reasonAt(t, hh, raqqaLat+0.08, raqqaLng); got != "address_outside_coverage" {

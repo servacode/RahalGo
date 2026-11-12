@@ -226,6 +226,7 @@ func TestZONE_003_InsideZoneUnchanged(t *testing.T) {
 // دائرةِ عُدّة.**
 func TestZONE_004_OutsideAllZonesRejected(t *testing.T) {
 	h := New(t)
+	govOn(t, h, "دمشق") // المحافظاتُ مطفأةٌ ما عدا الرقة (0545)
 	if n := h.zoneCount(t); n == 0 {
 		t.Fatalf("ZONE-004 المقدّمةُ لم تتحقّق — لا دائرةَ فعّالة")
 	}
