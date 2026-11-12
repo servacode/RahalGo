@@ -75,3 +75,46 @@ func TestTI01_TopItemsDeliveredLastWeekOwnStoreOnly(t *testing.T) {
 		t.Fatalf("متجرٌ بلا مبيعات: %d", r.Code)
 	}
 }
+
+// TestTI02_TopItemsIgnoreOpenOrdersAndReturnedLines **an order that is not delivered yet never
+// counts** (owner trial 2026-11-12: a pending order showed in the week's best sellers) — every
+// live status from pending to at_dropoff is left out, and so is a line returned after pickup.
+func TestTI02_TopItemsIgnoreOpenOrdersAndReturnedLines(t *testing.T) {
+	h := New(t)
+	f := h.Factory()
+	m := f.Merchant()
+	a, b := h.NewItemPriced(m, 10, 10), h.NewItemPriced(m, 10, 10)
+	now := time.Now()
+	tiOrder(t, h, m.ID, a.ID, a.Name, 1, "delivered", now)
+	for _, st := range []string{"pending", "accepted", "preparing", "dispatching", "assigned",
+		"at_pickup", "picked_up", "on_the_way", "at_dropoff", "rejected", "failed", "refunded"} {
+		tiOrder(t, h, m.ID, b.ID, b.Name, 30, st, now)
+	}
+	// a delivered order whose only line was handed back after pickup.
+	tiOrder(t, h, m.ID, b.ID, b.Name, 30, "delivered", now)
+	if _, err := h.Pool.Exec(ctxBG(), `
+		UPDATE order_items SET returned = true
+		WHERE menu_item_id = $1::uuid AND order_id IN (SELECT id FROM orders WHERE status = 'delivered')`,
+		b.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	res := h.GET("/api/v1/merchant/stores/"+m.ID+"/top-items", m.Owner.Token)
+	if res.Code != 200 {
+		t.Fatalf("top-items: %d %s", res.Code, res.Body)
+	}
+	var out struct {
+		Data struct {
+			Items []struct {
+				Name string `json:"name"`
+				Qty  int    `json:"qty"`
+			} `json:"items"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(res.Body, &out); err != nil {
+		t.Fatal(err)
+	}
+	if it := out.Data.Items; len(it) != 1 || it[0].Name != a.Name || it[0].Qty != 1 {
+		t.Fatalf("**only the delivered line counts** — got %+v", it)
+	}
+}

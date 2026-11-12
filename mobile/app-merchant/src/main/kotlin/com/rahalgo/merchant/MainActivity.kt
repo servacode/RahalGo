@@ -160,7 +160,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun MerchantApp() {
-    AppFrame { theme, dark ->
+    // **ولا إذنَ قبل الدخول** (تجربةُ المالك ٢٠٢٦-١١-١٢): كان الموقعُ والإشعارُ يُسألان فوق
+    // شاشة الدخول. **فالإشعارُ يُسأل بعد الدخول** (`AskNotifyPermission` في `SignedIn`)،
+    // **والموقعُ عند الحاجة وحدَها** — زرُّ «موقعي» على الخريطة يسأل بنفسه.
+    AppFrame(permissions = emptyList()) { theme, dark ->
         val vm: AuthViewModel = viewModel()
         AuthGate(
             vm = vm,
@@ -295,6 +298,9 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
             if (selfManage) {
                 tab = Tab.Orders
                 ordersVm.focus(dest.id)
+            } else {
+                // **وفي وضع المنصّة يفتح السجلَّ** (فيه الجارية للقراءة) — تجربةُ المالك ٢٠٢٦-١١-١٢.
+                overlay.show(Overlay.Menu(MerchantItems.HISTORY))
             }
         }
     }
@@ -788,6 +794,12 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         onOffers = { overlay.show(Overlay.Menu(MerchantItems.OFFERS)) },
                         onPrices = { menuVm.cancelEdit(); menuVm.bulk.show(); tab = Tab.Menu },
                         onTodayOrders = { overlay.show(Overlay.Menu(MerchantItems.HISTORY)) },
+                        // **«عندك طلب جديد»** — يفتح تبويبَ الطلبات إن كان يديرها، وإلّا السجلَّ (فيه الجارية).
+                        activeOrders = ordersVm.active,
+                        onActiveOrders = {
+                            if (selfManage) tab = Tab.Orders
+                            else overlay.show(Overlay.Menu(MerchantItems.HISTORY))
+                        },
                         stores = storeVm.stores,
                         onSwitch = { id ->
                             com.rahalgo.merchant.SelectedStore.set(id)

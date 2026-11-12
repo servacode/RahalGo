@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 139,
-    "notify_targeted": 71,
+    "notify_sites": 140,
+    "notify_targeted": 72,
     "publish_rooms": [
       "customer",
       "driver",
@@ -33,8 +33,8 @@
     "setting_defs": 286,
     "behaviour_settings": 241,
     "order_fields": 148,
-    "test_files": 842,
-    "test_funcs": 3216
+    "test_files": 843,
+    "test_funcs": 3218
   },
   "flows": [
     {
@@ -21356,6 +21356,12 @@
       "orphan": true
     },
     {
+      "name": "TestHO01_PlatformModeMerchantIsNotifiedOnCreateAndOnHandoff",
+      "file": "internal/qa/merchant_handoff_notify_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestConc_CreateTxNeverWritesMerchantRow",
       "file": "internal/qa/merchant_lock_stress_test.go",
       "package": "qa",
@@ -21489,6 +21495,12 @@
     },
     {
       "name": "TestTI01_TopItemsDeliveredLastWeekOwnStoreOnly",
+      "file": "internal/qa/merchant_top_items_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTI02_TopItemsIgnoreOpenOrdersAndReturnedLines",
       "file": "internal/qa/merchant_top_items_test.go",
       "package": "qa",
       "orphan": true

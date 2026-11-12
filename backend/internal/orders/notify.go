@@ -21,8 +21,10 @@ import (
 
 // نصوص إشعارات الطلبات — مجمّعة كي لا تتناثر (كنمط notifTitles في الخادم).
 var t = struct {
-	offerDriver, assignedDriver              string
-	newOrderMerchant, newOrderOps            string
+	offerDriver, assignedDriver   string
+	newOrderMerchant, newOrderOps string
+	// handedToMerchant **المكتبُ حوّل الطلبَ للمتجر في وضع المنصّة** (تجربةُ المالك ٢٠٢٦-١١-١٢).
+	handedToMerchant                         string
 	accepted, preparing, onTheWay, delivered string
 	// **مفصلا الطلب الخاصّ** — كلٌّ منهما يوقف الطلبَ على فعلِ طرفٍ بعينه،
 	// **فمن عليه الدورُ يُخبَر أنّ الدورَ عليه.**
@@ -83,6 +85,7 @@ var t = struct {
 	offerDriver:      "طلب جديد بانتظارك",
 	assignedDriver:   "طلب أُسند إليك",
 	newOrderMerchant: "طلب جديد قادم إليك",
+	handedToMerchant: "عندك طلب جديد — جهّزه",
 	newOrderOps:      "طلب جديد في المنصة",
 	accepted:         "قبل المتجر طلبك",
 	preparing:        "طلبك قيد التحضير",
@@ -256,6 +259,53 @@ func (s *Service) notifyCreated(ctx context.Context, o *Order) {
 		Kind: notifications.KindOrder, Title: t.newOrderOps,
 		Body:   ref + " — " + p.merchantName,
 		Entity: "order", EntityID: o.ID, Href: "/dashboard/orders",
+	})
+}
+
+// NotifyMerchantHandoff **the office handed the order to the store** (platform mode: ops accepts,
+// then sends it by WhatsApp or marks it «manual»). Owner trial 2026-11-12: the merchant app gave
+// no sign that an order had arrived — the only push came at creation, before the office had even
+// accepted it, and the WhatsApp ticket goes to a phone that may not be the app's. So the moment the
+// store is told, its owner's app rings too, with the store's own part (items and amount).
+//
+// The caller sends it once per handoff (a resend of the ticket does not ring again).
+// merchantID is the store whose part was sent; empty means the order's store.
+func (s *Service) NotifyMerchantHandoff(ctx context.Context, orderID, merchantID string) {
+	if s.notify == nil {
+		return
+	}
+	var (
+		owner  *string
+		number int64
+		kind   string
+		items  int
+		amount int64
+	)
+	if err := s.db.QueryRow(ctx, `
+		SELECT m.owner_user_id, o.number, o.kind,
+		       COALESCE((SELECT count(*) FROM order_items oi
+		                 WHERE oi.order_id = o.id AND oi.merchant_id = m.id), 0),
+		       COALESCE((SELECT sum(oi.unit_price * oi.qty) FROM order_items oi
+		                 WHERE oi.order_id = o.id AND oi.merchant_id = m.id), 0)::bigint
+		FROM orders o
+		JOIN merchants m ON m.id = COALESCE(NULLIF($2, '')::uuid, o.merchant_id)
+		WHERE o.id = $1`, orderID, merchantID).
+		Scan(&owner, &number, &kind, &items, &amount); err != nil || owner == nil {
+		return
+	}
+	// **«لدي توصيلة» أرسلها المتجرُ نفسُه** — لا يُخبَر بما فعل.
+	if kind == KindMerchantDelivery {
+		return
+	}
+	body := fmt.Sprintf("#%d", number)
+	if items > 0 {
+		body = fmt.Sprintf("#%d — %s · %s ل.س", number, itemsCountAr(items), groupDigits(amount))
+	}
+	s.notify.Notify(ctx, notifications.Input{
+		UserID: *owner, Kind: notifications.KindOrder,
+		Title: t.handedToMerchant, Body: body,
+		Entity: "order", EntityID: orderID, Href: "/portal",
+		Apps: []string{notifications.AppMerchant},
 	})
 }
 

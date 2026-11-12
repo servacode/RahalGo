@@ -91,7 +91,7 @@ import { useStoreOrders } from "@/lib/store/orders";
 import { pointSet, useStoreSections } from "@/lib/store/setup";
 import { pctChange, useSalesSeries, type SalesRange, type SalesRow } from "@/lib/store/sales";
 import { groupOf } from "@/lib/store/types";
-import type { DayHours, MenuSummary, MerchantOrder, MerchantStore, StoreReport, TopItems } from "@/lib/store/types";
+import type { DayHours, MenuSummary, MerchantOrder, MerchantStore, OrdersPage, StoreReport, TopItems } from "@/lib/store/types";
 import { backAt, fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
 import { LogoCard, useSaveSettings } from "@/components/store/StoreSettings";
@@ -554,6 +554,42 @@ function SalesCard({ storeId, wk }: { storeId: string; wk: { cur: SalesRow[] | n
 // الصفحة
 // ══════════════════════════════════════════════════════════════════════
 
+// ══════════════════════════════════════════════════════════════════════
+// «عندك طلب جديد» — بطاقةٌ بارزةٌ ما دام طلبٌ جارياً (تجربةُ المالك ٢٠٢٦-١١-١٢، مرآةُ `StoreHome.kt`)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **في وضع المنصّة المكتبُ يقبل والمتجرُ يتفرّج** — والمحرّكُ يحجب الجاريةَ عن قائمة الطلبات،
+// فتُقرأ من السجلّ (`with_active`) وتُرشَّح على غير المنتهية. **وفي وضع المتاجر من القائمة الحيّة.**
+const FINAL_STATUSES = new Set(["delivered", "rejected", "cancelled", "failed", "refunded"]);
+
+function useActiveOrders(storeId: string, selfManage: boolean, live: MerchantOrder[]) {
+  const load = () =>
+    selfManage
+      ? Promise.resolve<MerchantOrder[]>([])
+      : api<OrdersPage>(`/api/v1/merchant/stores/${storeId}/orders?with_active=true&page=1&per_page=20`).then((r) =>
+          (r.orders ?? []).filter((o) => !FINAL_STATUSES.has(o.status)),
+        );
+  const { data } = useLiveData(load, ["order"], [storeId, selfManage]);
+  return selfManage ? live : (data ?? []);
+}
+
+function ActiveOrdersBanner({ orders, selfManage }: { orders: MerchantOrder[]; selfManage: boolean }) {
+  if (orders.length === 0) return null;
+  const first = orders[0];
+  const text =
+    orders.length === 1 && first ? fill(HM.activeOne, { n: String(first.number) }) : fill(HM.activeMany, { n: fmtNum(orders.length) });
+  return (
+    <Link
+      href={selfManage ? "/store/orders" : "/store/history"}
+      className="flex flex-col gap-rg-xs rounded-card border border-warning bg-warning-tint px-rg-lg py-rg-md"
+      data-testid="store-active-orders"
+    >
+      <span className="text-body-lg font-bold text-ink">{text}</span>
+      <span className="text-caption text-ink-muted">{HM.activeOpen}</span>
+    </Link>
+  );
+}
+
 export default function StoreHome() {
   const { store } = useStore();
   return store ? <HomeBody store={store} /> : null;
@@ -581,6 +617,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
   const usesAmeen = store.uses_ameen === true;
   const wk = useSalesSeries(id, 7);
   const live = useLive();
+  const active = useActiveOrders(id, selfManage, live.all);
 
   useEffect(() => {
     if (!id) return;
@@ -772,6 +809,8 @@ function HomeBody({ store }: { store: MerchantStore }) {
         </header>
         {suspended && <Alert tone="error">{S.suspendedBanner}</Alert>}
 
+        <ActiveOrdersBanner orders={active} selfManage={selfManage} />
+
         {/* **حالةُ برنامج الأمين قرب الأعلى** (ملاحظةُ المالك ٢٠٢٦-١١-٠٧) — لمتاجر الأمين وحدَها. */}
         <AmeenStatusTile />
 
@@ -903,6 +942,10 @@ function HomeBody({ store }: { store: MerchantStore }) {
             <SwitchTrack on={state.isOpen} />
           </button>
         )}
+      </div>
+
+      <div className="tab-span">
+        <ActiveOrdersBanner orders={active} selfManage={selfManage} />
       </div>
 
       <div className="tab-span">

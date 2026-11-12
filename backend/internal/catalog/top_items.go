@@ -17,7 +17,8 @@ type TopItem struct {
 
 // TopSellingItems the store's best sellers over the last `days` days (owner 2026-11-11:
 // «الأكتر مبيعاً هالأسبوع»): items by DELIVERED quantity only, highest first, at most `limit`.
-// A non-delivered order (cancelled, failed, still open) never counts.
+// A non-delivered order (cancelled, failed, still open: pending/accepted/on the way…) never
+// counts, and neither does a line returned after pickup (owner trial 2026-11-12).
 func (s *Service) TopSellingItems(ctx context.Context, merchantID string, days, limit int) ([]TopItem, error) {
 	if days <= 0 {
 		days = 7
@@ -34,6 +35,8 @@ func (s *Service) TopSellingItems(ctx context.Context, merchantID string, days, 
 		LEFT JOIN media m ON m.id = mi.image_media_id
 		WHERE oi.merchant_id = $1
 		  AND o.status = 'delivered'
+		  -- a line the customer handed back after pickup was not sold (0497).
+		  AND NOT oi.returned
 		  AND COALESCE(o.delivered_at, o.created_at) >= now() - make_interval(days => $2)
 		GROUP BY COALESCE(oi.menu_item_id::text, oi.name)
                  , COALESCE(oi.menu_item_id::text, '')

@@ -182,6 +182,21 @@ export default function CartPage() {
     if (scope === "delivery" && !deliveryOk) setScope("none");
   }, [scope, deliveryOk]);
 
+  // **والإجماليُّ يُفصَّل تحته: المجموع + التوصيل** (تجربةُ المالك ٢٠٢٦-١١-١٢) — مرآةُ `CartScreen.kt`.
+  // **ومن التسعيرة وحدَها** — بلا تسعيرةٍ لا تفصيل، فلا تُخمَّن أجرة.
+  const breakdown =
+    priced && payable != null ? (
+      <p className="text-caption text-ink-muted" data-testid="cart-total-breakdown">
+        {C.subtotal} <Money value={priced.subtotal} /> + {C.delivery}{" "}
+        {fee > 0 ? <Money value={fee} /> : <span className="text-success">{m.shop.free.badge}</span>}
+        {cut && cut.discount > 0 && (
+          <>
+            {" − "}
+            {C.discount} <Money value={cut.discount} />
+          </>
+        )}
+      </p>
+    ) : null;
   const fp = useMemo(() => fingerprint(quote, linesKey, point, cut?.discount ?? 0), [quote, linesKey, point, cut]);
   const canSubmit = changes.length === 0 || acked === fp;
 
@@ -599,6 +614,7 @@ export default function CartPage() {
                 <span className="text-sm text-ink-muted">{C.total}</span>
                 {payable != null ? <Money value={payable} className="text-price-lg" /> : <p className="text-price-lg">—</p>}
               </div>
+              {breakdown}
               <button
                 type="button"
                 className="shop-cta"
@@ -681,6 +697,7 @@ export default function CartPage() {
             <div className="min-w-0 flex-1">
               <p className="text-caption text-ink-muted">{C.total}</p>
               {payable != null ? <Money value={payable} className="text-price-lg" /> : <p className="text-price-lg">—</p>}
+              {breakdown}
             </div>
             <Button
               className="min-h-12 flex-1 text-base"

@@ -23,6 +23,15 @@ import kotlinx.coroutines.launch
 // SharedPreferences، فلا يُعاد سؤالُ الطلبِ نفسِه بعد إعادةِ التشغيل.
 private const val KEY_AUTO_PROMPTED = "auto_prompted"
 
+/** **نافذةُ السؤال التلقائيّ عن التقييم** — ما سُلّم قبلها لا يُسأل عنه تلقائيّاً (الزرُّ في بطاقته يبقى). */
+private const val RATE_PROMPT_WINDOW_MS = 48L * 60 * 60 * 1000
+
+/** **سُلّم في آخر ٤٨ ساعة؟** — وبلا وقت تسليمٍ لا سؤال. */
+internal fun deliveredRecently(o: com.rahalgo.shared.customer.MyOrder, now: Long): Boolean {
+    val at = o.deliveredAt?.let { com.rahalgo.customer.BoundaryScheduler.parseIso(it) } ?: return false
+    return now - at <= RATE_PROMPT_WINDOW_MS
+}
+
 // **مفتاحُ ما قُرّر فيه من «شارك موقعك المباشر»** — سطرٌ واحدٌ بترتيبه.
 private const val KEY_LIVE_DECIDED = "decided"
 
@@ -244,8 +253,12 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 // **ولا تُعاد النافذةُ على نبضةٍ أو إعادةِ وصلٍ أو عودة** لأنّ
                 // الطلبَ صار في `autoPrompted` الدائمة والجلسةُ سُئلت مرّةً.
                 if (!autoPromptShownThisSession) {
+                    // **والقديمُ لا يُسأل** (تجربةُ المالك ٢٠٢٦-١١-١٢): كان يُسأل عن #1200 ثمّ #1199
+                    // عند كلّ فتحة — طلبٌ أقدمُ في كلّ مرّة. **فلا سؤالَ إلّا لما سُلّم في آخر ٤٨ ساعة.**
+                    val now = System.currentTimeMillis()
                     val cand = history.firstOrNull {
-                        it.status == "delivered" && it.id !in rated && it.id !in autoPrompted
+                        it.status == "delivered" && it.id !in rated && it.id !in autoPrompted &&
+                            deliveredRecently(it, now)
                     }
                     if (cand != null) {
                         askRate = cand
