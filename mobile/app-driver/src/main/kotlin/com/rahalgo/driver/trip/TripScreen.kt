@@ -2923,16 +2923,19 @@ private fun DeliverConfirmDialog(
                 onClick = { if (shamcashExceedsDue(payment, dueAmount)) overAsk = true else onConfirm(code, payment) },
                 enabled = ready,
                 modifier = Modifier.fillMaxWidth(),
+                compact = true,
             ) {
                 Text(
                     stringResource(if (due) R.string.deliver_confirm_due_yes else R.string.deliver_confirm_paid_yes),
                     style = Rahal.type.button,
+                    maxLines = 1,
                 )
             }
         },
+        // **وزرُّ الرجوع بإطارٍ كأخيه** — لا نصّاً باهتاً بجانب زرٍّ ممتلئ.
         dismissButton = {
-            RahalTextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.act_back))
+            com.rahalgo.ui.RahalOutlineButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), compact = true) {
+                Text(stringResource(R.string.act_back), style = Rahal.type.button)
             }
         },
     )

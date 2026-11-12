@@ -879,17 +879,11 @@ internal fun ShamcashChoice(
     Spacer(Modifier.height(Rahal.space.md))
     Text(stringResource(R.string.shamcash_how), fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(Rahal.space.sm))
-    Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm), verticalAlignment = Alignment.CenterVertically) {
-        androidx.compose.material3.FilterChip(
-            selected = !sham,
-            onClick = { onSham(false) },
-            label = { Text(stringResource(R.string.shamcash_cash), fontWeight = FontWeight.Bold) },
-        )
-        androidx.compose.material3.FilterChip(
-            selected = sham,
-            onClick = { onSham(true) },
-            label = { Text(stringResource(R.string.shamcash_sham), fontWeight = FontWeight.Bold) },
-        )
+    // **خياران بمربّعين متساويين** (ملاحظةُ المالك ٢٠٢٦-١١-١٢: «شكلها بشع ومو واضح») — أيقونةٌ وكلمة،
+    // **والمختارُ ممتلئٌ بعلامة ✓** فلا يُحزر.
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+        ChoiceTile(R.drawable.ic_cash, stringResource(R.string.shamcash_cash), !sham, Modifier.weight(1f)) { onSham(false) }
+        ChoiceTile(com.rahalgo.ui.R.drawable.ic_wallet, stringResource(R.string.shamcash_sham), sham, Modifier.weight(1f)) { onSham(true) }
     }
     if (!sham) return
     Spacer(Modifier.height(Rahal.space.sm))
@@ -928,16 +922,43 @@ internal fun ShamcashChoice(
  */
 @Composable
 internal fun GoodsCurrencyToggle(usd: Boolean, onChange: (Boolean) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm), verticalAlignment = Alignment.CenterVertically) {
-        androidx.compose.material3.FilterChip(
-            selected = !usd,
-            onClick = { onChange(false) },
-            label = { Text(stringResource(R.string.currency_short), fontWeight = FontWeight.Bold) },
-        )
-        androidx.compose.material3.FilterChip(
-            selected = usd,
-            onClick = { onChange(true) },
-            label = { Text(stringResource(R.string.currency_usd_short), fontWeight = FontWeight.Bold) },
-        )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+        ChoiceTile(null, stringResource(R.string.currency_short), !usd, Modifier.weight(1f)) { onChange(false) }
+        ChoiceTile(null, stringResource(R.string.currency_usd_short), usd, Modifier.weight(1f)) { onChange(true) }
+    }
+}
+
+/**
+ * **خيارٌ من اثنين بمربّعٍ واحد الشكل** (٢٠٢٦-١١-١٢) — المختارُ بلون العلامة ممتلئاً وعلامةِ ✓،
+ * والآخرُ بإطارٍ فاتح. **وارتفاعُ اللمس ٥٢** فيُضغط بإبهامٍ واحد.
+ */
+@Composable
+internal fun ChoiceTile(icon: Int?, label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val fg = if (selected) Rahal.colors.onBrand else Rahal.colors.ink
+    Row(
+        modifier
+            .heightIn(min = androidx.compose.ui.unit.Dp(52f))
+            .clip(Rahal.shape.md)
+            .background(if (selected) Rahal.colors.brand else Rahal.colors.field)
+            .border(
+                androidx.compose.foundation.BorderStroke(Rahal.stroke.hair, if (selected) Rahal.colors.brand else Rahal.colors.inkMuted.copy(alpha = 0.3f)),
+                Rahal.shape.md,
+            )
+            .clickable(role = androidx.compose.ui.semantics.Role.RadioButton, onClick = onClick)
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val shown = if (selected) com.rahalgo.ui.R.drawable.ic_check else icon
+        if (shown != null) {
+            androidx.compose.material3.Icon(
+                painter = androidx.compose.ui.res.painterResource(shown),
+                contentDescription = null,
+                tint = fg,
+                modifier = Modifier.size(Rahal.icon.sm),
+            )
+            Spacer(Modifier.width(Rahal.space.sm))
+        }
+        Text(label, color = fg, fontWeight = FontWeight.Bold, style = Rahal.type.button, maxLines = 1)
     }
 }

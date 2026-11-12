@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -382,7 +384,11 @@ private val LocalDialogFill = compositionLocalOf { false }
 
 @Composable
 private fun Modifier.dialogFill(): Modifier =
-    if (LocalDialogFill.current) this.fillMaxWidth() else this
+    if (LocalDialogFill.current) {
+        this.fillMaxWidth().fillMaxHeight()
+    } else {
+        this
+    }
 
 /** **الفاصلُ بين زرّي النافذة** — بين ٨ و١٢. */
 private val DialogButtonGap = 10.dp
@@ -402,9 +408,14 @@ fun DialogButtons(
         return
     }
     CompositionLocalProvider(LocalDialogFill provides true) {
-        Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(DialogButtonGap)) {
-            Box(Modifier.weight(1f)) { confirm() }
-            Box(Modifier.weight(1f)) { dismiss() }
+        // **والزرّان بارتفاعٍ واحد** (ملاحظةُ المالك ٢٠٢٦-١١-١٢: «الازرار لازم تكون نفس الشكل») — كان
+        // زرٌّ يلتفّ نصُّه على سطرين فيطول وحدَه بجانب أخيه.
+        Row(
+            modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(DialogButtonGap),
+        ) {
+            Box(Modifier.weight(1f).fillMaxHeight()) { confirm() }
+            Box(Modifier.weight(1f).fillMaxHeight()) { dismiss() }
         }
     }
 }

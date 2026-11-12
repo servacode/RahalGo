@@ -217,7 +217,7 @@
     <string name="trip_collect_from">اقبض من %1$s</string>
     <string name="deliver_confirm_due_title">هل قبضت المبلغ؟</string>
     <string name="deliver_confirm_due_body">المبلغ المطلوب من %1$s</string>
-    <string name="deliver_confirm_due_yes">نعم، قبضت وسلّمت</string>
+    <string name="deliver_confirm_due_yes">قبضت وسلّمت</string>
     <string name="deliver_confirm_paid_title">هل سلّمت الطلب للزبون؟</string>
     <string name="deliver_confirm_paid_yes">نعم، سلّمت</string>
     <string name="shamcash_how">كيف قبضت؟</string>
