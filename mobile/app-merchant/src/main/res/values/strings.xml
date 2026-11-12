@@ -298,7 +298,7 @@
     <string name="home_share_text">تسوّق من %1$s على رحّال غو واطلب بتوصيل لباب بيتك:\n%2$s</string>
     <string name="home_sections_many">%1$d قسم · %2$s …</string>
     <string name="home_top_title">الأكتر مبيعاً هالأسبوع</string>
-    <string name="home_top_empty">ما في مبيعات هالأسبوع لسا — أول ما تنسلّم طلبات بتظهر هون أكتر أصنافك مبيعاً</string>
+    <string name="home_top_empty">لا يوجد مبيعات بعد</string>
     <string name="home_top_qty">بيع %1$d</string>
     <string name="menu_deliveries">سجل التوصيلات</string>
     <string name="md_more">عرض المزيد</string>
