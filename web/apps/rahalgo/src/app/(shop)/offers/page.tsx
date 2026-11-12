@@ -10,6 +10,10 @@
  *
  * **والعرضُ على صنفٍ يُضغط فتُفتح نافذةُ الصنف** — بخياراته إن كانت له،
  * **والسعرُ فيها سعرُ المحرّك لا سعرُ البطاقة.**
+ *
+ * **والأصنافُ المحسومةُ بشبكة التسوّق نفسِها** (ملاحظةُ المالك ٢٠٢٦-١١-١٣: «لازم تكون نفس
+ * العرض بالتسوق») — `ItemGrid` و`ItemCard` من `/public/items?offers=1`، **وما ليس صنفاً
+ * محسوماً** (إعلانٌ عامّ، أو صنفٌ لم يردّه السوق) يبقى بطاقةً بسيطةً تحت الشبكة.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -19,7 +23,7 @@ import { api, mediaUrl } from "@/lib/api";
 import { useBrowseQuery, useCustomer } from "@/lib/customer/context";
 import { fill, freeOfferLines } from "@/lib/customer/texts";
 import type { FreeDelivery, Item, Offer } from "@/lib/customer/types";
-import { ItemSheet } from "@/components/customer/items";
+import { ItemGrid, ItemSheet } from "@/components/customer/items";
 import { ShopPageHeader } from "@/components/customer/ShopPageHeader";
 
 const m = getMessages(defaultLocale);
@@ -83,18 +87,30 @@ function left(endsAt: string | null): string {
 
 export default function OffersPage() {
   const scope = useBrowseQuery("?");
+  const scopeAmp = useBrowseQuery("&");
   const { freeDelivery } = useCustomer();
   const free = freeDelivery && (freeDelivery.standard || freeDelivery.purchase || freeDelivery.amanah) ? freeDelivery : null;
   const [offers, setOffers] = useState<Offer[] | null>(null);
+  const [items, setItems] = useState<Item[]>([]);
   const [error, setError] = useState("");
   const [open, setOpen] = useState<Item | null>(null);
 
   const load = useCallback(() => {
     setError("");
-    api<{ offers: Offer[] }>(`/api/v1/public/offers${scope}`)
-      .then((r) => setOffers((r.offers ?? []).filter((o) => o.live !== false)))
+    Promise.all([
+      api<{ offers: Offer[] }>(`/api/v1/public/offers${scope}`),
+      api<{ items: Item[] }>(`/api/v1/public/items?offers=1${scopeAmp}`),
+    ])
+      .then(([r, it]) => {
+        // **ولا صنفَ بلا حسمٍ بين العروض** — ولو ردّه خادمٌ أقدمُ لا يعرف الفلتر.
+        setItems((it.items ?? []).filter((x) => (x.discount_percent ?? 0) > 0 || x.price_before != null));
+        setOffers((r.offers ?? []).filter((o) => o.live !== false));
+      })
       .catch((err) => setError(errorText(err)));
-  }, [scope]);
+  }, [scope, scopeAmp]);
+
+  const inGrid = new Set(items.map((x) => x.id));
+  const cards = (offers ?? []).filter((o) => !o.menu_item_id || !inGrid.has(o.menu_item_id));
 
   useEffect(load, [load]);
 
@@ -106,68 +122,73 @@ export default function OffersPage() {
         <ReloadState label={error} onRetry={load} />
       ) : offers === null ? (
         <LoadingState variant="list" rows={3} />
-      ) : offers.length === 0 ? (
+      ) : offers.length === 0 && items.length === 0 ? (
         free ? null : <EmptyState icon={IconPromos} title={F.empty} line={F.emptyHint} />
       ) : (
-        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {offers.map((o) => {
-            const item = asItem(o);
-            const img = mediaUrl(o.item_image_url ?? o.image_url);
-            const saved = Math.max(0, o.price_before - o.price_after);
-            const rest = left(o.ends_at);
-            /* **بطاقةٌ بحدٍّ** (مرآةُ `Offers` في التطبيق): صورةٌ ٧٢ في البداية، عنوانٌ بسطرين، اسمُ التاجر
-               باهتاً، السعرُ بلون العلامة وقديمُه مشطوب، الخصمُ رقاقةُ تحذير، و«أضف» صغيرٌ ثانويٌّ في النهاية. */
-            const body = (
-              <>
-                <span className="h-18 w-18 shrink-0 overflow-hidden rounded-rg-md bg-field">
-                  {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
-                </span>
-                <span className="flex min-w-0 flex-1 flex-col gap-rg-xs">
-                  <span className="line-clamp-2 text-card-title">{o.title || o.item_name}</span>
-                  {o.merchant_name && (
-                    <span className="flex items-center gap-1 truncate text-caption text-ink-muted">
-                      <IconStore size={11} />
-                      {o.merchant_name}
+        <>
+          {items.length > 0 && <ItemGrid items={items} onOpen={setOpen} />}
+          {cards.length > 0 && (
+            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {cards.map((o) => {
+                const item = asItem(o);
+                const img = mediaUrl(o.item_image_url ?? o.image_url);
+                const saved = Math.max(0, o.price_before - o.price_after);
+                const rest = left(o.ends_at);
+                /* **بطاقةٌ بحدٍّ** (مرآةُ `Offers` في التطبيق): صورةٌ ٧٢ في البداية، عنوانٌ بسطرين، اسمُ التاجر
+                   باهتاً، السعرُ بلون العلامة وقديمُه مشطوب، الخصمُ رقاقةُ تحذير، و«أضف» صغيرٌ ثانويٌّ في النهاية. */
+                const body = (
+                  <>
+                    <span className="h-18 w-18 shrink-0 overflow-hidden rounded-rg-md bg-field">
+                      {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
                     </span>
-                  )}
-                  {o.body && <span className="line-clamp-2 text-caption text-ink-muted">{o.body}</span>}
-                  <span className="flex flex-wrap items-center gap-x-rg-sm gap-y-rg-xxs">
-                    {o.price_after > 0 && <Money value={o.price_after} className="text-price text-accent-text" />}
-                    {o.price_before > o.price_after && (
-                      <span className="text-caption text-ink-muted line-through">
-                        <Money value={o.price_before} small />
+                    <span className="flex min-w-0 flex-1 flex-col gap-rg-xs">
+                      <span className="line-clamp-2 text-card-title">{o.title || o.item_name}</span>
+                      {o.merchant_name && (
+                        <span className="flex items-center gap-1 truncate text-caption text-ink-muted">
+                          <IconStore size={11} />
+                          {o.merchant_name}
+                        </span>
+                      )}
+                      {o.body && <span className="line-clamp-2 text-caption text-ink-muted">{o.body}</span>}
+                      <span className="flex flex-wrap items-center gap-x-rg-sm gap-y-rg-xxs">
+                        {o.price_after > 0 && <Money value={o.price_after} className="text-price text-accent-text" />}
+                        {o.price_before > o.price_after && (
+                          <span className="text-caption text-ink-muted line-through">
+                            <Money value={o.price_before} small />
+                          </span>
+                        )}
+                        {o.discount_percent != null && o.discount_percent > 0 && (
+                          <StatusChip tone="warning">{`-${fmtNum(o.discount_percent)}%`}</StatusChip>
+                        )}
                       </span>
+                      {saved > 0 && <span className="text-caption text-success">{fill(F.saves, { amount: fmtMoney(saved) })}</span>}
+                      {rest && <span className="text-caption text-ink-muted">{rest}</span>}
+                    </span>
+                    {item && (
+                      <span className="self-end rounded-rg-md border border-line px-rg-md py-rg-sm text-label font-bold">{F.order}</span>
                     )}
-                    {o.discount_percent != null && o.discount_percent > 0 && (
-                      <StatusChip tone="warning">{`-${fmtNum(o.discount_percent)}%`}</StatusChip>
+                  </>
+                );
+                return (
+                  <li key={o.id}>
+                    {item ? (
+                      <button
+                        type="button"
+                        onClick={() => setOpen(item)}
+                        aria-label={`${F.order} — ${o.title || o.item_name}`}
+                        className="flex w-full items-start gap-rg-md rounded-rg-lg border border-line bg-surface p-rg-md text-start transition-transform active:scale-[0.99]"
+                      >
+                        {body}
+                      </button>
+                    ) : (
+                      <div className="flex items-start gap-rg-md rounded-rg-lg border border-line bg-surface p-rg-md">{body}</div>
                     )}
-                  </span>
-                  {saved > 0 && <span className="text-caption text-success">{fill(F.saves, { amount: fmtMoney(saved) })}</span>}
-                  {rest && <span className="text-caption text-ink-muted">{rest}</span>}
-                </span>
-                {item && (
-                  <span className="self-end rounded-rg-md border border-line px-rg-md py-rg-sm text-label font-bold">{F.order}</span>
-                )}
-              </>
-            );
-            return (
-              <li key={o.id}>
-                {item ? (
-                  <button
-                    type="button"
-                    onClick={() => setOpen(item)}
-                    aria-label={`${F.order} — ${o.title || o.item_name}`}
-                    className="flex w-full items-start gap-rg-md rounded-rg-lg border border-line bg-surface p-rg-md text-start transition-transform active:scale-[0.99]"
-                  >
-                    {body}
-                  </button>
-                ) : (
-                  <div className="flex items-start gap-rg-md rounded-rg-lg border border-line bg-surface p-rg-md">{body}</div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </>
       )}
       <ItemSheet item={open} onClose={() => setOpen(null)} />
     </div>

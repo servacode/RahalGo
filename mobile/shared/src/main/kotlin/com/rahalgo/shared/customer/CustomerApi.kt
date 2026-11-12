@@ -59,6 +59,13 @@ class CustomerApi(private val api: ApiClient) {
     suspend fun allItems(): ItemsPage =
         api.raw("/api/v1/public/items" + BrowseScope.query('?'))
 
+    /**
+     * **أصنافُ السوق التي عليها حسمٌ ساريٌ وحدَها** — صفحةُ العروض بالبطاقة والشبكة
+     * نفسِها كالتسوّق (ملاحظةُ المالك ٢٠٢٦-١١-١٣).
+     */
+    suspend fun offerItems(): ItemsPage =
+        api.raw("/api/v1/public/items?offers=1" + BrowseScope.query('&'))
+
     /** **أصنافُ قسم** — من كلّ المصادر مختلطةً بلا اسم متجر. */
     suspend fun sectionItems(sectionId: String): ItemsPage =
         api.raw("/api/v1/public/sections/$sectionId/items" + BrowseScope.query('?'))

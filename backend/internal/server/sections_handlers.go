@@ -447,6 +447,11 @@ func (s *Server) handlePublicSectionItems(w http.ResponseWriter, r *http.Request
 // بلا اختيار والشبكةُ للكلّ، والضغطةُ تُرشّح والثانيةُ تمحو). **وسوقُ مدينته وحدَه كالقسم.**
 func (s *Server) handlePublicAllItems(w http.ResponseWriter, r *http.Request) {
 	where, geo := s.cityWhere(r.Context(), scopeFrom(r), 1)
+	// **«?offers=1»: ما عليه حسمٌ ساريٌ وحدَه** — صفحةُ العروض بالبطاقات نفسِها
+	// والشبكةِ نفسِها كالتسوّق (ملاحظةُ المالك ٢٠٢٦-١١-١٣).
+	if r.URL.Query().Get("offers") == "1" {
+		where += storeOffersCond
+	}
 	s.scanItems(w, r, itemSelect+where+`
 		ORDER BY (i.available AND `+orders.OpenNowSQL+`) DESC, ps.sort_order, i.sort_order, i.name
 		LIMIT 200`, geo...)

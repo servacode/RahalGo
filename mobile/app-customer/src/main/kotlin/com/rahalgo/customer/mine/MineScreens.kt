@@ -273,7 +273,30 @@ private fun Offers(
             onStore = com.rahalgo.customer.shop.StoreLink.target(target, null)
                 ?.let { id -> { picking = null; onOpenStore(id) } },
             media = Backend.of(context)::media,
+            // **والبطاقةُ تفتحها للقراءة ولو كان مغلقاً** — فالسببُ مكانَ «أضف».
+            blockedReason = when {
+                target.sourceClosed -> stringResource(R.string.shop_closed_now)
+                !target.available -> stringResource(com.rahalgo.ui.R.string.mn_unavailable)
+                blocked -> blockedText
+                else -> null
+            },
         )
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **و«+» بشروط السوق نفسِها** — بوّابةُ الخدمة، والخياراتُ قبل الدخول،
+    // والمغلقُ يُفتح للقراءة، **وتنبيهُ المتجر الثاني** بعد كلّ إضافة.
+    // ══════════════════════════════════════════════════════════════════
+    val addOne: (Item) -> Unit = { item ->
+        when {
+            blocked -> Flash.fail(blockedText)
+            item.hasOptions || item.sourceClosed || !item.available -> picking = item
+            else -> {
+                val inc = Cart.add(item)
+                com.rahalgo.customer.cart.SourceNotice.afterAdd(sourceScope, vm.customerApi, address, inc)
+                Flash.ok(addedText)
+            }
+        }
     }
 
     Screen {
@@ -329,7 +352,8 @@ private fun Offers(
                 )
             }
         }
-        if (list.isEmpty()) {
+        val gridItems = vm.offerItems
+        if (list.isEmpty() && gridItems.isEmpty()) {
             if (!free.any) {
                 Empty(
                     text = stringResource(R.string.off_none),
@@ -339,141 +363,169 @@ private fun Offers(
             }
             return@Screen
         }
+        // ══════════════════════════════════════════════════════════════
+        // **العروضُ بشبكة التسوّق نفسِها** (ملاحظةُ المالك ٢٠٢٦-١١-١٣)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // («صفحة العروض ماعجبتني لازم تكون نفس العرض بالتسوق».) **البطاقةُ
+        // بطاقةُ السوق (`ItemCard`) وعددُ الأعمدة عددُه (`ShopCols`)** — و«+» والعدّادُ
+        // والقلبُ واسمُ المتجر بأفعالها هناك. **وما ليس صنفاً محسوماً** (إعلانٌ عامّ،
+        // أو صنفٌ لم يردّه السوق) يبقى بطاقةً بسيطةً تحت الشبكة.
+        val focusOffer = focus?.let { id -> list.firstOrNull { it.id == id } }
+        val focusItem = focusOffer?.menuItemId?.takeIf { id -> gridItems.any { it.id == id } }
         val ordered =
-            if (focus == null) list else list.sortedByDescending { it.id == focus }
-        ordered.forEach { o ->
-            if (focus != null && o.id == focus) {
-                Spacer(Modifier.height(Rahal.space.md))
-                Text(
-                    text = stringResource(R.string.off_from_notice),
-                    color = Rahal.colors.brand,
-                    fontWeight = FontWeight.Bold,
-                    style = Rahal.type.meta,
-                )
-            }
+            if (focusItem == null) gridItems else gridItems.sortedByDescending { it.id == focusItem }
+        val inGrid = gridItems.map { it.id }.toSet()
+        val cards = list.filter { it.menuItemId.isNullOrEmpty() || it.menuItemId !in inGrid }
+        val cardsOrdered =
+            if (focus == null) cards else cards.sortedByDescending { it.id == focus }
+        val focusCard = focus != null && cardsOrdered.firstOrNull()?.id == focus
+        val media = Backend.of(context)::media
+        val fromNotice: @Composable () -> Unit = {
             Spacer(Modifier.height(Rahal.space.md))
-            // **بطاقةُ عرضٍ بحدٍّ لا بظلّ** (إعادةُ التصميم ٢٠٢٦-١١-١١) — الصورةُ عن اليمين والاسمُ
-            // والسعرُ والشارةُ في عمودها، **و«أضف» في طرفها السفليّ** كبطاقات تطبيقات التوصيل.
-            com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined) {
-                Row(verticalAlignment = Alignment.Top) {
-                    RemoteImage(
-                        url = Backend.of(context).media(o.itemImageUrl ?: o.imageUrl),
-                        name = o.title.ifEmpty { o.itemName },
-                        modifier = Modifier
-                            .size(Rahal.size.avatarLg)
-                            .clip(Rahal.shape.md),
-                    )
-                    Spacer(Modifier.size(Rahal.space.md))
-                    Column(Modifier.fillMaxWidth()) {
-                        Text(
-                            text = o.title.ifEmpty { o.itemName },
-                            color = Rahal.colors.ink,
-                            style = Rahal.type.cardTitle,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        // **واسمُ المتجر تحت اسم الصنف** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
-                        // كما في بطاقة السوق. **وفارغُه من خادمٍ أقدم لا سطرَ له.**
-                        o.merchantName?.takeIf { it.isNotEmpty() }?.let {
-                            Text(
-                                text = it,
-                                color = Rahal.colors.inkMuted,
-                                style = Rahal.type.caption,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                        if (o.body.isNotEmpty()) {
-                            Text(
-                                text = o.body,
-                                color = Rahal.colors.inkMuted,
-                                style = Rahal.type.caption,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                        Spacer(Modifier.height(Rahal.space.xs))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (o.priceAfter > 0) {
-                                com.rahalgo.ui.MoneyText(o.priceAfter, color = Rahal.colors.brand)
-                            }
-                            if (o.priceBefore > o.priceAfter) {
-                                Spacer(Modifier.size(Rahal.space.sm))
-                                Text(
-                                    text = money(o.priceBefore),
-                                    color = Rahal.colors.inkMuted,
-                                    textDecoration = TextDecoration.LineThrough,
-                                    style = Rahal.type.caption,
-                                )
-                            }
-                            o.discountPercent?.let {
-                                Spacer(Modifier.size(Rahal.space.sm))
-                                com.rahalgo.ui.Badge("-$it٪", com.rahalgo.ui.StatusTone.Warning)
-                            }
-                        }
-
-                        // ══════════════════════════════════════════════
-                        // **والعرضُ يُضاف من مكانه**
-                        // ══════════════════════════════════════════════
-                        //
-                        // (قرارُ المالك ٢٠٢٦-٠٨-١٩: «بصفحة العروض ما في
-                        //  زرّ إضافة إلى السلّة… مو معقول يطلع من صفحة
-                        //  العروض يروح يدوّر على العرض بالقوائم».)
-                        //
-                        // **وصفحةُ عرضٍ لا يُشترى منها إعلانٌ لا سوق**:
-                        // من رأى الحسمَ ثمّ طُلب منه أن يبحث عن الصنف
-                        // في القوائم **يفقد الحسمَ في الطريق.**
-                        //
-                        // # ولا زرَّ لعرضٍ بلا صنف
-                        //
-                        // **بعضُ العروض إعلانٌ عامّ** (`menuItemId`
-                        // فارغ) — **وزرٌّ يُضيف لا شيءَ يُقرأ عطبا.**
-                        o.menuItemId?.takeIf { it.isNotEmpty() }?.let { itemId ->
-                            Spacer(Modifier.height(Rahal.space.sm))
-                            com.rahalgo.ui.RahalSmallButton(
-                                modifier = Modifier.align(Alignment.End),
-                                onClick = {
-                                    // **والسعرُ سعرُ العرض** — وهو ما
-                                    // رآه. **والمحرّكُ يُعيد الحسابَ
-                                    // عند الإرسال** فلا يُدسّ رقم.
-                                    // **وما له خياراتٌ يُسأل قبل أن
-                                    // يدخل** — **والمجموعةُ الإلزاميّةُ
-                                    // تُسقط الطلبَ كلَّه** إن دخل بلا
-                                    // اختيار، ولا يُقال أيُّ صنفٍ سبّبه.
-                                    val picked = Item(
-                                        id = itemId,
-                                        name = o.itemName.ifEmpty { o.title },
-                                        price = o.priceAfter,
-                                        imageUrl = o.itemImageUrl ?: o.imageUrl,
-                                        priceBefore = o.priceBefore
-                                            .takeIf { it > o.priceAfter },
-                                        discountPercent = o.discountPercent,
-                                        hasOptions = o.hasOptions,
-                                    )
-                                    if (picked.hasOptions) {
-                                        picking = picked
-                                    } else if (blocked) {
-                                        // **بوّابةُ الخدمة نفسُها** (CAF-12) —
-                                        // **لا يُضاف عرضٌ إلى نقطةٍ لا نصلها.**
-                                        Flash.fail(blockedText)
-                                    } else {
-                                        val inc = Cart.add(picked)
-                                        com.rahalgo.customer.cart.SourceNotice.afterAdd(
-                                            sourceScope, vm.customerApi, address, inc,
-                                        )
-                                        // **ورسالةٌ تقول إنّه وقع** —
-                                        // **وضغطةٌ بلا أثرٍ تُقرأ عطبا**،
-                                        // والبطاقةُ لا تتغيّر بعدها.
-                                        Flash.ok(addedText)
-                                    }
+            Text(
+                text = stringResource(R.string.off_from_notice),
+                color = Rahal.colors.brand,
+                fontWeight = FontWeight.Bold,
+                style = Rahal.type.meta,
+            )
+        }
+        // **وعرضٌ بطاقةٌ جاء به الخبرُ يُرفع فوق الشبكة** — لا يُدفن تحتها.
+        if (focusCard) {
+            fromNotice()
+            Spacer(Modifier.height(Rahal.space.md))
+            OfferCard(cardsOrdered.first(), media, onAdd = addOne)
+        }
+        if (ordered.isNotEmpty()) {
+            if (focusItem != null) fromNotice()
+            Spacer(Modifier.height(Rahal.space.md))
+            ordered.chunked(ShopCols).forEach { row ->
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+                ) {
+                    row.forEach { item ->
+                        Box(Modifier.weight(1f)) {
+                            com.rahalgo.customer.shop.ItemCard(
+                                item = item,
+                                media = media,
+                                liked = item.id in vm.liked,
+                                onAdd = { addOne(item) },
+                                qty = com.rahalgo.customer.shop.cartQtyOf(item),
+                                onMinus = {
+                                    Cart.setQty(item.id + "|", com.rahalgo.customer.shop.cartQtyOf(item) - 1)
                                 },
-                            ) { Text(stringResource(R.string.shop_add)) }
+                                onPlus = { addOne(item) },
+                                onOpen = { picking = item },
+                                onLike = { vm.toggleFavorite(item.id) },
+                                // **واسمُ المتجر يفتح صفحتَه** كما في السوق (٢٠٢٦-١٠-١٨).
+                                onStore = com.rahalgo.customer.shop.StoreLink.target(item, null)
+                                    ?.let { id -> { onOpenStore(id) } },
+                            )
                         }
                     }
+                    // **والسطرُ الناقصُ يبقى بعرض الأعمدة نفسِها** — لا تتمدّد بطاقتُه.
+                    repeat(ShopCols - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+                Spacer(Modifier.height(Rahal.space.md))
+            }
+        }
+        cardsOrdered.drop(if (focusCard) 1 else 0).forEach { o ->
+            Spacer(Modifier.height(Rahal.space.md))
+            OfferCard(o, media, onAdd = addOne)
+        }
+        Spacer(Modifier.height(Rahal.space.xl))
+    }
+}
+
+/**
+ * **بطاقةُ عرضٍ ليس في الشبكة** — إعلانٌ عامٌّ بلا صنف، أو صنفٌ لم يردّه السوق.
+ * **بحدٍّ لا بظلّ** (إعادةُ التصميم ٢٠٢٦-١١-١١)، و«أضف» لما له صنفٌ وحدَه.
+ */
+@Composable
+private fun OfferCard(
+    o: com.rahalgo.shared.model.Offer,
+    media: (String?) -> String?,
+    onAdd: (Item) -> Unit,
+) {
+    com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined) {
+        Row(verticalAlignment = Alignment.Top) {
+            RemoteImage(
+                url = media(o.itemImageUrl ?: o.imageUrl),
+                name = o.title.ifEmpty { o.itemName },
+                modifier = Modifier
+                    .size(Rahal.size.avatarLg)
+                    .clip(Rahal.shape.md),
+            )
+            Spacer(Modifier.size(Rahal.space.md))
+            Column(Modifier.fillMaxWidth()) {
+                Text(
+                    text = o.title.ifEmpty { o.itemName },
+                    color = Rahal.colors.ink,
+                    style = Rahal.type.cardTitle,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                o.merchantName?.takeIf { it.isNotEmpty() }?.let {
+                    Text(
+                        text = it,
+                        color = Rahal.colors.inkMuted,
+                        style = Rahal.type.caption,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (o.body.isNotEmpty()) {
+                    Text(
+                        text = o.body,
+                        color = Rahal.colors.inkMuted,
+                        style = Rahal.type.caption,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Spacer(Modifier.height(Rahal.space.xs))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (o.priceAfter > 0) {
+                        com.rahalgo.ui.MoneyText(o.priceAfter, color = Rahal.colors.brand)
+                    }
+                    if (o.priceBefore > o.priceAfter) {
+                        Spacer(Modifier.size(Rahal.space.sm))
+                        Text(
+                            text = money(o.priceBefore),
+                            color = Rahal.colors.inkMuted,
+                            textDecoration = TextDecoration.LineThrough,
+                            style = Rahal.type.caption,
+                        )
+                    }
+                    o.discountPercent?.let {
+                        Spacer(Modifier.size(Rahal.space.sm))
+                        com.rahalgo.ui.Badge("-$it٪", com.rahalgo.ui.StatusTone.Warning)
+                    }
+                }
+                // **ولا زرَّ لعرضٍ بلا صنف** — **وزرٌّ يُضيف لا شيءَ يُقرأ عطبا.**
+                // **والسعرُ سعرُ العرض** وهو ما رآه، **والمحرّكُ يُعيد الحسابَ عند الإرسال.**
+                o.menuItemId?.takeIf { it.isNotEmpty() }?.let { itemId ->
+                    Spacer(Modifier.height(Rahal.space.sm))
+                    com.rahalgo.ui.RahalSmallButton(
+                        modifier = Modifier.align(Alignment.End),
+                        onClick = {
+                            onAdd(
+                                Item(
+                                    id = itemId,
+                                    name = o.itemName.ifEmpty { o.title },
+                                    price = o.priceAfter,
+                                    imageUrl = o.itemImageUrl ?: o.imageUrl,
+                                    priceBefore = o.priceBefore.takeIf { it > o.priceAfter },
+                                    discountPercent = o.discountPercent,
+                                    hasOptions = o.hasOptions,
+                                ),
+                            )
+                        },
+                    ) { Text(stringResource(R.string.shop_add)) }
                 }
             }
         }
-        Spacer(Modifier.height(Rahal.space.xl))
     }
 }
 
