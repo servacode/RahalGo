@@ -426,4 +426,5 @@
     <!-- كرت العرض (قرار المالك ٢٠٢٦-١١-١٢) -->
     <string name="shop_sale_badge">خصم %1$d٪</string>
     <string name="shop_saved">وفّرت %1$s</string>
+    <string name="store_offers_chip">🔥 العروض (%1$d)</string>
 </resources>

@@ -1705,6 +1705,16 @@ html[data-shop-theme="dark"] .shop-pic {
 }
 /* **كرتُ العرض** (قرارُ المالك ٢٠٢٦-١١-١٢) — إطارٌ أحمرُ أعرض، وبطاقةُ «خصم ن٪» حمراءُ بظلٍّ على الصورة،
    والسعرُ الجديدُ بلون الخطر. مرآةُ بطاقة التطبيق. */
+/* **زرُّ «🔥 العروض» بصفحة المتجر** — أحمرُ كبطاقة الخصم، وممتلئٌ حين يُختار. */
+.shop-chip-offers {
+  border-color: var(--color-danger-solid);
+  color: var(--color-danger-solid);
+  font-weight: 800;
+}
+.shop-chip-offers[aria-pressed="true"] {
+  background-color: var(--color-danger-solid);
+  color: var(--color-on-solid);
+}
 .shop-item[data-sale] {
   border: 1.5px solid var(--color-danger-solid);
 }

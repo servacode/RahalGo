@@ -85,10 +85,13 @@ class CustomerApi(private val api: ApiClient) {
         query: String = "",
         after: String = "",
         limit: Int = 40,
+        /** **العروضُ وحدَها** (٢٠٢٦-١١-١٢) — عبر الأقسام. */
+        offers: Boolean = false,
     ): com.rahalgo.shared.model.StoreItemsPage {
         val p = buildList {
             add("limit=$limit")
             if (section.isNotEmpty()) add("section=$section")
+            if (offers) add("offers=1")
             if (query.isNotBlank()) add("q=" + query.trim().encodeURLParameter())
             if (after.isNotEmpty()) add("after=" + after.encodeURLParameter())
         }

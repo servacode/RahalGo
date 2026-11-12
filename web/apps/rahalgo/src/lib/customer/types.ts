@@ -103,6 +103,8 @@ export interface StoreSummary {
   store: StoreHeader;
   sections: StoreSectionCount[];
   total: number;
+  /** **كم صنفاً عليه عرضٌ ساري** (٢٠٢٦-١١-١٢) — زرُّ «🔥 العروض»؛ وغيابُه (خادمٌ قديم) صفر. */
+  offers?: number;
 }
 
 /** **One page of a store's items** — `total` on the first page only (-1 after). */

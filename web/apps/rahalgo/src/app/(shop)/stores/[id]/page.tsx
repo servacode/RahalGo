@@ -35,6 +35,9 @@ const SK = m.shop.skin;
  * **دوامُ اليوم بلفظ الزبون** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨) — «مفتوح ٢٤ ساعة» أو «اليوم من … لـ …»
  * أو «مغلق اليوم»، **لا «مفتوح هلّق».**
  */
+/** **«قسم» العروض** — فلترُ «عليه حسمٌ ساري»، لا قسمٌ في القاعدة. */
+const OFFERS = "__offers__";
+
 function todayText(today: StoreSummary["store"]["today"]): string {
   if (!today || today.open_24h) return ST.open24;
   if (today.closed || !today.open) return ST.closedToday;
@@ -88,6 +91,8 @@ export default function StorePageView() {
     (after: string) => {
       const p = new URLSearchParams({ limit: String(PAGE) });
       if (needle) p.set("q", needle);
+      // **«🔥 العروض» فلترٌ لا قسم** (قرارُ المالك ٢٠٢٦-١١-١٢) — عبر الأقسام كلِّها.
+      else if (active === OFFERS) p.set("offers", "1");
       else if (active) p.set("section", active);
       if (after) p.set("after", after);
       return `/api/v1/public/stores/${id}/items?${p.toString()}${scopeAmp}`;
@@ -260,6 +265,16 @@ export default function StorePageView() {
                      لاصقٌ تحت الشريط العلويّ، والقسمُ المختارُ يبقى في المرمى، وتحته أصنافُه وحدَها. */
                   <nav ref={bar} className="shop-store-sections" aria-label={SK.menuSections}>
                     <div className="shop-chips">
+                      {(page.offers ?? 0) > 0 && (
+                        <button
+                          type="button"
+                          className="shop-chip shop-chip-offers"
+                          aria-pressed={active === OFFERS}
+                          onClick={() => pick(active === OFFERS ? (sections[0]?.id ?? "") : OFFERS)}
+                        >
+                          {fill(ST.offersChip, { n: fmtNum(page.offers ?? 0) })}
+                        </button>
+                      )}
                       {sections.map((sec) => (
                         <button
                           key={sec.id}

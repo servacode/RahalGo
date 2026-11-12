@@ -12,6 +12,7 @@ package server
 // GET /merchant/stores/{id}/menu and GET /public/stores/{id}.
 
 import (
+	"github.com/servacode/rahalgo/backend/internal/offers"
 	"net/http"
 	"strconv"
 
@@ -116,7 +117,19 @@ func (s *Server) handlePublicStoreSummary(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"store": h, "sections": out, "total": total})
+	// **وكم صنفاً عليه عرضٌ ساري** (قرارُ المالك ٢٠٢٦-١١-١٢: زرُّ «🔥 العروض» بصفحة المتجر) — بالشرط
+	// نفسِه الذي يعرض به الصنفُ حسمَه (`offers.LiveCond`)، **وصفرُه لا زرّ.**
+	offersCount := 0
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT count(*) FROM menu_items i
+		JOIN merchants m ON m.id = i.merchant_id
+		JOIN platform_sections ps ON ps.id = i.platform_section_id
+		WHERE m.status = 'active' AND ps.active AND m.id = $1::uuid`+where+storeOffersCond,
+		append([]any{id}, geo...)...).Scan(&offersCount); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"store": h, "sections": out, "total": total, "offers": offersCount})
 }
 
 // publicStoreCursor the sort key of the last item of a public store page: section order, name
@@ -160,6 +173,10 @@ func (s *Server) handlePublicStoreItems(w http.ResponseWriter, r *http.Request) 
 	}
 	if q := catalog.NormalizeQuery(qs.Get("q")); q != "" {
 		cond += ` AND i.name ILIKE ` + arg(catalog.LikePattern(q)) + ` ESCAPE '\'`
+	}
+	// **«🔥 العروض»: ما عليه حسمٌ ساريٌ وحدَه** (قرارُ المالك ٢٠٢٦-١١-١٢) — عبر الأقسام كلِّها.
+	if qs.Get("offers") == "1" {
+		cond += storeOffersCond
 	}
 	total := -1
 	after := qs.Get("after")
@@ -205,3 +222,7 @@ func (s *Server) handlePublicStoreItems(w http.ResponseWriter, r *http.Request) 
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"items": items, "next_after": next, "total": total})
 }
+
+// storeOffersCond **صنفٌ عليه حسمٌ ساري** — بشرط السريان الواحد (`offers.LiveCond`).
+const storeOffersCond = ` AND EXISTS (SELECT 1 FROM offers o WHERE o.menu_item_id = i.id AND o.kind = 'discount' AND ` +
+	offers.LiveCond + `)`

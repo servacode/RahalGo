@@ -22,6 +22,9 @@ import kotlinx.coroutines.launch
  *
  * Cart and prices are untouched: the items are the same `Item` the market shows.
  */
+/** **«قسم» العروض** (٢٠٢٦-١١-١٢) — ليس قسماً في القاعدة، بل فلترُ «عليه حسمٌ ساري» عبر الأقسام. */
+const val OFFERS = "__offers__"
+
 class StoreList(
     private val scope: CoroutineScope,
     private val api: CustomerApi,
@@ -98,10 +101,11 @@ class StoreList(
 
     private suspend fun fetch(after: String) = api.storeItems(
         storeId,
-        section = if (query.isBlank()) section else "",
+        section = if (query.isBlank() && section != OFFERS) section else "",
         query = query,
         after = after,
         limit = PAGE_SIZE,
+        offers = query.isBlank() && section == OFFERS,
     )
 
     fun reload() {

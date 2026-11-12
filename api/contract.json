@@ -12770,6 +12770,10 @@
       "auth": false,
       "response": [
         {
+          "name": "offers",
+          "type": "unknown"
+        },
+        {
           "name": "sections",
           "type": "unknown"
         },

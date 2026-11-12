@@ -97,6 +97,8 @@ data class StoreSummary(
     val store: StoreHeader = StoreHeader(),
     val sections: List<StoreSectionCount> = emptyList(),
     val total: Int = 0,
+    /** **كم صنفاً عليه عرضٌ ساري** (٢٠٢٦-١١-١٢) — زرُّ «🔥 العروض»؛ وصفرُه (أو خادمٌ قديم) لا زرّ. */
+    val offers: Int = 0,
 )
 
 /** **One page of a store's items** — `GET /public/stores/{id}/items`; `total` on the first page only. */

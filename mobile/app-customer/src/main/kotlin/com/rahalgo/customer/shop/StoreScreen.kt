@@ -1,5 +1,6 @@
 package com.rahalgo.customer.shop
 
+import androidx.compose.foundation.background
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.text.BasicText
@@ -405,6 +406,24 @@ internal fun StoreScreen(
                     shape = Rahal.shape.pill,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
                 )
+                // **زرُّ «🔥 العروض (ن)»** (قرارُ المالك ٢٠٢٦-١١-١٢) — فوق الأقسام، أحمرُ كبطاقة الخصم،
+                // **ولمسةٌ ثانيةٌ ترجع للأقسام.** ولا زرَّ بلا عروض.
+                if (list.query.isBlank() && page.offers > 0) {
+                    val onOffers = list.section == OFFERS
+                    Text(
+                        text = stringResource(R.string.store_offers_chip, page.offers),
+                        color = if (onOffers) Rahal.colors.onPanel else Rahal.colors.danger,
+                        fontWeight = FontWeight.Bold,
+                        style = Rahal.type.label,
+                        modifier = Modifier
+                            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs)
+                            .clip(Rahal.shape.pill)
+                            .background(if (onOffers) Rahal.colors.danger else Rahal.colors.danger.copy(alpha = 0.10f))
+                            .border(Rahal.stroke.hair, Rahal.colors.danger, Rahal.shape.pill)
+                            .clickable { list.pick(if (onOffers) sections.first().id else OFFERS) }
+                            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+                    )
+                }
                 if (list.query.isBlank()) {
                     SectionRail(
                         sections.map { Section(id = it.id, name = it.name, icon = it.icon, imageUrl = it.imageUrl, imageThumbUrl = it.imageThumbUrl) },

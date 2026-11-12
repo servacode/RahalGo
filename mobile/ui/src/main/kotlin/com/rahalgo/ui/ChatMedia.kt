@@ -400,8 +400,9 @@ private fun ChatPhoto(att: ChatAttachment) {
         url = small,
         name = "",
         modifier = Modifier
-            .width(200.dp)
-            .height(150.dp)
+            // **أكبرُ يُرى بلا تكبير** (قرارُ المالك ٢٠٢٦-١١-١٢) — كانت ٢٠٠×١٥٠.
+            .width(240.dp)
+            .height(200.dp)
             .clip(Rahal.shape.sm)
             .clickable(onClickLabel = label) { open = true },
     )

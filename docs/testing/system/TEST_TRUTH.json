@@ -33,8 +33,8 @@
     "setting_defs": 286,
     "behaviour_settings": 241,
     "order_fields": 148,
-    "test_files": 843,
-    "test_funcs": 3218
+    "test_files": 844,
+    "test_funcs": 3219
   },
   "flows": [
     {
@@ -27876,6 +27876,12 @@
     {
       "name": "TestStoreAnnounce_OnceWhenVisible",
       "file": "internal/qa/store_announce_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSTOREOFFERS_FilterAndCount",
+      "file": "internal/qa/store_offers_filter_test.go",
       "package": "qa",
       "orphan": true
     },
