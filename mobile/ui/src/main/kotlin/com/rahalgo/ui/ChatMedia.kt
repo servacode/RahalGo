@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -146,100 +147,122 @@ fun ChatPhotoButton(enabled: Boolean, onPhoto: (ByteArray) -> Unit) {
 }
 
 /**
- * **زرُّ المايك** — اضغط مطوّلاً وسجّل، ارفع فيُرسَل، اسحب بعيداً فيُلغى، والدقيقةُ ترسله وحدَها.
+ * **زرُّ المايك — كبسةٌ تبدأ وكبسةٌ ترسل** (قرارُ المالك ٢٠٢٦-١١-١٢: «كبسة تسجيل الصوت لازم تظل
+ * مستمرة حتى لو شال ايدو عن المايك») — كان ضغطاً مطوّلاً يقف بشيل الإصبع، **والسائقُ يده على المقود.**
+ * وأثناء التسجيل يصير الزرُّ «إرسال» ويظهر جنبه «إلغاء»، **والدقيقةُ ترسله وحدَها.**
  */
 @Composable
 fun ChatMicButton(state: ChatVoiceState, enabled: Boolean, onVoice: (ByteArray, Long) -> Unit) {
     val context = LocalContext.current
     val send by rememberUpdatedState(onVoice)
     val recorder = remember { VoiceRecorder(context.applicationContext) }
-    DisposableEffect(recorder) { onDispose { recorder.cancel() } }
+    DisposableEffect(recorder) {
+        onDispose {
+            recorder.cancel()
+            state.recording = false
+        }
+    }
     val denied = stringResource(R.string.chat_voice_mic_denied)
     val cancelled = stringResource(R.string.chat_voice_cancelled)
     val tooShort = stringResource(R.string.chat_voice_too_short)
     val failed = stringResource(R.string.chat_voice_failed)
-    val hold = stringResource(R.string.chat_voice_hold)
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-        state.note = if (ok) hold else denied
-    }
-    val cancelPx = with(LocalDensity.current) { 72.dp.toPx() }
+    val tapToRecord = stringResource(R.string.chat_voice_hold)
+    val sendLabel = stringResource(R.string.chat_voice_send)
+    val cancelLabel = stringResource(R.string.chat_voice_cancel)
 
+    fun begin() {
+        if (!recorder.start()) {
+            state.note = failed
+            return
+        }
+        state.note = ""
+        state.elapsedMs = 0
+        state.recording = true
+    }
+
+    fun finish() {
+        if (!state.recording) return
+        state.recording = false
+        val out = recorder.stop()
+        when {
+            out == null -> state.note = failed
+            out.second < CHAT_VOICE_MIN_MS -> state.note = tooShort
+            else -> send(out.first, out.second.coerceAtMost(CHAT_VOICE_MAX_MS))
+        }
+    }
+
+    fun drop() {
+        if (!state.recording) return
+        state.recording = false
+        recorder.cancel()
+        state.note = cancelled
+    }
+
+    // **والإذنُ عند أوّل كبسة** — وإن سُمح بدأ التسجيلُ مباشرةً فلا يُعاد الكبس.
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        if (ok) begin() else state.note = denied
+    }
+
+    // **العدّادُ والدقيقة** — يُرسَل وحدَه حين تبلغ.
     LaunchedEffect(state.recording) {
         while (state.recording) {
             state.elapsedMs = recorder.elapsedMs()
+            if (state.elapsedMs >= CHAT_VOICE_MAX_MS) {
+                finish()
+                break
+            }
             delay(200)
         }
     }
 
-    Box(
-        Modifier
-            .size(Rahal.size.touch)
-            .clip(Rahal.shape.pill)
-            .background(if (state.recording) Rahal.colors.danger else Rahal.colors.field)
-            .semantics { contentDescription = hold }
-            .pointerInput(enabled) {
-                if (!enabled) return@pointerInput
-                awaitEachGesture {
-                    val down = awaitFirstDown()
-                    // **والإذنُ عند أوّل لمسة** — لا يُسجَّل في هذه اللمسة، والتالية تسجّل.
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (state.recording) {
+            Box(
+                Modifier
+                    .size(Rahal.size.touch)
+                    .clip(Rahal.shape.pill)
+                    .background(Rahal.colors.field)
+                    .clickable(onClickLabel = cancelLabel) { drop() }
+                    .semantics { contentDescription = cancelLabel },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_trash),
+                    contentDescription = null,
+                    tint = Rahal.colors.danger,
+                )
+            }
+            Spacer(Modifier.size(Rahal.space.xs))
+        }
+        Box(
+            Modifier
+                .size(Rahal.size.touch)
+                .clip(Rahal.shape.pill)
+                .background(if (state.recording) Rahal.colors.danger else Rahal.colors.field)
+                .clickable(enabled = enabled || state.recording) {
+                    if (state.recording) {
+                        finish()
+                    } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
                         PackageManager.PERMISSION_GRANTED
                     ) {
                         ask.launch(Manifest.permission.RECORD_AUDIO)
-                        return@awaitEachGesture
-                    }
-                    if (!recorder.start()) {
-                        state.note = failed
-                        return@awaitEachGesture
-                    }
-                    state.note = ""
-                    state.elapsedMs = 0
-                    state.recording = true
-                    var cancel = false
-                    try {
-                        while (true) {
-                            val left = CHAT_VOICE_MAX_MS - recorder.elapsedMs()
-                            if (left <= 0) break
-                            val ev = withTimeoutOrNull(left) { awaitPointerEvent() } ?: break
-                            val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
-                            if (!ch.pressed) break
-                            if ((ch.position - down.position).getDistance() > cancelPx) {
-                                cancel = true
-                                break
-                            }
-                            ch.consume()
-                        }
-                    } catch (e: kotlinx.coroutines.CancellationException) {
-                        cancel = true
-                        recorder.cancel()
-                        state.recording = false
-                        throw e
-                    }
-                    state.recording = false
-                    if (cancel) {
-                        recorder.cancel()
-                        state.note = cancelled
-                        return@awaitEachGesture
-                    }
-                    val out = recorder.stop()
-                    when {
-                        out == null -> state.note = failed
-                        out.second < CHAT_VOICE_MIN_MS -> state.note = tooShort
-                        else -> send(out.first, out.second.coerceAtMost(CHAT_VOICE_MAX_MS))
+                    } else {
+                        begin()
                     }
                 }
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_mic),
-            contentDescription = null,
-            tint = when {
-                state.recording -> Rahal.colors.onBrand
-                enabled -> Rahal.colors.brand
-                else -> Rahal.colors.inkMuted
-            },
-        )
+                .semantics { contentDescription = if (state.recording) sendLabel else tapToRecord },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(if (state.recording) R.drawable.ic_check else R.drawable.ic_mic),
+                contentDescription = null,
+                tint = when {
+                    state.recording -> Rahal.colors.onBrand
+                    enabled -> Rahal.colors.brand
+                    else -> Rahal.colors.inkMuted
+                },
+            )
+        }
     }
 }
 

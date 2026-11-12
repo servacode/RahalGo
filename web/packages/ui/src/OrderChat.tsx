@@ -39,7 +39,7 @@
  * **ومن قرأ سطراً لا يعرف أقاله هو أم قيل له** إلّا بعد أن يتتبّع الحافّة.
  */
 
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale, fmtTime, fmtRelDay, errorText } from "@rahalgo/i18n";
 import { Alert } from "./feedback";
 import { IconChat, IconSend, IconCheck, IconCheckAll, IconPhoto, IconMic } from "./icons";
@@ -77,7 +77,6 @@ const MAX_VOICE_MS = 60_000;
 /** أقصرُ من هذا يُهمَل: لمسةٌ عابرةٌ لا رسالة. */
 const MIN_VOICE_MS = 700;
 /** إن ابتعد الإصبعُ هذا القدر عن موضع الضغط فالتسجيلُ يُلغى. */
-const CANCEL_DIST = 60;
 
 /** أفضلُ صيغةٍ يسجّلها المتصفّح — سفاري `mp4` وغيره `webm`. */
 function pickMime(): string {
@@ -122,7 +121,6 @@ export function OrderChat({
   const [canRecord, setCanRecord] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recMs, setRecMs] = useState(0);
-  const [willCancel, setWillCancel] = useState(false);
   const rec = useRef<{
     recorder: MediaRecorder | null;
     stream: MediaStream | null;
@@ -234,7 +232,6 @@ export function OrderChat({
     r.recorder = null;
     r.chunks = [];
     setRecording(false);
-    setWillCancel(false);
     setRecMs(0);
     if (cancelled || ms < MIN_VOICE_MS || chunks.length === 0) return;
     const ext = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "webm";
@@ -249,18 +246,13 @@ export function OrderChat({
     if (r.recorder && r.recorder.state !== "inactive") r.recorder.stop();
   }
 
-  async function startRec(e: PointerEvent<HTMLButtonElement>) {
+  /* **كبسةٌ تبدأ وكبسةٌ ترسل** (قرارُ المالك ٢٠٢٦-١١-١٢: «كبسة تسجيل الصوت لازم تظل مستمرة حتى لو شال
+     ايدو عن المايك») — مرآةُ زرّ التطبيق: أثناء التسجيل يصير الزرُّ «إرسال»، و«احذف» في شريط التسجيل. */
+  async function startRec() {
     const r = rec.current;
     if (busy || r.recorder || r.pressing) return;
     r.pressing = true;
     r.cancel = false;
-    r.x = e.clientX;
-    r.y = e.clientY;
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      /* لا يضرّ */
-    }
     setError("");
     let stream: MediaStream;
     try {
@@ -271,7 +263,7 @@ export function OrderChat({
       setError(C.micDenied);
       return;
     }
-    // **أفلت الإصبعُ أثناء نافذة الإذن** — تلك الضغطةُ استُهلكت بالسؤال.
+    // **أُلغي أثناء نافذة الإذن** — فلا يُبدأ.
     if (!r.pressing) {
       stream.getTracks().forEach((t) => t.stop());
       return;
@@ -302,19 +294,6 @@ export function OrderChat({
       setRecMs(el);
       if (el >= MAX_VOICE_MS) stopRec(true);
     }, 200);
-  }
-
-  function moveRec(e: PointerEvent<HTMLButtonElement>) {
-    const r = rec.current;
-    if (!r.recorder) return;
-    setWillCancel(Math.hypot(e.clientX - r.x, e.clientY - r.y) > CANCEL_DIST);
-  }
-
-  function endRec(e: PointerEvent<HTMLButtonElement>) {
-    const r = rec.current;
-    if (!r.pressing && !r.recorder) return;
-    const far = Math.hypot(e.clientX - r.x, e.clientY - r.y) > CANCEL_DIST;
-    stopRec(e.type === "pointerup" && !far);
   }
 
   if (!thread) return null;
@@ -430,16 +409,19 @@ export function OrderChat({
   const recordingBar = recording && (
     <div
       role="status"
-      className={`mt-2 flex items-center justify-between gap-2 rounded-control px-3 py-2 text-xs ${
-        willCancel ? "bg-danger-tint text-danger" : "bg-field text-ink"
-      }`}
+      className="mt-2 flex items-center justify-between gap-2 rounded-control bg-field px-3 py-2 text-xs text-ink"
     >
       <span className="flex items-center gap-2">
         <span className="h-2 w-2 animate-pulse rounded-full bg-danger-solid" />
         {C.recording}
         <span dir="ltr">{fmtDuration(recMs)}</span>
       </span>
-      <span className="text-ink-muted">{willCancel ? C.releaseCancel : C.slideCancel}</span>
+      <span className="flex items-center gap-3">
+        <span className="text-ink-muted">{C.tapToSend}</span>
+        <button type="button" onClick={() => stopRec(false)} className="font-bold text-danger">
+          {C.discard}
+        </button>
+      </span>
     </div>
   );
 
@@ -516,15 +498,11 @@ export function OrderChat({
         <button
           type="button"
           disabled={busy && !recording}
-          onPointerDown={(e) => void startRec(e)}
-          onPointerMove={moveRec}
-          onPointerUp={endRec}
-          onPointerCancel={endRec}
-          onContextMenu={(e) => e.preventDefault()}
-          aria-label={C.voice}
-          title={C.voice}
+          onClick={() => (recording ? stopRec(true) : void startRec())}
+          aria-label={recording ? C.sendVoice : C.voice}
+          title={recording ? C.sendVoice : C.voice}
           className={`flex h-9 w-9 shrink-0 touch-none select-none items-center justify-center rounded-badge disabled:opacity-40 ${
-            recording ? (willCancel ? "bg-danger-solid text-on-bright" : "bg-accent text-on-bright") : "text-ink-muted"
+            recording ? "bg-danger-solid text-on-bright" : "text-ink-muted"
           }`}
         >
           <IconMic size={19} />

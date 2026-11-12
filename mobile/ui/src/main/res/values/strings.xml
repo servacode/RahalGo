@@ -1394,10 +1394,12 @@
     <!-- صور ورسائل صوتية بحديث الطلب (قرار المالك ٢٠٢٦-١١-١٢) -->
     <string name="chat_photo">إرسال صورة</string>
     <string name="chat_photo_open">فتح الصورة</string>
-    <string name="chat_voice_hold">اضغط مطوّلاً للتسجيل</string>
-    <string name="chat_voice_recording">جارٍ التسجيل %1$s — اسحب بعيداً للإلغاء</string>
+    <string name="chat_voice_hold">اكبس لتسجّل رسالة صوتية</string>
+    <string name="chat_voice_recording">🔴 عم يسجّل %1$s — ✓ للإرسال</string>
+    <string name="chat_voice_send">أرسل الرسالة الصوتية</string>
+    <string name="chat_voice_cancel">احذف التسجيل</string>
     <string name="chat_voice_cancelled">أُلغي التسجيل</string>
-    <string name="chat_voice_too_short">التسجيل قصير كتير — اضغط مطوّلاً</string>
+    <string name="chat_voice_too_short">التسجيل قصير كتير</string>
     <string name="chat_voice_mic_denied">لازم تسمح بالمايك لترسل رسالة صوتية</string>
     <string name="chat_voice_failed">تعذّر التسجيل — جرّب مرة تانية</string>
     <string name="chat_voice_play">تشغيل الرسالة الصوتية</string>
