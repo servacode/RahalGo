@@ -856,6 +856,7 @@ kosom` |
 | `launch.notice` |  | longtext | `` |
 | `hours.platform_enforced` |  | bool | `false` |
 | `hours.platform_switch` |  | choice | `schedule` |
+| `hours.platform_switch_reason` |  | text | `` |
 | `platform.support_phone` |  | text | `` |
 | `platform.address` |  | text | `` |
 | `platform.location` |  | geo | `` |

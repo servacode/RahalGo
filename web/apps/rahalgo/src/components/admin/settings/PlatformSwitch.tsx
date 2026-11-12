@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import { Alert, Badge, Button, Card, Confirm } from "@rahalgo/ui";
+import { Alert, Badge, Button, Card, Chip, Confirm, Input } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -27,6 +27,8 @@ export default function PlatformSwitch({ compact = false }: { compact?: boolean 
   const [error, setError] = useState("");
   // **التسكيرُ يُسأل قبله** (تدقيقُ الرئيسيّة ٢٠٢٦-١٠-٢٧) — ضغطةٌ غلطٌ في رأس الصفحة تمنع كلَّ الزبائن يطلبوا.
   const [asking, setAsking] = useState(false);
+  // **سببُ السكّر يقرؤه الزبون** (قرارُ المالك ٢٠٢٦-١١-١٢) — فارغُه يُبقي «خارج أوقات الدوام».
+  const [reason, setReason] = useState("");
 
   const load = useCallback(() => {
     api<{ switch?: string }>("/api/v1/admin/platform/hours")
@@ -40,6 +42,11 @@ export default function PlatformSwitch({ compact = false }: { compact?: boolean 
     setBusy(true);
     setError("");
     try {
+      // **السببُ قبل الزرّ** — فلا يرى زبونٌ «خارج الدوام» لحظةً ثمّ السبب؛ **ويُمحى حين يُفتح.**
+      await api("/api/v1/admin/settings/hours.platform_switch_reason", {
+        method: "PUT",
+        body: JSON.stringify({ value: v === "closed" ? reason.trim() : "" }),
+      });
       await api("/api/v1/admin/settings/hours.platform_switch", {
         method: "PUT",
         body: JSON.stringify({ value: v }),
@@ -55,7 +62,10 @@ export default function PlatformSwitch({ compact = false }: { compact?: boolean 
   /** **الفتحُ والجدولُ فوراً، والتسكيرُ بعد تأكيد.** */
   const choose = (v: Mode) => {
     if (v === mode) return;
-    if (v === "closed") setAsking(true);
+    if (v === "closed") {
+      setReason("");
+      setAsking(true);
+    }
     else void set(v);
   };
 
@@ -65,7 +75,25 @@ export default function PlatformSwitch({ compact = false }: { compact?: boolean 
     <Confirm
       open={asking}
       title={S.confirmTitle}
-      body={S.confirmBody}
+      body={
+        <div className="flex flex-col gap-3">
+          <p>{S.confirmBody}</p>
+          <Input
+            label={S.reasonLabel}
+            placeholder={S.reasonPlaceholder}
+            value={reason}
+            maxLength={120}
+            onChange={(e) => setReason(e.target.value)}
+          />
+          <div className="flex flex-wrap gap-2">
+            {S.reasonQuick.map((q: string) => (
+              <Chip key={q} selected={reason === q} onClick={() => setReason(q)}>
+                {q}
+              </Chip>
+            ))}
+          </div>
+        </div>
+      }
       confirmLabel={S.closeNow}
       busy={busy}
       onCancel={() => setAsking(false)}

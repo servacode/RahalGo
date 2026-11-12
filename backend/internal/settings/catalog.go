@@ -405,6 +405,10 @@ var Catalog = []Def{
 	// **وافتراضُه `schedule`** فلا يتبدّل شيءٌ يومَ يُنشر. انظر `platform.SwitchKey`.
 	{Key: "hours.platform_switch", Group: GroupLaunch, Kind: KindChoice,
 		Options: []string{"schedule", "open", "closed"}, Default: "schedule"},
+	// **وسببُ السكّر باليد** (قرارُ المالك ٢٠٢٦-١١-١٢: «وقت نحط مسكرين لازم الرسالة تتغير من خارج
+	// الدوام الى سبب اخر نكتبو من لوحة التحكم») — يقرؤه الزبونُ بدل «خارج الدوام» والزرُّ `closed`
+	// وحدَه، **وفارغُه يُبقي النصَّ كما كان.** واللوحةُ تمحوه حين يُفتح الدوام.
+	{Key: "hours.platform_switch_reason", Group: GroupLaunch, Kind: KindText, Max: 120, Default: ""},
 
 	{Key: "platform.orders_mode", Group: GroupPlatform, Kind: KindChoice,
 		Options: []string{"platform", "merchants"}, Default: "platform"},

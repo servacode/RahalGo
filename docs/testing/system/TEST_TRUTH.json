@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 285,
-    "behaviour_settings": 240,
+    "setting_defs": 286,
+    "behaviour_settings": 241,
     "order_fields": 148,
-    "test_files": 841,
-    "test_funcs": 3215
+    "test_files": 842,
+    "test_funcs": 3216
   },
   "flows": [
     {
@@ -5557,6 +5557,24 @@
       "key": "hours.platform_switch",
       "group": "launch",
       "kind": "choice",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "hours.platform_switch_reason",
+      "group": "launch",
+      "kind": "text",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -24280,6 +24298,12 @@
     {
       "name": "TestPH_OpenScheduleAdmitsOrder",
       "file": "internal/qa/platform_hours_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPLATSW_ManualCloseShowsOwnerReason",
+      "file": "internal/qa/platform_switch_reason_test.go",
       "package": "qa",
       "orphan": true
     },

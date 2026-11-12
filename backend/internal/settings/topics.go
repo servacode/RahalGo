@@ -154,6 +154,7 @@ var placeRules = []placeRule{
 	{prefix: "launch.", topic: TopicLaunch, section: "launch.gates"},
 	{prefix: "hours.platform_enforced", exact: true, topic: TopicLaunch, panel: "hours"},
 	{prefix: "hours.platform_switch", exact: true, topic: TopicLaunch, panel: "hours"},
+	{prefix: "hours.platform_switch_reason", exact: true, topic: TopicLaunch, panel: "hours"},
 	// **وساعةُ بداية اليوم جنب الدوام** (تدقيقُ الإعدادات ٢٠٢٦-١٠-٢٧): كانت تقع بالقاعدة
 	// العامّة «platform.» فتظهر بقسم التواصل قبل رقم الدعم — وهي تحكم يومَ الحساب بالمنصّة كلّها.
 	{prefix: "platform.day_start_hour", exact: true, topic: TopicLaunch, panel: "hours"},

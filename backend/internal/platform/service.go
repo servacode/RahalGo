@@ -37,6 +37,10 @@ const EnforcedKey = "hours.platform_enforced"
 // **ومفتوحٌ بالزرّ مفتوحٌ ولو كان خارجَ الجدول.** والجدولُ يبقى محفوظاً لا يُمحى.
 const SwitchKey = "hours.platform_switch"
 
+// SwitchReasonKey **سببُ السكّر باليد** (قرارُ المالك ٢٠٢٦-١١-١٢) — يسري والزرُّ `closed` وحدَه،
+// ويسبق نصَّ «خارج الدوام» (`ClosedTextKey`). **وفارغُه لا يغيّر شيئاً.**
+const SwitchReasonKey = "hours.platform_switch_reason"
+
 // platformGate **قيدُ المنصّة الزمنيُّ كما يحكم الآن** — الزرُّ إن ضُغط، وإلّا الجدول.
 //
 // **ومسكّرٌ بالزرّ جدولٌ فارغٌ يسري**: لا فترةَ فيه فلا يُفتح، **ولا موعدَ فتحٍ
@@ -159,6 +163,20 @@ func (s *Service) State(ctx context.Context, q dbtx.Querier) (State, error) {
 	return WithClosedText(Decide(s.now(), enforced, gate, c), s.closedText(ctx)), nil
 }
 
+// manualReason **سببُ السكّر باليد إن كُتب والزرُّ مسكّر** — وإلّا فارغ.
+func (s *Service) manualReason(ctx context.Context) string {
+	if s.settings.GetString(ctx, SwitchKey) != "closed" {
+		return ""
+	}
+	g, ok := s.settings.(interface {
+		GetString(ctx context.Context, key string) string
+	})
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(g.GetString(ctx, SwitchReasonKey))
+}
+
 // HoursClosedAt **أالمنصّةُ مسكّرةٌ بدوامها في هذه اللحظة؟** — الزرُّ إن ضُغط وإلّا الجدولُ إن سرى.
 //
 // **ولا يقرأ الإيقافَ المؤقّت** — هو «مفتوحٌ ولكن ليس الآن» لا إغلاقُ الدوام. **و«مفتوحين» بالزرّ
@@ -182,7 +200,11 @@ func WithClosedText(st State, text string) State {
 }
 
 // closedText **نصُّ المالك لخارج الدوام إن كتبه** — وإلّا فارغٌ فيبقى نصُّ التطبيق.
+// **وسببُ السكّر باليد يسبقه** (`manualReason`).
 func (s *Service) closedText(ctx context.Context) string {
+	if r := s.manualReason(ctx); r != "" {
+		return r
+	}
 	g, ok := s.settings.(interface {
 		GetString(ctx context.Context, key string) string
 	})
