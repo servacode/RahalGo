@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -74,14 +75,18 @@ import com.rahalgo.shared.model.ChatMessage
 @Composable
 fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modifier) {
     var draft by remember { mutableStateOf("") }
+    // **ونحوُ ثلثَي الشاشة** (تجربةُ المالك ٢٠٢٦-١١-١٢: «صغيرة ما بتنشاف الصور ولا الرسائل»).
+    val tall = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * CHAT_SHEET_SCREEN_SHARE).dp
 
     Column(
         modifier
             .fillMaxWidth()
             .padding(horizontal = Rahal.space.md)
-            // **وارتفاعٌ محدود** — النصف الأعلى يبقى خريطةً: **من فتح
-            // الحديث لم يقف عن السير**، وهو يقرأ سطرا ويرفع عينه.
-            .heightIn(max = 340.dp)
+            // **وارتفاعٌ نحوُ ثلثَي الشاشة** (تجربةُ المالك ٢٠٢٦-١١-١٢) — كان ٣٤٠ فلا تُرى صورةٌ
+            // ولا رسالتان. **ويملأ ما يُعطى حتّى حدّه** (`fillMaxHeight` بعد الحدّ)، والشريطُ
+            // العلويّ وزرُّ الخطوة يبقيان: الشاشةُ تعطيه ما بقي تحتهما وحدَه (`weight`).
+            .heightIn(max = tall)
+            .fillMaxHeight()
             .shadow(Rahal.elevation.overlay, Rahal.shape.lg)
             .clip(Rahal.shape.lg)
             .background(Rahal.colors.canvas)
@@ -120,7 +125,8 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             )
         }
         LazyColumn(
-            Modifier.weight(1f, fill = false).fillMaxWidth().padding(horizontal = Rahal.space.md),
+            // **والقائمةُ تملأ ما بين العنوان والكتابة وتمرّر داخلها** — والكتابةُ مثبّتةٌ تحت.
+            Modifier.weight(1f).fillMaxWidth().padding(horizontal = Rahal.space.md),
             // **والأحدث في الأسفل** — كما في كلّ حديث، **ويُقلب الترتيب
             // ليبقى آخرُه أمام العين.**
             reverseLayout = true,
@@ -291,3 +297,6 @@ data class ChatActions(
     /** **رسالةٌ صوتيّة** — البايتاتُ والمدّةُ بالميلي ثانية. */
     val sendVoice: (ByteArray, Long) -> Unit = { _, _ -> },
 )
+
+/** **حصّةُ نافذة الدردشة من ارتفاع الشاشة** (تجربةُ المالك ٢٠٢٦-١١-١٢). */
+internal const val CHAT_SHEET_SCREEN_SHARE = 0.62f

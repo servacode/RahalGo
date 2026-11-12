@@ -251,6 +251,8 @@
     <string name="trip_p_delivered">سلّمت الطلب</string>
     <!-- الإشعارات -->
     <string name="push_ch_offer">طلب جديد</string>
+    <!-- **قناةُ رنّة العرض** (تجربةُ المالك ٢٠٢٦-١١-١٢) — ترنّ حتّى يُفتح التطبيق أو ينقضي العرض. -->
+    <string name="push_ch_offer_ring">رنّة عرض الطلب</string>
     <string name="push_ch_news">أخبار الحساب</string>
     <string name="push_offer_title">طلب جديد بانتظارك</string>
     <!-- خريطة المدينة في الجهاز -->
@@ -294,7 +296,7 @@
     <string name="emg_body">سيصل بلاغ فوري إلى المكتب بموقعك ورقم الطلب. استعمله عند عطل أو خطر أو أي ما يمنعك من إكمال الطلب.</string>
     <string name="emg_send">بلغ الآن</string>
     <string name="emg_failed">لم يصل البلاغ إلى العمليات. أعد المحاولة، أو اتصل بهم مباشرة.</string>
-    <string name="trip_chat">حديث الزبون</string>
+    <string name="trip_chat">دردشة الزبون</string>
     <string name="chat_hint">اكتب رسالة…</string>
     <string name="chat_closed">انتهى الطلب — أغلق الحديث</string>
     <!-- الطلب الخاصّ -->
@@ -405,6 +407,8 @@
     <string name="card_eta">المدة</string>
     <!-- الشريط العلويّ -->
     <string name="card_dist_to">المسافة إلى %1$s</string>
+    <!-- **والمسافاتُ بخطٍّ مستقيم** (تجربةُ المالك ٢٠٢٦-١١-١٢) — والطريقُ الفعليّ بشاشة الرحلة. -->
+    <string name="card_dist_approx">≈ مسافة تقريبية بخط مستقيم — مسافة الطريق بتظهر بالرحلة</string>
     <string name="card_invoice_total">إجمالي الفاتورة</string>
 
     <!-- ══ شاشةُ الحساب ══ -->

@@ -66,6 +66,19 @@ class PushService : RahalPushService() {
             }
             return
         }
+        // **وعرضٌ والتطبيقُ بالخلفيّة يرنّ بإلحاح حتّى ينقضي** (تجربةُ المالك ٢٠٢٦-١١-١٢) —
+        // انظر `OfferAlert`. **والتطبيقُ ظاهرٌ يبقى على الإشعار المعتاد**: البطاقةُ أمامه.
+        val data = message.data
+        if (OfferAlert.isOffer(data) && !com.rahalgo.ui.AppForeground.isForeground) {
+            com.rahalgo.ui.Refresh.bump()
+            val title = data["title"].orEmpty().ifBlank { message.notification?.title.orEmpty() }
+            val body = data["body"].orEmpty().ifBlank { message.notification?.body.orEmpty() }
+            val shown = runCatching { OfferAlert.show(applicationContext, data, title, body, icon()) }
+                .onFailure { android.util.Log.w("RahalGo/push", "تعذّر تنبيهُ العرض", it) }
+                .getOrDefault(false)
+            // **وعرضٌ مات قبل وصوله لا يرنّ** — ولا يُرسم بديله.
+            if (shown || OfferAlert.ringMs(data["expires_at"], System.currentTimeMillis()) <= 0L) return
+        }
         super.onMessageReceived(message)
     }
 
