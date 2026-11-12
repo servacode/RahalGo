@@ -136,6 +136,7 @@ func TestCR04_DifferentAreaIsDistinct(t *testing.T) {
 func TestCR05_CR08_CityInterestStoresIDs(t *testing.T) {
 	hh := New(t)
 	zoneForDemand(t, hh, "منطقةُ CR-05")
+	govOn(t, hh, "دمشق")
 	u := hh.Customer()
 
 	r := demand(t, hh, u.Token, damLat, damLng, "")

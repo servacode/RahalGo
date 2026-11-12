@@ -48,6 +48,7 @@ func TestAG02_DamascusIsNamed(t *testing.T) {
 	ordersOpen(t, hh)
 	z := newZone(t, hh, "منطقةُ AG-02", raqqaLat, raqqaLng)
 	otherZonesOff(t, hh, z.ID)
+	govOn(t, hh, "دمشق")
 
 	u := hh.Customer()
 	it := hh.NewItem(900)
