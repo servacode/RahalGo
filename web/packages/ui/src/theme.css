@@ -1703,6 +1703,27 @@ html[data-shop-theme="dark"] .shop-pic {
   pointer-events: none;
   background-color: color-mix(in srgb, var(--color-paper) 55%, transparent);
 }
+/* **كرتُ العرض** (قرارُ المالك ٢٠٢٦-١١-١٢) — إطارٌ أحمرُ أعرض، وبطاقةُ «خصم ن٪» حمراءُ بظلٍّ على الصورة،
+   والسعرُ الجديدُ بلون الخطر. مرآةُ بطاقة التطبيق. */
+.shop-item[data-sale] {
+  border: 1.5px solid var(--color-danger-solid);
+}
+.shop-sale-badge {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-start: 8px;
+  pointer-events: none;
+  border-radius: var(--radius-badge);
+  background-color: var(--color-danger-solid);
+  padding: 3px 10px;
+  color: var(--color-on-solid);
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: var(--shadow-e2);
+}
+.shop-sale-price {
+  color: var(--color-danger-solid);
+}
 .shop-item-badge {
   position: absolute;
   inset-block-end: 8px;

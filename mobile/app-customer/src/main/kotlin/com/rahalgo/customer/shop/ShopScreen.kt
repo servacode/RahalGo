@@ -913,6 +913,9 @@ internal fun ItemCard(
     onPlus: (() -> Unit)? = null,
 ) {
     val closed = item.sourceClosed || !item.available
+    // **كرتُ العرض يُرى من بعيد** (ملاحظةُ المالك ٢٠٢٦-١١-١٢: «لازم يكون في علامة مميزة… بطاقة ع
+    // صورة انه خصم شقد بالمية») — إطارٌ أحمر، وبطاقةُ «خصم ن٪» على الصورة، والسعرُ الجديدُ أحمرُ عريض.
+    val onSale = (item.discountPercent ?: 0) > 0
     var zoom by remember(item.id) { mutableStateOf<String?>(null) }
     val full = media(item.imageUrl ?: item.imageThumbUrl)
     Column {
@@ -920,7 +923,11 @@ internal fun ItemCard(
             Modifier
                 .fillMaxWidth()
                 .clip(Rahal.shape.md)
-                .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+                .border(
+                    if (onSale) 1.5.dp else Rahal.stroke.hair,
+                    if (onSale) Rahal.colors.danger else Rahal.colors.line,
+                    Rahal.shape.md,
+                )
                 .background(Rahal.colors.surface),
         ) {
             // **شريطُ السعر وحدَه فوق، بعرض البطاقة** (اقتراحُ المالك ٢٠٢٦-١١-٠٤: «زر المفضلة
@@ -951,6 +958,7 @@ internal fun ItemCard(
                         syp = item.price,
                         stacked = true,
                         style = Rahal.type.label,
+                        usdColor = if (onSale) Rahal.colors.danger else Rahal.colors.brand,
                         horizontalAlignment = Alignment.End,
                     )
                     // **والمشطوبُ تحت السعر داخلَ البطاقة** (إعادةُ التصميم ٢٠٢٦-١١-١١) — كان سطراً
@@ -963,6 +971,17 @@ internal fun ItemCard(
                             style = Rahal.type.meta,
                             maxLines = 1,
                         )
+                        // **وكم وفّر** — بعملة السعر نفسِه، ولا سطرَ إن لم يكن فرق.
+                        val saved = saleSaving(item)
+                        if (saved != null) {
+                            Text(
+                                text = stringResource(R.string.shop_saved, saved),
+                                color = Rahal.colors.danger,
+                                fontWeight = FontWeight.Bold,
+                                style = Rahal.type.meta,
+                                maxLines = 1,
+                            )
+                        }
                     }
                 }
             }
@@ -1024,11 +1043,23 @@ internal fun ItemCard(
                     )
                 }
 
-                // **ونسبةُ الحسم فوق الصورة** — تُقرأ بلمحةٍ قبل أن يُقارَن الرقمان.
-                item.discountPercent?.let {
-                    Box(Modifier.padding(Rahal.space.xs)) {
-                        Chip("-$it٪", Rahal.colors.accent)
-                    }
+                // **ونسبةُ الحسم بطاقةٌ حمراءُ على الصورة** — تُقرأ بلمحةٍ قبل أن يُقارَن الرقمان،
+                // **وبظلٍّ** فتبقى واضحةً فوق أيّ صورة (كانت شارةً برتقاليّةً تذوب فيها).
+                if (onSale) {
+                    Text(
+                        text = stringResource(R.string.shop_sale_badge, item.discountPercent ?: 0),
+                        color = Rahal.colors.onPanel,
+                        fontWeight = FontWeight.Bold,
+                        style = Rahal.type.label,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(Rahal.space.xs)
+                            .shadow(Rahal.elevation.card, Rahal.shape.sm)
+                            .clip(Rahal.shape.sm)
+                            .background(Rahal.colors.danger)
+                            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
+                    )
                 }
 
             }
@@ -1147,4 +1178,21 @@ internal fun ItemCard(
             }
         }
     }
+}
+
+/**
+ * **كم وفّر الزبون** — الفرقُ بين المشطوب والحاليّ بعملة السعر نفسِه (الدولارُ إن كان الصنفُ به).
+ * **ولا فرقَ ⇒ لا سطر.**
+ */
+@Composable
+private fun saleSaving(item: Item): String? {
+    val usdNow = item.priceUsd
+    val usdBefore = item.priceBeforeUsd
+    if (usdNow != null && usdBefore != null) {
+        val d = usdBefore - usdNow
+        return if (d > 0.004) com.rahalgo.ui.dollars(Math.round(d * 100) / 100.0) else null
+    }
+    val before = item.priceBefore ?: return null
+    val d = before - item.price
+    return if (d > 0) money(d) else null
 }

@@ -421,4 +421,7 @@
     <string name="shop_order_btn">اطلب</string>
     <!-- إعادةُ التصميم الموحّد ٢٠٢٦-١١-١١ -->
     <string name="cart_summary_title">ملخّص الحساب</string>
+    <!-- كرت العرض (قرار المالك ٢٠٢٦-١١-١٢) -->
+    <string name="shop_sale_badge">خصم %1$d٪</string>
+    <string name="shop_saved">وفّرت %1$s</string>
 </resources>

@@ -18,7 +18,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import {
   Alert,
   Badge,
@@ -140,8 +140,12 @@ export function ItemCard({
     cart.add(item, 1);
     toast(I.added);
   };
+  /* **كرتُ العرض يُرى من بعيد** (ملاحظةُ المالك ٢٠٢٦-١١-١٢، مرآةُ بطاقة التطبيق) — إطارٌ أحمر، وبطاقةُ
+     «خصم ن٪» على الصورة، والسعرُ الجديدُ أحمرُ عريض، وتحته «وفّرت». */
+  const onSale = item.discount_percent != null && item.discount_percent > 0;
+  const saved = saleSaving(item);
   return (
-    <div className="shop-item" data-layout={layout}>
+    <div className="shop-item" data-layout={layout} data-sale={onSale || undefined}>
       {/* **والصورةُ وعدسةُ التكبير أخوان لا متداخلان** — زرٌّ في زرٍّ لا يصحّ. */}
       <div className="shop-item-img">
         <ShopPic src={img} name={item.name} icon="food" iconSize={28} />
@@ -162,10 +166,8 @@ export function ItemCard({
             </span>
           </>
         )}
-        {item.discount_percent != null && item.discount_percent > 0 && (
-          <span className="pointer-events-none absolute start-2 top-2">
-            <Badge variant="accent">{`-${fmtNum(item.discount_percent)}%`}</Badge>
-          </span>
+        {onSale && (
+          <span className="shop-sale-badge">{fill(I.saleBadge, { n: fmtNum(item.discount_percent ?? 0) })}</span>
         )}
         {inCart > 0 && (
           <span className="shop-qty-badge" aria-label={fill(SK.inCart, { n: fmtNum(inCart) })}>
@@ -196,12 +198,15 @@ export function ItemCard({
           {/* **الدولارُ ثمّ الليرةُ** («$2.5 · 300 ل.س») — والليرةُ تنزل تحته إن ضاق ولا تُقصّ. */}
           {/* **والسعرُ القديمُ المشطوبُ داخلَ البطاقة تحت السعر مباشرةً** (مرآةُ شريط السعر العلويّ في التطبيق). */}
           <span className="flex min-w-0 flex-col items-start">
-            <DualPrice usd={item.price_usd} syp={item.price} stacked />
+            <span className={onSale ? "shop-sale-price" : undefined}>
+              <DualPrice usd={item.price_usd} syp={item.price} stacked inherit={onSale} />
+            </span>
             {item.price_before != null && (
               <span className="text-meta text-ink-muted line-through">
                 {item.price_before_usd != null ? dollars(item.price_before_usd) : <Money value={item.price_before} small />}
               </span>
             )}
+            {saved && <span className="text-meta font-bold text-danger">{fill(I.saved, { v: saved })}</span>}
           </span>
           <span className="flex items-center gap-1.5">
             <FavoriteButton
@@ -751,4 +756,15 @@ function CounterBlock({
       })}
     </fieldset>
   );
+}
+
+/** **كم وفّر الزبون** — الفرقُ بين المشطوب والحاليّ بعملة السعر نفسِه، ولا فرقَ ⇒ لا سطر. */
+function saleSaving(item: { price: number; price_before?: number | null; price_usd?: number | null; price_before_usd?: number | null }): string | null {
+  if (item.price_usd != null && item.price_before_usd != null) {
+    const d = Math.round((item.price_before_usd - item.price_usd) * 100) / 100;
+    return d > 0 ? dollars(d) : null;
+  }
+  if (item.price_before == null) return null;
+  const d = item.price_before - item.price;
+  return d > 0 ? fmtMoney(d) : null;
 }
