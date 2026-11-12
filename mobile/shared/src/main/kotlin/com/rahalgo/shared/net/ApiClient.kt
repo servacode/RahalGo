@@ -411,6 +411,8 @@ class ApiClient(
         fileName: String,
         bytes: ByteArray,
         fields: Map<String, String> = emptyMap(),
+        /** **نوعُ الملف** — صورةٌ افتراضاً، وصوتُ الحديث `audio/mp4`. */
+        contentType: String = "image/jpeg",
     ): String {
         val res: HttpResponse = http.submitFormWithBinaryData(
             url = baseUrl + path,
@@ -420,7 +422,7 @@ class ApiClient(
                     "file",
                     bytes,
                     io.ktor.http.Headers.build {
-                        append(io.ktor.http.HttpHeaders.ContentType, "image/jpeg")
+                        append(io.ktor.http.HttpHeaders.ContentType, contentType)
                         append(
                             io.ktor.http.HttpHeaders.ContentDisposition,
                             "filename=\"" + fileName + "\"",

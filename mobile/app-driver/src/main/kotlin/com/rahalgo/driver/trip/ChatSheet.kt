@@ -218,11 +218,25 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                     }
                 }
             }
+            // ══════════════════════════════════════════════════════════
+            // **وصورةٌ ورسالةٌ صوتيّة** (قرارُ المالك ٢٠٢٦-١١-١٢) — وهو يقود، الصوتُ أسهلُ من الكتابة.
+            // ══════════════════════════════════════════════════════════
+            val voice = com.rahalgo.ui.rememberChatVoiceState()
+            com.rahalgo.ui.ChatVoiceHint(
+                voice,
+                Modifier.fillMaxWidth().padding(start = Rahal.space.md, end = Rahal.space.md, top = Rahal.space.sm),
+            )
+            Row(
+                Modifier.fillMaxWidth().padding(start = Rahal.space.sm, end = Rahal.space.md),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                com.rahalgo.ui.ChatPhotoButton(enabled = !state.busy) { actions.sendPhoto(it) }
+                com.rahalgo.ui.ChatMicButton(voice, enabled = !state.busy) { bytes, ms -> actions.sendVoice(bytes, ms) }
             OutlinedTextField(
                 value = draft,
                 onValueChange = { draft = it },
                 placeholder = { Text(stringResource(R.string.chat_hint)) },
-                modifier = Modifier.fillMaxWidth().padding(Rahal.space.md),
+                modifier = Modifier.weight(1f).padding(start = Rahal.space.sm, top = Rahal.space.md, bottom = Rahal.space.md),
                 singleLine = true,
                 shape = Rahal.shape.lg,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -237,6 +251,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                     }
                 },
             )
+            }
         } else {
             // **وحديثٌ مغلقٌ يُقال إنّه مغلق** — لا حقلُ كتابةٍ لا يعمل.
             Text(
@@ -271,4 +286,8 @@ data class ChatState(
 data class ChatActions(
     val send: (String) -> Unit,
     val close: () -> Unit,
+    /** **صورةٌ في الحديث** (قرارُ المالك ٢٠٢٦-١١-١٢). */
+    val sendPhoto: (ByteArray) -> Unit = {},
+    /** **رسالةٌ صوتيّة** — البايتاتُ والمدّةُ بالميلي ثانية. */
+    val sendVoice: (ByteArray, Long) -> Unit = { _, _ -> },
 )

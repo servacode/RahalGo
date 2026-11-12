@@ -1391,4 +1391,19 @@
     <string name="ms_search">ابحث عن قسم</string>
     <string name="ms_picked">الأقسام المختارة: %1$d</string>
     <string name="ms_no_match">لا يوجد قسم بهذا الاسم</string>
+    <!-- صور ورسائل صوتية بحديث الطلب (قرار المالك ٢٠٢٦-١١-١٢) -->
+    <string name="chat_photo">إرسال صورة</string>
+    <string name="chat_photo_open">فتح الصورة</string>
+    <string name="chat_voice_hold">اضغط مطوّلاً للتسجيل</string>
+    <string name="chat_voice_recording">جارٍ التسجيل %1$s — اسحب بعيداً للإلغاء</string>
+    <string name="chat_voice_cancelled">أُلغي التسجيل</string>
+    <string name="chat_voice_too_short">التسجيل قصير كتير — اضغط مطوّلاً</string>
+    <string name="chat_voice_mic_denied">لازم تسمح بالمايك لترسل رسالة صوتية</string>
+    <string name="chat_voice_failed">تعذّر التسجيل — جرّب مرة تانية</string>
+    <string name="chat_voice_play">تشغيل الرسالة الصوتية</string>
+    <string name="chat_voice_pause">إيقاف الصوت</string>
+    <string name="chat_sending">جارٍ الإرسال…</string>
+    <string name="err_chat_attachments_limit">وصلت للحد الأقصى من الصور والرسائل الصوتية بهالطلب</string>
+    <string name="err_invalid_audio">الملف الصوتي غير صالح</string>
+    <string name="err_audio_too_large">الرسالة الصوتية طويلة أو كبيرة كتير</string>
 </resources>

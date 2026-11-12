@@ -1215,6 +1215,8 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                     chatActions = ChatActions(
                         send = orders::sendMessage,
                         close = orders::closeChat,
+                        sendPhoto = orders::sendChatPhoto,
+                        sendVoice = orders::sendChatVoice,
                     ),
                     chatUnread = orders.chatUnread,
                 )

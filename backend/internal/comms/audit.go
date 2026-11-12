@@ -52,6 +52,8 @@ type AuditLine struct {
 	// قسمه لا خليطاً واحداً (بلاغُ المالك ٢٠٢٦-١٠-٠٢). وفارغٌ: سطرٌ قبل أيّ سائق.
 	DriverID   string `json:"driver_id,omitempty"`
 	DriverName string `json:"driver_name,omitempty"`
+	// Attachment **صورةٌ أو رسالةٌ صوتيّة** (قرارُ المالك ٢٠٢٦-١١-١٢) — برابطٍ موقَّع.
+	Attachment *Attachment `json:"attachment,omitempty"`
 }
 
 // AuditThread **حديثُ طلبٍ كاملاً — للمراجعة عند الخلاف.**
@@ -79,8 +81,11 @@ func (s *Service) Audit(ctx context.Context, orderID string) (*AuditThread, erro
 	rows, err := s.db.Query(ctx, `
 		SELECT x.id::text, x.body, x.sender_role, COALESCE(u.full_name, ''),
 		       x.created_at, x.read_at, x.flagged, COALESCE(x.flag_word, ''),
-		       COALESCE(x.driver_id::text, ''), COALESCE(td.full_name, ''), x.contact_leak
+		       COALESCE(x.driver_id::text, ''), COALESCE(td.full_name, ''), x.contact_leak,
+		       COALESCE(x.attachment_kind, ''), COALESCE(m.path, ''), COALESCE(m.thumb_path, ''),
+		       COALESCE(x.attachment_duration_ms, 0)
 		FROM order_messages x
+		LEFT JOIN media m ON m.id = x.attachment_media_id
 		LEFT JOIN users u ON u.id = x.sender_id
 		LEFT JOIN users td ON td.id = x.driver_id
 		WHERE x.order_id = $1
@@ -91,10 +96,13 @@ func (s *Service) Audit(ctx context.Context, orderID string) (*AuditThread, erro
 	defer rows.Close()
 	for rows.Next() {
 		var l AuditLine
+		var a attachmentRow
 		if err := rows.Scan(&l.ID, &l.Body, &l.Role, &l.Sender, &l.CreatedAt, &l.ReadAt,
-			&l.Flagged, &l.FlagWord, &l.DriverID, &l.DriverName, &l.ContactLeak); err != nil {
+			&l.Flagged, &l.FlagWord, &l.DriverID, &l.DriverName, &l.ContactLeak,
+			&a.kind, &a.path, &a.thumb, &a.durationMs); err != nil {
 			return nil, err
 		}
+		l.Attachment = a.build(l.Body)
 		out.Lines = append(out.Lines, l)
 	}
 	return out, rows.Err()

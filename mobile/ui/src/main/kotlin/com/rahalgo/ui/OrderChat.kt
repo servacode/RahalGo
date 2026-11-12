@@ -197,11 +197,23 @@ class OrderChatViewModel(app: Application) : AndroidViewModel(app) {
     /** **يُرسل ثمّ يُعيد الجلب** — فيرى ما وصل لا ما ظنّ أنّه أرسل. */
     fun send(orderId: String, body: String) {
         val text = body.trim()
-        if (text.isEmpty() || busy) return
+        if (text.isEmpty()) return
+        deliver(orderId) { api.send(orderId, text) }
+    }
+
+    /** **صورةٌ في الحديث** (قرارُ المالك ٢٠٢٦-١١-١٢). */
+    fun sendPhoto(orderId: String, jpeg: ByteArray) = deliver(orderId) { api.sendPhoto(orderId, jpeg) }
+
+    /** **رسالةٌ صوتيّة** — حتّى دقيقة. */
+    fun sendVoice(orderId: String, m4a: ByteArray, durationMs: Long) =
+        deliver(orderId) { api.sendVoice(orderId, m4a, durationMs) }
+
+    private fun deliver(orderId: String, call: suspend () -> Unit) {
+        if (busy) return
         busy = true
         viewModelScope.launch {
             try {
-                api.send(orderId, text)
+                call()
                 val t = api.thread(orderId)
                 if (current == orderId) {
                     messages = t.messages
@@ -515,10 +527,14 @@ fun OrderChatSheet(
                 // تحته يقبل الكتابة، **ثمّ لا يحدث شيء.** **وحقلٌ يُكتب فيه
                 // ولا يُرسل يُقرأ عطباً** — فسطرٌ واحدٌ يقول إنّها انتهت.
                 if (chatCanWrite(vm.head)) {
+                    val voice = rememberChatVoiceState()
+                    ChatVoiceHint(voice, Modifier.fillMaxWidth().padding(bottom = Rahal.space.xs))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        // **صورةٌ وصوت** (قرارُ المالك ٢٠٢٦-١١-١٢) — بجانب الحقل.
+                        ChatPhotoButton(enabled = !vm.busy) { vm.sendPhoto(orderId, it) }
                         OutlinedTextField(
                             value = draft,
                             // **وبحدّ المحرّك** — انظر `TextLimits`.
@@ -528,14 +544,19 @@ fun OrderChatSheet(
                             shape = Rahal.shape.pill,
                             modifier = Modifier.weight(1f),
                         )
-                        RahalButton(
-                            onClick = {
-                                vm.send(orderId, draft)
-                                draft = ""
-                            },
-                            enabled = !vm.busy && draft.isNotBlank(),
-                            compact = true,
-                        ) { Text(stringResource(R.string.chat_send)) }
+                        // **والمايك مكانَ «إرسال» ما دام الحقلُ فارغاً** — كما في كلّ تطبيق محادثة.
+                        if (draft.isBlank() || voice.recording) {
+                            ChatMicButton(voice, enabled = !vm.busy) { bytes, ms -> vm.sendVoice(orderId, bytes, ms) }
+                        } else {
+                            RahalButton(
+                                onClick = {
+                                    vm.send(orderId, draft)
+                                    draft = ""
+                                },
+                                enabled = !vm.busy && draft.isNotBlank(),
+                                compact = true,
+                            ) { Text(stringResource(R.string.chat_send)) }
+                        }
                     }
                 } else {
                     Text(

@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtDateTime } from "@rahalgo/i18n";
-import { Alert, Badge, LoadingState, Modal } from "@rahalgo/ui";
+import { Alert, Badge, ChatAttachmentView, LoadingState, Modal, type ChatAttachment } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { roleLabelByCode } from "@/lib/rolemeta";
 
@@ -28,6 +28,8 @@ interface ChatLine {
   flag_word?: string;
   /** **أُخفي منه رقمٌ أو واتساب** — حمايةُ الزبون من سحبه برّا المنصّة. */
   contact_leak?: boolean;
+  /** صورةٌ أو رسالةٌ صوتيّة — تُعرض هي وشرحُها بدل `body` (نصٌّ احتياطيٌّ للتطبيقات القديمة). */
+  attachment?: ChatAttachment;
 }
 
 /** **اسمُ المرسِل** — وحين يغيب يُقال دورُه بالعربيّ لا رمزُه (`driver`). */
@@ -61,7 +63,16 @@ export function OrderChatView({ orderId }: { orderId: string }) {
             <li key={l.id} className="flex items-start gap-2 text-sm">
               <Badge variant={l.role === "driver" ? "primary" : "neutral"}>{senderLabel(l)}</Badge>
               <span className="min-w-0 flex-1">
-                <span className={l.flagged ? "text-danger" : ""}>{l.body}</span>
+                {l.attachment ? (
+                  <span className="flex flex-col items-start gap-1">
+                    <ChatAttachmentView attachment={l.attachment} native />
+                    {l.attachment.caption && (
+                      <span className={l.flagged ? "text-danger" : ""}>{l.attachment.caption}</span>
+                    )}
+                  </span>
+                ) : (
+                  <span className={l.flagged ? "text-danger" : ""}>{l.body}</span>
+                )}
                 {/* **وما أُخفي يُقال للإدارة بنصّه** — الرقمُ أو اللفظ — ليُحسم البلاغ. */}
                 {l.flagged && l.flag_word && (
                   <span className="ms-2 text-xs text-danger">({l.flag_word})</span>

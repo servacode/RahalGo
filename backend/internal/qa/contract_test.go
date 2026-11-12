@@ -141,8 +141,11 @@ var contracts = []struct {
 	{ID: "CONTRACT-002", File: "customer/CustomerApi.kt", Class: "MyOrder",
 		Path: "/api/v1/my/orders", JSONPath: "orders.0",
 		Skip: []string{"sections"}},
+	// **والمرفقُ لا يُرسَل إلّا مع صورةٍ أو رسالةٍ صوتيّة** (`omitempty`، ٢٠٢٦-١١-١٢) — ورسالةُ العقد
+	// نصّ، **وغيابُه يعني «نصٌّ وحده»** (null). حارسُه `TestCHATMEDIA_PartiesSendPhotoAndVoice`.
 	{ID: "CONTRACT-003", File: "model/Chat.kt", Class: "ChatMessage",
-		Path: "MESSAGES", JSONPath: "messages.0"},
+		Path: "MESSAGES", JSONPath: "messages.0",
+		Skip: []string{"attachment"}},
 	{ID: "CONTRACT-004", File: "model/Chat.kt", Class: "ChatThreadRow",
 		Path: "/api/v1/my/chats", JSONPath: "threads.0"},
 }
