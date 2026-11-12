@@ -130,6 +130,14 @@
       "title": "طلب جديد قادم إليك"
     },
     {
+      "body": "#\u003cnumber\u003e — صنف واحد · 2,000 ل.س",
+      "entity": "order",
+      "href": "/portal",
+      "kind": "order",
+      "party": "\u003cowner\u003e",
+      "title": "عندك طلب جديد — جهّزه"
+    },
+    {
       "body": "+1800 ل.س — طلب #\u003cnumber\u003e",
       "entity": "wallet",
       "href": "/portal/wallet",
