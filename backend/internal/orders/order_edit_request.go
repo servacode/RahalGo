@@ -100,6 +100,10 @@ type EditRequestAdd struct {
 	Price        int64  `json:"price"`
 	MerchantID   string `json:"merchant_id,omitempty"`
 	MerchantName string `json:"merchant_name,omitempty"`
+	// PriceUSD **سعرُ القطعة بالدولار (سنتات)** إن كتبه الكابتن دولاراً (قرارُ المالك ٢٠٢٦-١١-١٢).
+	// **يُحوَّل إلى `Price` بالليرة بسعر صرف المتجر مدوَّراً لأقرب ٥** — والحسابُ كلُّه بالليرة كما كان،
+	// **والدولارُ للعرض وحدَه.**
+	PriceUSD int64 `json:"price_usd,omitempty"`
 }
 
 // DriverEditInput **ما يبعته الكابتن.**
@@ -318,6 +322,35 @@ func (s *Service) PrepareOrderEdit(ctx context.Context, orderID, driverID string
 	for _, a := range in.Adds {
 		a.Name = strings.TrimSpace(a.Name)
 		a.MerchantName = ""
+		if a.PriceUSD < 0 || a.PriceUSD > 10_000_000 {
+			return nil, badEditInput()
+		}
+		if a.PriceUSD > 0 {
+			// **بسعر صرف المتجر الذي جاء منه الصنف** — وبلا سعرٍ له: السعرُ المرجعيّ؛ وبلا هذا ولا ذاك يُرفض.
+			store := a.MerchantID
+			if store == "" {
+				store = mainMerchant
+			}
+			var rate *float64
+			if store != "" {
+				if _, perr := uuid.Parse(store); perr == nil {
+					if err := s.db.QueryRow(ctx, `SELECT exchange_rate::float8 FROM merchants WHERE id = $1::uuid`, store).
+						Scan(&rate); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+						return nil, err
+					}
+				}
+			}
+			r := 0.0
+			if rate != nil {
+				r = *rate
+			}
+			if r <= 0 {
+				r = s.usdReferenceRate(ctx, s.db)
+			}
+			if a.Price = usdToSYP(a.PriceUSD, r); a.Price <= 0 {
+				return nil, badEditInput()
+			}
+		}
 		if a.Name == "" || utf8.RuneCountInString(a.Name) > 120 || a.Qty < 1 || a.Qty > 50 ||
 			a.Price < 1 || a.Price > 1_000_000_000 {
 			return nil, badEditInput()

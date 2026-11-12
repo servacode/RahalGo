@@ -1894,6 +1894,8 @@ private fun TripCard(
                                     // **ولونُ «تقبض» واحدٌ في كلّ الشاشات** — أحمرُ كبطاقة الطلب (قرارُ المالك
                                     // ٢٠٢٦-٠٨-١٢: «أحمر يعني اقبض»)، لا برتقاليٌّ هنا وأحمرُ هناك.
                                     tint = CollectTint(),
+                                    // **ومن أين الرقم بسطرٍ صغير** (٢٠٢٦-١١-١٢) — بدل مجموع الفاتورة تحته فلا تمرير.
+                                    note = if (order.kind == "standard" && usdCollect == null) collectBreakdown(order) else null,
                                 )
                                 // **والمشترياتُ مفصّلة** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «مشتريات بقيمة 350 اجرة
                                 // توصيل 150 مجموع 500»).
@@ -1940,7 +1942,10 @@ private fun TripCard(
                                 )
                             }
                             // **والفاتورةُ عند الباب كذلك** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لمن يسأله «شو بالطلب؟ وقديش؟».
-                            if (order.kind == "standard" && order.items.isNotEmpty()) InvoiceBox(order)
+                            // **ومجموعُها في سطر «اقبض»** (قرارُ المالك ٢٠٢٦-١١-١٢: «التسليم للزبون فيه سكرول»).
+                            if (order.kind == "standard" && order.items.isNotEmpty()) {
+                                InvoiceBox(order, totals = cashFrom != CashFrom.RECIPIENT || usdCollect != null)
+                            }
                         } else if (order.kind != "custom") {
                             var paired = false
                             // **وقبل الاستلام: متى يجهز** — بأيقونة ساعة. **ولا «جاهز في المتجر» في
@@ -2540,7 +2545,7 @@ private fun InvoiceBox(order: DriverOrder, totals: Boolean = true) {
 
 /** **مربّعُ المال** — من يُقبض منه، والمبلغُ كبيراً يُقرأ في لمحة. */
 @Composable
-private fun MoneyBox(label: String, amount: String, tint: Color) {
+private fun MoneyBox(label: String, amount: String, tint: Color, note: String? = null) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -2551,12 +2556,12 @@ private fun MoneyBox(label: String, amount: String, tint: Color) {
     ) {
         Icon(painter = painterResource(R.drawable.ic_cash), contentDescription = null, tint = tint, modifier = Modifier.size(Rahal.icon.md))
         Spacer(Modifier.width(Rahal.space.md))
-        Text(
-            label,
-            color = Rahal.colors.ink,
-            style = Rahal.type.bodyStrong,
-            modifier = Modifier.weight(1f),
-        )
+        Column(Modifier.weight(1f)) {
+            Text(label, color = Rahal.colors.ink, style = Rahal.type.bodyStrong)
+            if (!note.isNullOrBlank()) {
+                Text(note, color = Rahal.colors.inkMuted, style = Rahal.type.meta)
+            }
+        }
         Spacer(Modifier.width(Rahal.space.sm))
         Text(
             com.rahalgo.driver.Bidi.isolate(amount),
@@ -2638,6 +2643,15 @@ private fun CutLine(p: com.rahalgo.shared.model.StorePay) {
             .background(Rahal.colors.field)
             .padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs),
     )
+}
+
+/** **«الطلب ٢٥ + التوصيل ١٠٠»** — من مجموع الفاتورة نفسِه (`driverInvoiceTotals`)، وخادمٌ قديمٌ بلا أسعار: لا سطر. */
+@Composable
+private fun collectBreakdown(order: DriverOrder): String? {
+    val t = driverInvoiceTotals(order) ?: return null
+    val fee = if (t.free) stringResource(R.string.trip_invoice_free) else money(t.delivery)
+    val base = stringResource(R.string.trip_collect_breakdown, money(t.subtotal), fee)
+    return if (t.discount > 0) base + " − " + stringResource(R.string.trip_invoice_discount) + " " + money(t.discount) else base
 }
 
 /** **«10» لا «10.0»، و«1.5» كما هي.** */

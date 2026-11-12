@@ -710,6 +710,8 @@ class DriverApi(private val api: ApiClient) {
         val price: Long,
         /** **المتجر اللي جاب منه الصنف** — لطلب بأكثر من متجر وحده؛ وفاضي: متجر الطلب الرئيسي. */
         @kotlinx.serialization.SerialName("merchant_id") val merchantId: String? = null,
+        /** **سعرُ القطعة بالدولار (سنتات)** — الخادمُ يحوّله بسعر صرف المتجر لأقرب ٥ (٢٠٢٦-١١-١٢). */
+        @kotlinx.serialization.SerialName("price_usd") val priceUsd: Long? = null,
     )
 
     /** `currency` لطلب الواتساب وحده (٢٠٢٦-١١-٠٩) — وغيرُه يتجاهله الخادمُ ويُبقي عملةَ المتجر. */

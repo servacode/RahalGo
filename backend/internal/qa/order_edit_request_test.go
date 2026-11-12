@@ -150,3 +150,35 @@ func TestWACOMM_CorrectedAfterPickup(t *testing.T) {
 		t.Fatalf("كتابة بعد التسليم: %s", r)
 	}
 }
+
+// TestEDITREQ_USDPriceConvertedByStoreRate **صنفٌ مضافٌ بالدولار** (قرارُ المالك ٢٠٢٦-١١-١٢) — يُحوَّل
+// بسعر صرف المتجر لأقرب ٥ ليرات، **والحسابُ بالليرة**: ٢٫٥$ × ١٢٠ = ٣٠٠ ل.س للقطعة.
+func TestEDITREQ_USDPriceConvertedByStoreRate(t *testing.T) {
+	h := New(t)
+	oid, drv := h.assignedOrder(t)
+	var total0 int64
+	if _, err := h.Pool.Exec(ctxBG(),
+		`UPDATE merchants SET exchange_rate = 120 WHERE id = (SELECT merchant_id FROM orders WHERE id = $1)`, oid); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT total FROM orders WHERE id = $1`, oid).Scan(&total0); err != nil {
+		t.Fatal(err)
+	}
+	path := "/api/v1/driver/orders/" + oid + "/edit-request"
+	r := h.POSTKey(path, drv.Token, uniq("er"), map[string]any{
+		"adds": []map[string]any{{"name": "شاحن", "qty": 2, "price": 1, "price_usd": 250}},
+	})
+	if r.Code != http.StatusOK {
+		t.Fatalf("طلب التعديل: %s", r)
+	}
+	req, _ := r.JSON()["request"].(map[string]any)
+	if int64(num(req["new_total"])) != total0+600 {
+		t.Fatalf("**الدولارُ لم يُحوَّل بسعر المتجر**: المجموع %v — يُنتظر %d (٢ × ٣٠٠): %s", req["new_total"], total0+600, r)
+	}
+	// **وسعرٌ بالدولار سالبٌ يُرفض.**
+	if bad := h.POSTKey(path, drv.Token, uniq("er"), map[string]any{
+		"adds": []map[string]any{{"name": "x", "qty": 1, "price": 1, "price_usd": -5}},
+	}); bad.Code != http.StatusBadRequest {
+		t.Fatalf("دولارٌ سالبٌ قُبل: %s", bad)
+	}
+}

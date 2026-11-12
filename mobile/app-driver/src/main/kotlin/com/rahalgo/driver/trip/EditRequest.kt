@@ -27,6 +27,8 @@ data class EditAddDraft(
     val price: Long,
     val merchantId: String? = null,
     val merchantName: String = "",
+    /** **بالدولار** (٢٠٢٦-١١-١٢) ⇐ `price` سنتات، والخادمُ يحوّله لليرة بسعر المتجر. */
+    val usd: Boolean = false,
 )
 
 data class EditDraft(
@@ -51,9 +53,13 @@ fun editDraftDelta(order: DriverOrder, draft: EditDraft): Long {
         val d = draft.lines[it.id] ?: continue
         delta -= (it.unitPrice ?: 0L) * d.remove.coerceIn(0, it.qty)
     }
-    for (a in draft.adds) delta += a.price * a.qty
+    // **والدولارُ لا يدخل الليرة هنا** — سعرُ صرفه عند الخادم؛ يُقال بجانبه (`editDraftUsd`).
+    for (a in draft.adds) if (!a.usd) delta += a.price * a.qty
     return delta
 }
+
+/** **ما أُضيف بالدولار (سنتات)** — يُعرض فوق المجموع بالليرة. */
+fun editDraftUsd(draft: EditDraft): Long = draft.adds.filter { it.usd }.sumOf { it.price * it.qty }
 
 /** **المجموع التقريبي بعد التعديل** — وما بينزل تحت الصفر. */
 fun editDraftTotal(order: DriverOrder, draft: EditDraft): Long = (order.total + editDraftDelta(order, draft)).coerceAtLeast(0)
@@ -81,9 +87,16 @@ fun editDraftValid(order: DriverOrder, draft: EditDraft): Boolean {
  * **ما كُتب في خانات «انزاد صنف» ولم يُضَف بزرّه يُضاف عند الإرسال** (المالك ٢٠٢٦-١١-١٠) —
  * **كان يسقط بصمت.** **وناقصُ الحقول (اسمٌ فارغ أو سعرٌ صفر) لا يُضاف**: يبقى كما هو.
  */
-fun EditDraft.withPendingAdd(name: String, qty: Int, price: Long, merchantId: String?, merchantName: String): EditDraft =
+fun EditDraft.withPendingAdd(
+    name: String,
+    qty: Int,
+    price: Long,
+    merchantId: String?,
+    merchantName: String,
+    usd: Boolean = false,
+): EditDraft =
     if (name.isNotBlank() && qty in 1..50 && price > 0) {
-        copy(adds = adds + EditAddDraft(name.trim(), qty, price, merchantId, merchantName))
+        copy(adds = adds + EditAddDraft(name.trim(), qty, price, merchantId, merchantName, usd))
     } else {
         this
     }
@@ -91,7 +104,12 @@ fun EditDraft.withPendingAdd(name: String, qty: Int, price: Long, merchantId: St
 fun EditDraft.toBody(): DriverApi.EditRequestBody = DriverApi.EditRequestBody(
     lines = lines.map { (id, d) -> DriverApi.EditLineBody(itemId = id, action = d.action.wire, qty = d.remove) },
     adds = adds.map {
-        DriverApi.EditAddBody(name = it.name.trim(), qty = it.qty, price = it.price, merchantId = it.merchantId)
+        // **والدولارُ يُرسَل سنتاتٍ** وسعرُ الليرة واحدٌ مؤقّتٌ يكتبه الخادمُ من سعر الصرف.
+        if (it.usd) {
+            DriverApi.EditAddBody(name = it.name.trim(), qty = it.qty, price = 1, merchantId = it.merchantId, priceUsd = it.price)
+        } else {
+            DriverApi.EditAddBody(name = it.name.trim(), qty = it.qty, price = it.price, merchantId = it.merchantId)
+        }
     },
     note = note.trim(),
 )

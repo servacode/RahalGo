@@ -119,13 +119,13 @@ internal fun MapButtons(
                 val p = measurable.measure(constraints.copy(minHeight = 0, maxHeight = androidx.compose.ui.unit.Constraints.Infinity))
                 layout(p.width, 0) { p.place(0, -p.height) }
             }
-            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs),
         verticalAlignment = Alignment.Bottom,
     ) {
         // **على اليمين** (المالك ٢٠٢٦-١١-١٢: «قائمة الازرار على اليمين مو على اليسار»).
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+            verticalArrangement = Arrangement.spacedBy(Rahal.space.xs),
         ) {
             start?.invoke()
             MapButton(R.drawable.ic_my_location, R.string.map_recenter, onRecenter)

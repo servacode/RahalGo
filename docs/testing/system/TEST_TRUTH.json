@@ -34,7 +34,7 @@
     "behaviour_settings": 240,
     "order_fields": 147,
     "test_files": 839,
-    "test_funcs": 3209
+    "test_funcs": 3210
   },
   "flows": [
     {
@@ -23458,6 +23458,12 @@
     },
     {
       "name": "TestEDITREQ01_DriverAsksOfficeDecides",
+      "file": "internal/qa/order_edit_request_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestEDITREQ_USDPriceConvertedByStoreRate",
       "file": "internal/qa/order_edit_request_test.go",
       "package": "qa",
       "orphan": true
