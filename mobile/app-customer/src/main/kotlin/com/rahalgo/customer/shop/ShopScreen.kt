@@ -956,10 +956,17 @@ internal fun ItemCard(
                 // السطرُ الأوّل: **القديمُ مشطوباً بجانب الجديد** (أحمرُ عريض) إن كان عرض، وإلّا السعرُ وحدَه؛
                 // والثاني: «≈ الليرة» للمسعَّر بالدولار، أو المشطوبُ بالليرة لصنفٍ بالليرة وحدَها.
                 // **ولا سطرَ ثالث** («وفّرت» شِيل) — والنسبةُ على بطاقة الصورة.
-                val usdNow = item.priceUsd
-                val mainNow = usdNow?.let { com.rahalgo.ui.dollars(it) } ?: money(item.price)
-                val oldMain = if (onSale) {
-                    if (usdNow != null) item.priceBeforeUsd?.let { com.rahalgo.ui.dollars(it) } else item.priceBefore?.let { money(it) }
+                // **بلا عرض: السعرُ بسطرٍ واحدٍ في وسط الشريط؛ وبعرض: القديمُ مشطوباً بسطرٍ والجديدُ أحمرَ
+                // بسطرٍ تحته** (ملاحظةُ المالك ٢٠٢٦-١١-١٣) — والشريطُ بارتفاع سطرين دائماً فلا يتفاوت كرت.
+                val oldLine = if (onSale) {
+                    val bu = item.priceBeforeUsd
+                    val bs = item.priceBefore
+                    when {
+                        item.priceUsd != null && bu != null && bs != null -> com.rahalgo.ui.dollars(bu) + " · " + money(bs)
+                        item.priceUsd != null && bu != null -> com.rahalgo.ui.dollars(bu)
+                        bs != null -> money(bs)
+                        else -> null
+                    }
                 } else {
                     null
                 }
@@ -968,36 +975,23 @@ internal fun ItemCard(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (oldMain != null) {
-                            Text(
-                                text = "⁨" + oldMain + "⁩",
-                                color = Rahal.colors.inkMuted,
-                                textDecoration = TextDecoration.LineThrough,
-                                style = Rahal.type.meta,
-                                maxLines = 1,
-                                softWrap = false,
-                            )
-                            Spacer(Modifier.width(Rahal.space.xs))
-                        }
+                    if (oldLine != null) {
                         Text(
-                            text = "⁨" + mainNow + "⁩",
-                            color = if (onSale) Rahal.colors.danger else Rahal.colors.brand,
-                            fontWeight = FontWeight.Bold,
-                            style = Rahal.type.label,
-                            maxLines = 1,
-                            softWrap = false,
-                        )
-                    }
-                    if (usdNow != null) {
-                        Text(
-                            text = "≈ " + money(item.price),
+                            text = "\u2068" + oldLine + "\u2069",
                             color = Rahal.colors.inkMuted,
+                            textDecoration = TextDecoration.LineThrough,
                             style = Rahal.type.meta,
                             maxLines = 1,
                             softWrap = false,
                         )
                     }
+                    com.rahalgo.ui.DualPrice(
+                        usd = item.priceUsd,
+                        syp = item.price,
+                        style = Rahal.type.label,
+                        usdColor = if (onSale) Rahal.colors.danger else Rahal.colors.brand,
+                        horizontalAlignment = Alignment.End,
+                    )
                 }
             }
 

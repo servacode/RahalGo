@@ -196,24 +196,20 @@ export function ItemCard({
         <div className="shop-item-foot">
           {/* **الدولارُ ثمّ الليرةُ** («$2.5 · 300 ل.س») — والليرةُ تنزل تحته إن ضاق ولا تُقصّ. */}
           {/* **والسعرُ القديمُ المشطوبُ داخلَ البطاقة تحت السعر مباشرةً** (مرآةُ شريط السعر العلويّ في التطبيق). */}
-          {/* **سطران ثابتان بعرضٍ أو بلا عرض** (ملاحظةُ المالك ٢٠٢٦-١١-١٢: «مو كلهن بنفس القياس») — الأوّلُ
-              القديمُ مشطوباً بجانب الجديد إن كان عرض، والثاني «≈ الليرة»؛ و«وفّرت» شِيل فلا يطول الكرت. */}
+          {/* **بلا عرض: السعرُ بسطرٍ واحدٍ في الوسط؛ وبعرض: القديمُ مشطوباً بسطرٍ والجديدُ أحمرَ تحته** (ملاحظةُ
+              المالك ٢٠٢٦-١١-١٣) — والشريطُ بارتفاع سطرين دائماً فلا يتفاوت كرت. مرآةُ بطاقة التطبيق. */}
           <span className="shop-price-2l flex min-w-0 flex-col items-start justify-center">
-            <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-              {onSale && item.price_before != null && (
-                <span className="text-meta text-ink-muted line-through" dir="ltr">
-                  {item.price_usd != null && item.price_before_usd != null ? dollars(item.price_before_usd) : <Money value={item.price_before} small />}
-                </span>
-              )}
-              <span className={`font-bold ${onSale ? "shop-sale-price" : "text-accent-text"}`} dir="ltr">
-                {item.price_usd != null ? dollars(item.price_usd) : <Money value={item.price} small className="text-inherit" />}
-              </span>
-            </span>
-            {item.price_usd != null && (
-              <span className="text-meta text-ink-muted whitespace-nowrap">
-                ≈ <Money value={item.price} small className="text-inherit" />
+            {onSale && item.price_before != null && (
+              <span className="whitespace-nowrap text-meta text-ink-muted line-through">
+                {item.price_usd != null && item.price_before_usd != null
+                  ? `${dollars(item.price_before_usd)} · `
+                  : ""}
+                <Money value={item.price_before} small />
               </span>
             )}
+            <span className={onSale ? "shop-sale-price" : undefined}>
+              <DualPrice usd={item.price_usd} syp={item.price} inherit={onSale} />
+            </span>
           </span>
           <span className="flex items-center gap-1.5">
             <FavoriteButton
