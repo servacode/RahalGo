@@ -96,6 +96,14 @@ fun ChatComposer(
                 placeholder = { Text(stringResource(R.string.chat_write)) },
                 singleLine = true,
                 shape = Rahal.shape.pill,
+                // **أرضُ الخانة بيضاء** (قرارُ المالك ٢٠٢٦-١١-١٢: «لتكون واضح انو لازم نكتب بيها») — سطحٌ
+                // فاتحٌ بإطارٍ يُرى، لا رماديٌّ يذوب في شريط الكتابة.
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Rahal.colors.surface,
+                    unfocusedContainerColor = Rahal.colors.surface,
+                    unfocusedBorderColor = Rahal.colors.line,
+                    focusedBorderColor = Rahal.colors.brand,
+                ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = { if (canSend) onSend() }),
                 modifier = Modifier.weight(1f),

@@ -479,7 +479,7 @@ export function OrderChat({
         }}
         placeholder={C.placeholder}
         maxLength={500}
-        className="max-h-24 flex-1 resize-none bg-transparent px-1 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
+        className="max-h-24 flex-1 resize-none surface rounded-control px-3 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent"
       />
       {/* **والمايكُ مكانَ «إرسال» ما دام الحقلُ فارغاً** — الترتيبُ نفسُه في التطبيقات
           (`ChatConversation.kt`): صورة · حقل · مايك/إرسال. */}
