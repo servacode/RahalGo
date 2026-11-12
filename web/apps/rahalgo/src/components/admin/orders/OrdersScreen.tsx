@@ -88,6 +88,7 @@ import { WaiveCommissionDialog, WAIVE_ROUTE } from "./WaiveCommissionDialog";
 import { OrderEditor } from "./OrderEditor";
 import { EditRequestBox } from "./EditRequestBox";
 import {
+  AmanahPointsSection,
   CommissionSection,
   CustomerSection,
   DriveLine,
@@ -239,6 +240,10 @@ interface OrderRow {
   ext_store_reason?: string;
   /** **أصلُ الطلب** — `whatsapp` لطلبٍ كتبه المكتبُ من رسالة واتساب (قرارُ المالك ٢٠٢٦-١١-٠٥). */
   origin?: string;
+  /** **«أمانة من شخص» بالواتساب** (٢٠٢٦-١١-١٢) — صندوقا «الاستلام من» و«التسليم لـ». */
+  wa_amanah?: boolean;
+  /** **أنقطةُ التسليم معروفة؟** — خطأٌ: الموقعُ لم يصل بعد. */
+  dropoff_known?: boolean;
   /** **من كتب طلبَ الواتساب** من الموظّفين. */
   created_by_name?: string;
   /** **متجرٌ من متاجرنا نُسخ على طلب الواتساب** — أثرٌ لا ربط. */
@@ -1653,6 +1658,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       cell: (o) =>
         o.parts?.length ? (
           <PartsSection order={o} live={live} onChanged={load} />
+        ) : o.wa_amanah ? (
+          <AmanahPointsSection o={o} live={live} />
         ) : (
           <StoreSection o={o} live={live} />
         ),
@@ -1669,6 +1676,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       header: CARD.customer,
       noLabel: true,
       only: "cards",
+      // **والأمانةُ صندوقاها فوق** — «التسليم لـ» جنب «الاستلام من».
+      hide: (o: OrderRow) => !!o.wa_amanah,
       cell: (o) => <CustomerSection o={o} live={live} />,
     },
     {
@@ -2821,14 +2830,16 @@ function HistoryCard({
       <div className="min-w-0">
         {o.parts?.length ? (
           <PartsSection order={o} live compact />
+        ) : o.wa_amanah ? (
+          <AmanahPointsSection o={o} live />
         ) : hasPickupSection(o) ? (
           <StoreSection o={o} live />
         ) : null}
       </div>
 
-      {/* ── الزبون ── */}
+      {/* ── الزبون ── والأمانةُ صندوقاها فوق، والصفُّ حاضرٌ فارغاً. */}
       <div className="min-w-0">
-        <CustomerSection o={o} live />
+        {!o.wa_amanah && <CustomerSection o={o} live />}
       </div>
 
       {/* ── الفاتورة كاملةً بلا قصّ ── */}

@@ -45,6 +45,11 @@ data class DriverOrder(
      * واتساب، **فتقول البطاقةُ «طلب واتساب»**. وفارغٌ من خادمٍ قديم.
      */
     val origin: String = "",
+    /**
+     * **«أمانة من شخص» بالواتساب** (قرارُ المالك ٢٠٢٦-١١-١٢) — «استلم الأمانة من» قبل الاستلام
+     * و«سلّمها لـ» بعده. وخطأٌ من خادمٍ قديم.
+     */
+    @SerialName("wa_amanah") val waAmanah: Boolean = false,
     val status: String = "",
     /**
      * **نوعه** — `standard` أو `custom`.

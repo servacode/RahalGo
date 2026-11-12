@@ -32,9 +32,9 @@
     ],
     "setting_defs": 285,
     "behaviour_settings": 240,
-    "order_fields": 147,
-    "test_files": 840,
-    "test_funcs": 3214
+    "order_fields": 148,
+    "test_files": 841,
+    "test_funcs": 3215
   },
   "flows": [
     {
@@ -29152,6 +29152,12 @@
     {
       "name": "TestWebPush_NewOrderReachesMerchantBrowser",
       "file": "internal/qa/webpush_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAAMN006_TwoPointsInDashboardAndMap",
+      "file": "internal/qa/whatsapp_amanah_points_test.go",
       "package": "qa",
       "orphan": true
     },

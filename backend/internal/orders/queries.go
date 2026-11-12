@@ -164,7 +164,7 @@ const orderSelect = `
 	       -- **وفي طلب الواتساب العنوانُ المكتوب** (٢٠٢٦-١١-٠٥).
 	       COALESCE(NULLIF(mr.address_text, ''), NULLIF(ptn.address_text, ''), o.pickup_address, ''),
 	       -- **وأصلُ الطلب ومن كتبه ومتجرُ متاجرنا المنسوخ** (قرارُ المالك ٢٠٢٦-١١-٠٥).
-	       o.origin,
+	       o.origin, o.wa_amanah,
 	       COALESCE((SELECT NULLIF(cb.full_name, '') FROM users cb WHERE cb.id = o.created_by), ''),
 	       COALESCE(o.pickup_merchant_id::text, ''),
 	       -- **وعددُ متاجر الطلب** (هجرة ٠٥٠٢) — داخليٌّ لا يُرسَل (Order.Stops).
@@ -233,7 +233,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.AmountCurrency, &o.NearLandmark, &o.LiveRequestedAt, &o.LiveRequestCount,
 		&o.EntranceLat, &o.EntranceLng, &o.DropoffSuggestLat, &o.DropoffSuggestLng,
 		&o.HolderName, &o.HolderPhone, &o.PickupAddress,
-		&o.Origin, &o.CreatedByName, &o.PickupMerchantID, &o.Stops, &o.CustomPhotos)
+		&o.Origin, &o.WAAmanah, &o.CreatedByName, &o.PickupMerchantID, &o.Stops, &o.CustomPhotos)
 	if err != nil {
 		return nil, err
 	}

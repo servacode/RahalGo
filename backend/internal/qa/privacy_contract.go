@@ -178,6 +178,7 @@ var OrderPrivacy = map[string]FieldRule{
 	// **طلبُ الواتساب** (قرارُ المالك ٢٠٢٦-١١-٠٥) — أصلُه يُقرأ «طلب واتساب» للسائق وفي اللوحة،
 	// **ومن كتبه ومتجرُ متاجرنا المنسوخ للمكتب وحدَه.** ولا زبونَ ولا متجرَ يرى الطلبَ أصلاً.
 	"origin":             {Ref: "أصلُ الطلب — «طلب واتساب» (٢٠٢٦-١١-٠٥)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"wa_amanah":          {Ref: "«أمانة من شخص» بالواتساب — «الاستلام من» و«التسليم لـ» (٢٠٢٦-١١-١٢)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"created_by_name":    {Ref: "الموظّفُ الذي كتب طلبَ الواتساب — للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"pickup_merchant_id": {Ref: "متجرٌ من متاجرنا نُسخ على طلب الواتساب — أثرٌ للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"merchant_net":       {Ref: "مستحقُّ المتجر — لا يخصّ زبوناً ولا سائقاً ولا مندوباً", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},

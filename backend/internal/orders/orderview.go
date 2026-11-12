@@ -188,7 +188,9 @@ var audienceAllow = map[Audience]map[string]bool{
 	},
 	AudienceDriver: {
 		// **«طلب واتساب» على بطاقته** (قرارُ المالك ٢٠٢٦-١١-٠٥).
-		"origin":                       true,
+		"origin": true,
+		// **و«استلم الأمانة من» / «سلّمها لـ»** لأمانة الواتساب (قرارُ المالك ٢٠٢٦-١١-١٢).
+		"wa_amanah":                    true,
 		"custom_fee_source":            true,
 		"custom_goods_pending":         true,
 		"custom_mode":                  true,
@@ -478,6 +480,7 @@ var audienceAllow = map[Audience]map[string]bool{
 		"customer_live": true,
 		// **وطلبُ الواتساب: أصلُه ومن كتبه ومتجرُ متاجرنا المنسوخ** (قرارُ المالك ٢٠٢٦-١١-٠٥).
 		"origin":             true,
+		"wa_amanah":          true,
 		"created_by_name":    true,
 		"pickup_merchant_id": true,
 		// **صندوقٌ لكلّ متجرٍ في الطلب بعدّة محطّات** (العقدُ §2).

@@ -803,6 +803,9 @@
     <string name="trip_head_deliver">التسليم للزبون</string>
     <string name="trip_head_deliver_named">التسليم للزبون: %1$s</string>
     <string name="trip_head_pickup">الاستلام من %1$s</string>
+    <!-- أمانة الواتساب (قرار المالك 2026-11-12): «استلم الأمانة من» قبل الاستلام و«سلّمها لـ» بعده -->
+    <string name="trip_amanah_pickup_from">استلم الأمانة من: %1$s</string>
+    <string name="trip_amanah_deliver_to">سلّمها لـ: %1$s</string>
     <string name="open_google_maps_short">خرائط غوغل</string>
     <string name="trip_live_request_short">موقع الزبون</string>
     <string name="open_google_maps">افتح في خرائط غوغل</string>

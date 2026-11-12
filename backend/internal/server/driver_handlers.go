@@ -441,6 +441,9 @@ type driverOrder struct {
 	// Origin **أصلُ الطلب** — `app` أو `whatsapp` (قرارُ المالك ٢٠٢٦-١١-٠٥): التطبيقُ الجديدُ يكتب
 	// «طلب واتساب» على البطاقة، **والقديمُ يتجاهل الحقل** (`ignoreUnknownKeys`) ويقرأ «لدي توصيلة».
 	Origin string `json:"origin"`
+	// WAAmanah **«أمانة من شخص» بالواتساب** (قرارُ المالك ٢٠٢٦-١١-١٢) — «استلم الأمانة من» قبل الاستلام
+	// و«سلّمها لـ» بعده. **والقديمُ يتجاهله** (`ignoreUnknownKeys`).
+	WAAmanah bool `json:"wa_amanah,omitempty"`
 	// **ولا رقمَ للزبون هنا — ولا في أيّ حمولةٍ تبلغ سائقاً.**
 	//
 	// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «لازم الاثنان لا يقدران يوصلان لبعض إلّا
@@ -769,7 +772,7 @@ const driverOrderSelect = `
 	       CASE WHEN o.kind = 'custom' AND o.custom_mode = 'amanah' AND o.driver_id = $1::uuid
 	            THEN COALESCE(o.amanah_holder_phone, '') ELSE '' END,
 	       -- **وأصلُ الطلب** — «طلب واتساب» على البطاقة (قرارُ المالك ٢٠٢٦-١١-٠٥).
-	       o.origin
+	       o.origin, o.wa_amanah
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -815,7 +818,7 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.DeliveryMode, &o.CollectAmount,
 			&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
 			&o.AmountCurrency, &o.EntranceLat, &o.EntranceLng,
-			&o.Subtotal, &o.Discount, &o.HolderName, &o.HolderPhone, &o.Origin); err != nil {
+			&o.Subtotal, &o.Discount, &o.HolderName, &o.HolderPhone, &o.Origin, &o.WAAmanah); err != nil {
 			return nil, err
 		}
 		// **والاسمُ الأوّلُ للزبون وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥) — كما في
