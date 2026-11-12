@@ -731,9 +731,9 @@
     <string name="trip_live_switched">الزبون ليس عند العنوان — تحوّل الطريق إلى موقعه الحالي</string>
     <!-- **ما يضيفه السائقُ للخريطة** (قرارات المالك ٢٠٢٦-١٠-٢١). -->
     <string name="map_need_location">لا نستطيع تحديد موقعك الآن — انتظر لحظة وحاول مجدداً</string>
-    <string name="entrance_title">هل أنت الآن عند باب البناية؟</string>
-    <string name="entrance_body">إذا حفظت الباب، فسيصل أي سائق يأتي إلى هذا العنوان لاحقاً إلى الباب مباشرة.</string>
-    <string name="entrance_yes">نعم، احفظ الباب</string>
+    <string name="entrance_title">أنت عند باب البناية؟</string>
+    <string name="entrance_body">احفظه ليصل السائق التالي إلى الباب مباشرة</string>
+    <string name="entrance_yes">احفظ الباب</string>
     <string name="entrance_no">لا</string>
     <string name="entrance_saved">تم حفظ باب البناية — شكراً لك</string>
     <string name="entrance_too_far">أنت بعيد جداً عن نقطة الزبون — لم يتم حفظ الباب</string>

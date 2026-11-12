@@ -1,5 +1,7 @@
 package com.rahalgo.driver
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.fillMaxWidth
 import com.rahalgo.ui.DialogConfirmButton
 import androidx.lifecycle.viewmodel.compose.viewModel as vmOf
 import androidx.compose.animation.AnimatedVisibility
@@ -1063,14 +1065,57 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
             }
 
             // **«انت عند باب البناية؟»** بعد التسليم (قرارُ المالك ٢٠٢٦-١٠-٢١).
+            // **وشكلُها نافذةٌ بأيقونةٍ وسطرٍ واحد** (ملاحظةُ المالك ٢٠٢٦-١١-١٢: «احترافي اكثر والكتابة ختصرها»).
             if (orders.askEntranceFor != null) {
-                com.rahalgo.ui.ConfirmDialog(
-                    title = stringResource(R.string.entrance_title),
-                    body = stringResource(R.string.entrance_body),
-                    confirm = stringResource(R.string.entrance_yes),
-                    onConfirm = orders::saveEntrance,
-                    onDismiss = orders::skipEntrance,
-                    danger = false,
+                com.rahalgo.ui.RahalDialog(
+                    onDismissRequest = orders::skipEntrance,
+                    icon = {
+                        androidx.compose.foundation.layout.Box(
+                            androidx.compose.ui.Modifier
+                                .size(com.rahalgo.design.Rahal.size.touch)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(com.rahalgo.design.Rahal.colors.brand.copy(alpha = 0.12f)),
+                            contentAlignment = androidx.compose.ui.Alignment.Center,
+                        ) {
+                            androidx.compose.material3.Icon(
+                                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_pin),
+                                contentDescription = null,
+                                tint = com.rahalgo.design.Rahal.colors.brand,
+                                modifier = androidx.compose.ui.Modifier.size(com.rahalgo.design.Rahal.icon.md),
+                            )
+                        }
+                    },
+                    title = {
+                        Text(
+                            stringResource(R.string.entrance_title),
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                        )
+                    },
+                    text = {
+                        Text(
+                            stringResource(R.string.entrance_body),
+                            color = com.rahalgo.design.Rahal.colors.inkMuted,
+                            style = com.rahalgo.design.Rahal.type.body,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                        )
+                    },
+                    confirmButton = {
+                        com.rahalgo.ui.RahalButton(
+                            onClick = { orders.saveEntrance() },
+                            compact = true,
+                            modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                        ) { Text(stringResource(R.string.entrance_yes), style = com.rahalgo.design.Rahal.type.button, maxLines = 1) }
+                    },
+                    dismissButton = {
+                        com.rahalgo.ui.RahalOutlineButton(
+                            onClick = { orders.skipEntrance() },
+                            compact = true,
+                            modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                        ) { Text(stringResource(R.string.entrance_no), style = com.rahalgo.design.Rahal.type.button, maxLines = 1) }
+                    },
                 )
             }
             when {
