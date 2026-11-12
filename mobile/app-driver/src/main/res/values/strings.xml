@@ -350,6 +350,8 @@
     <string name="edit_req_remove">شيل</string>
     <string name="edit_req_total">المجموع: %1$s ← تقريباً %2$s</string>
     <string name="edit_req_add_price_usd">سعر القطعة ($)</string>
+    <string name="edit_req_price_label">السعر</string>
+    <string name="edit_req_total_label">المجموع</string>
     <string name="edit_req_cur_syp">ل.س</string>
     <string name="edit_req_cur_usd">$</string>
     <string name="edit_req_total_usd">+ %1$s بتتحوّل لليرة بسعر صرف المتجر</string>

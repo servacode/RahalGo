@@ -1,6 +1,9 @@
 package com.rahalgo.driver.trip
 
 import com.rahalgo.ui.RahalDivider
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -45,8 +48,9 @@ import com.rahalgo.ui.money
 import com.rahalgo.ui.amountText
 
 /**
- * **نافذة «طلب تعديل»** (قرار المالك ٢٠٢٦-١١-١٠) — كل سطر: «ناقص» أو «الزبون لغاه» (وكم قطعة)،
- * و«انزاد صنف» باسمه وكمّيته وسعره، وملاحظة. **والمجموع التقريبي تحت**، والمكتب بيوافق.
+ * **نافذة «طلب تعديل»** (قرار المالك ٢٠٢٦-١١-١٠، وشكلُها ٢٠٢٦-١١-١٢) — كل صنف بسطره وأيقونتان
+ * بآخره: **حذف** (ناقص بالمتجر) و**إلغاء** (الزبون لغاه). وتحتها «إضافة صنف»: الاسمُ والكمّيةُ
+ * بسطر، والسعرُ بالليرة أو الدولار بسطر. **والمجموعُ سطرٌ واحد** — بلا شرحٍ زائد.
  */
 @Composable
 internal fun EditRequestDialog(
@@ -60,7 +64,7 @@ internal fun EditRequestDialog(
     var addName by remember { mutableStateOf("") }
     var addQty by remember { mutableStateOf("1") }
     var addPrice by remember { mutableStateOf("") }
-    // **ل.س أو $** (قرارُ المالك ٢٠٢٦-١١-١٢) — والدولارُ يُكتب بكسوره: «2.5».
+    // **ل.س أو $** — والدولارُ يُكتب بكسوره: «2.5».
     var addUsd by remember { mutableStateOf(false) }
     val lines = editableLines(order)
     // **طلب بأكثر من متجر ⇒ الكابتن يختار متجر الصنف** (الافتراضي: الأول)، وغيره ما بيظهر اختيار.
@@ -74,7 +78,7 @@ internal fun EditRequestDialog(
         addPrice.toLongOrNull() ?: 0L
     }
     val addStoreRow = stores.firstOrNull { it.merchantId == addStore }
-    // **والمكتوبُ في الخانات يُحسب ويُرسَل ولو لم يُضغط «+ ضيف الصنف».**
+    // **والمكتوبُ في الخانات يُحسب ويُرسَل ولو لم يُضغط «+ أضف الصنف».**
     val effective = draft.withPendingAdd(addName, q, p, addStoreRow?.merchantId, addStoreRow?.name.orEmpty(), addUsd)
     com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
@@ -82,52 +86,49 @@ internal fun EditRequestDialog(
         text = {
             Column(
                 Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
             ) {
-                Text(stringResource(R.string.edit_req_hint), color = Rahal.colors.inkMuted, style = Rahal.type.body)
-                Spacer(Modifier.height(Rahal.space.sm))
                 for (it in lines) {
                     val d = draft.lines[it.id]
-                    Spacer(Modifier.height(Rahal.space.sm))
-                    // **الاسمُ والكمّيةُ بسطر، والسعرُ تحته** (قرارُ المالك ٢٠٢٦-١١-١٢).
-                    Text("${it.name} × ${it.qty}", color = Rahal.colors.ink, style = Rahal.type.cardTitle)
-                    it.unitPrice?.let { up ->
-                        Text(
-                            stringResource(R.string.edit_req_line_price, money(up), money(up * it.qty)),
-                            color = Rahal.colors.inkMuted,
-                            style = Rahal.type.meta,
-                        )
+                    fun toggle(a: EditLineAction) {
+                        val next = if (d?.action == a) null else EditLineDraft(a, d?.remove ?: it.qty)
+                        draft = draft.copy(lines = if (next == null) draft.lines - it.id else draft.lines + (it.id to next))
                     }
-                    Spacer(Modifier.height(Rahal.space.xs))
-                    Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm), verticalAlignment = Alignment.CenterVertically) {
-                        for (a in EditLineAction.entries) {
-                            FilterChip(
-                                selected = d?.action == a,
-                                onClick = {
-                                    val next = if (d?.action == a) null else EditLineDraft(a, d?.remove ?: it.qty)
-                                    draft = draft.copy(
-                                        lines = if (next == null) draft.lines - it.id else draft.lines + (it.id to next),
-                                    )
-                                },
-                                // **وأيقونةٌ لكلّ سبب** (قرارُ المالك ٢٠٢٦-١١-١٢: «نخليه احترافي اكثر») —
-                                // صندوقٌ مشطوبٌ لما لم يجده بالمتجر، وشخصٌ لما رفضه الزبون.
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(
-                                            if (a == EditLineAction.MISSING) com.rahalgo.ui.R.drawable.ic_block else com.rahalgo.ui.R.drawable.ic_user,
-                                        ),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(Rahal.icon.sm),
-                                    )
-                                },
-                                label = {
-                                    Text(
-                                        stringResource(
-                                            if (a == EditLineAction.MISSING) R.string.edit_req_missing else R.string.edit_req_cancelled,
-                                        ),
-                                    )
-                                },
+                    // **الصنفُ وأيقونتاه بسطرٍ واحد** — والمختارُ يُلوَّن، ولمسةٌ ثانيةٌ تُلغيه.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "${it.name} × ${it.qty}",
+                                color = Rahal.colors.ink,
+                                style = Rahal.type.bodyStrong,
+                                textDecoration = if (d != null) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
                             )
+                            it.unitPrice?.let { up ->
+                                Text(money(up * it.qty), color = Rahal.colors.inkMuted, style = Rahal.type.meta)
+                            }
                         }
+                        LineToggle(
+                            icon = com.rahalgo.ui.R.drawable.ic_trash,
+                            description = stringResource(R.string.edit_req_missing),
+                            selected = d?.action == EditLineAction.MISSING,
+                            tint = Rahal.colors.danger,
+                        ) { toggle(EditLineAction.MISSING) }
+                        Spacer(Modifier.width(Rahal.space.xs))
+                        LineToggle(
+                            icon = R.drawable.ic_close_circle,
+                            description = stringResource(R.string.edit_req_cancelled),
+                            selected = d?.action == EditLineAction.CANCELLED,
+                            tint = Rahal.colors.accent,
+                        ) { toggle(EditLineAction.CANCELLED) }
+                    }
+                    // **ومعنى المختار بكلمة** — فلا تُحزر الأيقونة.
+                    if (d != null) {
+                        Text(
+                            stringResource(if (d.action == EditLineAction.MISSING) R.string.edit_req_missing else R.string.edit_req_cancelled),
+                            color = if (d.action == EditLineAction.MISSING) Rahal.colors.danger else Rahal.colors.accent,
+                            style = Rahal.type.meta,
+                            fontWeight = FontWeight.Bold,
+                        )
                     }
                     // **وكم قطعة** — لسطر فيه أكتر من وحدة.
                     if (d != null && it.qty > 1) {
@@ -142,10 +143,9 @@ internal fun EditRequestDialog(
                             },
                         )
                     }
-                    Spacer(Modifier.height(Rahal.space.sm))
                     RahalDivider()
                 }
-                Spacer(Modifier.height(Rahal.space.sm))
+                // **المضافُ بسطره** — الاسمُ والكمّيةُ، وسعرُه تحته، وزرُّ شيله بآخره.
                 for ((i, a) in draft.adds.withIndex()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -157,35 +157,53 @@ internal fun EditRequestDialog(
                         Spacer(Modifier.width(Rahal.space.sm))
                         Column(Modifier.weight(1f)) {
                             Text("${a.name} × ${a.qty}", style = Rahal.type.bodyStrong, color = Rahal.colors.ink)
-                            val unit = if (a.usd) amountText(a.price, "USD") else money(a.price)
-                            val sum = if (a.usd) amountText(a.price * a.qty, "USD") else money(a.price * a.qty)
                             Text(
-                                stringResource(R.string.edit_req_line_price, unit, sum) +
+                                (if (a.usd) amountText(a.price * a.qty, "USD") else money(a.price * a.qty)) +
                                     (if (a.merchantName.isBlank()) "" else " · " + a.merchantName),
                                 style = Rahal.type.meta,
                                 color = Rahal.colors.inkMuted,
                             )
                         }
-                        RahalTextButton(onClick = {
-                            draft = draft.copy(adds = draft.adds.filterIndexed { j, _ -> j != i })
-                        }, tone = com.rahalgo.ui.Tone.Danger) { Text(stringResource(R.string.edit_req_remove)) }
+                        com.rahalgo.ui.IconAction(
+                            icon = com.rahalgo.ui.R.drawable.ic_trash,
+                            description = stringResource(R.string.edit_req_remove),
+                            tint = Rahal.colors.danger,
+                            onClick = { draft = draft.copy(adds = draft.adds.filterIndexed { j, _ -> j != i }) },
+                        )
                     }
                 }
-                Spacer(Modifier.height(Rahal.space.sm))
                 Text(stringResource(R.string.edit_req_add_title), style = Rahal.type.sectionTitle, color = Rahal.colors.ink)
-                Spacer(Modifier.height(Rahal.space.xs))
-                OutlinedTextField(
-                    value = addName,
-                    onValueChange = { addName = it.take(120) },
-                    label = { Text(stringResource(R.string.edit_req_add_name)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    keyboardActions = KeyboardActions(onNext = { focus.moveFocus(FocusDirection.Down) }),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                // **الاسمُ والكمّيةُ بسطرٍ واحد** (قرارُ المالك ٢٠٢٦-١١-١٢).
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = addName,
+                        onValueChange = { addName = it.take(120) },
+                        label = { Text(stringResource(R.string.edit_req_add_name), maxLines = 1) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focus.moveFocus(FocusDirection.Down) }),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(Rahal.space.xs))
+                    com.rahalgo.ui.IconAction(
+                        icon = com.rahalgo.ui.R.drawable.ic_minus,
+                        description = "−",
+                        onClick = { addQty = (q - 1).coerceAtLeast(1).toString() },
+                    )
+                    Text(
+                        addQty.ifBlank { "1" },
+                        style = Rahal.type.sectionTitle,
+                        color = Rahal.colors.ink,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.widthIn(min = 28.dp),
+                    )
+                    com.rahalgo.ui.IconAction(
+                        icon = com.rahalgo.ui.R.drawable.ic_plus,
+                        description = "+",
+                        onClick = { addQty = (q + 1).coerceIn(1, 50).toString() },
+                    )
+                }
                 if (stores.isNotEmpty()) {
-                    Spacer(Modifier.height(Rahal.space.sm))
-                    Text(stringResource(R.string.edit_req_add_store), color = Rahal.colors.inkMuted, style = Rahal.type.label)
                     Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                         for (st in stores) {
                             FilterChip(
@@ -196,34 +214,21 @@ internal fun EditRequestDialog(
                         }
                     }
                 }
-                // **الكمّيةُ بزرَّي − و+** — لا كتابةَ لرقمٍ صغير (المالك ٢٠٢٦-١١-١٠).
-                QtyStepper(
-                    label = stringResource(R.string.edit_req_add_qty),
-                    value = addQty.ifBlank { "1" },
-                    onMinus = { addQty = (q - 1).coerceAtLeast(1).toString() },
-                    onPlus = { addQty = (q + 1).coerceIn(1, 50).toString() },
-                )
-                // **والسعرُ بعرضٍ كامل** — فلا تلتفّ التسميةُ على سطرين.
+                // **والسعرُ وعملتُه بسطر.**
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                     OutlinedTextField(
                         value = addPrice,
                         onValueChange = { v ->
                             addPrice = if (addUsd) {
                                 // **رقمٌ وفاصلةٌ واحدةٌ ومنزلتان** — «2.5» لا «2..5».
-                                val clean = v.filter { it.isDigit() || it == '.' }
+                                val clean = v.filter { c -> c.isDigit() || c == '.' }
                                 val dot = clean.indexOf('.')
                                 (if (dot < 0) clean else clean.substring(0, dot + 1) + clean.substring(dot + 1).replace(".", "").take(2)).take(9)
                             } else {
-                                v.filter { it.isDigit() }.take(9)
+                                v.filter { c -> c.isDigit() }.take(9)
                             }
                         },
-                        label = {
-                            Text(
-                                stringResource(if (addUsd) R.string.edit_req_add_price_usd else R.string.edit_req_add_price),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
+                        label = { Text(stringResource(R.string.edit_req_price_label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = if (addUsd) KeyboardType.Decimal else KeyboardType.Number,
@@ -253,32 +258,20 @@ internal fun EditRequestDialog(
                     },
                     enabled = addName.isNotBlank() && q in 1..50 && p > 0,
                 ) { Text(stringResource(R.string.edit_req_add_button)) }
-                Spacer(Modifier.height(Rahal.space.sm))
-                // **المجموعُ التقريبيُّ في بطاقةٍ ملوّنة** — آخرُ ما يُقرأ قبل الإرسال.
+                // **المجموعُ سطرٌ واحدٌ واضح** — القديمُ ← الجديد (والدولارُ المضافُ بجانبه).
                 com.rahalgo.ui.RahalCard(
                     variant = com.rahalgo.ui.CardVariant.Tinted,
                     tone = com.rahalgo.ui.StatusTone.Info,
                 ) {
-                    // **المجموعُ قبل وبعد بسطرين** (٢٠٢٦-١١-١٢) — والجديدُ أعرض، و«تقريباً» لأنّ المكتب يوافق.
-                    Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.xxs)) {
-                        com.rahalgo.ui.InvoiceRow(stringResource(R.string.edit_req_total_before), money(order.total))
-                        com.rahalgo.ui.InvoiceRow(
-                            stringResource(R.string.edit_req_total_after),
-                            money(editDraftTotal(order, effective)),
-                            strong = true,
-                        )
-                        editDraftUsd(effective).takeIf { it > 0 }?.let { usd ->
-                            Text(
-                                stringResource(R.string.edit_req_total_usd, amountText(usd, "USD")),
-                                style = Rahal.type.bodyStrong,
-                                color = Rahal.colors.ink,
-                            )
-                        }
-                        Text(stringResource(R.string.edit_req_total_note), style = Rahal.type.meta, color = Rahal.colors.inkMuted)
-                    }
+                    val usd = editDraftUsd(effective)
+                    com.rahalgo.ui.InvoiceRow(
+                        stringResource(R.string.edit_req_total_label),
+                        money(order.total) + " ← " + money(editDraftTotal(order, effective)) +
+                            (if (usd > 0) " + " + amountText(usd, "USD") else ""),
+                        strong = true,
+                    )
                 }
                 if (error.isNotEmpty()) {
-                    Spacer(Modifier.height(Rahal.space.sm))
                     Text(error, color = Rahal.colors.danger, style = Rahal.type.caption)
                 }
             }
@@ -296,6 +289,26 @@ internal fun EditRequestDialog(
             }
         },
     )
+}
+
+/** **أيقونةُ فعلٍ على سطر الصنف** — قرصٌ بلون معناه إن اختير، وإطارٌ باهتٌ إن لم يُختر. */
+@Composable
+private fun LineToggle(icon: Int, description: String, selected: Boolean, tint: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+    androidx.compose.foundation.layout.Box(
+        Modifier
+            .size(Rahal.size.touch)
+            .clip(androidx.compose.foundation.shape.CircleShape)
+            .background(if (selected) tint else tint.copy(alpha = 0.10f))
+            .clickable(onClickLabel = description, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = description,
+            tint = if (selected) Rahal.colors.onPanel else tint,
+            modifier = Modifier.size(Rahal.icon.md),
+        )
+    }
 }
 
 /**
