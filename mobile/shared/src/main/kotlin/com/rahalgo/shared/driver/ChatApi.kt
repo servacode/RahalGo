@@ -32,4 +32,33 @@ class ChatApi(private val api: ApiClient) {
             HttpMethod.Post,
             mapOf("body" to body),
         )
+
+    /** **صورةٌ في الحديث** (قرارُ المالك ٢٠٢٦-١١-١٢) — JPEG مصغَّرٌ من الجهاز، والمحرّكُ يصغّره أيضاً. */
+    suspend fun sendPhoto(orderId: String, jpeg: ByteArray): ChatMessage =
+        decode(
+            api.upload(
+                "/api/v1/orders/" + orderId + "/messages/attachment",
+                "photo.jpg",
+                jpeg,
+                fields = mapOf("kind" to "photo"),
+            ),
+        )
+
+    /** **رسالةٌ صوتيّة** — AAC في `.m4a`، حتّى ٦٠ ثانية. */
+    suspend fun sendVoice(orderId: String, m4a: ByteArray, durationMs: Long): ChatMessage =
+        decode(
+            api.upload(
+                "/api/v1/orders/" + orderId + "/messages/attachment",
+                "voice.m4a",
+                m4a,
+                fields = mapOf("kind" to "audio", "duration_ms" to durationMs.toString()),
+                contentType = "audio/mp4",
+            ),
+        )
+
+    private fun decode(raw: String): ChatMessage = json.decodeFromString(ChatMessage.serializer(), raw)
+
+    private companion object {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+    }
 }

@@ -53,6 +53,9 @@ var protectedKinds = map[string]bool{
 	"odometer": true,
 	// صورةُ قائمة الطلب الخاصّ — يراها صاحبُه وسائقُه والمكتب برابطٍ موقَّع (هجرة ٠٥٤١).
 	"custom_photo": true,
+	// صورةُ حديث الطلب ورسالتُه الصوتيّة — لطرفَي الحديث والمكتب وحدهم (هجرة ٠٥٤٧).
+	"chat_photo": true,
+	"chat_audio": true,
 }
 
 // signTTL عمرُ الرابط الموقَّع.

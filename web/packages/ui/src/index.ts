@@ -226,6 +226,7 @@ export * from "./ordertrackh";
 export * from "./MyAddresses";
 // **حديثُ الطلب** — مكوّنٌ واحدٌ لطرفيه، بلا رقمٍ بينهما.
 export * from "./OrderChat";
+export { ChatAttachmentView, fmtDuration, type ChatAttachment } from "./ChatAttachment";
 // **فقّاعةُ المحادثة** — تطفو ولا تسكن بطاقة.
 export * from "./ChatBubble";
 export * from "./ChatArchive";

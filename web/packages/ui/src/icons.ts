@@ -205,4 +205,9 @@ export {
   Clock as IconClock,
   Tag as IconTag,
   Bike as IconBike,
+  // **صورٌ ورسائلُ صوتيّة في حديث الطلب** (قرارُ المالك ٢٠٢٦-١١-١٢).
+  ImagePlus as IconPhoto,
+  Mic as IconMic,
+  Play as IconPlay,
+  Pause as IconPause,
 } from "lucide-react";

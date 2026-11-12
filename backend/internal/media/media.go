@@ -132,7 +132,10 @@ var validKinds = map[string]bool{"merchant_logo": true, "menu_item": true, "menu
 	"odometer": true,
 	// **و`custom_photo` صورةُ قائمة مشتريات الطلب الخاصّ أو الغرض** — صنفٌ محميّ (هجرة ٠٥٤١،
 	// قرارُ المالك ٢٠٢٦-١١-١١): يراها صاحبُ الطلب وسائقُه والمكتبُ برابطٍ موقَّع.
-	"custom_photo": true}
+	"custom_photo": true,
+	// **و`chat_photo` و`chat_audio` صورةُ حديث الطلب ورسالتُه الصوتيّة** — صنفان محميّان (هجرة ٠٥٤٧،
+	// قرارُ المالك ٢٠٢٦-١١-١٢): يراهما طرفا الحديث والمكتب برابطٍ موقَّع.
+	"chat_photo": true, "chat_audio": true}
 
 type Media struct {
 	ID       string `json:"id"`

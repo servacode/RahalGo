@@ -865,6 +865,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/my/chats", s.handleMyChats)
 			r.Get("/orders/{id}/messages", s.handleOrderMessages)
 			r.Post("/orders/{id}/messages", s.handleSendOrderMessage)
+			// **وصورةٌ أو رسالةٌ صوتيّة** (قرارُ المالك ٢٠٢٦-١١-١٢) — الصلاحيةُ نفسُها.
+			r.Post("/orders/{id}/messages/attachment", s.handleSendOrderAttachment)
 			r.Get("/my/orders", s.handleMyOrders)
 			r.Get("/my/orders/{id}", s.handleMyOrder)
 			r.Get("/my/wallet", s.handleMyWallet)

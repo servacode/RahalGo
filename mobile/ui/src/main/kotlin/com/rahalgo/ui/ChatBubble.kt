@@ -56,10 +56,18 @@ fun ChatBubble(message: ChatMessage) {
                 .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
             horizontalAlignment = Alignment.End,
         ) {
-            Text(
-                text = message.body,
-                color = if (mine) Rahal.colors.onBrand else Rahal.colors.ink,
-            )
+            // **والمرفقُ مكانَ النصّ البديل** (قرارُ المالك ٢٠٢٦-١١-١٢) — وتعليقُه تحته إن كُتب.
+            val att = message.attachment
+            if (att != null) {
+                ChatAttachmentView(att, mine)
+            }
+            val text = if (att != null) att.caption else message.body
+            if (text.isNotEmpty()) {
+                Text(
+                    text = text,
+                    color = if (mine) Rahal.colors.onBrand else Rahal.colors.ink,
+                )
+            }
             Spacer(Modifier.height(Rahal.space.xxs))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

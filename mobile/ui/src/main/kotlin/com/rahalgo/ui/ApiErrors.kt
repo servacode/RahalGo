@@ -754,6 +754,10 @@ private val CODES: Map<String, Int> = mapOf(
     "not_found" to R.string.err_not_found,
     "comms_closed" to R.string.err_comms_closed,
     "comms_no_driver" to R.string.err_comms_no_driver,
+    // **صورةٌ وصوتٌ في الحديث** (قرارُ المالك ٢٠٢٦-١١-١٢).
+    "chat_attachments_limit" to R.string.err_chat_attachments_limit,
+    "invalid_audio" to R.string.err_invalid_audio,
+    "audio_too_large" to R.string.err_audio_too_large,
     // **«ما استلمت العمولة»** (٢٠٢٦-١٠-٢٦) — بابُ لوحةٍ، والحارسُ يطلب نصَّه لأنّه في `orders`.
     "commission_waiver_reason_required" to R.string.err_commission_waiver_reason_required,
     "commission_waiver_not_delivered" to R.string.err_commission_waiver_not_delivered,

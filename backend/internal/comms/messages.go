@@ -34,6 +34,8 @@ type Message struct {
 	// FlagWord **أيُّ لفظٍ أوقعها** — للمراجعة، **ولمراجعة الحارس نفسِه**
 	// حين يَسِم بريئا. **وللإدارة وحدَها.**
 	FlagWord string `json:"flag_word,omitempty"`
+	// Attachment **صورةٌ أو رسالةٌ صوتيّة** (قرارُ المالك ٢٠٢٦-١١-١٢) — وفارغٌ: نصٌّ وحده.
+	Attachment *Attachment `json:"attachment,omitempty"`
 }
 
 // List **حديثُ الطلب كما يراه أحدُ طرفيه.**
@@ -48,9 +50,13 @@ func (s *Service) List(ctx context.Context, p *Permission) ([]Message, error) {
 		return []Message{}, nil
 	}
 	rows, err := s.db.Query(ctx, `
-		SELECT id::text, body, sender_role, sender_id::text = $2, created_at, read_at
-		FROM order_messages WHERE order_id = $1 AND driver_id = $3
-		ORDER BY created_at`, p.OrderID, p.SelfID, p.DriverID)
+		SELECT x.id::text, x.body, x.sender_role, x.sender_id::text = $2, x.created_at, x.read_at,
+		       COALESCE(x.attachment_kind, ''), COALESCE(m.path, ''), COALESCE(m.thumb_path, ''),
+		       COALESCE(x.attachment_duration_ms, 0)
+		FROM order_messages x
+		LEFT JOIN media m ON m.id = x.attachment_media_id
+		WHERE x.order_id = $1 AND x.driver_id = $3
+		ORDER BY x.created_at`, p.OrderID, p.SelfID, p.DriverID)
 	if err != nil {
 		return nil, err
 	}
@@ -59,9 +65,12 @@ func (s *Service) List(ctx context.Context, p *Permission) ([]Message, error) {
 	out := []Message{}
 	for rows.Next() {
 		var x Message
-		if err := rows.Scan(&x.ID, &x.Body, &x.Role, &x.Mine, &x.CreatedAt, &x.ReadAt); err != nil {
+		var a attachmentRow
+		if err := rows.Scan(&x.ID, &x.Body, &x.Role, &x.Mine, &x.CreatedAt, &x.ReadAt,
+			&a.kind, &a.path, &a.thumb, &a.durationMs); err != nil {
 			return nil, err
 		}
+		x.Attachment = a.build(x.Body)
 		out = append(out, x)
 	}
 	return out, rows.Err()
@@ -71,6 +80,10 @@ func (s *Service) List(ctx context.Context, p *Permission) ([]Message, error) {
 //
 // **ولا يأخذ متلقّياً**: يُستخرج من الصلاحية. **ومن أرسل معرّفاً لا يُقرأ منه.**
 func (s *Service) Send(ctx context.Context, p *Permission, body string) (*Message, error) {
+	return s.send(ctx, p, body, nil)
+}
+
+func (s *Service) send(ctx context.Context, p *Permission, body string, att *AttachmentInput) (*Message, error) {
 	if !p.Open {
 		return nil, ErrChannelClosed
 	}
@@ -89,16 +102,8 @@ func (s *Service) Send(ctx context.Context, p *Permission, body string) (*Messag
 
 	// **وحدُّ المعدّل يُفحص في القاعدة لا في الذاكرة** — خادمان يعملان معاً
 	// **وذاكرةٌ في أحدهما لا يراها الآخر.**
-	var recent bool
-	if err := s.db.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM order_messages
-		               WHERE order_id = $1 AND sender_id = $2 AND NOT auto
-		                 AND created_at > now() - $3::interval)`,
-		p.OrderID, p.SelfID, MinGap.String()).Scan(&recent); err != nil {
+	if err := s.checkGap(ctx, p); err != nil {
 		return nil, err
-	}
-	if recent {
-		return nil, ErrTooFast
 	}
 
 	// **والولايةُ من الصلاحية** — سائقُ الطلب لحظةَ قُرئت. **وفراغُها يترك
@@ -107,18 +112,46 @@ func (s *Service) Send(ctx context.Context, p *Permission, body string) (*Messag
 	if p.DriverID != "" {
 		tenure = p.DriverID
 	}
+	var mediaID, kind, dur any
+	if att != nil {
+		mediaID, kind = att.MediaID, att.Kind
+		if att.Kind == AttachAudio {
+			dur = att.DurationMs
+		}
+	}
 	var x Message
 	if err := s.db.QueryRow(ctx, `
-		INSERT INTO order_messages (order_id, sender_id, sender_role, body, flagged, flag_word, driver_id)
-		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), $7)
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, flagged, flag_word, driver_id,
+		                            attachment_media_id, attachment_kind, attachment_duration_ms)
+		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9, $10)
 		RETURNING id::text, body, sender_role, created_at`,
-		p.OrderID, p.SelfID, string(p.Me), body, word != "", word, tenure).
+		p.OrderID, p.SelfID, string(p.Me), body, word != "", word, tenure, mediaID, kind, dur).
 		Scan(&x.ID, &x.Body, &x.Role, &x.CreatedAt); err != nil {
 		return nil, err
 	}
 	x.Mine = true
 	x.Flagged = word != ""
+	if att != nil {
+		x.Attachment = attachmentRow{kind: att.Kind, path: att.Path, thumb: att.Thumb,
+			durationMs: att.DurationMs}.build(x.Body)
+	}
 	return &x, nil
+}
+
+// checkGap **حدُّ المعدّل** — الفاصلُ نفسُه للنصّ والمرفق.
+func (s *Service) checkGap(ctx context.Context, p *Permission) error {
+	var recent bool
+	if err := s.db.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM order_messages
+		               WHERE order_id = $1 AND sender_id = $2 AND NOT auto
+		                 AND created_at > now() - $3::interval)`,
+		p.OrderID, p.SelfID, MinGap.String()).Scan(&recent); err != nil {
+		return err
+	}
+	if recent {
+		return ErrTooFast
+	}
+	return nil
 }
 
 // MarkRead **ما وصل يُوسَم** — ويردّ كم وُسم.

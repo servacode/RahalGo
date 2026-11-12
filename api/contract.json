@@ -11842,6 +11842,21 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/orders/{id}/messages/attachment",
+      "handler": "handleSendOrderAttachment",
+      "auth": true,
+      "response": [
+        {
+          "name": "@msg",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/orders/{id}/rating",
       "handler": "handleRateOrder",
       "auth": true,

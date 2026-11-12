@@ -44,6 +44,24 @@ data class ChatMessage(
      * خبرا عن نفسه.
      */
     @SerialName("read_at") val readAt: String? = null,
+    /**
+     * **صورةٌ أو رسالةٌ صوتيّة** (قرارُ المالك ٢٠٢٦-١١-١٢) — وفارغٌ: نصٌّ وحده.
+     *
+     * **و`body` معها نصٌّ بديلٌ للتطبيق القديم** («📷 صورة») — والجديدُ يعرض المرفقَ وتعليقَه.
+     */
+    val attachment: ChatAttachment? = null,
+)
+
+/** **مرفقُ الرسالة** — والروابطُ موقَّعةٌ نسبيّة (`/media/...`). */
+@Serializable
+data class ChatAttachment(
+    /** `photo` أو `audio`. */
+    val kind: String = "",
+    val url: String = "",
+    @SerialName("thumb_url") val thumbUrl: String = "",
+    @SerialName("duration_ms") val durationMs: Long = 0,
+    /** **ما كُتب مع المرفق** — بلا النصّ البديل. */
+    val caption: String = "",
 )
 
 /** **قائمة محادثاتي** — ومنها تُقرأ الشارة. */

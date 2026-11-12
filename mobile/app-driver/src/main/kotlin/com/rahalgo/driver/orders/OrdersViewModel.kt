@@ -2553,6 +2553,31 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** **صورةٌ في الحديث** (قرارُ المالك ٢٠٢٦-١١-١٢). */
+    fun sendChatPhoto(jpeg: ByteArray) = sendChatAttachment { id -> backend.chat.sendPhoto(id, jpeg) }
+
+    /** **رسالةٌ صوتيّة** — حتّى دقيقة. */
+    fun sendChatVoice(m4a: ByteArray, durationMs: Long) =
+        sendChatAttachment { id -> backend.chat.sendVoice(id, m4a, durationMs) }
+
+    private fun sendChatAttachment(call: suspend (String) -> Unit) {
+        val id = currentId() ?: return
+        if (chat?.busy == true) return
+        chat = chat?.copy(busy = true, error = "")
+        viewModelScope.launch {
+            try {
+                call(id)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("RahalGo/chat", "تعذّر إرسال المرفق", e)
+                chat = (chat ?: ChatState()).copy(busy = false, error = describe(e))
+                return@launch
+            }
+            loadChat(id)
+        }
+    }
+
     private suspend fun loadChat(id: String) {
         chatUnread = 0
         chat = try {

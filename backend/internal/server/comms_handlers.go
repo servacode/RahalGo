@@ -22,6 +22,7 @@ package server
 */
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -163,15 +164,23 @@ func (s *Server) handleSendOrderMessage(w http.ResponseWriter, r *http.Request) 
 	// **فصار نوعُه `chat`** — **صفٌّ يُدفَع ويُحجَب عن الصندوق**
 	// (`notifications.KindChat`): **لا يُعرَض خبراً ولا يُعَدّ في شارة
 	// الجرس**، **والحديثُ نفسُه يبقى هو السجلّ.**
+	s.notifyChatPeer(r.Context(), p, msg.Body)
+	httpx.JSON(w, http.StatusCreated, msg)
+}
+
+// notifyChatPeer **يُشعر الطرفَ الآخر برسالةٍ جديدة** — نصّاً كانت أو مرفقاً.
+//
+// **ونصُّ المرفق بديلُه** («📷 صورة» · «🎤 رسالة صوتية») — فالإشعارُ يقول ما وصل.
+func (s *Server) notifyChatPeer(ctx context.Context, p *comms.Permission, body string) {
 	title := notifTitles.messageFromDriver
 	app := notifications.AppCustomer
 	if p.Me == comms.RoleCustomer {
 		title = notifTitles.messageFromCustomer
 		app = notifications.AppDriver
 	}
-	s.notify.Notify(r.Context(), notifications.Input{
+	s.notify.Notify(ctx, notifications.Input{
 		UserID: p.PeerID, Kind: notifications.KindChat,
-		Title: title + " — " + orderRef(p.Number), Body: clip(msg.Body, 120),
+		Title: title + " — " + orderRef(p.Number), Body: clip(body, 120),
 		// **والوجهةُ نوعٌ نعرفه ومعرّفُ طلب** — **تفتح حديثَ الطلب
 		// بعينه لا البيتَ ولا آخرَ حديثٍ فُتح.**
 		Entity: DestOrderChat, EntityID: p.OrderID,
@@ -181,7 +190,6 @@ func (s *Server) handleSendOrderMessage(w http.ResponseWriter, r *http.Request) 
 	})
 
 	s.touchUser(p.PeerID, "order")
-	httpx.JSON(w, http.StatusCreated, msg)
 }
 
 // handleMyChats **سجلُّ محادثاتي — المفتوحةُ والمنتهية.**

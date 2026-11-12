@@ -39,10 +39,11 @@
  * **ومن قرأ سطراً لا يعرف أقاله هو أم قيل له** إلّا بعد أن يتتبّع الحافّة.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { getMessages, defaultLocale, fmtTime, fmtRelDay } from "@rahalgo/i18n";
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
+import { getMessages, defaultLocale, fmtTime, fmtRelDay, errorText } from "@rahalgo/i18n";
 import { Alert } from "./feedback";
-import { IconChat, IconSend, IconCheck, IconCheckAll } from "./icons";
+import { IconChat, IconSend, IconCheck, IconCheckAll, IconPhoto, IconMic } from "./icons";
+import { ChatAttachmentView, fmtDuration, type ChatAttachment } from "./ChatAttachment";
 import { useLiveRefresh } from "./Notifications";
 
 const m = getMessages(defaultLocale);
@@ -57,6 +58,8 @@ interface ChatMessage {
   mine: boolean;
   created_at: string;
   read_at: string | null;
+  /** صورةٌ أو رسالةٌ صوتيّة — وحين تحضر تُعرض هي وشرحُها بدل `body` (نصٌّ احتياطيٌّ للتطبيقات القديمة). */
+  attachment?: ChatAttachment;
 }
 
 interface Thread {
@@ -68,6 +71,22 @@ interface Thread {
 
 /** أقصى ما يرتفع حقلُ الكتابة قبل أن ينزلق داخلَ نفسِه — **أربعةُ أسطر.** */
 const MAX_COMPOSER = 96;
+
+/** أطولُ رسالةٍ صوتيّة — يوقفها الإرسالُ تلقائيّاً. */
+const MAX_VOICE_MS = 60_000;
+/** أقصرُ من هذا يُهمَل: لمسةٌ عابرةٌ لا رسالة. */
+const MIN_VOICE_MS = 700;
+/** إن ابتعد الإصبعُ هذا القدر عن موضع الضغط فالتسجيلُ يُلغى. */
+const CANCEL_DIST = 60;
+
+/** أفضلُ صيغةٍ يسجّلها المتصفّح — سفاري `mp4` وغيره `webm`. */
+function pickMime(): string {
+  if (typeof MediaRecorder === "undefined") return "";
+  for (const t of ["audio/mp4", "audio/webm;codecs=opus"]) {
+    if (MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return "";
+}
 
 export function OrderChat({
   api,
@@ -99,6 +118,22 @@ export function OrderChat({
   const [error, setError] = useState("");
   const endRef = useRef<HTMLDivElement | null>(null);
   const boxRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const [canRecord, setCanRecord] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recMs, setRecMs] = useState(0);
+  const [willCancel, setWillCancel] = useState(false);
+  const rec = useRef<{
+    recorder: MediaRecorder | null;
+    stream: MediaStream | null;
+    chunks: Blob[];
+    startedAt: number;
+    timer: ReturnType<typeof setInterval> | null;
+    pressing: boolean;
+    cancel: boolean;
+    x: number;
+    y: number;
+  }>({ recorder: null, stream: null, chunks: [], startedAt: 0, timer: null, pressing: false, cancel: false, x: 0, y: 0 });
 
   // **ودالّةُ «وصل الحديث» في مرجعٍ** — كي لا يُعاد الجلبُ كلَّما تبدّلت هويّتُها.
   const loadedRef = useRef(onLoaded);
@@ -143,6 +178,143 @@ export function OrderChat({
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, MAX_COMPOSER)}px`;
+  }
+
+  // **المايك يظهر لمن يملكه** — يُفحص بعد التركيب كي لا يختلف الرسمُ بين الخادم والمتصفّح.
+  useEffect(() => {
+    setCanRecord(
+      typeof MediaRecorder !== "undefined" &&
+        typeof navigator !== "undefined" &&
+        !!navigator.mediaDevices?.getUserMedia,
+    );
+    const r = rec.current;
+    return () => {
+      r.pressing = false;
+      r.cancel = true;
+      if (r.timer) clearInterval(r.timer);
+      if (r.recorder && r.recorder.state !== "inactive") r.recorder.stop();
+      r.stream?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  /** يرفع مرفقاً (صورة أو صوت) بالمسار الجديد. */
+  async function upload(file: Blob, kind: "photo" | "audio", name: string, durationMs?: number) {
+    setBusy(true);
+    setError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file, name);
+      fd.append("kind", kind);
+      if (durationMs !== undefined) fd.append("duration_ms", String(Math.round(durationMs)));
+      await api(`/api/v1/orders/${orderId}/messages/attachment`, { method: "POST", body: fd });
+      await load();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function onPhoto(file: File | undefined) {
+    if (fileRef.current) fileRef.current.value = "";
+    if (!file || busy) return;
+    void upload(file, "photo", file.name || "photo.jpg");
+  }
+
+  function finishRec() {
+    const r = rec.current;
+    if (r.timer) clearInterval(r.timer);
+    r.timer = null;
+    r.stream?.getTracks().forEach((t) => t.stop());
+    r.stream = null;
+    const ms = Date.now() - r.startedAt;
+    const type = r.recorder?.mimeType || "audio/webm";
+    const chunks = r.chunks;
+    const cancelled = r.cancel;
+    r.recorder = null;
+    r.chunks = [];
+    setRecording(false);
+    setWillCancel(false);
+    setRecMs(0);
+    if (cancelled || ms < MIN_VOICE_MS || chunks.length === 0) return;
+    const ext = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "webm";
+    void upload(new Blob(chunks, { type }), "audio", `voice.${ext}`, Math.min(ms, MAX_VOICE_MS));
+  }
+
+  /** يوقف التسجيل — `send=false` يلغيه. */
+  function stopRec(send: boolean) {
+    const r = rec.current;
+    r.pressing = false;
+    r.cancel = !send;
+    if (r.recorder && r.recorder.state !== "inactive") r.recorder.stop();
+  }
+
+  async function startRec(e: PointerEvent<HTMLButtonElement>) {
+    const r = rec.current;
+    if (busy || r.recorder || r.pressing) return;
+    r.pressing = true;
+    r.cancel = false;
+    r.x = e.clientX;
+    r.y = e.clientY;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* لا يضرّ */
+    }
+    setError("");
+    let stream: MediaStream;
+    try {
+      // **الإذنُ يُطلب عند أوّل ضغطةٍ فقط** — لا عند فتح الصفحة.
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      r.pressing = false;
+      setError(C.micDenied);
+      return;
+    }
+    // **أفلت الإصبعُ أثناء نافذة الإذن** — تلك الضغطةُ استُهلكت بالسؤال.
+    if (!r.pressing) {
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+    const mime = pickMime();
+    let recorder: MediaRecorder;
+    try {
+      recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    } catch {
+      stream.getTracks().forEach((t) => t.stop());
+      r.pressing = false;
+      setError(C.micDenied);
+      return;
+    }
+    r.stream = stream;
+    r.recorder = recorder;
+    r.chunks = [];
+    recorder.ondataavailable = (ev) => {
+      if (ev.data.size > 0) r.chunks.push(ev.data);
+    };
+    recorder.onstop = finishRec;
+    r.startedAt = Date.now();
+    recorder.start();
+    setRecording(true);
+    setRecMs(0);
+    r.timer = setInterval(() => {
+      const el = Date.now() - r.startedAt;
+      setRecMs(el);
+      if (el >= MAX_VOICE_MS) stopRec(true);
+    }, 200);
+  }
+
+  function moveRec(e: PointerEvent<HTMLButtonElement>) {
+    const r = rec.current;
+    if (!r.recorder) return;
+    setWillCancel(Math.hypot(e.clientX - r.x, e.clientY - r.y) > CANCEL_DIST);
+  }
+
+  function endRec(e: PointerEvent<HTMLButtonElement>) {
+    const r = rec.current;
+    if (!r.pressing && !r.recorder) return;
+    const far = Math.hypot(e.clientX - r.x, e.clientY - r.y) > CANCEL_DIST;
+    stopRec(e.type === "pointerup" && !far);
   }
 
   if (!thread) return null;
@@ -207,7 +379,16 @@ export function OrderChat({
                   : "surface-inset rounded-card rounded-ss-control text-ink"
               }`}
             >
-              <p className="whitespace-pre-wrap break-words">{x.body}</p>
+              {x.attachment ? (
+                <div className="space-y-1.5">
+                  <ChatAttachmentView attachment={x.attachment} onDark={x.mine} />
+                  {x.attachment.caption && (
+                    <p className="whitespace-pre-wrap break-words">{x.attachment.caption}</p>
+                  )}
+                </div>
+              ) : (
+                <p className="whitespace-pre-wrap break-words">{x.body}</p>
+              )}
             </div>
             {/* **والوقتُ تحت الفقّاعة لا فيها** — **رمادِيٌّ داخلَ لونٍ
                 مصمتٍ يسقط تباينُه**، ويُقرأ الوقتُ جزءاً من الكلام. */}
@@ -246,6 +427,22 @@ export function OrderChat({
     </div>
   );
 
+  const recordingBar = recording && (
+    <div
+      role="status"
+      className={`mt-2 flex items-center justify-between gap-2 rounded-control px-3 py-2 text-xs ${
+        willCancel ? "bg-danger-tint text-danger" : "bg-field text-ink"
+      }`}
+    >
+      <span className="flex items-center gap-2">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-danger-solid" />
+        {C.recording}
+        <span dir="ltr">{fmtDuration(recMs)}</span>
+      </span>
+      <span className="text-ink-muted">{willCancel ? C.releaseCancel : C.slideCancel}</span>
+    </div>
+  );
+
   const composer = thread.open ? (
     /* ══════════════════════════════════════════════════════════════════
        **وشريطٌ سفليٌّ واحدٌ — لا صندوقٌ وزرٌّ بجانبه**
@@ -259,6 +456,8 @@ export function OrderChat({
 
        **وصارا جسماً واحداً**: الحقلُ والأيقونةُ في غائرٍ واحدٍ مستديرِ
        الطرفين — **وهو الشكلُ الذي تعرفه كلُّ يدٍ أمسكت هاتفاً.** */
+    <>
+    {recordingBar}
     <form
       onSubmit={(e) => {
         e.preventDefault();
@@ -297,6 +496,40 @@ export function OrderChat({
 
           **وتخفت حتّى يُكتب شيء**: قرصٌ مضيءٌ فوق حقلٍ فارغٍ يدعو إلى ضغطةٍ
           لا تفعل. */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => onPhoto(e.target.files?.[0])}
+      />
+      <button
+        type="button"
+        disabled={busy || recording}
+        onClick={() => fileRef.current?.click()}
+        aria-label={C.photo}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-badge text-ink-muted disabled:opacity-40"
+      >
+        <IconPhoto size={19} />
+      </button>
+      {canRecord && (
+        <button
+          type="button"
+          disabled={busy && !recording}
+          onPointerDown={(e) => void startRec(e)}
+          onPointerMove={moveRec}
+          onPointerUp={endRec}
+          onPointerCancel={endRec}
+          onContextMenu={(e) => e.preventDefault()}
+          aria-label={C.voice}
+          title={C.voice}
+          className={`flex h-9 w-9 shrink-0 touch-none select-none items-center justify-center rounded-badge disabled:opacity-40 ${
+            recording ? (willCancel ? "bg-danger-solid text-on-bright" : "bg-accent text-on-bright") : "text-ink-muted"
+          }`}
+        >
+          <IconMic size={19} />
+        </button>
+      )}
       <button
         type="submit"
         disabled={busy || !draft.trim()}
@@ -312,6 +545,7 @@ export function OrderChat({
         <IconSend size={17} className="rtl:-scale-x-100" />
       </button>
     </form>
+    </>
   ) : (
     /* **ويُقال إنّها أُغلقت** — لا يُخفى الحقلُ بلا كلمة. */
     <p className="mt-2 rounded-control bg-field px-3 py-2 text-center text-xs text-ink-muted">
