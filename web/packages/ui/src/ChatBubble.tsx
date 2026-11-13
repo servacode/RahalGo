@@ -54,6 +54,8 @@ export function ChatBubble({
   /** حديثٌ فُتح أو بُدِّل إليه — **صاحبُ `threads` يُصفِّر عدَّه الآن** ثمّ تأتي الحقيقةُ من `onRead`. */
   onOpen?: (orderId: string) => void;
 }) {
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const drag = useRef({ sx: 0, sy: 0, ox: 0, oy: 0, on: false, moved: false, endedAt: 0 });
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<string>("");
 
@@ -134,11 +136,37 @@ export function ChatBubble({
           **و`start` لا `right`**: في عربيّةٍ هي اليمين، **وفي لغةٍ تُكتب
           يساراً هي اليسار** — فتبقى عكسَ السلّة أبداً. **ورقمٌ مكتوبٌ
           صراحةً ينقلب على الوجه الآخر ويصير فوقها.** */}
+      {/* **يُسحب بالإصبع أو الفأرة** (قرارُ المالك ٢٠٢٦-١١-١٣: «نقدر نحركها لنبعده عن مكانه») — ويبقى حيث تُرك
+          طولَ الجلسة، **ورفعةُ الإصبع بعد السحب لا تفتح الحديث.** مرآةُ قرص التطبيق. */}
       {!open && (
         <button
           type="button"
           aria-label={C.openChat}
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            if (Date.now() - drag.current.endedAt > 350) setOpen(true);
+          }}
+          onPointerDown={(e) => {
+            drag.current = { ...drag.current, sx: e.clientX, sy: e.clientY, ox: pos.x, oy: pos.y, on: true, moved: false };
+            e.currentTarget.setPointerCapture(e.pointerId);
+          }}
+          onPointerMove={(e) => {
+            const d = drag.current;
+            if (!d.on) return;
+            const dx = e.clientX - d.sx;
+            const dy = e.clientY - d.sy;
+            if (!d.moved && Math.hypot(dx, dy) < 6) return;
+            d.moved = true;
+            const maxX = window.innerWidth - 56 - 32;
+            const maxY = window.innerHeight - 56 - 160;
+            const rtl = getComputedStyle(e.currentTarget).direction === "rtl";
+            const nx = d.ox + dx;
+            setPos({ x: rtl ? Math.max(-maxX, Math.min(0, nx)) : Math.max(0, Math.min(maxX, nx)), y: Math.max(-maxY, Math.min(0, d.oy + dy)) });
+          }}
+          onPointerUp={() => {
+            if (drag.current.moved) drag.current.endedAt = Date.now();
+            drag.current.on = false;
+          }}
+          style={{ transform: `translate(${pos.x}px, ${pos.y}px)`, touchAction: "none" }}
           className="fixed bottom-20 start-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-on-bright elev-2"
         >
           <IconChat size={24} />
