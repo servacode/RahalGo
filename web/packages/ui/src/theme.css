@@ -1316,6 +1316,24 @@ html[data-shop] .surface-inset {
   color: var(--color-shell);
 }
 
+/* **الشريطُ بلون العلامة** (قرارُ المالك ٢٠٢٦-١١-١٣: «خلي لون الشريط كله ازرق»، مرآةُ التطبيق) — أرضٌ زرقاء،
+   وأيقوناتٌ وأسماءٌ بيضاء، ودائرةُ «تسوق» بيضاءُ بأيقونةٍ زرقاء. */
+.shop-tabbar {
+  border-top-color: transparent;
+  background-color: var(--color-primary-solid);
+}
+.shop-tab {
+  color: color-mix(in srgb, var(--color-on-solid) 72%, transparent);
+}
+.shop-tab[aria-current="page"] {
+  color: var(--color-on-solid);
+  font-weight: 700;
+}
+.shop-tab-center .shop-tab-icon {
+  background-color: var(--color-on-solid);
+  color: var(--color-primary-solid);
+}
+
 /* ── شريطان عائمان فوق التبويبات: «طلبك في الطريق» وسلّةُ المتجر ── */
 .shop-float {
   position: fixed;

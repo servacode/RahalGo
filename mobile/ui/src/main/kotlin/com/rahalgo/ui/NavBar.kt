@@ -40,12 +40,18 @@ import com.rahalgo.design.Rahal
  * في أوّل ما يراه المستخدمُ وآخره. **وموضعٌ واحدٌ هنا** للأرض البيضاء والخطّ
  * الرفيع في أعلاه ولون المختار وشارة العدد.
  */
+/**
+ * **شريطٌ بلون العلامة** (قرارُ المالك ٢٠٢٦-١١-١٣: «خلي لون الشريط كله ازرق») — للزبون وحدَه الآن:
+ * الأرضُ زرقاء، والأيقوناتُ والأسماءُ بيضاء، ودائرةُ الوسط بيضاءُ بأيقونةٍ زرقاء.
+ */
+val LocalNavOnBrand = androidx.compose.runtime.compositionLocalOf { false }
+
 @Composable
-fun RahalNavigationBar(content: @Composable RowScope.() -> Unit) {
+fun RahalNavigationBar(onBrand: Boolean = false, content: @Composable RowScope.() -> Unit) {
     val line = Rahal.colors.line
     val hair = Rahal.stroke.hair
     NavigationBar(
-        containerColor = Rahal.colors.canvas,
+        containerColor = if (onBrand) Rahal.colors.brand else Rahal.colors.canvas,
         tonalElevation = 0.dp,
         modifier = Modifier.drawBehind {
             drawLine(
@@ -55,7 +61,7 @@ fun RahalNavigationBar(content: @Composable RowScope.() -> Unit) {
                 strokeWidth = hair.toPx(),
             )
         },
-        content = content,
+        content = { androidx.compose.runtime.CompositionLocalProvider(LocalNavOnBrand provides onBrand) { content() } },
     )
 }
 
@@ -107,11 +113,11 @@ fun RowScope.RahalNavTab(
             )
         },
         colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = Rahal.colors.brand,
-            selectedTextColor = Rahal.colors.brand,
-            indicatorColor = Rahal.colors.brand.copy(alpha = 0.12f),
-            unselectedIconColor = Rahal.colors.inkMuted,
-            unselectedTextColor = Rahal.colors.inkMuted,
+            selectedIconColor = if (LocalNavOnBrand.current) Rahal.colors.onBrand else Rahal.colors.brand,
+            selectedTextColor = if (LocalNavOnBrand.current) Rahal.colors.onBrand else Rahal.colors.brand,
+            indicatorColor = if (LocalNavOnBrand.current) Rahal.colors.onBrand.copy(alpha = 0.18f) else Rahal.colors.brand.copy(alpha = 0.12f),
+            unselectedIconColor = if (LocalNavOnBrand.current) Rahal.colors.onBrand.copy(alpha = 0.72f) else Rahal.colors.inkMuted,
+            unselectedTextColor = if (LocalNavOnBrand.current) Rahal.colors.onBrand.copy(alpha = 0.72f) else Rahal.colors.inkMuted,
         ),
     )
 }
@@ -149,19 +155,23 @@ fun RowScope.RahalNavCenter(
                 .size(54.dp)
                 .shadow(Rahal.elevation.card, CircleShape)
                 .clip(CircleShape)
-                .background(Rahal.colors.brand),
+                .background(if (LocalNavOnBrand.current) Rahal.colors.onBrand else Rahal.colors.brand),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painterResource(icon),
                 contentDescription = null,
-                tint = Rahal.colors.onBrand,
+                tint = if (LocalNavOnBrand.current) Rahal.colors.brand else Rahal.colors.onBrand,
                 modifier = Modifier.size(28.dp),
             )
         }
         Text(
             stringResource(label),
-            color = if (selected) Rahal.colors.brand else Rahal.colors.inkMuted,
+            color = when {
+                LocalNavOnBrand.current -> if (selected) Rahal.colors.onBrand else Rahal.colors.onBrand.copy(alpha = 0.72f)
+                selected -> Rahal.colors.brand
+                else -> Rahal.colors.inkMuted
+            },
             fontWeight = FontWeight.Bold,
             style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
             maxLines = 1,
