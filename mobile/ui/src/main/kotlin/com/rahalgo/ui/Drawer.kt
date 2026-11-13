@@ -198,20 +198,7 @@ private fun ProfileHeader(p: DrawerProfile) {
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
             }
-            if (p.phone.isNotBlank()) {
-                Text(
-                    phoneText(p.phone),
-                    color = Rahal.colors.inkMuted,
-                    style = Rahal.type.caption,
-                    maxLines = 1,
-                )
-            }
-            Text(
-                stringResource(p.role),
-                color = Rahal.colors.brand,
-                style = Rahal.type.badge,
-                maxLines = 1,
-            )
+            // **الصورةُ والاسمُ وحدَهما** (قرارُ المالك ٢٠٢٦-١١-١٣: «مايلزم رقمه وزبون») — الرقمُ ونوعُ الحساب في «حسابي».
         }
     }
 }
