@@ -125,6 +125,36 @@ interface LiveState {
   stop: (reason?: StopReason) => void;
   /** **آخرُ سببِ توقّفٍ يُقال للزبون** — الإذنُ مرفوضٌ أو المتصفّحُ لا يدعم. */
   problem: "" | "denied" | "unsupported";
+  /** **دقّةُ آخر قراءةٍ بالمتر** — تُرى في اللافتة، **و`null` قبل أوّل قراءة.** */
+  accuracyM: number | null;
+}
+
+/**
+ * **قفلُ الشاشة أثناء المشاركة** (ملاحظةُ المالك ٢٠٢٦-١١-١٤: «على الآيفون الموقعُ المباشرُ لا يعمل فعليّاً»).
+ *
+ * **سفاري يوقف `watchPosition` حين تنطفئ الشاشة أو يغيب التبويب** — لا موقعَ في الخلفيّة لصفحة ويب، وهذا
+ * حدُّ آبل لا حدُّنا. **فيُطلب من المتصفّح إبقاءُ الشاشة مضاءةً** (`navigator.wakeLock`، iOS ١٦٫٤ وما بعده)
+ * ما دامت المشاركة، **ويُطلب ثانيةً كلّما عادت الصفحة** (المتصفّحُ يحرّره عند الغياب). ومتصفّحٌ لا يعرفه
+ * لا يُخطئ — يبقى كما كان.
+ */
+/** **حدُّ «تقريبيّ»** — مرآةُ `COARSE_ACCURACY_M` في الخريطة. */
+export const COARSE_ACCURACY_M = 150;
+
+/** **أهو آيفون أو آيباد؟** — والآيبادُ الحديثُ يقول إنّه ماك، **فيُعرف بشاشة اللمس.** */
+export function isAppleMobile(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && (navigator.maxTouchPoints ?? 0) > 1);
+}
+
+type WakeLockLike = { release: () => Promise<void> };
+async function requestWake(): Promise<WakeLockLike | null> {
+  try {
+    const wl = (navigator as unknown as { wakeLock?: { request: (t: "screen") => Promise<WakeLockLike> } }).wakeLock;
+    return wl ? await wl.request("screen") : null;
+  } catch {
+    return null;
+  }
 }
 
 const Ctx = createContext<LiveState | null>(null);
@@ -133,6 +163,8 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
   const [activeId, setActiveId] = useState("");
   const [decided, setDecided] = useState<string[]>([]);
   const [problem, setProblem] = useState<"" | "denied" | "unsupported">("");
+  const [accuracyM, setAccuracyM] = useState<number | null>(null);
+  const wake = useRef<WakeLockLike | null>(null);
   /* **ولا تلقائيّةَ قبل قراءة ما قُرِّر** — وإلّا عادت لطلبٍ أوقفها صاحبُه. */
   const [decidedReady, setDecidedReady] = useState(false);
   const filter = useRef(new LiveSendFilter());
@@ -165,6 +197,9 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
       }
     }
     watchId.current = null;
+    wake.current?.release().catch(() => undefined);
+    wake.current = null;
+    setAccuracyM(null);
     if (tick.current) clearInterval(tick.current);
     tick.current = null;
     if (deadline.current) clearTimeout(deadline.current);
@@ -213,6 +248,40 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
     [stop],
   );
 
+  /** **تبدأ المراقبةُ — أو تُعاد من جديد** فتُردّ القراءةُ الأولى بلا انتظار. ويردّ `false` إن رفضها المتصفّح. */
+  const arm = useCallback((): boolean => {
+    if (watchId.current != null) {
+      try {
+        navigator.geolocation.clearWatch(watchId.current);
+      } catch {
+        /* أُغلقت */
+      }
+      watchId.current = null;
+    }
+    try {
+      watchId.current = navigator.geolocation.watchPosition(
+        (p) => {
+          const r: Reading = {
+            lat: p.coords.latitude,
+            lng: p.coords.longitude,
+            accuracyM: Number.isFinite(p.coords.accuracy) ? p.coords.accuracy : null,
+            atMs: performance.now(),
+          };
+          last.current = r;
+          setAccuracyM(r.accuracyM != null ? Math.ceil(r.accuracyM) : null);
+          send(r);
+        },
+        (e) => {
+          if (e.code === e.PERMISSION_DENIED) stop("denied");
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 20_000 },
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }, [send, stop]);
+
   const start = useCallback(
     (orderId: string): boolean => {
       if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
@@ -223,27 +292,14 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
       setProblem("");
       current.current = orderId;
       setActiveId(orderId);
-      try {
-        watchId.current = navigator.geolocation.watchPosition(
-          (p) => {
-            const r: Reading = {
-              lat: p.coords.latitude,
-              lng: p.coords.longitude,
-              accuracyM: Number.isFinite(p.coords.accuracy) ? p.coords.accuracy : null,
-              atMs: performance.now(),
-            };
-            last.current = r;
-            send(r);
-          },
-          (e) => {
-            if (e.code === e.PERMISSION_DENIED) stop("denied");
-          },
-          { enableHighAccuracy: true, maximumAge: 0, timeout: 20_000 },
-        );
-      } catch {
+      if (!arm()) {
         stop("denied");
         return false;
       }
+      void requestWake().then((w) => {
+        if (current.current === orderId) wake.current = w;
+        else w?.release().catch(() => undefined);
+      });
       tick.current = setInterval(() => {
         const r = last.current;
         if (r) send({ ...r, atMs: performance.now() });
@@ -251,8 +307,26 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
       deadline.current = setTimeout(() => stop("timeout"), MAX_SHARE_MS);
       return true;
     },
-    [send, stop, teardown],
+    [send, stop, teardown, arm],
   );
+
+  /* **وعادت الصفحةُ بعد غياب** — سفاري أوقف المراقبةَ والقفلَ وهي غائبة: **تُعاد المراقبةُ من جديد
+     ويُطلب القفلُ ثانية**، وأوّلُ قراءةٍ تُرسَل فوراً لا بعد عشر ثوانٍ. */
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState !== "visible" || !current.current) return;
+      arm();
+      const id = current.current;
+      void requestWake().then((w) => {
+        if (current.current === id) {
+          wake.current?.release().catch(() => undefined);
+          wake.current = w;
+        } else w?.release().catch(() => undefined);
+      });
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [arm]);
 
   /* **والمشاركةُ التلقائيّة** — طلبٌ «بالطريق» لم يُقرَّر فيه والتفضيلُ مفعّل: تبدأ بلا سؤال. */
   useEffect(() => {
@@ -273,8 +347,8 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
   useEffect(() => teardown, [teardown]);
 
   const value = useMemo<LiveState>(
-    () => ({ activeId, decided, decide, start, stop, problem }),
-    [activeId, decided, decide, start, stop, problem],
+    () => ({ activeId, decided, decide, start, stop, problem, accuracyM }),
+    [activeId, decided, decide, start, stop, problem, accuracyM],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -42,6 +42,9 @@ import { useShopToast } from "./toast";
 const m = getMessages(defaultLocale);
 const A = m.shop.address;
 
+/** **حدُّ «تقريبيّ»** — مرآةُ `COARSE_ACCURACY_M` في الخريطة (لا يُستورد منها فيُحمَّل محرّكُها مع الورقة). */
+const COARSE_ACCURACY_M = 150;
+
 const CenterPinMap = lazy(() => import("@rahalgo/ui/map").then((mod) => ({ default: mod.CenterPinMap })));
 
 const KINDS = [
@@ -81,6 +84,10 @@ function AddressForm({
   const [live, setLive] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  /* **دقّةُ الدبّوس ومن وضعه** (ملاحظةُ المالك ٢٠٢٦-١١-١٤، آيفون) — دبّوسٌ وضعه الجهازُ بدائرةٍ عريضةٍ
+     لا يُحفظ بصمت: **يُنبَّه مرّةً، وضغطةُ «احفظ» الثانية تحفظ** (هو أدرى إن كان في بيته). */
+  const [pinAcc, setPinAcc] = useState<{ acc: number | null; manual: boolean }>({ acc: null, manual: !!initial });
+  const [coarseWarned, setCoarseWarned] = useState(false);
 
   useEffect(() => setLive(liveAutoOn()), []);
 
@@ -88,6 +95,11 @@ function AddressForm({
     e?.preventDefault();
     if (!text.trim()) return setError(A.needDetail);
     if (!pin) return setError(A.needPin);
+    const coarse = !pinAcc.manual && pinAcc.acc != null && pinAcc.acc > COARSE_ACCURACY_M;
+    if (coarse && !coarseWarned) {
+      setCoarseWarned(true);
+      return setError(m.map.coarseConfirm);
+    }
     setBusy(true);
     setError("");
     try {
@@ -134,6 +146,10 @@ function AddressForm({
           onMove={(la: number, ln: number) => {
             setPin({ lat: la, lng: ln });
             setError("");
+          }}
+          onAccuracy={(acc: number | null, manual: boolean) => {
+            setPinAcc({ acc, manual });
+            setCoarseWarned(false);
           }}
         />
       </Suspense>

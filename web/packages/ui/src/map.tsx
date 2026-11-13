@@ -425,6 +425,24 @@ export function PickMap({
 const REFINE_MS = 20_000;
 /** **ويقف حين تبلغ الدقّةُ هذا** — كـ`CONFIRM_ACCURACY_M`. */
 const GOOD_ACCURACY_M = 15;
+/**
+ * **موقعٌ تقريبيٌّ فوق هذا** (ملاحظةُ المالك ٢٠٢٦-١١-١٤: «على الآيفون تحديدُ الموقع سيّئ جدّاً»).
+ * **آيفون بـ«الموقع الدقيق» مطفأً يردّ دائرةً بالكيلومترات** — فيُقال للزبون كيف يشغّله، ولا يُحفظ العنوانُ
+ * عليها بصمتٍ (انظر `onAccuracy`).
+ */
+export const COARSE_ACCURACY_M = 150;
+
+/** **أهو آيفون أو آيباد؟** — والآيبادُ الحديثُ يقول إنّه ماك، **فيُعرف بشاشة اللمس.** */
+export function isAppleMobile(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && (navigator.maxTouchPoints ?? 0) > 1);
+}
+
+/** **كيف يشغّل الموقعَ الدقيق** — خطواتُ جهازه هو، لا خطواتٌ عامّة. */
+export function preciseHelp(): string {
+  return isAppleMobile() ? m.map.preciseIos : m.map.preciseOther;
+}
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -442,17 +460,22 @@ export function CenterPinMap({
   onMove,
   autoLocate = false,
   height = "h-64",
+  onAccuracy,
 }: {
   lat: number | null;
   lng: number | null;
   onMove: (lat: number, lng: number) => void;
   autoLocate?: boolean;
   height?: string;
+  /** **دقّةُ النقطة الحاليّة، ومن وضعها** — `manual` حين حرّك الزبونُ الخريطةَ بإصبعه (فدقّتُه هو). */
+  onAccuracy?: (accuracyM: number | null, manual: boolean) => void;
 }) {
   const holder = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<import("maplibre-gl").Map | null>(null);
   const moveRef = useRef(onMove);
   moveRef.current = onMove;
+  const accRef = useRef(onAccuracy);
+  accRef.current = onAccuracy;
   const watch = useRef<number | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const best = useRef<number | null>(null);
@@ -518,6 +541,7 @@ export function CenterPinMap({
           stopWatch();
           best.current = null;
           setAcc(null);
+          accRef.current?.(null, true);
         });
         instance.on("moveend", (e: { originalEvent?: unknown }) => {
           if (!e.originalEvent) return;
@@ -548,8 +572,11 @@ export function CenterPinMap({
     if (prev != null && accuracy >= prev) return;
     best.current = accuracy;
     setAcc(a);
-    mapRef.current?.flyTo({ center: [ln, la], zoom: 17, duration: 600 });
+    /* **ودائرةٌ بالكيلومترات لا تُقرّب إلى الشارع** — تقريبُها يوهم أنّها البيت. */
+    const zoom = a != null && a > COARSE_ACCURACY_M ? 14 : 17;
+    mapRef.current?.flyTo({ center: [ln, la], zoom, duration: 600 });
     moveRef.current(la, ln);
+    accRef.current?.(a, false);
     if (a != null && a <= GOOD_ACCURACY_M) stopWatch();
   };
 
@@ -571,10 +598,11 @@ export function CenterPinMap({
     };
     const read = (p: GeolocationPosition) =>
       take(p.coords.latitude, p.coords.longitude, Number.isFinite(p.coords.accuracy) ? p.coords.accuracy : null);
-    /* **قراءةٌ سريعةٌ أوّلاً** — آخرُ موضعٍ يعرفه الجهازُ إن كان حديثاً. */
+    /* **قراءةٌ سريعةٌ أوّلاً** — آخرُ موضعٍ يعرفه الجهازُ **إن كان ابنَ ثوانٍ**. (كان دقيقتين: من مشى
+       دقيقتين وُضع دبّوسُه حيث كان لا حيث هو، **وآيفون يردّها بلا تحسينٍ أحياناً فتبقى.**) */
     navigator.geolocation.getCurrentPosition(read, fail, {
-      enableHighAccuracy: false,
-      maximumAge: 120_000,
+      enableHighAccuracy: true,
+      maximumAge: 10_000,
       timeout: 8_000,
     });
     /* **ثمّ تتحسّن وحدَها.** */
@@ -597,6 +625,7 @@ export function CenterPinMap({
   }, []);
 
   const located = acc != null ? m.map.located.replace("{n}", String(Math.ceil(acc))) : "";
+  const coarse = acc != null && acc > COARSE_ACCURACY_M;
 
   return (
     <div className="space-y-2">
@@ -627,6 +656,11 @@ export function CenterPinMap({
         <p className="text-xs text-danger">{m.map.denied}</p>
       ) : locating ? (
         <p className="text-sm font-bold text-accent-text">{located || m.map.locating}</p>
+      ) : coarse ? (
+        <div role="status" className="space-y-1 rounded-control border border-warning bg-warning-tint px-3 py-2">
+          <p className="text-sm font-bold text-ink">{m.map.coarse.replace("{n}", String(Math.ceil(acc ?? 0)))}</p>
+          <p className="text-xs text-ink-soft">{preciseHelp()}</p>
+        </div>
       ) : located ? (
         <p className="text-sm font-bold text-success">{located}</p>
       ) : null}

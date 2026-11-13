@@ -18,7 +18,7 @@ import { createPortal } from "react-dom";
 import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import { Alert, Button, IconLocation, usePlatform } from "@rahalgo/ui";
 import { useActiveOrders } from "@/lib/customer/active";
-import { liveAutoOn, pendingAsk, useLiveShare } from "@/lib/customer/live";
+import { COARSE_ACCURACY_M, isAppleMobile, liveAutoOn, pendingAsk, useLiveShare } from "@/lib/customer/live";
 import { quotePending } from "./orderParts";
 
 const m = getMessages(defaultLocale);
@@ -76,18 +76,33 @@ export function LiveBanner() {
     return <Alert tone="warning">{live.problem === "denied" ? L.denied : L.unsupported}</Alert>;
   }
   if (!live.activeId) return null;
+  /* **ودقّةُ الموقع قدّامه** (ملاحظةُ المالك ٢٠٢٦-١١-١٤، آيفون) — رقمٌ يعرف منه إن كان الكابتنُ سيجد بابه،
+     **وتقريبيٌّ يُقال له كيف يُصلحه** بخطوات جهازه. */
+  const acc = live.accuracyM;
+  const coarse = acc != null && acc > COARSE_ACCURACY_M;
   return (
-    <div className="surface-inset flex flex-wrap items-center gap-3 p-3">
-      <IconLocation size={20} className="shrink-0 text-success motion-safe:animate-pulse" />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold">{L.sharing}</p>
-        <p className="text-xs text-ink-muted">
-          {L.autoStop} · {L.browserNote}
-        </p>
+    <div className="surface-inset space-y-2 p-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <IconLocation size={20} className="shrink-0 text-success motion-safe:animate-pulse" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold">{L.sharing}</p>
+          <p className={`text-xs font-bold ${coarse ? "text-warning" : "text-success"}`}>
+            {acc == null ? L.waiting : L.accuracy.replace("{n}", String(acc))}
+          </p>
+          <p className="text-xs text-ink-muted">
+            {L.autoStop} · {L.keepOpen}
+          </p>
+        </div>
+        <Button variant="danger" onClick={() => live.stop("user")}>
+          {L.stop}
+        </Button>
       </div>
-      <Button variant="danger" onClick={() => live.stop("user")}>
-        {L.stop}
-      </Button>
+      {coarse && (
+        <div role="status" className="space-y-1 rounded-control border border-warning bg-warning-tint px-3 py-2">
+          <p className="text-sm font-bold text-ink">{L.coarse.replace("{n}", String(acc))}</p>
+          <p className="text-xs text-ink-soft">{isAppleMobile() ? m.map.preciseIos : m.map.preciseOther}</p>
+        </div>
+      )}
     </div>
   );
 }
