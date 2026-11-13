@@ -65,6 +65,9 @@ type publicItem struct {
 	// (قرارُ المالك ٢٠٢٦-٠٩-٣٠). **وأحدُهما `null` دائماً**، فالشاشةُ
 	// تعرف أيَّ شارةٍ ترسم من أيّهما حضر.
 	DiscountAmount *int64 `json:"discount_amount"`
+	// OfferEndsAt **متى ينتهي الحسمُ الساري** (قرارُ المالك ٢٠٢٦-١١-١٣: «عداد جوا كلمة خصم») — لعدّاد
+	// «باقي ٣ أيام» على بطاقة الخصم. **وفارغٌ: عرضٌ بلا نهاية فلا عدّاد.** عرضٌ لا حساب.
+	OfferEndsAt *time.Time `json:"offer_ends_at,omitempty"`
 
 	// PriceUSD و`PriceBeforeUSD` **السعرُ بالدولار للعرض** (قرارُ المالك ٢٠٢٦-١٠-١٢،
 	// الخيار ١) — لمتجرٍ اختار أن يرى زبونُه أسعارَه بالدولار. **الليرةُ تبقى ما
@@ -273,7 +276,51 @@ func (s *Server) queryItems(r *http.Request, sql string, args ...any) ([]publicI
 		}
 		out = append(out, it)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := s.fillOfferEnds(r, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// fillOfferEnds **يكتب نهايةَ الحسم الساري لكلّ صنفٍ عليه حسم** — بنداءٍ واحدٍ للقائمة كلِّها،
+// وبشرط السريان الواحد (`offers.LiveCond`). **وعرضٌ بلا نهايةٍ لا يُكتب له شيء.**
+func (s *Server) fillOfferEnds(r *http.Request, items []publicItem) error {
+	var ids []string
+	idx := map[string][]int{}
+	for i := range items {
+		if items[i].DiscountPercent != nil || items[i].DiscountAmount != nil {
+			ids = append(ids, items[i].ID)
+			idx[items[i].ID] = append(idx[items[i].ID], i)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT o.menu_item_id::text, min(o.ends_at)
+		FROM offers o
+		WHERE o.menu_item_id = ANY($1::uuid[]) AND o.kind = 'discount' AND o.ends_at IS NOT NULL
+		  AND `+offers.LiveCond+`
+		GROUP BY 1`, ids)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var ends time.Time
+		if err := rows.Scan(&id, &ends); err != nil {
+			return err
+		}
+		for _, i := range idx[id] {
+			e := ends
+			items[i].OfferEndsAt = &e
+		}
+	}
+	return rows.Err()
 }
 
 // handlePublicSections أقسامُ المنصة وعددُ ما فيها.
@@ -486,6 +533,12 @@ func (s *Server) handlePublicItem(w http.ResponseWriter, r *http.Request) {
 	if !open {
 		it.SourceOpensAt = opensAt
 	}
+	one := []publicItem{it}
+	if err := s.fillOfferEnds(r, one); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	it = one[0]
 
 	// **والخياراتُ تُقرأ معه** — «حجم» و«إضافات»، وهي جزءٌ من سعره.
 	groups, err := s.catalog.ItemModifiers(r.Context(), it.ID)

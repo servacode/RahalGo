@@ -166,7 +166,10 @@ export function ItemCard({
           </>
         )}
         {onSale && (
-          <span className="shop-sale-badge">{fill(I.saleBadge, { n: fmtNum(item.discount_percent ?? 0) })}</span>
+          <span className="shop-sale-badge">
+            {fill(I.saleBadge, { n: fmtNum(item.discount_percent ?? 0) })}
+            {saleLeft(item.offer_ends_at) && <span className="shop-sale-left">{saleLeft(item.offer_ends_at)}</span>}
+          </span>
         )}
         {inCart > 0 && (
           <span className="shop-qty-badge" aria-label={fill(SK.inCart, { n: fmtNum(inCart) })}>
@@ -177,7 +180,8 @@ export function ItemCard({
       {full && viewing && <ImageViewer src={full} alt={item.name} onClose={() => setViewing(false)} />}
       <div className="shop-item-body">
         <button type="button" onClick={() => onOpen(item)} className="min-w-0 text-start">
-          <h3 className="line-clamp-2">{item.name}</h3>
+          {/* **سطرٌ واحد** (قرارُ المالك ٢٠٢٦-١١-١٣) — فكلُّ الكروت بارتفاعٍ واحد، والاسمُ كاملاً في `title`. */}
+          <h3 className="shop-item-name" title={item.name}>{item.name}</h3>
           {item.description && <p className="d">{item.description}</p>}
         </button>
         {/* **وداخل صفحة المتجر نفسِها لا اسمَ تحت كلّ صنف** (٢٠٢٦-١١-٠٤). */}
@@ -761,3 +765,12 @@ function CounterBlock({
   );
 }
 
+/** **كم باقٍ للعرض** — «⏳ باقي ٣ أيام / ٥ ساعات / ٤٠ دقيقة»؛ وبلا نهايةٍ أو انتهى: لا شيء. */
+function saleLeft(endsAt?: string | null): string | null {
+  if (!endsAt) return null;
+  const mins = Math.floor((new Date(endsAt).getTime() - Date.now()) / 60000);
+  if (!Number.isFinite(mins) || mins <= 0) return null;
+  if (mins >= 1440) return fill(I.leftDays, { n: fmtNum(Math.floor(mins / 1440)) });
+  if (mins >= 60) return fill(I.leftHours, { n: fmtNum(Math.floor(mins / 60)) });
+  return fill(I.leftMinutes, { n: fmtNum(mins) });
+}

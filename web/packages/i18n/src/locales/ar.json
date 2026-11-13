@@ -10938,6 +10938,9 @@
     },
     "item": {
       "saleBadge": "خصم {n}٪",
+      "leftDays": "⏳ باقي {n} يوم",
+      "leftHours": "⏳ باقي {n} ساعة",
+      "leftMinutes": "⏳ باقي {n} دقيقة",
       "saved": "وفّرت {v}",
       "zoomBtn": "عرض الصورة بملء الشاشة",
       "orderBtn": "اطلب",

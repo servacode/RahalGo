@@ -209,6 +209,8 @@ data class Item(
      */
     @SerialName("price_usd") val priceUsd: Double? = null,
     @SerialName("price_before_usd") val priceBeforeUsd: Double? = null,
+    /** **متى ينتهي الحسم** (٢٠٢٦-١١-١٣) — لعدّاد «باقي ٣ أيام» على بطاقة الخصم؛ وفارغٌ: بلا نهاية. */
+    @SerialName("offer_ends_at") val offerEndsAt: String? = null,
     /** سعرُ صرف المتجر — لعرض فروق الإضافات بالدولار. */
     @SerialName("exchange_rate") val exchangeRate: Double? = null,
     /**

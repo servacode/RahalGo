@@ -66,3 +66,36 @@ func TestOFFERSGRID_MarketItemsOffersOnly(t *testing.T) {
 		}
 	}
 }
+
+// TestOFFERENDS_ItemCarriesOfferEnd **عدّادُ نهاية العرض** (قرارُ المالك ٢٠٢٦-١١-١٣) — الصنفُ يحمل
+// `offer_ends_at` إن كان لحسمه نهاية، **ولا يحمله إن كان مفتوحاً.**
+func TestOFFERENDS_ItemCarriesOfferEnd(t *testing.T) {
+	h := New(t)
+	m := h.Factory().Merchant()
+	ending := h.NewItemFor(m, 1000)
+	open := h.NewItemFor(m, 2000)
+	admin := h.NewUser("admin")
+	start := time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
+	for _, b := range []map[string]any{
+		{"kind": "discount", "title": "حسم", "menu_item_id": ending.ID, "discount_percent": 10, "starts_at": start,
+			"ends_at": time.Now().Add(72 * time.Hour).UTC().Format(time.RFC3339)},
+		{"kind": "discount", "title": "حسم", "menu_item_id": open.ID, "discount_percent": 10, "starts_at": start},
+	} {
+		if r := h.POST("/api/v1/admin/offers", admin.Token, b); r.Code >= 400 {
+			t.Fatalf("إنشاءُ العرض: %s", r)
+		}
+	}
+	body := string(h.GET("/api/v1/public/stores/"+m.ID+"/items?offers=1", "").Body)
+	for _, chunk := range strings.Split(body, `{"id":`)[1:] {
+		has := strings.Contains(chunk, `"offer_ends_at"`)
+		switch {
+		case strings.HasPrefix(chunk, `"`+ending.ID) && !has:
+			t.Fatalf("**عرضٌ بنهايةٍ بلا offer_ends_at**: %s", chunk)
+		case strings.HasPrefix(chunk, `"`+open.ID) && has:
+			t.Fatalf("**عرضٌ مفتوحٌ يحمل نهاية**: %s", chunk)
+		}
+	}
+	if !strings.Contains(body, ending.ID) || !strings.Contains(body, open.ID) {
+		t.Fatalf("الصنفان لم يرجعا: %s", body)
+	}
+}

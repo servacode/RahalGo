@@ -51,6 +51,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -1055,20 +1056,35 @@ internal fun ItemCard(
                 // **ونسبةُ الحسم بطاقةٌ حمراءُ على الصورة** — تُقرأ بلمحةٍ قبل أن يُقارَن الرقمان،
                 // **وبظلٍّ** فتبقى واضحةً فوق أيّ صورة (كانت شارةً برتقاليّةً تذوب فيها).
                 if (onSale) {
-                    Text(
-                        text = stringResource(R.string.shop_sale_badge, item.discountPercent ?: 0),
-                        color = Rahal.colors.onPanel,
-                        fontWeight = FontWeight.Bold,
-                        style = Rahal.type.label,
-                        maxLines = 1,
-                        modifier = Modifier
+                    // **وعدّادُ نهاية العرض تحت النسبة** (قرارُ المالك ٢٠٢٦-١١-١٣) — أيّامٌ أو ساعاتٌ أو دقائق،
+                    // **وعرضٌ بلا نهايةٍ لا عدّاد.**
+                    val left = saleLeft(item.offerEndsAt)
+                    Column(
+                        Modifier
                             .align(Alignment.TopStart)
                             .padding(Rahal.space.xs)
                             .shadow(Rahal.elevation.card, Rahal.shape.sm)
                             .clip(Rahal.shape.sm)
                             .background(Rahal.colors.danger)
                             .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
-                    )
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.shop_sale_badge, item.discountPercent ?: 0),
+                            color = Rahal.colors.onPanel,
+                            fontWeight = FontWeight.Bold,
+                            style = Rahal.type.label,
+                            maxLines = 1,
+                        )
+                        if (left != null) {
+                            Text(
+                                text = left,
+                                color = Rahal.colors.onPanel,
+                                style = Rahal.type.meta,
+                                maxLines = 1,
+                            )
+                        }
+                    }
                 }
 
             }
@@ -1083,19 +1099,21 @@ internal fun ItemCard(
             // **الاسمُ واسمُ المتجر كتلةٌ واحدةٌ ملتصقةٌ من الأعلى** (٢٠٢٦-١١-١١) — كان الاسمُ يحجز سطرين
             // دائماً فيبقى فراغٌ بينه وبين اسم المتجر. **والارتفاعُ الأدنى للكتلة كلِّها** كي لا تتفاوت
             // البطاقاتُ ويبقى الزرُّ في القاع؛ **فالفراغُ إن وُجد صار تحت المتجر لا بينهما.**
-            Column(Modifier.fillMaxWidth().heightIn(min = if (showStoreName) 60.dp else 40.dp)) {
+            Column(Modifier.fillMaxWidth().heightIn(min = if (showStoreName) 48.dp else 30.dp)) {
             run {
                 val itemStyle = Rahal.type.body.copy(
                     color = Rahal.colors.ink,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                 )
+                // **سطرٌ واحدٌ يصغر خطُّه حتّى يسع** (قرارُ المالك ٢٠٢٦-١١-١٣: «اسم الصنف احيانا ياخذ
+                // سطرين… نعمله سطر ونصغر الخط») — فكلُّ الكروت بارتفاعٍ واحد.
                 BasicText(
                     text = item.name,
                     style = itemStyle,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 14.sp),
+                    autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = 14.sp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs)
@@ -1189,3 +1207,23 @@ internal fun ItemCard(
     }
 }
 
+/** **كم باقٍ للعرض** — «⏳ باقي ٣ أيام / ٥ ساعات / ٤٠ دقيقة»؛ وبلا نهايةٍ أو انتهى: لا شيء. */
+@Composable
+private fun saleLeft(endsAt: String?): String? {
+    val end = endsAt?.let { runCatching { java.time.Instant.parse(it) }.getOrNull() } ?: return null
+    // **ودقيقةٌ تُحدّث العدّاد** — لا ثانيةٌ تُعيد رسم الشبكة كلِّها.
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    androidx.compose.runtime.LaunchedEffect(end) {
+        while (true) {
+            kotlinx.coroutines.delay(60_000)
+            now = System.currentTimeMillis()
+        }
+    }
+    val mins = (end.toEpochMilli() - now) / 60_000
+    if (mins <= 0) return null
+    return when {
+        mins >= 24 * 60 -> pluralStringResource(R.plurals.shop_sale_days, (mins / (24 * 60)).toInt(), (mins / (24 * 60)).toInt())
+        mins >= 60 -> pluralStringResource(R.plurals.shop_sale_hours, (mins / 60).toInt(), (mins / 60).toInt())
+        else -> pluralStringResource(R.plurals.shop_sale_minutes, mins.toInt(), mins.toInt())
+    }
+}

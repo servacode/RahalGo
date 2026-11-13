@@ -427,4 +427,7 @@
     <string name="shop_sale_badge">خصم %1$d٪</string>
     <string name="shop_saved">وفّرت %1$s</string>
     <string name="store_offers_chip">🔥 العروض (%1$d)</string>
+    <plurals name="shop_sale_days"><item quantity="zero">⏳ باقي %1$d يوم</item><item quantity="one">⏳ باقي يوم</item><item quantity="two">⏳ باقي يومين</item><item quantity="few">⏳ باقي %1$d أيام</item><item quantity="many">⏳ باقي %1$d يوم</item><item quantity="other">⏳ باقي %1$d يوم</item></plurals>
+    <plurals name="shop_sale_hours"><item quantity="zero">⏳ باقي %1$d ساعة</item><item quantity="one">⏳ باقي ساعة</item><item quantity="two">⏳ باقي ساعتين</item><item quantity="few">⏳ باقي %1$d ساعات</item><item quantity="many">⏳ باقي %1$d ساعة</item><item quantity="other">⏳ باقي %1$d ساعة</item></plurals>
+    <plurals name="shop_sale_minutes"><item quantity="zero">⏳ باقي %1$d دقيقة</item><item quantity="one">⏳ باقي دقيقة</item><item quantity="two">⏳ باقي دقيقتين</item><item quantity="few">⏳ باقي %1$d دقائق</item><item quantity="many">⏳ باقي %1$d دقيقة</item><item quantity="other">⏳ باقي %1$d دقيقة</item></plurals>
 </resources>

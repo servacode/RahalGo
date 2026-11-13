@@ -132,6 +132,8 @@ export interface Item {
   discount_percent: number | null;
   price_usd?: number | null;
   price_before_usd?: number | null;
+  /** **متى ينتهي الحسم** (٢٠٢٦-١١-١٣) — لعدّاد «باقي ٣ أيام»؛ وغيابُه: بلا نهاية. */
+  offer_ends_at?: string | null;
   exchange_rate?: number | null;
   has_options: boolean;
 }

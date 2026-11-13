@@ -1736,6 +1736,22 @@ html[data-shop-theme="dark"] .shop-pic {
   min-height: 2.6em;
   max-height: 2.6em;
 }
+/* **عدّادُ نهاية العرض تحت النسبة** و**اسمُ الصنف بسطرٍ واحد** (قرارُ المالك ٢٠٢٦-١١-١٣). */
+.shop-sale-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.shop-sale-left {
+  font-size: 11px;
+  font-weight: 500;
+}
+.shop-item-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+}
 .shop-sale-price {
   color: var(--color-danger-solid);
 }

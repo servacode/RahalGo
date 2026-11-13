@@ -34,7 +34,7 @@
     "behaviour_settings": 241,
     "order_fields": 148,
     "test_files": 844,
-    "test_funcs": 3220
+    "test_funcs": 3221
   },
   "flows": [
     {
@@ -27876,6 +27876,12 @@
     {
       "name": "TestStoreAnnounce_OnceWhenVisible",
       "file": "internal/qa/store_announce_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOFFERENDS_ItemCarriesOfferEnd",
+      "file": "internal/qa/store_offers_filter_test.go",
       "package": "qa",
       "orphan": true
     },
