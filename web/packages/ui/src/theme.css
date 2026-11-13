@@ -1255,6 +1255,30 @@ html[data-shop] .surface-inset {
     display: none;
   }
 }
+/* **زرُّ «تسوق» بالنص أكبر، ونبضةٌ للمختار** (قرارُ المالك ٢٠٢٦-١١-١٣، مرآةُ التطبيق). */
+.shop-tab-icon {
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.shop-tab[aria-current="page"] .shop-tab-icon {
+  transform: scale(1.12);
+}
+.shop-tab-center .shop-tab-icon {
+  display: flex;
+  width: 54px;
+  height: 54px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: var(--color-primary-solid);
+  color: var(--color-on-solid);
+  box-shadow: var(--shadow-e2);
+}
+.shop-tab-center:active .shop-tab-icon {
+  transform: scale(0.9);
+}
+.shop-tab-center[aria-current="page"] .shop-tab-icon {
+  transform: scale(1.05);
+}
 .shop-tab {
   position: relative;
   display: flex;

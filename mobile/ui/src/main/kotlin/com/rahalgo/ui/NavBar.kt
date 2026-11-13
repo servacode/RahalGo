@@ -18,6 +18,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import com.rahalgo.design.Rahal
 
 /**
@@ -67,7 +77,13 @@ fun RowScope.RahalNavTab(
         selected = selected,
         onClick = onClick,
         icon = {
-            Box {
+            // **نبضةٌ خفيفةٌ للمختار** (قرارُ المالك ٢٠٢٦-١١-١٣: «حركة تاثير وقت الانتقال») — تكبر وترجع.
+            val pop by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = if (selected) 1.12f else 1f,
+                animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 500f),
+                label = "navPop",
+            )
+            Box(Modifier.graphicsLayer { scaleX = pop; scaleY = pop }) {
                 Icon(painterResource(icon), contentDescription = null)
                 if (badge > 0) {
                     CountBadge(
@@ -98,4 +114,57 @@ fun RowScope.RahalNavTab(
             unselectedTextColor = Rahal.colors.inkMuted,
         ),
     )
+}
+
+/**
+ * **زرُّ الوسط الكبير** (قرارُ المالك ٢٠٢٦-١١-١٣: «زر تسوق بالنص… اكبر من بقية العناصر») — دائرةٌ بلون
+ * العلامة وظلٍّ خفيف، **تصغر لحظةَ الضغط وترجع**، واسمُه تحتها كباقي البنود.
+ */
+@Composable
+fun RowScope.RahalNavCenter(
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: Int,
+    label: Int,
+    modifier: Modifier = Modifier,
+) {
+    val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val down by press.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (down) 0.9f else if (selected) 1.05f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.5f, stiffness = 600f),
+        label = "navCenter",
+    )
+    androidx.compose.foundation.layout.Column(
+        modifier
+            .weight(1f)
+            .align(Alignment.CenterVertically)
+            .clickable(interactionSource = press, indication = null, role = androidx.compose.ui.semantics.Role.Tab, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+    ) {
+        Box(
+            Modifier
+                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .size(54.dp)
+                .shadow(Rahal.elevation.card, CircleShape)
+                .clip(CircleShape)
+                .background(Rahal.colors.brand),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painterResource(icon),
+                contentDescription = null,
+                tint = Rahal.colors.onBrand,
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        Text(
+            stringResource(label),
+            color = if (selected) Rahal.colors.brand else Rahal.colors.inkMuted,
+            fontWeight = FontWeight.Bold,
+            style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+        )
+    }
 }

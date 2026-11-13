@@ -193,11 +193,13 @@ export function ShopTabBar() {
   const { user } = useAuth();
   const cart = useCart();
   const path = usePathname() ?? "/shop";
+  /* **«تسوق» بالنص أكبرَ من الباقي، واثنان يميناً واثنان يساراً** (قرارُ المالك ٢٠٢٦-١١-١٣، مرآةُ التطبيق) —
+     يميناً «سلتي» و«طلباتي»، ويساراً «طلب خاص» و«حسابي». */
   const items = user
     ? [
-        { href: "/shop", label: N.shop, Icon: IconStore, count: 0 },
         { href: "/cart", label: N.cart, Icon: IconCart, count: cart.count },
         { href: "/orders", label: N.orders, Icon: IconOrder, count: 0 },
+        { href: "/shop", label: N.shop, Icon: IconStore, count: 0, center: true },
         { href: "/custom", label: N.custom, Icon: IconBag, count: 0 },
         { href: "/account", label: N.account, Icon: IconUser, count: 0 },
       ]
@@ -209,10 +211,15 @@ export function ShopTabBar() {
   const active = isBrowse(path) ? "/shop" : path;
   return (
     <nav className="shop-tabbar" aria-label={N.shop}>
-      {items.map(({ href, label, Icon, count }) => (
-        <Link key={href} href={href} className="shop-tab" aria-current={active.startsWith(href) ? "page" : undefined}>
-          <span className="relative">
-            <Icon size={23} />
+      {items.map(({ href, label, Icon, count, ...rest }) => (
+        <Link
+          key={href}
+          href={href}
+          className={"center" in rest && rest.center ? "shop-tab shop-tab-center" : "shop-tab"}
+          aria-current={active.startsWith(href) ? "page" : undefined}
+        >
+          <span className="shop-tab-icon relative">
+            <Icon size={"center" in rest && rest.center ? 28 : 23} />
           </span>
           {label}
           {count > 0 && <b>{fmtNum(Math.min(count, 99))}</b>}
