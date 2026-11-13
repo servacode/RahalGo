@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,7 +64,7 @@ import com.rahalgo.ui.PlatformScreen
 import com.rahalgo.ui.knowsKey
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import com.rahalgo.ui.RahalNavCenter
+import com.rahalgo.ui.RahalNavLabelOnly
 import com.rahalgo.ui.Avatar
 import com.rahalgo.ui.InboxSheet
 import com.rahalgo.ui.ThemeState
@@ -863,6 +864,7 @@ private fun SignedIn(
                 //
                 // **وقاعدةٌ تفصل الشريطين**: الأعلى أخبارٌ تُقرأ
                 // بنظرةٍ — رصيدٌ وجرس. **والأسفلُ أماكنُ يُنتقل إليها.**
+                Box(contentAlignment = Alignment.TopCenter) {
                 com.rahalgo.ui.RahalNavigationBar {
                     // ══════════════════════════════════════════════════════
                     // **«تسوق» بالنص أكبرَ من الباقي، واثنان يميناً واثنان يساراً** (قرارُ المالك
@@ -887,11 +889,10 @@ private fun SignedIn(
                             icon = R.drawable.ic_orders,
                             label = R.string.nav_orders_mine,
                         )
-                        RahalNavCenter(
+                        // **«تسوق» اسمُه على سطر الباقي، وشعارُه نافرٌ فوقه** (قرارُ المالك ٢٠٢٦-١١-١٣).
+                        RahalNavLabelOnly(
                             selected = tab == Tab.Shop && over == Overlay.None,
                             onClick = { tab = Tab.Shop; overlay.clear() },
-                            icon = com.rahalgo.ui.R.drawable.rahal_mark_color, // **شعارُ رحّال غو بألوانه على دائرةٍ بيضاء** (٢٠٢٦-١١-١٣)
-                            logo = true,
                             label = R.string.nav_shop,
                             modifier = Modifier.testTag("nav_shop"),
                         )
@@ -917,6 +918,16 @@ private fun SignedIn(
                         icon = com.rahalgo.ui.R.drawable.ic_user,
                         label = R.string.nav_profile,
                     )
+                }
+                // **الشعارُ النافر** — فوق بند الوسط، نصفُه فوق الشريط. **وللزائر لا وسط** (بندان فقط).
+                if (!guest) {
+                    com.rahalgo.ui.RahalNavRaisedLogo(
+                        selected = tab == Tab.Shop && over == Overlay.None,
+                        onClick = { tab = Tab.Shop; overlay.clear() },
+                        logo = com.rahalgo.ui.R.drawable.rahal_mark_color,
+                        modifier = Modifier.offset(y = (-24).dp),
+                    )
+                }
                 }
             },
         ) { padding ->

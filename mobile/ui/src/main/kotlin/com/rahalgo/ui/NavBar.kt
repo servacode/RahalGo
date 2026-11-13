@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import com.rahalgo.design.Rahal
 
 /**
@@ -175,6 +176,79 @@ fun RowScope.RahalNavCenter(
             fontWeight = FontWeight.Bold,
             style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
             maxLines = 1,
+        )
+    }
+}
+
+/**
+ * **بندُ الوسط باسمه وحدَه** — مكانُ الأيقونة فارغٌ لأنّ الشعارَ النافرَ (`RahalNavRaisedLogo`) فوقه،
+ * **فيبقى «تسوق» على سطر باقي الأسماء** (قرارُ المالك ٢٠٢٦-١١-١٣).
+ */
+@Composable
+fun RowScope.RahalNavLabelOnly(
+    selected: Boolean,
+    onClick: () -> Unit,
+    label: Int,
+    modifier: Modifier = Modifier,
+) {
+    NavigationBarItem(
+        modifier = modifier,
+        selected = selected,
+        onClick = onClick,
+        icon = { androidx.compose.foundation.layout.Spacer(Modifier.size(24.dp)) },
+        label = {
+            FitText(
+                stringResource(label),
+                maxLines = 1,
+                style = androidx.compose.material3.LocalTextStyle.current.copy(
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                ),
+            )
+        },
+        colors = NavigationBarItemDefaults.colors(
+            selectedTextColor = Rahal.colors.brand,
+            indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+            unselectedTextColor = Rahal.colors.inkMuted,
+        ),
+    )
+}
+
+/**
+ * **شعارُ رحّال غو نافرٌ فوق الشريط** (قرارُ المالك ٢٠٢٦-١١-١٣: «اللوغو نافر لفوق… ومميز انه واقفين عليه»)
+ * — دائرةٌ بيضاءُ بظلّ، والشعارُ بألوانه؛ **وحين يُختار «تسوق» يحيط بها إطارٌ بلون العلامة وتكبر قليلاً.**
+ */
+@Composable
+fun RahalNavRaisedLogo(
+    selected: Boolean,
+    onClick: () -> Unit,
+    logo: Int,
+    modifier: Modifier = Modifier,
+) {
+    val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val down by press.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (down) 0.92f else if (selected) 1.06f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.5f, stiffness = 600f),
+        label = "raisedLogo",
+    )
+    Box(
+        modifier
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .size(62.dp)
+            .shadow(Rahal.elevation.card, CircleShape)
+            .clip(CircleShape)
+            .background(androidx.compose.ui.graphics.Color.White)
+            .border(
+                androidx.compose.foundation.BorderStroke(if (selected) 2.5.dp else Rahal.stroke.hair, if (selected) Rahal.colors.brand else Rahal.colors.line),
+                CircleShape,
+            )
+            .clickable(interactionSource = press, indication = null, role = androidx.compose.ui.semantics.Role.Tab, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.foundation.Image(
+            painterResource(logo),
+            contentDescription = null,
+            modifier = Modifier.size(40.dp),
         )
     }
 }

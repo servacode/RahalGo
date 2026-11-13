@@ -1262,22 +1262,34 @@ html[data-shop] .surface-inset {
 .shop-tab[aria-current="page"] .shop-tab-icon {
   transform: scale(1.12);
 }
+.shop-tab-center {
+  overflow: visible;
+}
+/* **الشعارُ نافرٌ فوق الشريط والاسمُ على سطر الباقي** (قرارُ المالك ٢٠٢٦-١١-١٣، مرآةُ التطبيق). */
 .shop-tab-center .shop-tab-icon {
+  position: absolute;
+  inset-block-start: -26px;
   display: flex;
-  width: 54px;
-  height: 54px;
+  width: 62px;
+  height: 62px;
   align-items: center;
   justify-content: center;
+  border: 1px solid var(--color-line);
   border-radius: 9999px;
   background-color: #ffffff;
-  color: var(--color-primary-solid);
   box-shadow: var(--shadow-e2);
 }
+.shop-tab-center::before {
+  content: "";
+  display: block;
+  height: 23px;
+}
 .shop-tab-center:active .shop-tab-icon {
-  transform: scale(0.9);
+  transform: scale(0.92);
 }
 .shop-tab-center[aria-current="page"] .shop-tab-icon {
-  transform: scale(1.05);
+  border: 2.5px solid var(--color-primary-solid);
+  transform: scale(1.06);
 }
 .shop-tab {
   position: relative;
