@@ -29,6 +29,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.layout.navigationBars
 import com.rahalgo.design.Rahal
 
 /**
@@ -42,9 +47,27 @@ import com.rahalgo.design.Rahal
  * الرفيع في أعلاه ولون المختار وشارة العدد.
  */
 @Composable
-fun RahalNavigationBar(content: @Composable RowScope.() -> Unit) {
+fun RahalNavigationBar(
+    /** **شريطٌ أقصر** (قرارُ المالك ٢٠٢٦-١١-١٣: «في بادينك تحت الخط كثير») — للزبون؛ وفارغٌ: ارتفاعُ مادّة (٨٠). */
+    height: androidx.compose.ui.unit.Dp? = null,
+    content: @Composable RowScope.() -> Unit,
+) {
     val line = Rahal.colors.line
     val hair = Rahal.stroke.hair
+    if (height != null) {
+        androidx.compose.foundation.layout.Row(
+            Modifier
+                .fillMaxWidth()
+                .background(Rahal.colors.canvas)
+                .drawBehind { drawLine(color = line, start = Offset(0f, 0f), end = Offset(size.width, 0f), strokeWidth = hair.toPx()) }
+                .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars)
+                .height(height)
+                .selectableGroup(),
+            verticalAlignment = Alignment.CenterVertically,
+            content = content,
+        )
+        return
+    }
     NavigationBar(
         containerColor = Rahal.colors.canvas,
         tonalElevation = 0.dp,
@@ -234,7 +257,7 @@ fun RahalNavRaisedLogo(
     Box(
         modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .size(62.dp)
+            .size(52.dp)
             .shadow(Rahal.elevation.card, CircleShape)
             .clip(CircleShape)
             .background(androidx.compose.ui.graphics.Color.White)
@@ -248,7 +271,7 @@ fun RahalNavRaisedLogo(
         androidx.compose.foundation.Image(
             painterResource(logo),
             contentDescription = null,
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(34.dp),
         )
     }
 }

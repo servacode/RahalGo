@@ -865,7 +865,7 @@ private fun SignedIn(
                 // **وقاعدةٌ تفصل الشريطين**: الأعلى أخبارٌ تُقرأ
                 // بنظرةٍ — رصيدٌ وجرس. **والأسفلُ أماكنُ يُنتقل إليها.**
                 Box(contentAlignment = Alignment.TopCenter) {
-                com.rahalgo.ui.RahalNavigationBar {
+                com.rahalgo.ui.RahalNavigationBar(height = 62.dp) {
                     // ══════════════════════════════════════════════════════
                     // **«تسوق» بالنص أكبرَ من الباقي، واثنان يميناً واثنان يساراً** (قرارُ المالك
                     // ٢٠٢٦-١١-١٣) — يميناً «سلتي» و«طلباتي»، ويساراً «طلب خاص» و«حسابي».
@@ -925,7 +925,7 @@ private fun SignedIn(
                         selected = tab == Tab.Shop && over == Overlay.None,
                         onClick = { tab = Tab.Shop; overlay.clear() },
                         logo = com.rahalgo.ui.R.drawable.rahal_mark_color,
-                        modifier = Modifier.offset(y = (-24).dp),
+                        modifier = Modifier.offset(y = (-14).dp),
                     )
                 }
                 }

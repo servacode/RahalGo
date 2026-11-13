@@ -1268,10 +1268,10 @@ html[data-shop] .surface-inset {
 /* **الشعارُ نافرٌ فوق الشريط والاسمُ على سطر الباقي** (قرارُ المالك ٢٠٢٦-١١-١٣، مرآةُ التطبيق). */
 .shop-tab-center .shop-tab-icon {
   position: absolute;
-  inset-block-start: -26px;
+  inset-block-start: -16px;
   display: flex;
-  width: 62px;
-  height: 62px;
+  width: 52px;
+  height: 52px;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--color-line);
@@ -1294,7 +1294,7 @@ html[data-shop] .surface-inset {
 .shop-tab {
   position: relative;
   display: flex;
-  min-height: 62px;
+  min-height: 54px;
   flex: 1;
   flex-direction: column;
   align-items: center;
