@@ -233,7 +233,7 @@ fun TopBar(
                     if (!tight) {
                         Text(
                             text = stringResource(R.string.top_deliver_to),
-                            color = Rahal.colors.brand,
+                            color = Rahal.colors.inkMuted,
                             style = Rahal.type.badge,
                             maxLines = 1,
                             softWrap = false,
@@ -246,6 +246,7 @@ fun TopBar(
                             stringResource(R.string.top_pick_address)
                         },
                         maxLines = 1,
+                        color = Rahal.colors.brand,
                         style = Rahal.type.label.copy(fontWeight = FontWeight.Bold),
                     )
                 }

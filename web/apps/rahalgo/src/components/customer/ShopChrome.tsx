@@ -108,7 +108,7 @@ export function ShopTopBar({
             <span className="shop-addr-ic">
               <IconLocation size={18} />
             </span>
-            <span className="min-w-0">
+            <span className="flex min-w-0 items-center gap-1">
               <small>{H.deliverTo}</small>
               <b className="flex items-center gap-1">
                 <span className={address ? "min-w-0 truncate" : "min-w-0 line-clamp-2 text-xs leading-snug"}>{address ? address.address_text : A.none}</span>

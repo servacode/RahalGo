@@ -1030,6 +1030,7 @@ html[data-shop] .surface-inset {
 }
 .shop-addr small {
   display: block;
+  flex: none;
   font-size: 12px;
   line-height: 1.3;
   color: var(--color-ink-muted);
@@ -1047,6 +1048,7 @@ html[data-shop] .surface-inset {
   gap: 4px;
   font-size: 14px;
   line-height: 1.4;
+  color: var(--color-primary);
 }
 @media (width >= 1024px) {
   .shop-addr {
