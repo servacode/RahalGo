@@ -1720,14 +1720,14 @@ html[data-shop-theme="dark"] .shop-pic {
 }
 .shop-sale-badge {
   position: absolute;
-  inset-block-start: 8px;
-  inset-inline-start: 8px;
+  inset-block-start: 4px;
+  inset-inline-start: 4px;
   pointer-events: none;
   border-radius: var(--radius-badge);
   background-color: var(--color-danger-solid);
-  padding: 3px 10px;
+  padding: 1px 6px;
   color: var(--color-on-solid);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 800;
   box-shadow: var(--shadow-e2);
 }
@@ -1737,14 +1737,17 @@ html[data-shop-theme="dark"] .shop-pic {
   max-height: 2.6em;
 }
 /* **عدّادُ نهاية العرض تحت النسبة** و**اسمُ الصنف بسطرٍ واحد** (قرارُ المالك ٢٠٢٦-١١-١٣). */
-.shop-sale-badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+/* **صغيرةٌ بالزاوية، والعدّادُ شريطٌ رفيعٌ بأسفل الصورة** (٢٠٢٦-١١-١٣: «الصورة ماعاد تبين»). */
 .shop-sale-left {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  pointer-events: none;
+  background-color: color-mix(in srgb, var(--color-danger-solid) 85%, transparent);
+  color: var(--color-on-solid);
   font-size: 11px;
-  font-weight: 500;
+  text-align: center;
+  line-height: 1.5;
 }
 .shop-item-name {
   overflow: hidden;

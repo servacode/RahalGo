@@ -1059,31 +1059,33 @@ internal fun ItemCard(
                     // **وعدّادُ نهاية العرض تحت النسبة** (قرارُ المالك ٢٠٢٦-١١-١٣) — أيّامٌ أو ساعاتٌ أو دقائق،
                     // **وعرضٌ بلا نهايةٍ لا عدّاد.**
                     val left = saleLeft(item.offerEndsAt)
-                    Column(
-                        Modifier
+                    // **صغيرةٌ بالزاوية لا لوحةٌ على الصورة** (ملاحظةُ المالك ٢٠٢٦-١١-١٣: «الصورة جزء كبير منها
+                    // ماعاد يبين») — والعدّادُ شريطٌ رفيعٌ بأسفلها.
+                    Text(
+                        text = stringResource(R.string.shop_sale_badge, item.discountPercent ?: 0),
+                        color = Rahal.colors.onPanel,
+                        fontWeight = FontWeight.Bold,
+                        style = Rahal.type.meta,
+                        maxLines = 1,
+                        modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(Rahal.space.xs)
-                            .shadow(Rahal.elevation.card, Rahal.shape.sm)
+                            .padding(Rahal.space.xxs)
                             .clip(Rahal.shape.sm)
                             .background(Rahal.colors.danger)
-                            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
+                            .padding(horizontal = Rahal.space.xs),
+                    )
+                    if (left != null) {
                         Text(
-                            text = stringResource(R.string.shop_sale_badge, item.discountPercent ?: 0),
+                            text = left,
                             color = Rahal.colors.onPanel,
-                            fontWeight = FontWeight.Bold,
-                            style = Rahal.type.label,
+                            style = Rahal.type.meta,
                             maxLines = 1,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .background(Rahal.colors.danger.copy(alpha = 0.85f)),
                         )
-                        if (left != null) {
-                            Text(
-                                text = left,
-                                color = Rahal.colors.onPanel,
-                                style = Rahal.type.meta,
-                                maxLines = 1,
-                            )
-                        }
                     }
                 }
 

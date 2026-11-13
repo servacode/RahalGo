@@ -165,12 +165,8 @@ export function ItemCard({
             </span>
           </>
         )}
-        {onSale && (
-          <span className="shop-sale-badge">
-            {fill(I.saleBadge, { n: fmtNum(item.discount_percent ?? 0) })}
-            {saleLeft(item.offer_ends_at) && <span className="shop-sale-left">{saleLeft(item.offer_ends_at)}</span>}
-          </span>
-        )}
+        {onSale && <span className="shop-sale-badge">{fill(I.saleBadge, { n: fmtNum(item.discount_percent ?? 0) })}</span>}
+        {onSale && saleLeft(item.offer_ends_at) && <span className="shop-sale-left">{saleLeft(item.offer_ends_at)}</span>}
         {inCart > 0 && (
           <span className="shop-qty-badge" aria-label={fill(SK.inCart, { n: fmtNum(inCart) })}>
             {fmtNum(inCart)}
@@ -770,7 +766,15 @@ function saleLeft(endsAt?: string | null): string | null {
   if (!endsAt) return null;
   const mins = Math.floor((new Date(endsAt).getTime() - Date.now()) / 60000);
   if (!Number.isFinite(mins) || mins <= 0) return null;
-  if (mins >= 1440) return fill(I.leftDays, { n: fmtNum(Math.floor(mins / 1440)) });
-  if (mins >= 60) return fill(I.leftHours, { n: fmtNum(Math.floor(mins / 60)) });
-  return fill(I.leftMinutes, { n: fmtNum(mins) });
+  if (mins >= 1440) return plural(I.leftDays, Math.floor(mins / 1440));
+  if (mins >= 60) return plural(I.leftHours, Math.floor(mins / 60));
+  return plural(I.leftMinutes, mins);
+}
+
+/** **الجمعُ العربيّ** — يوم/يومين/٣ أيام/١١ يوم، بقواعد `Intl.PluralRules("ar")`. */
+const arPlural = new Intl.PluralRules("ar");
+function plural(forms: { one: string; two: string; few: string; other: string }, n: number): string {
+  const c = arPlural.select(n);
+  const t = c === "one" ? forms.one : c === "two" ? forms.two : c === "few" ? forms.few : forms.other;
+  return fill(t, { n: fmtNum(n) });
 }
