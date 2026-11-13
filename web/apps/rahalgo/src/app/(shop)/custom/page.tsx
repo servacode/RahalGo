@@ -31,7 +31,7 @@ import { customFee, fill, freeCustomOn, freeUntilText } from "@/lib/customer/tex
 import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
 import { OUTLINE_CARD, Segmented, StickyActionBar } from "@/components/customer/kit";
 import { NeedLogin } from "@/components/customer/NeedLogin";
-import { CustomPhotoPicker, type UploadedPhoto } from "@/components/CustomPhotos";
+import { type UploadedPhoto } from "@/components/CustomPhotos";
 import { useOrderingState, useAddGate, AvailabilityNotice } from "@/components/customer/ServiceNotices";
 import { useShopToast } from "@/components/customer/toast";
 
@@ -232,7 +232,7 @@ export default function CustomOrderPage() {
           maxLength={MAX_REQUEST}
         />
 
-        {mode !== "amanah" && <CustomPhotoPicker photos={photos} onChange={setPhotos} disabled={busy} />}
+        {/* **شِيلت «إضافة صورة»** (قرارُ المالك ٢٠٢٦-١١-١٣) — الصورةُ تُبعث بالدردشة. */}
       </section>
 
       <AddressChip onOpen={() => setPickAddr(true)} />
