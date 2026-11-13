@@ -205,9 +205,10 @@ fun TopBar(
             // **فأرضٌ خفيفةٌ وإطارٌ وسهمٌ نازل**: الأرضُ تفصله عن
             // الشريط، **والسهمُ هو ما يقول «هنا خيارات»** — ومن رآه في
             // أيّ تطبيقٍ عرفه.
+            // **بحجم المحفظة لا بعرض الشريط** (قرارُ المالك ٢٠٢٦-١١-١٣: «تصغر الدائرة وتصير مناسبة… للمحفظة»).
             Row(
                 Modifier
-                    .weight(1f)
+                    .weight(1f, fill = false)
                     .clip(Rahal.shape.pill)
                     .background(Rahal.colors.brand.copy(alpha = 0.08f))
                     .border(Rahal.stroke.hair, Rahal.colors.brand.copy(alpha = 0.35f), Rahal.shape.pill)
@@ -227,24 +228,25 @@ fun TopBar(
                 // الصغيرُ وبقي الاسمُ على سطرٍ واحد** — والدبّوسُ يقول إنّه عنوانُ توصيل.
                 val tight = LocalConfiguration.current.screenWidthDp < 400 ||
                     LocalDensity.current.fontScale > 1.15f
-                Column(Modifier.weight(1f)) {
-                    if (!tight) Text(
-                        text = stringResource(R.string.top_deliver_to),
-                        color = Rahal.colors.brand,
-                        style = Rahal.type.badge,
-                        // **ولا تنكسر الكلمةُ نصفين** (صورةُ المالك ٢٠٢٦-١٠-١٩: «التوصي / ل إلى»
-                        // على جوالٍ خطُّه مكبَّر) — سطرٌ واحدٌ ولو قُصّ آخرُه.
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                // **«التوصيل إلى» والاسمُ بسطرٍ واحد** (قرارُ المالك ٢٠٢٦-١١-١٣) — فتصغر الدائرةُ وتصير بحجم المحفظة.
+                Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
+                    if (!tight) {
+                        Text(
+                            text = stringResource(R.string.top_deliver_to),
+                            color = Rahal.colors.brand,
+                            style = Rahal.type.badge,
+                            maxLines = 1,
+                            softWrap = false,
+                        )
+                        Spacer(Modifier.size(Rahal.space.xs))
+                    }
                     // **يصغر ولا يُقصّ** (الفحصُ البصريّ ٢٠٢٦-١١-١١: «المنزل» صارت «الم…» على ٣٦٠ بخطٍّ ١٫٣).
                     FitText(
                         text = addressLabel.ifEmpty {
                             stringResource(R.string.top_pick_address)
                         },
                         maxLines = 1,
-                        style = Rahal.type.body.copy(fontWeight = FontWeight.Bold),
+                        style = Rahal.type.label.copy(fontWeight = FontWeight.Bold),
                     )
                 }
                 // **والسهمُ آخرَ الزرّ** — **وأيقونتان في طرفٍ واحدٍ
