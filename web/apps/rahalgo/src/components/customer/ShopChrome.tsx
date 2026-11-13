@@ -15,7 +15,7 @@
  */
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
@@ -209,45 +209,22 @@ export function ShopTabBar() {
       ];
   /* **و`/s/…` وصفحةُ المتجر والعروضُ والمفضّلةُ أقسامٌ من التسوّق** — فيُضاء «تسوّق» وهو فيها. */
   const active = isBrowse(path) ? "/shop" : path;
-  /* **شريطُ الكرة** (قرارُ المالك ٢٠٢٦-١١-١٣، مرآةُ التطبيق) — دائرةٌ تنزلق إلى المختار برتقاليّةً وتصل زرقاء،
-     فيها أيقونتُه واسمُه. **والموضعُ بجهة القراءة**: `inset-inline-start` بنسبة البند. */
-  const sel = Math.max(0, items.findIndex(({ href }) => active.startsWith(href)));
-  const [moving, setMoving] = useState(false);
-  const last = useRef(sel);
-  useEffect(() => {
-    if (last.current === sel) return;
-    last.current = sel;
-    setMoving(true);
-    const t = setTimeout(() => setMoving(false), 340);
-    return () => clearTimeout(t);
-  }, [sel]);
-  const cur = items[sel] ?? items[0]!;
-  const CurIcon = cur.Icon;
   return (
-    <nav className="shop-tabbar shop-ballbar" aria-label={N.shop} style={{ ["--ball-n" as string]: items.length } as React.CSSProperties}>
-      {items.map(({ href, label, Icon, count }, i) => (
-        <Link key={href} href={href} className="shop-tab" aria-current={i === sel ? "page" : undefined}>
-          {i !== sel && (
-            <>
-              <span className="relative">
-                <Icon size={23} />
-              </span>
-              {label}
-              {count > 0 && <b>{fmtNum(Math.min(count, 99))}</b>}
-            </>
-          )}
+    <nav className="shop-tabbar" aria-label={N.shop}>
+      {items.map(({ href, label, Icon, count, ...rest }) => (
+        <Link
+          key={href}
+          href={href}
+          className={"center" in rest && rest.center ? "shop-tab shop-tab-center" : "shop-tab"}
+          aria-current={active.startsWith(href) ? "page" : undefined}
+        >
+          <span className="shop-tab-icon relative">
+            <Icon size={"center" in rest && rest.center ? 28 : 23} />
+          </span>
+          {label}
+          {count > 0 && <b>{fmtNum(Math.min(count, 99))}</b>}
         </Link>
       ))}
-      <span
-        aria-hidden
-        className="shop-ball"
-        data-moving={moving || undefined}
-        style={{ insetInlineStart: `calc(${sel} * (100% / ${items.length}) + (100% / ${items.length} - 58px) / 2)` }}
-      >
-        <CurIcon size={22} />
-        <span className="shop-ball-label">{cur.label}</span>
-        {cur.count > 0 && <b>{fmtNum(Math.min(cur.count, 99))}</b>}
-      </span>
     </nav>
   );
 }
