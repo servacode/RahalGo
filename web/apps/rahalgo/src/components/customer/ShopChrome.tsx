@@ -222,7 +222,7 @@ export function ShopTabBar() {
             {"center" in rest && rest.center ? (
               /* **شعارُ رحّال غو بدل أيقونة المتجر** (قرارُ المالك ٢٠٢٦-١١-١٣، مرآةُ التطبيق). */
               // eslint-disable-next-line @next/next/no-img-element
-              <img src="/pwa/mark-white.png" alt="" width={30} height={30} />
+              <img src="/pwa/mark-color.png" alt="" width={36} height={36} />
             ) : (
               <Icon size={23} />
             )}

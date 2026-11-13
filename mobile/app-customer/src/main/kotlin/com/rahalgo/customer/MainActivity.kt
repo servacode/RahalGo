@@ -890,7 +890,8 @@ private fun SignedIn(
                         RahalNavCenter(
                             selected = tab == Tab.Shop && over == Overlay.None,
                             onClick = { tab = Tab.Shop; overlay.clear() },
-                            icon = com.rahalgo.ui.R.drawable.ic_notification, // **شعارُ رحّال غو بدل أيقونة المتجر** (قرارُ المالك ٢٠٢٦-١١-١٣)
+                            icon = com.rahalgo.ui.R.drawable.rahal_mark_color, // **شعارُ رحّال غو بألوانه على دائرةٍ بيضاء** (٢٠٢٦-١١-١٣)
+                            logo = true,
                             label = R.string.nav_shop,
                             modifier = Modifier.testTag("nav_shop"),
                         )

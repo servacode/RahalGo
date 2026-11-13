@@ -127,6 +127,8 @@ fun RowScope.RahalNavCenter(
     icon: Int,
     label: Int,
     modifier: Modifier = Modifier,
+    /** **شعارٌ بألوانه على دائرةٍ بيضاء** (قرارُ المالك ٢٠٢٦-١١-١٣) — لا أيقونةٌ تُصبغ. */
+    logo: Boolean = false,
 ) {
     val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val down by press.collectIsPressedAsState()
@@ -149,15 +151,23 @@ fun RowScope.RahalNavCenter(
                 .size(54.dp)
                 .shadow(Rahal.elevation.card, CircleShape)
                 .clip(CircleShape)
-                .background(Rahal.colors.brand),
+                .background(if (logo) androidx.compose.ui.graphics.Color.White else Rahal.colors.brand),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                painterResource(icon),
-                contentDescription = null,
-                tint = Rahal.colors.onBrand,
-                modifier = Modifier.size(28.dp),
-            )
+            if (logo) {
+                androidx.compose.foundation.Image(
+                    painterResource(icon),
+                    contentDescription = null,
+                    modifier = Modifier.size(36.dp),
+                )
+            } else {
+                Icon(
+                    painterResource(icon),
+                    contentDescription = null,
+                    tint = Rahal.colors.onBrand,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
         }
         Text(
             stringResource(label),

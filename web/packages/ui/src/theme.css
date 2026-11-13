@@ -1269,8 +1269,8 @@ html[data-shop] .surface-inset {
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background-color: var(--color-primary-solid);
-  color: var(--color-on-solid);
+  background-color: #ffffff;
+  color: var(--color-primary-solid);
   box-shadow: var(--shadow-e2);
 }
 .shop-tab-center:active .shop-tab-icon {
