@@ -1213,19 +1213,30 @@ internal fun ItemCard(
 @Composable
 private fun saleLeft(endsAt: String?): String? {
     val end = endsAt?.let { runCatching { java.time.Instant.parse(it) }.getOrNull() } ?: return null
-    // **ودقيقةٌ تُحدّث العدّاد** — لا ثانيةٌ تُعيد رسم الشبكة كلِّها.
+    // **دقيقةٌ تُحدّث العدّاد، وثانيةٌ في آخر ثلاث ساعات** (قرارُ المالك ٢٠٢٦-١١-١٣: «وقت يكون 3 ساعات
+    // عداد يبلش ينقص») — فلا تُعاد الشبكةُ كلَّ ثانيةٍ إلّا لكرتٍ يكاد عرضُه ينتهي.
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
     androidx.compose.runtime.LaunchedEffect(end) {
         while (true) {
-            kotlinx.coroutines.delay(60_000)
+            val leftMs = end.toEpochMilli() - System.currentTimeMillis()
+            if (leftMs <= 0) break
+            kotlinx.coroutines.delay(if (leftMs <= LIVE_COUNT_MS) 1_000 else 60_000)
             now = System.currentTimeMillis()
         }
     }
-    val mins = (end.toEpochMilli() - now) / 60_000
-    if (mins <= 0) return null
+    val leftMs = end.toEpochMilli() - now
+    if (leftMs <= 0) return null
+    if (leftMs <= LIVE_COUNT_MS) {
+        val t = leftMs / 1000
+        return "⏳ " + "\u2066" + "%d:%02d:%02d".format(t / 3600, (t % 3600) / 60, t % 60) + "\u2069"
+    }
+    val mins = leftMs / 60_000
     return when {
         mins >= 24 * 60 -> pluralStringResource(R.plurals.shop_sale_days, (mins / (24 * 60)).toInt(), (mins / (24 * 60)).toInt())
         mins >= 60 -> pluralStringResource(R.plurals.shop_sale_hours, (mins / 60).toInt(), (mins / 60).toInt())
         else -> pluralStringResource(R.plurals.shop_sale_minutes, mins.toInt(), mins.toInt())
     }
 }
+
+/** **آخرُ ثلاث ساعات بالثواني** — قبلها أيّامٌ أو ساعات. */
+private const val LIVE_COUNT_MS = 3 * 60 * 60 * 1000L
