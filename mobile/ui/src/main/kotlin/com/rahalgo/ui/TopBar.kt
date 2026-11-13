@@ -241,12 +241,18 @@ fun TopBar(
                         Spacer(Modifier.size(Rahal.space.xs))
                     }
                     // **يصغر ولا يُقصّ** (الفحصُ البصريّ ٢٠٢٦-١١-١١: «المنزل» صارت «الم…» على ٣٦٠ بخطٍّ ١٫٣).
+                    // **والمختارُ في كبسولةٍ زرقاءَ بكتابةٍ بيضاء** (قرارُ المالك ٢٠٢٦-١١-١٣: «خلي اللون مميز اكثر»).
                     FitText(
                         text = addressLabel.ifEmpty {
                             stringResource(R.string.top_pick_address)
                         },
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .clip(CircleShape)
+                            .background(Rahal.colors.brand)
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
                         maxLines = 1,
-                        color = Rahal.colors.brand,
+                        color = Rahal.colors.onBrand,
                         style = Rahal.type.label.copy(fontWeight = FontWeight.Bold),
                     )
                 }

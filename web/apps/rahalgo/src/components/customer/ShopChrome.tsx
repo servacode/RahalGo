@@ -111,7 +111,7 @@ export function ShopTopBar({
             <span className="flex min-w-0 items-center gap-1">
               <small>{H.deliverTo}</small>
               <b className="flex items-center gap-1">
-                <span className={address ? "min-w-0 truncate" : "min-w-0 line-clamp-2 text-xs leading-snug"}>{address ? address.address_text : A.none}</span>
+                <span className={address ? "shop-addr-pick min-w-0 truncate" : "min-w-0 line-clamp-2 text-xs leading-snug"}>{address ? address.address_text : A.none}</span>
                 <IconChevronDown size={14} className="shrink-0 text-ink-muted" />
               </b>
             </span>
