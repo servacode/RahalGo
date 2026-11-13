@@ -1228,7 +1228,7 @@ private fun saleLeft(endsAt: String?): String? {
     if (leftMs <= 0) return null
     if (leftMs <= LIVE_COUNT_MS) {
         val t = leftMs / 1000
-        return "⏳ " + "\u2066" + "%d:%02d:%02d".format(t / 3600, (t % 3600) / 60, t % 60) + "\u2069"
+        return "⏳ " + "\u2066" + String.format(java.util.Locale.ROOT, "%d:%02d:%02d", t / 3600, (t % 3600) / 60, t % 60) + "\u2069"
     }
     val mins = leftMs / 60_000
     return when {
