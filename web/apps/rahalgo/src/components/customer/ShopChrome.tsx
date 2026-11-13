@@ -219,7 +219,13 @@ export function ShopTabBar() {
           aria-current={active.startsWith(href) ? "page" : undefined}
         >
           <span className="shop-tab-icon relative">
-            <Icon size={"center" in rest && rest.center ? 28 : 23} />
+            {"center" in rest && rest.center ? (
+              /* **شعارُ رحّال غو بدل أيقونة المتجر** (قرارُ المالك ٢٠٢٦-١١-١٣، مرآةُ التطبيق). */
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src="/pwa/mark-white.png" alt="" width={30} height={30} />
+            ) : (
+              <Icon size={23} />
+            )}
           </span>
           {label}
           {count > 0 && <b>{fmtNum(Math.min(count, 99))}</b>}
