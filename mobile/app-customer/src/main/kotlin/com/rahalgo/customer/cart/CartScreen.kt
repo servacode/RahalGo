@@ -889,21 +889,8 @@ fun CartScreen(
                     style = Rahal.type.priceLarge,
                     maxLines = 1,
                 )
-                // **والإجماليُّ يُفصَّل تحته: المجموع + التوصيل** (تجربةُ المالك ٢٠٢٦-١١-١٢) — كان
-                // يرى «125» وحدَه ولا يعرف أنّ منها ١٠٠ توصيل. **ومن التسعيرة وحدَها** — بلا تسعيرةٍ
-                // لا تفصيل، فلا تُخمَّن أجرة.
-                if (bq != null && barTotal != null) {
-                    val bfee = bcut?.deliveryFee ?: bq.deliveryFee
-                    val feeText = if (bfee > 0) money(bfee) else stringResource(R.string.free_badge)
-                    val base = stringResource(R.string.cart_bar_breakdown, money(bq.subtotal), feeText)
-                    val disc = bcut?.discount ?: 0L
-                    Text(
-                        text = if (disc > 0) base + " " + stringResource(R.string.cart_bar_breakdown_discount, money(disc)) else base,
-                        color = Rahal.colors.inkMuted,
-                        style = Rahal.type.caption,
-                        maxLines = 2,
-                    )
-                }
+                // **الإجماليُّ وحدَه** (قرارُ المالك ٢٠٢٦-١١-١٣: «المجموع + التوصيل مكرر… لازم الاجمالي وبس») —
+                // التفصيلُ في بطاقة الحساب فوق.
             }
             Spacer(Modifier.size(Rahal.space.md))
         RahalButton(
