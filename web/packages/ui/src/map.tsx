@@ -654,13 +654,16 @@ export function CenterPinMap({
       </div>
       {denied ? (
         <p className="text-xs text-danger">{m.map.denied}</p>
-      ) : locating ? (
-        <p className="text-sm font-bold text-accent-text">{located || m.map.locating}</p>
       ) : coarse ? (
+        /* **والتقريبيُّ يُقال فوراً ولو كان التحسينُ جارياً** — «تم تحديد موقعك بدقة ٣٠٠٠ م» بالأخضر
+           يوهم أنّه البيت (رُئي على WebKit ٢٠٢٦-١١-١٤). */
         <div role="status" className="space-y-1 rounded-control border border-warning bg-warning-tint px-3 py-2">
           <p className="text-sm font-bold text-ink">{m.map.coarse.replace("{n}", String(Math.ceil(acc ?? 0)))}</p>
           <p className="text-xs text-ink-soft">{preciseHelp()}</p>
+          {locating && <p className="text-xs font-bold text-accent-text">{m.map.locating}</p>}
         </div>
+      ) : locating ? (
+        <p className="text-sm font-bold text-accent-text">{located || m.map.locating}</p>
       ) : located ? (
         <p className="text-sm font-bold text-success">{located}</p>
       ) : null}
