@@ -135,7 +135,8 @@ var contracts = []struct {
 	// وغيابُها يعني «اعرض بالليرة»، **وهو ما يفعله التطبيقُ بقيمتها الافتراضيّة (null).**
 	{ID: "CONTRACT-001", File: "model/Shop.kt", Class: "Item",
 		Path: "ITEMS", JSONPath: "items.0",
-		Skip: []string{"price_usd", "price_before_usd", "exchange_rate"}},
+		// **ونهايةُ العرض لا تُرسَل إلّا لصنفٍ عليه عرضٌ محدودُ الوقت** (`offer_ends_at`، ٢٠٢٦-١١-١٣) — وصنفُ العقد بلا عرض.
+		Skip: []string{"price_usd", "price_before_usd", "exchange_rate", "offer_ends_at"}},
 	// **وأقسامُ الطلب لا تُرسَل إلّا لطلبٍ من متجرين فأكثر** (`sections`، ٢٠٢٦-١١-٠٦) — وطلبُ
 	// العقد من متجرٍ واحد، **وغيابُها يعني شاشةَ اليوم** (null). حارسُها `TestMultiStop_CustomerSectionsWithoutStores`.
 	{ID: "CONTRACT-002", File: "customer/CustomerApi.kt", Class: "MyOrder",

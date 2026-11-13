@@ -197,7 +197,7 @@ fun RowScope.RahalNavCenter(
             stringResource(label),
             color = if (selected) Rahal.colors.brand else Rahal.colors.inkMuted,
             fontWeight = FontWeight.Bold,
-            style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+            style = Rahal.type.badge,
             maxLines = 1,
         )
     }
