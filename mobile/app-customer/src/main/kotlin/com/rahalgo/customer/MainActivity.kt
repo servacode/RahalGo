@@ -63,7 +63,6 @@ import com.rahalgo.ui.PlatformScreen
 import com.rahalgo.ui.knowsKey
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import com.rahalgo.ui.RahalNavCenter
 import com.rahalgo.ui.Avatar
 import com.rahalgo.ui.InboxSheet
 import com.rahalgo.ui.ThemeState
@@ -863,60 +862,32 @@ private fun SignedIn(
                 //
                 // **وقاعدةٌ تفصل الشريطين**: الأعلى أخبارٌ تُقرأ
                 // بنظرةٍ — رصيدٌ وجرس. **والأسفلُ أماكنُ يُنتقل إليها.**
-                com.rahalgo.ui.RahalNavigationBar {
-                    // ══════════════════════════════════════════════════════
-                    // **«تسوق» بالنص أكبرَ من الباقي، واثنان يميناً واثنان يساراً** (قرارُ المالك
-                    // ٢٠٢٦-١١-١٣) — يميناً «سلتي» و«طلباتي»، ويساراً «طلب خاص» و«حسابي».
-                    // ══════════════════════════════════════════════════════
-                    //
-                    // **وأوّلُ البنود أيمنُها** — الشاشةُ من اليمين إلى اليسار. **والسلّةُ تُنزل رايتَها
-                    // بكلّ تبويب** (`overlay.clear()`، شكوى ٢٠٢٦-٠٨-١٨). **والزائرُ لا سلّةَ له ولا طلبات**
-                    // (٢٠٢٦-١٠-١٦) — فيبقى له «تسوق» و«حسابي» كما كان.
-                    if (!guest) {
-                        Tab(
-                            selected = tab == Tab.Cart && over == Overlay.None,
-                            onClick = { tab = Tab.Cart; overlay.clear() },
-                            icon = com.rahalgo.ui.R.drawable.ic_cart,
-                            label = R.string.cart_title,
-                            badge = com.rahalgo.customer.cart.Cart.count,
-                            badgeColor = Rahal.colors.accent,
-                        )
-                        Tab(
-                            selected = tab == Tab.Orders && over == Overlay.None,
-                            onClick = { tab = Tab.Orders; overlay.clear() },
-                            icon = R.drawable.ic_orders,
-                            label = R.string.nav_orders_mine,
-                        )
-                        RahalNavCenter(
-                            selected = tab == Tab.Shop && over == Overlay.None,
-                            onClick = { tab = Tab.Shop; overlay.clear() },
-                            icon = R.drawable.ic_store,
-                            label = R.string.nav_shop,
-                            modifier = Modifier.testTag("nav_shop"),
-                        )
-                        Tab(
-                            selected = tab == Tab.Custom && over == Overlay.None,
-                            onClick = { tab = Tab.Custom; overlay.clear() },
-                            icon = R.drawable.ic_custom,
-                            label = R.string.nav_custom_order,
-                        )
-                    } else {
-                        Tab(
-                            selected = tab == Tab.Shop && over == Overlay.None,
-                            onClick = { tab = Tab.Shop; overlay.clear() },
-                            icon = R.drawable.ic_store,
-                            label = R.string.nav_shop,
-                        )
-                    }
-                    // **وحسابي آخرا فهو في اليسار** (٢٠٢٦-٠٨-١٤) — أيقونةُ شخصٍ موحَّدة (٢٠٢٦-٠٨-٢٣)،
-                    // **وللزائر بابُ الدخول أو إنشاء الحساب** (٢٠٢٦-١٠-١٦).
-                    Tab(
-                        selected = tab == Tab.Account && over == Overlay.None,
-                        onClick = { tab = Tab.Account; overlay.clear() },
-                        icon = com.rahalgo.ui.R.drawable.ic_user,
-                        label = R.string.nav_profile,
+                // ══════════════════════════════════════════════════════
+                // **شريطُ الكرة** (قرارُ المالك ٢٠٢٦-١١-١٣) — دائرةٌ تنزلق إلى المختار برتقاليّةً وتصل زرقاء،
+                // وفيها أيقونتُه واسمُه. **وأوّلُ البنود أيمنُها**: «سلتي» و«طلباتي» يميناً، «تسوق» بالنص،
+                // و«طلب خاص» و«حسابي» يساراً. **والزائرُ لا سلّةَ له ولا طلبات** (٢٠٢٦-١٠-١٦).
+                // ══════════════════════════════════════════════════════
+                val navTabs = if (!guest) {
+                    listOf(
+                        Tab.Cart to com.rahalgo.ui.BallTab(com.rahalgo.ui.R.drawable.ic_cart, R.string.cart_title, com.rahalgo.customer.cart.Cart.count, "cart_title"),
+                        Tab.Orders to com.rahalgo.ui.BallTab(R.drawable.ic_orders, R.string.nav_orders_mine, 0, "nav_orders_mine"),
+                        Tab.Shop to com.rahalgo.ui.BallTab(R.drawable.ic_store, R.string.nav_shop, 0, "nav_shop"),
+                        Tab.Custom to com.rahalgo.ui.BallTab(R.drawable.ic_custom, R.string.nav_custom_order, 0, "nav_custom_order"),
+                        Tab.Account to com.rahalgo.ui.BallTab(com.rahalgo.ui.R.drawable.ic_user, R.string.nav_profile, 0, "nav_profile"),
+                    )
+                } else {
+                    listOf(
+                        Tab.Shop to com.rahalgo.ui.BallTab(R.drawable.ic_store, R.string.nav_shop, 0, "nav_shop"),
+                        Tab.Account to com.rahalgo.ui.BallTab(com.rahalgo.ui.R.drawable.ic_user, R.string.nav_profile, 0, "nav_profile"),
                     )
                 }
+                // **والسلّةُ تُنزل رايتَها بكلّ تبويب** (`overlay.clear()`، شكوى ٢٠٢٦-٠٨-١٨)؛ وطبقةٌ مفتوحةٌ تُبقي
+                // الكرةَ على آخر تبويب.
+                com.rahalgo.ui.RahalBallNavBar(
+                    tabs = navTabs.map { it.second },
+                    selected = navTabs.indexOfFirst { it.first == tab }.coerceAtLeast(0),
+                    onSelect = { i -> tab = navTabs[i].first; overlay.clear() },
+                )
             },
         ) { padding ->
             // **حشوةٌ مركزيّةٌ لقرص الحديث** — كلُّ شاشةٍ قابلةٍ للتمرير تقرؤها (`LocalChatFabInset`)
