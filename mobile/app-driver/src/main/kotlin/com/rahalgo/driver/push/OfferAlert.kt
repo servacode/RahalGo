@@ -7,7 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
-import android.media.RingtoneManager
+import android.net.Uri
 import androidx.core.app.NotificationCompat
 import com.rahalgo.driver.MainActivity
 import com.rahalgo.driver.R
@@ -33,8 +33,16 @@ import com.rahalgo.ui.push.RahalPushService
  */
 object OfferAlert {
 
-    /** **قناةٌ جديدةٌ لا تعديلُ القديمة** — أندرويد لا يغيّر صوتَ قناةٍ أُنشئت. */
-    const val CHANNEL = "rahalgo_offer_ring"
+    /**
+     * **قناةٌ جديدةٌ لا تعديلُ القديمة** — أندرويد لا يغيّر صوتَ قناةٍ أُنشئت.
+     *
+     * (ملاحظةُ المالك ٢٠٢٦-١١-١٤: «نغمةُ الطلبات صارت مثل نغمة الاتصال، مزعجة».) كانت القناةُ
+     * `rahalgo_offer_ring` على **نغمة اتّصال الهاتف** — فصار للعرض **رنّةُ رحّال غو القصيرة**
+     * (`res/raw/order_chime.ogg`: ثلاثُ نقراتِ جرسٍ في نحو ثانية، ثمّ سكوتٌ حتّى الثالثة)،
+     * **وتكرارُها كلَّ ثلاث ثوانٍ** يأتي من `FLAG_INSISTENT` نفسِه. **والقديمةُ تُحذف** فلا تبقى في الإعدادات.
+     */
+    const val CHANNEL = "rahalgo_offer_chime"
+    private const val OLD_CHANNEL = "rahalgo_offer_ring"
     private const val TAG = "rahalgo_offer"
     private const val FALLBACK_MS = 60_000L
     private const val MAX_MS = 300_000L
@@ -99,9 +107,9 @@ object OfferAlert {
     }
 
     private fun ensureChannel(context: Context, manager: NotificationManager) {
+        runCatching { manager.deleteNotificationChannel(OLD_CHANNEL) }
         if (manager.getNotificationChannel(CHANNEL) != null) return
-        val sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        val sound = Uri.parse("android.resource://${context.packageName}/${R.raw.order_chime}")
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL,
@@ -111,7 +119,7 @@ object OfferAlert {
                 setSound(
                     sound,
                     AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .build(),
                 )
