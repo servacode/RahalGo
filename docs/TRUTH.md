@@ -1271,6 +1271,10 @@ kosom` |
 | `drivers.landmarks_duplicate_radius_m` | السائقون | int | `100` |
 | `drivers.landmarks_reminder_hour` | السائقون | int | `18` |
 | `drivers.landmarks_remind_on_shift_end` | السائقون | bool | `true` |
+| `drivers.late_shift_penalty_on` | السائقون | bool | `false` |
+| `drivers.late_shift_grace_min` | السائقون | int | `5` |
+| `drivers.late_shift_wallet_deliveries` | السائقون | int | `0` |
+| `drivers.late_shift_target_deliveries` | السائقون | int | `0` |
 | `drivers.odometer_mode` | السائقون | choice | `require` |
 | `drivers.odometer_max_jump_km` | السائقون | int | `150` |
 | `drivers.odometer_gap_alert_km` | السائقون | int | `5` |

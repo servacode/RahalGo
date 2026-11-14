@@ -1224,6 +1224,25 @@ var Catalog = []Def{
 	{Key: "drivers.landmarks_remind_on_shift_end", Group: GroupDrivers, Kind: KindBool, Default: true},
 
 	// ══════════════════════════════════════════════════════════════════
+	// **عقوبةُ تأخير فتح الدوام** (قرارُ المالك ٢٠٢٦-١١-١٤) — `server/late_shift_penalty.go`
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// كلُّ سائقٍ فعّالٍ لم يفتح دوامه خلال دقائق السماح بعد فتح المنصّة (أوّلُ فترةٍ بيومها)،
+	// وليس عليه «إجازة» لهذا اليوم: يُخصم من محفظته **عددُ توصيلات × `delivery.fee`**، ومن
+	// عدّاد هدفه الشهريّ عددُ توصيلات — مرّةً باليوم. **ومطفأةٌ افتراضاً**، والتشغيلُ يسري
+	// من اليوم التالي إن شُغّلت بعد موعد اليوم.
+	{Key: "drivers.late_shift_penalty_on", Group: GroupDrivers, Kind: KindBool, Default: false},
+	{Key: "drivers.late_shift_grace_min", Group: GroupDrivers, Kind: KindInt,
+		Min: 1, Max: 120, Unit: "minute", Default: 5,
+		ShowWhen: &Condition{Key: "drivers.late_shift_penalty_on", Equals: []string{"true"}}},
+	{Key: "drivers.late_shift_wallet_deliveries", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 50, Unit: "order", Default: 0,
+		ShowWhen: &Condition{Key: "drivers.late_shift_penalty_on", Equals: []string{"true"}}},
+	{Key: "drivers.late_shift_target_deliveries", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 200, Unit: "order", Default: 0,
+		ShowWhen: &Condition{Key: "drivers.late_shift_penalty_on", Equals: []string{"true"}}},
+
+	// ══════════════════════════════════════════════════════════════════
 	// **عدّاد الدرّاجة عند فتح الدوام وسكّره** (قرار المالك ٢٠٢٦-١١-٠٥) — `server/driver_odometer.go`
 	// ══════════════════════════════════════════════════════════════════
 	//

@@ -56,6 +56,7 @@ import {
   StoresTab,
   EndShiftButton,
   OdometerExemptionButton,
+  LateShiftCard,
 } from "@/components/admin/ProfileRoleTabs";
 import { useCanCall } from "@/lib/policy";
 import {
@@ -865,6 +866,8 @@ export default function UserProfilePage() {
           }
         />
       )}
+      {/* **تأخيرُ فتح الدوام: إجازةُ اليوم وعقوباتُه** (قرارُ المالك ٢٠٢٦-١١-١٤). */}
+      {has("driver") && !gone && <LateShiftCard userID={p.id} />}
       {has("customer") && <CashBanCard userID={p.id} />}
       {has("sales") && p.held_commissions_count > 0 && (
         <Alert tone="warning" className="mb-3">

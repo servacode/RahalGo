@@ -1620,13 +1620,14 @@
     },
     {
       "kind": "penalty",
-      "semantics": "عقوبةٌ تُخصم من مخالفٍ وتدخل الخزينة — **وما زاد على متاحه يصير ديناً** (`penalty_remainder`).",
+      "semantics": "عقوبةٌ تُخصم من مخالفٍ وتدخل الخزينة — **وما زاد على متاحه يصير ديناً** (`penalty_remainder`). **والموجبُ إلغاؤها**: تردّ الخزينةُ ما قبضت ويسقط باقي دينها.",
       "sign": "±",
       "ref_required": false,
-      "path": "POST /admin/users/{id}/incentive",
+      "path": "POST /admin/users/{id}/incentive · وتأخيرُ فتح الدوام (آليّ) · وPOST /admin/late-shift-penalties/{id}/cancel",
       "creators": [
         "internal/incentives/incentives.go:277",
-        "internal/incentives/incentives.go:286"
+        "internal/incentives/incentives.go:286",
+        "internal/server/late_shift_penalty.go"
       ],
       "invariants": [
         "FI-03.a",

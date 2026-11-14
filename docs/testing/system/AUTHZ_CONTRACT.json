@@ -29,7 +29,7 @@
   {
    "code": "drivers.manage",
    "description": "إدارة السائقين وتشغيلهم",
-   "guards_routes": 4
+   "guards_routes": 6
   },
   {
    "code": "drivers.monitor",
@@ -39,7 +39,7 @@
   {
    "code": "drivers.read",
    "description": "قراءة سجل السائقين ومواقعهم",
-   "guards_routes": 2
+   "guards_routes": 3
   },
   {
    "code": "emergencies.manage",
@@ -54,7 +54,7 @@
   {
    "code": "finance.manage",
    "description": "اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة",
-   "guards_routes": 50
+   "guards_routes": 51
   },
   {
    "code": "finance.read",
@@ -273,7 +273,7 @@
   }
  ],
  "route_policy": {
-  "rules": 371,
+  "rules": 375,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

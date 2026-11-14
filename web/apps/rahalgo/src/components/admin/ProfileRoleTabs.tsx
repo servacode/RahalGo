@@ -837,6 +837,146 @@ export function OdometerExemptionButton({ userID }: { userID: string }) {
   );
 }
 
+type LateShiftPenalty = {
+  id: string;
+  day: string;
+  opening_at: string;
+  grace_min: number;
+  wallet_deliveries: number;
+  target_deliveries: number;
+  amount: number;
+  created_at: string;
+  cancelled_at: string | null;
+  cancel_reason: string;
+};
+
+/**
+ * **تأخيرُ فتح الدوام** (قرارُ المالك ٢٠٢٦-١١-١٤) — زرُّ «إجازة اليوم» (يومُ المنصّة) ويُتراجَع عنه،
+ * وآخرُ عقوبات التأخير مع «إلغاء العقوبة» لمن يملك المال. **والإجازةُ بعد العقوبة لا تلغيها.**
+ */
+export function LateShiftCard({ userID }: { userID: string }) {
+  const canCall = useCanCall();
+  const L = D.lateShift;
+  const [data, setData] = useState<{ day: string; on_leave: boolean; enabled: boolean; penalties: LateShiftPenalty[] } | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [cancelID, setCancelID] = useState("");
+  const [reason, setReason] = useState("");
+  const canRead = canCall("GET", "/drivers/{id}/late-shift");
+  const canLeave = canCall("POST", "/drivers/{id}/leave");
+  const canCancel = canCall("POST", "/late-shift-penalties/{id}/cancel");
+  const load = useCallback(() => {
+    if (!canRead) return;
+    api<{ day: string; on_leave: boolean; enabled: boolean; penalties: LateShiftPenalty[] }>(
+      `/api/v1/admin/drivers/${userID}/late-shift`,
+    )
+      .then((d) => {
+        setData(d);
+        setError("");
+      })
+      .catch((err) => setError(errorText(err)));
+  }, [userID, canRead]);
+  useEffect(() => {
+    load();
+  }, [load]);
+  if (!canRead) return null;
+  async function toggleLeave(on: boolean) {
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/admin/drivers/${userID}/leave`, { method: on ? "POST" : "DELETE" });
+      load();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function cancelPenalty() {
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/admin/late-shift-penalties/${cancelID}/cancel`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      setCancelID("");
+      setReason("");
+      load();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="mb-3 surface p-3">
+      <p className="mb-2 text-sm font-bold">{L.title}</p>
+      {error && <Alert>{error}</Alert>}
+      {data && (
+        <div className="space-y-2">
+          {!data.enabled && <p className="text-xs text-ink-muted">{L.off}</p>}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={data.on_leave ? "warning" : "neutral"}>{data.on_leave ? L.onLeave : L.notOnLeave}</Badge>
+            {canLeave && (
+              <Button variant="secondary" className="!px-2.5" disabled={busy} onClick={() => void toggleLeave(!data.on_leave)}>
+                {data.on_leave ? L.unleave : L.leave}
+              </Button>
+            )}
+          </div>
+          {canLeave && <p className="text-xs text-ink-muted">{L.leaveHint}</p>}
+          <p className="pt-1 text-sm font-bold">{L.penalties}</p>
+          {data.penalties.length === 0 ? (
+            <p className="text-xs text-ink-muted">{L.none}</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {data.penalties.map((x) => (
+                <li key={x.id} className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-bold">{x.day}</span>
+                  {x.amount > 0 && (
+                    <span>
+                      {L.wallet}: {fmtMoney(x.amount)}
+                    </span>
+                  )}
+                  {x.target_deliveries > 0 && (
+                    <span>
+                      {L.target}: {fmtNum(x.target_deliveries)} {L.deliveries}
+                    </span>
+                  )}
+                  {x.cancelled_at ? (
+                    <Badge variant="neutral">{L.cancelled}</Badge>
+                  ) : (
+                    canCancel && (
+                      <Button variant="secondary" className="!px-2.5" disabled={busy} onClick={() => setCancelID(x.id)}>
+                        {L.cancel}
+                      </Button>
+                    )
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {cancelID && (
+        <Modal open onClose={() => setCancelID("")} title={L.cancelTitle}>
+          <div className="space-y-3">
+            <p className="text-sm text-ink-muted">{L.cancelHint}</p>
+            <Input
+              id="late-shift-cancel-reason"
+              label={L.cancelReason}
+              maxLength={300}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+            <FormActions onSave={() => void cancelPenalty()} onCancel={() => setCancelID("")} busy={busy} saveLabel={L.cancel} />
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 /**
  * **متاجرُه** — لصاحب المتجر متجرُه، **وللمندوب ما جلب.**
  *

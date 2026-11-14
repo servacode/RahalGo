@@ -1712,6 +1712,74 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/drivers/{id}/late-shift",
+      "handler": "handleAdminDriverLateShift",
+      "auth": true,
+      "capability": "drivers.read",
+      "response": [
+        {
+          "name": "day",
+          "type": "unknown"
+        },
+        {
+          "name": "enabled",
+          "type": "unknown"
+        },
+        {
+          "name": "on_leave",
+          "type": "unknown"
+        },
+        {
+          "name": "penalties",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/drivers/{id}/leave",
+      "handler": "handleAdminDriverLeave",
+      "auth": true,
+      "capability": "drivers.manage",
+      "response": [
+        {
+          "name": "day",
+          "type": "unknown"
+        },
+        {
+          "name": "on_leave",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/drivers/{id}/leave",
+      "handler": "handleAdminDriverLeave",
+      "auth": true,
+      "capability": "drivers.manage",
+      "response": [
+        {
+          "name": "day",
+          "type": "unknown"
+        },
+        {
+          "name": "on_leave",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/drivers/{id}/odometer-exemption",
       "handler": "handleAdminOdometerExemption",
@@ -2560,6 +2628,32 @@
       "handler": "handleIncentiveExport",
       "auth": true,
       "capability": "finance.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/late-shift-penalties/{id}/cancel",
+      "handler": "handleCancelLateShiftPenalty",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "cancelled",
+          "type": "bool"
+        },
+        {
+          "name": "refund",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
     },
     {
       "method": "GET",

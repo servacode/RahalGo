@@ -228,6 +228,8 @@ var placeRules = []placeRule{
 	{prefix: "drivers.reward_", topic: TopicDrivers, section: "drivers.targets"},
 	// **معالمُ الخريطة** (قرارُ المالك ٢٠٢٦-١١-٠٥) — العددُ اليوميّ والمكرَّرُ والتذكير في صندوقٍ واحد.
 	{prefix: "drivers.landmarks_", topic: TopicDrivers, section: "drivers.landmarks"},
+	// **عقوبةُ تأخير فتح الدوام** (قرارُ المالك ٢٠٢٦-١١-١٤) — المفتاحُ والسماحُ والعددان معاً.
+	{prefix: "drivers.late_shift_", topic: TopicDrivers, section: "drivers.late_shift"},
 	{prefix: "drivers.", topic: TopicDrivers, section: "drivers.work"},
 	{prefix: "merchants.", topic: TopicMerchants},
 	{prefix: "sales.", topic: TopicReps},

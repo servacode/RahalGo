@@ -190,6 +190,18 @@ func (s *Service) HoursClosedAt(ctx context.Context, q dbtx.Querier, now time.Ti
 	return enforced && !gate.OpenAt(now), nil
 }
 
+// Gate **قيدُ المنصّة الزمنيُّ كما يحكم الآن** — أيسري الجدول، وأيُّ جدول (الزرُّ إن ضُغط وإلّا
+// المحفوظ). **و«مفتوحين» بالزرّ أو جدولٌ لا يسري ⇒ `false`**: لا فتحَ ولا إغلاقَ مجدول.
+// يقرؤه كانسُ تأخير فتح الدوام (قرارُ المالك ٢٠٢٦-١١-١٤) ليعرف ساعةَ فتح اليوم.
+func (s *Service) Gate(ctx context.Context, q dbtx.Querier) (bool, Schedule, error) {
+	sch, err := s.Schedule(ctx, q)
+	if err != nil {
+		return false, nil, err
+	}
+	enforced, gate := s.platformGate(ctx, sch)
+	return enforced, gate, nil
+}
+
 // WithClosedText **نصُّ المالك لخارج الدوام وحدَه** — لا يمسّ الإيقافَ المؤقّت (له نصُّه)
 // ولا المفتوح، **وفارغُه لا يغيّر شيئاً.**
 func WithClosedText(st State, text string) State {

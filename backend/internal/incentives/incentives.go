@@ -185,7 +185,7 @@ func (s *Service) StandingsFor(ctx context.Context, role, month string) ([]Stand
 		                 WHERE i.user_id = u.id AND i.kind = 'reward' AND NOT i.for_target
 		                   AND `+inMonth+`), 0),
 		       COALESCE((SELECT sum(i.amount) FROM incentives i
-		                 WHERE i.user_id = u.id AND i.kind = 'penalty'
+		                 WHERE i.user_id = u.id AND i.kind = 'penalty' AND i.voided_at IS NULL
 		                   AND `+inMonth+`), 0),
 		       COALESCE((SELECT w.balance - w.reserved FROM wallets w WHERE w.user_id = u.id), 0),
 		       `+pendingSQL(role, "u.id")+`
@@ -227,7 +227,7 @@ func (s *Service) SummaryOf(ctx context.Context, role, month string, rows []Stan
 	err := s.db.QueryRow(ctx, `
 		SELECT COALESCE(sum(i.amount) FILTER (WHERE i.kind = 'reward' AND i.for_target), 0),
 		       COALESCE(sum(i.amount) FILTER (WHERE i.kind = 'reward' AND NOT i.for_target), 0),
-		       COALESCE(sum(i.amount) FILTER (WHERE i.kind = 'penalty'), 0)
+		       COALESCE(sum(i.amount) FILTER (WHERE i.kind = 'penalty' AND i.voided_at IS NULL), 0)
 		  FROM incentives i
 		 WHERE `+roleCondSQL("$1")+`
 		   AND i.created_at >= `+monthFromSQL("$2::text")+`
@@ -441,6 +441,60 @@ func (s *Service) GrantRoleTx(ctx context.Context, q dbtx.Querier,
 		}
 	}
 	return &e, nil
+}
+
+// ErrPenaltyGone **عقوبةٌ لا وجودَ لها أو أُلغيت قبلُ** — والإلغاءُ لا يتكرّر.
+var ErrPenaltyGone = httpx.NewError(http.StatusConflict, "penalty_already_voided", "errors.conflict")
+
+// VoidPenaltyTx **يُلغي عقوبةً قُيّدت** (قرارُ المالك ٢٠٢٦-١١-١٤، إلغاءُ عقوبة تأخير الدوام) —
+// **في المعاملة المُمرَّرة، والخزينةُ تردّ ما قبضت.**
+//
+//	١ · باقي الدين الذي نشأ منها (`penalty_remainder`) يُسقط بلا مال.
+//	٢ · وما وصل الخزينةَ منها — المخصومُ من المحفظة وما سُدّ من دينها — يعود للمحفظة بالنوع
+//	    نفسِه (`penalty`) ومرجعُه صفُّ العقوبة، فيتوازن `FI-03.a`.
+//	٣ · والصفُّ يبقى ويُعلَّم (`voided_at`) فلا يُعدّ في «ما خُصم منه».
+//
+// ويُرجع ما رُدّ إلى المحفظة.
+func (s *Service) VoidPenaltyTx(ctx context.Context, q dbtx.Querier,
+	actorID, incentiveID, note string) (int64, error) {
+	var userID string
+	var amount int64
+	err := q.QueryRow(ctx, `
+		SELECT user_id::text, amount FROM incentives
+		 WHERE id = $1::uuid AND kind = 'penalty' AND voided_at IS NULL
+		 FOR UPDATE`, incentiveID).Scan(&userID, &amount)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, ErrPenaltyGone
+	}
+	if err != nil {
+		return 0, err
+	}
+	unpaid, err := obligations.VoidBySource(ctx, q, incentiveID,
+		obligations.CausePenaltyRemainder, &actorID)
+	if err != nil {
+		return 0, err
+	}
+	refund := amount - unpaid
+	if strings.TrimSpace(note) == "" {
+		note = "إلغاء عقوبة"
+	}
+	if refund > 0 {
+		if _, err := s.wallet.ApplyTx(ctx, q, userID, refund, KindPenalty, incentiveID, note, &actorID); err != nil {
+			return 0, err
+		}
+		if tid := s.treasury(ctx); tid != "" {
+			if _, err := s.wallet.ApplyTx(ctx, q, tid, -refund, KindPenalty, incentiveID,
+				"عقوبةٌ أُلغيت فرُدّت", &actorID); err != nil {
+				return 0, err
+			}
+		}
+	}
+	if _, err := q.Exec(ctx, `
+		UPDATE incentives SET voided_at = now(), voided_by = $2::uuid WHERE id = $1::uuid`,
+		incentiveID, actorID); err != nil {
+		return 0, err
+	}
+	return max(refund, 0), nil
 }
 
 // debtParty **على أيّ طرفٍ يُكتب دينُ الشخص** — سائقاً، وإلّا مندوباً، وإلّا لا أحد.

@@ -140,6 +140,11 @@ var notifTitles = struct {
 	// **الدوامُ المفتوحُ بعد إغلاق المنصّة** (قرار المالك ٢٠٢٦-١١-٠٦، `shift_close_remind.go`) —
 	// إشعارٌ عند الإغلاق وتذكيرٌ واحدٌ باليوم التالي.
 	shiftPlatformClosed, shiftPlatformClosedBody, shiftStillOpen, shiftStillOpenBody string
+	// **تأخيرُ فتح الدوام** (قرار المالك ٢٠٢٦-١١-١٤، `late_shift_penalty.go`) — تذكيرٌ قبل الموعد
+	// بدقيقتين، وإشعارُ العقوبة بسببها ومقدارها، وإشعارُ إلغائها. `{time}` ساعةُ فتح المنصّة
+	// و`{grace}` دقائقُ السماح و`{amount}` المبلغ و`{n}` عددُ التوصيلات.
+	lateShiftRemind, lateShiftRemindBody, lateShiftPenalty, lateShiftPenaltyBody         string
+	lateShiftWalletPart, lateShiftTargetPart, lateShiftCancelled, lateShiftCancelledBody string
 	// **أصناف من الأمين بلا قسم** (قرار المالك ٢٠٢٦-١١-٠٧، `price_sync_notify.go`) — للمتجر
 	// وللإدارة بعد المزامنة، وتذكير واحد بعد يومين. `{n}` العدد و`{store}` اسم المتجر.
 	priceSyncPendingTitle, priceSyncPendingBody, priceSyncPendingRemindTitle string
@@ -227,6 +232,14 @@ var notifTitles = struct {
 	shiftPlatformClosedBody:     "سكّر دوامك من التطبيق — صوّر العدّاد واضغط «أنهِ العمل».",
 	shiftStillOpen:              "دوامك من أمس لسّا مفتوح",
 	shiftStillOpenBody:          "المنصة سكّرت مبارح ودوامك ضلّ مفتوح — سكّره من التطبيق، وإذا رجعت تشتغل افتحه من جديد.",
+	lateShiftRemind:             "باقي دقيقتين، افتح دوامك",
+	lateShiftRemindBody:         "المنصة فتحت الساعة {time}. افتح دوامك من التطبيق قبل ما يمرق {grace} دقائق على الفتح حتى ما تنخصم عليك عقوبة التأخير.",
+	lateShiftPenalty:            "عقوبة تأخير فتح الدوام",
+	lateShiftPenaltyBody:        "ما فتحت دوامك خلال {grace} دقائق من فتح المنصة الساعة {time}.",
+	lateShiftWalletPart:         " انخصم من محفظتك {amount}.",
+	lateShiftTargetPart:         " وانخصم من عدّاد هدفك هالشهر {n} توصيلات.",
+	lateShiftCancelled:          "انلغت عقوبة تأخير الدوام",
+	lateShiftCancelledBody:      "الإدارة لغت عقوبة تأخير فتح الدوام تبع يوم {day}، ورجع اللي انخصم.",
 	priceSyncPendingTitle:       "في أصناف من الأمين بلا قسم",
 	priceSyncPendingBody:        "في {n} صنف من الأمين بلا قسم — رتّبهن من صفحة مزامنة الأسعار",
 	priceSyncPendingRemindTitle: "تذكير: في أصناف من الأمين بلا قسم",

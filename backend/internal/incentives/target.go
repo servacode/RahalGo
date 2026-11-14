@@ -438,10 +438,14 @@ func doneSQL(role, who, month string) string {
 		            AND mm.rep_qualified_at >= ` + monthFromSQL(month) + `
 		            AND mm.rep_qualified_at <  ` + monthToSQL(month) + `)`
 	}
-	return `(SELECT count(*) FROM orders o
+	// **وخصمُ الهدف يُطرح** (عقوبةُ تأخير فتح الدوام، قرارُ المالك ٢٠٢٦-١١-١٤) — من هنا وحدَه،
+	// فلوحةُ الأهداف وتطبيقُ السائق والصرفُ الآليّ يقرؤون العددَ نفسَه. **ولا ينزل تحت الصفر.**
+	return `GREATEST(0, (SELECT count(*) FROM orders o
 	          WHERE o.driver_id = ` + who + ` AND o.status = 'delivered'
 	            AND o.delivered_at >= ` + monthFromSQL(month) + `
-	            AND o.delivered_at <  ` + monthToSQL(month) + `)`
+	            AND o.delivered_at <  ` + monthToSQL(month) + `)
+	        - COALESCE((SELECT sum(a.deliveries) FROM driver_target_adjustments a
+	                     WHERE a.driver_id = ` + who + ` AND a.month = ` + month + `), 0))`
 }
 
 // pendingSQL **متاجرُ فتحها المندوبُ ولم تكتمل شروطُها** — فاعلةٌ؛ وللسائق صفر.

@@ -223,9 +223,11 @@ var Kinds = map[string]KindContract{
 	},
 	"penalty": {
 		Kind: "penalty", Sign: "±", RefRequired: false,
-		Creators:   []string{"internal/incentives/incentives.go:277", "internal/incentives/incentives.go:286"},
-		Path:       "POST /admin/users/{id}/incentive",
-		Semantics:  "عقوبةٌ تُخصم من مخالفٍ وتدخل الخزينة — **وما زاد على متاحه يصير ديناً** (`penalty_remainder`).",
+		Creators: []string{"internal/incentives/incentives.go:277", "internal/incentives/incentives.go:286",
+			"internal/server/late_shift_penalty.go", // عقوبةُ تأخير فتح الدوام الآليّة وإلغاؤها (٢٠٢٦-١١-١٤) ← GrantRoleTx · VoidPenaltyTx
+		},
+		Path:       "POST /admin/users/{id}/incentive · وتأخيرُ فتح الدوام (آليّ) · وPOST /admin/late-shift-penalties/{id}/cancel",
+		Semantics:  "عقوبةٌ تُخصم من مخالفٍ وتدخل الخزينة — **وما زاد على متاحه يصير ديناً** (`penalty_remainder`). **والموجبُ إلغاؤها**: تردّ الخزينةُ ما قبضت ويسقط باقي دينها.",
 		Invariants: []string{"FI-03.a", "FI-02.b"},
 		Reachable:  true,
 	},

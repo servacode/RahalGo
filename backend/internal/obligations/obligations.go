@@ -366,6 +366,40 @@ func VoidForOrder(ctx context.Context, q Querier, partyKind, partyID, orderID, c
 	return bumpCache(ctx, q, partyKind, partyID, -remaining)
 }
 
+// VoidBySource **يُسقط باقيَ التزامٍ نشأ من مصدرٍ غيرِ الطلب** — عقوبةٌ أُلغيت (قرارُ المالك
+// ٢٠٢٦-١١-١٤، عقوبةُ تأخير فتح الدوام). كـ`VoidForOrder`: سطرُ تسويةٍ بلا قيدِ دفتر بالباقي،
+// والصفُّ يبقى. **ويُرجع ما أُسقط** — وما سُدّ قبله يردّه صاحبُ الإلغاء من الخزينة.
+func VoidBySource(ctx context.Context, q Querier, sourceRef, cause string, actorID *string) (int64, error) {
+	var id, partyKind, partyID string
+	var remaining int64
+	err := q.QueryRow(ctx, `
+		SELECT id::text, party_kind, party_id::text, amount - settled FROM financial_obligations
+		 WHERE source_ref = $1 AND cause = $2 AND closed_at IS NULL
+		 FOR UPDATE`, sourceRef, cause).Scan(&id, &partyKind, &partyID, &remaining)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	if remaining <= 0 {
+		return 0, nil
+	}
+	if _, err := q.Exec(ctx, `
+		INSERT INTO obligation_settlements
+		       (obligation_id, amount, order_id, ledger_tx_id, remaining, created_by, method, ref)
+		VALUES ($1, $2, NULL, NULL, 0, $3, $4, $5)`, id, remaining, actorID,
+		MethodVoided, sourceRef); err != nil {
+		return 0, err
+	}
+	if _, err := q.Exec(ctx, `
+		UPDATE financial_obligations SET settled = amount, closed_at = now()
+		 WHERE id = $1`, id); err != nil {
+		return 0, err
+	}
+	return remaining, bumpCache(ctx, q, partyKind, partyID, -remaining)
+}
+
 // ErrClosed **الالتزامُ مغلقٌ أو لا باقيَ يكفي** — سُدّ بين الاقتراح والموافقة.
 var ErrClosed = errors.New("obligation closed or short")
 

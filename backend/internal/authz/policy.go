@@ -276,6 +276,12 @@ var adminPolicy = []Rule{
 	{"PATCH", "/driver-odometer/{id}", DriversMonitor},
 	// **وسماحٌ بفتح الدوام بلا صورةٍ مرّةً واحدة** — بقدرة تشغيل السائقين كإنهاء الدوام.
 	{"POST", "/drivers/{id}/odometer-exemption", DriversManage},
+	// **عقوبةُ تأخير فتح الدوام** (قرارُ المالك ٢٠٢٦-١١-١٤): الإجازةُ بقدرة تشغيل السائقين،
+	// والإلغاءُ يردّ مالاً فبقدرة المال.
+	{"GET", "/drivers/{id}/late-shift", DriversRead},
+	{"POST", "/drivers/{id}/leave", DriversManage},
+	{"DELETE", "/drivers/{id}/leave", DriversManage},
+	{"POST", "/late-shift-penalties/{id}/cancel", FinanceManage},
 	{"GET", "/driver-monitor/{id}/recent", DriversMonitor},
 
 	// ── المال ───────────────────────────────────────────────────

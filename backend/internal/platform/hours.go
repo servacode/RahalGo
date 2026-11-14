@@ -363,3 +363,32 @@ func (s Schedule) Today(now time.Time) []Window {
 	}
 	return out
 }
+
+// FirstStartIn **أوّلُ بدءِ فترةٍ في المدى `[from, to)`** — لحظةُ «فتحت المنصّة» بيوم المنصّة.
+//
+// **وفارغٌ يعني لا فتحَ في المدى** (يومٌ مغلق). والمدى يومُ المنصّة من ساعة بدئه
+// (`platform.day_start_hour`)، فالعابرةُ منتصفَ الليل تُحسب ليوم بدئها.
+func (s Schedule) FirstStartIn(from, to time.Time) *time.Time {
+	loc := Location()
+	f := from.In(loc)
+	var best *time.Time
+	for d := -1; d <= 1; d++ {
+		day := f.AddDate(0, 0, d)
+		dow := int(day.Weekday())
+		for _, w := range s {
+			if w.Day != dow {
+				continue
+			}
+			start := time.Date(day.Year(), day.Month(), day.Day(),
+				int(w.Start)/60, int(w.Start)%60, 0, 0, loc)
+			if start.Before(from) || !start.Before(to) {
+				continue
+			}
+			if best == nil || start.Before(*best) {
+				c := start
+				best = &c
+			}
+		}
+	}
+	return best
+}

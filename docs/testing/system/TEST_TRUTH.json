@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 713,
+    "routes": 717,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 140,
-    "notify_targeted": 72,
+    "notify_sites": 143,
+    "notify_targeted": 75,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 286,
-    "behaviour_settings": 241,
+    "setting_defs": 290,
+    "behaviour_settings": 245,
     "order_fields": 148,
-    "test_files": 844,
-    "test_funcs": 3221
+    "test_files": 845,
+    "test_funcs": 3224
   },
   "flows": [
     {
@@ -4717,6 +4717,90 @@
     },
     {
       "key": "drivers.landmarks_reminder_hour",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.late_shift_grace_min",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.late_shift_penalty_on",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.late_shift_target_deliveries",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.late_shift_wallet_deliveries",
       "group": "drivers",
       "kind": "int",
       "sensitive": false,
@@ -20394,6 +20478,24 @@
     {
       "name": "TestDriverLandmarksToday",
       "file": "internal/qa/landmark_today_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLateShift_LeaveButton",
+      "file": "internal/qa/late_shift_penalty_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLateShift_NothingWhenOffOrClosed",
+      "file": "internal/qa/late_shift_penalty_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLateShift_PenaltyOnceAndCancel",
+      "file": "internal/qa/late_shift_penalty_test.go",
       "package": "qa",
       "orphan": true
     },

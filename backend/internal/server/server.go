@@ -1847,6 +1847,11 @@ func (s *Server) Router() http.Handler {
 			r.Patch("/driver-odometer/{id}", s.handleAdminOdometerCorrect)
 			// **وسماحٌ بفتح الدوام بلا صورةٍ مرّةً واحدة** — بسببٍ مكتوب.
 			r.Post("/drivers/{id}/odometer-exemption", s.handleAdminOdometerExemption)
+			// **عقوبةُ تأخير فتح الدوام** (قرارُ المالك ٢٠٢٦-١١-١٤) — إجازةُ اليوم وعقوباتُه وإلغاؤها.
+			r.Get("/drivers/{id}/late-shift", s.handleAdminDriverLateShift)
+			r.Post("/drivers/{id}/leave", s.handleAdminDriverLeave(true))
+			r.Delete("/drivers/{id}/leave", s.handleAdminDriverLeave(false))
+			r.Post("/late-shift-penalties/{id}/cancel", s.handleCancelLateShiftPenalty)
 			r.Get("/driver-monitor/{id}/recent", s.handleDriverMonitorRecent)
 			r.Get("/drivers/{id}/cash", s.handleDriverCashStatement)
 			// **وكلُّ ما سلّمه — لا النقديُّ وحدَه** (٢٠٢٦-١٠-٣٠) — للعرض فقط.
