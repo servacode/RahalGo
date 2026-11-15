@@ -638,7 +638,11 @@ export default function ObligationsPage() {
                         </OpenLink>
                       )}
                       {!f.party && (
-                        <button type="button" className="hover:underline" onClick={() => pick({ party: o.party_id })}>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-full border border-accent px-3 py-1 text-xs font-bold text-accent hover:bg-row-hover"
+                          onClick={() => pick({ party: o.party_id })}
+                        >
                           {O.partyFilter}
                         </button>
                       )}
