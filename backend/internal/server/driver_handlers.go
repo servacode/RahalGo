@@ -1532,6 +1532,13 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	// **موقعُ الزبون المباشر يُقرأ قبل «سُلّم»** (قرارُ المالك ٢٠٢٦-١١-١٥) — زنادُ
+	// `orders_clear_live_location` يمحوه في معاملة التسليم نفسِها، فلا يبقى بعدها ما يُقرأ.
+	var liveAtDoor *orders.LivePoint
+	if req.To == orders.StDelivered {
+		liveAtDoor = s.customerLiveAtDelivery(r.Context(), orderID)
+	}
+
 	// **وشام كاش في معاملة التسليم نفسِها** — يثبت معه أو يسقط معه، **وإعادةُ النداء لا تكرّره**
 	// (صفٌّ واحدٌ لكلّ طلب). **ولا يُمسّ المال**: السائقُ يسلّم المكتبَ المبلغَ كاملاً كالعادة.
 	var hook func(context.Context, dbtx.Querier) error
@@ -1552,7 +1559,7 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 	}
 	// **«هون عنوانك الصح؟»** (٢٠٢٦-١٠-٢١) — سُلّم بعيداً عن دبّوسه فيُسأل الزبون.
 	if req.To == orders.StDelivered {
-		s.suggestFromDelivery(r.Context(), orderID)
+		s.suggestFromDelivery(r.Context(), orderID, liveAtDoor)
 	}
 	// **«وصلت» في طلب الواتساب ⇒ البوتُ يُخبر الزبون** (قرارُ المالك ٢٠٢٦-١١-٠٨) — بانتظاره كرسالة المبالغ.
 	if req.To == orders.StAtDropoff {

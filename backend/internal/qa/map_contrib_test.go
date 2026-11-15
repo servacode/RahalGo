@@ -40,8 +40,9 @@ func TestEntrance_SavedOnAddressAndSuggestedToCustomer(t *testing.T) {
 	if _, err := h.Pool.Exec(ctxBG(), `UPDATE orders SET status = 'delivered' WHERE id = $1::uuid`, id); err != nil {
 		t.Fatal(err)
 	}
-	if res := h.POST("/api/v1/driver/orders/"+id+"/entrance", drv.Token, map[string]any{"lat": lat + 0.002, "lng": lng}); res.Code != 422 {
-		t.Fatalf("بابٌ على ٢٢٠ م يجب أن يُردّ: %s", res)
+	// **وأبعدُ من ٣ كم ليس هذا العنوان** (٢٠٢٦-١١-١٥) — كان الحدُّ ١٥٠ م.
+	if res := h.POST("/api/v1/driver/orders/"+id+"/entrance", drv.Token, map[string]any{"lat": lat + 0.03, "lng": lng}); res.Code != 422 {
+		t.Fatalf("بابٌ على ٣٫٣ كم يجب أن يُردّ: %s", res)
 	}
 	res := h.POST("/api/v1/driver/orders/"+id+"/entrance", drv.Token, door)
 	if res.Code != 200 || res.JSON()["saved"] != true || res.JSON()["suggested"] != true {

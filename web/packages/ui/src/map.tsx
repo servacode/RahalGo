@@ -35,7 +35,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 // والثيمُ صار سماويّاً، **فكانت الخريطةُ ترسم بألوان منصّةٍ أخرى** ولا يظهر
 // خطأً. (انظر `cssvar.ts`.)
 import { themeColor } from "./cssvar";
-import { IconLocateMe, IconAdd, IconClose, IconLocation } from "./icons";
+import { IconLocateMe, IconAdd, IconMinus, IconLocation } from "./icons";
 import { resolveMapSource, MAP_ATTRIBUTION_FALLBACK } from "./mapconfig";
 import { loadMapEngine } from "./mapengine";
 import { installLandmarks } from "./landmarks";
@@ -58,7 +58,7 @@ function ZoomControls({ onZoom }: { onZoom: (delta: number) => void }) {
         <IconAdd size={16} />
       </button>
       <button type="button" aria-label="−" className={btn} onClick={() => onZoom(-1)}>
-        <IconClose size={16} className="rotate-45" />
+        <IconMinus size={16} />
       </button>
     </div>
   );
@@ -413,7 +413,7 @@ export function PickMap({
 
         {denied && (
           <p className="absolute bottom-2 start-2 z-[1000] rounded-control bg-danger-fill px-2.5 py-1.5 text-xs text-on-bright">
-            {m.map.denied}
+            {deniedHelp()}
           </p>
         )}
       </div>
@@ -437,6 +437,27 @@ export function isAppleMobile(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent || "";
   return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && (navigator.maxTouchPoints ?? 0) > 1);
+}
+
+/**
+ * **أهو متصفّحٌ داخلَ تطبيقٍ آخر؟** (واتساب · فيسبوك · إنستغرام…) — **وهذه لا تعطي الصفحةَ موقعاً أبداً**،
+ * فخطواتُ سفاري لا تنفعه (ملاحظةُ المالك ٢٠٢٦-١١-١٥: «زرُّ تحديد الموقع لا يعمل على الآيفون»).
+ * **وآيفونُ بلا «Safari/» في هويّته ولا مثبَّتاً على الشاشة الرئيسيّة** هو صفحةٌ داخلَ تطبيق.
+ */
+export function isInAppBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (/FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Snapchat|Line\/|TikTok|musical_ly/i.test(ua)) return true;
+  const standalone = (navigator as unknown as { standalone?: boolean }).standalone === true;
+  return /iPhone|iPad|iPod/.test(ua) && !/Safari\//.test(ua) && !standalone;
+}
+
+/** **لماذا مُنع الموقع وكيف يُفتح** — بحسب ما فُتحت منه الصفحة، لا خطواتٌ عامّة. */
+export function deniedHelp(): string {
+  if (isInAppBrowser()) return m.map.deniedInApp;
+  if (!isAppleMobile()) return m.map.denied;
+  /* **والمثبَّتُ على الشاشة الرئيسيّة لا «aA» فيه** — ويبقى رافضاً حتّى يُغلق كلّيّاً ويُفتح. */
+  return (navigator as unknown as { standalone?: boolean }).standalone === true ? m.map.deniedIosPwa : m.map.deniedIos;
 }
 
 /** **كيف يشغّل الموقعَ الدقيق** — خطواتُ جهازه هو، لا خطواتٌ عامّة. */
@@ -653,7 +674,7 @@ export function CenterPinMap({
         )}
       </div>
       {denied ? (
-        <p className="text-xs text-danger">{m.map.denied}</p>
+        <p className="text-xs text-danger">{deniedHelp()}</p>
       ) : coarse ? (
         /* **والتقريبيُّ يُقال فوراً ولو كان التحسينُ جارياً** — «تم تحديد موقعك بدقة ٣٠٠٠ م» بالأخضر
            يوهم أنّه البيت (رُئي على WebKit ٢٠٢٦-١١-١٤). */

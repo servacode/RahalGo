@@ -20,6 +20,8 @@ import { useAuth } from "@/lib/auth";
 import { ENDED, type MyOrder, type MyOrdersPage } from "@/lib/customer/types";
 import { OrderSummary } from "@/components/customer/OrderSummary";
 import { NeedLogin } from "@/components/customer/NeedLogin";
+import { DropoffFix, pendingDropoffFix } from "@/components/customer/DropoffFix";
+import { useShopToast } from "@/components/customer/toast";
 
 const m = getMessages(defaultLocale);
 const O = m.shop.orders;
@@ -28,6 +30,7 @@ const PER_PAGE = 30;
 
 export default function OrdersPage() {
   const { user, loading } = useAuth();
+  const toast = useShopToast();
   const [tab, setTab] = useState<"open" | "history">("open");
   const [orders, setOrders] = useState<MyOrder[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -73,10 +76,13 @@ export default function OrdersPage() {
   const list = tab === "open" ? open : history;
   // **والسجلُّ بعدده، و«+» حين بقيت صفحات** (مرآةُ `ord_tab_history` في التطبيق).
   const hasMore = !!orders && orders.length < total;
+  // **«هل هذا عنوانك الصحيح؟» فوق القائمة** — كما يرفعها التطبيقُ من «طلباتي» (٢٠٢٦-١١-١٥).
+  const fix = pendingDropoffFix(orders);
 
   return (
     <div className="flex flex-col gap-4">
       <ScreenTitle title={O.title} actions={<span className="text-caption text-ink-muted">{O.live}</span>} />
+      {fix && <DropoffFix key={fix.id} order={fix} onDone={() => load(pages)} onMessage={(t) => toast(t)} />}
       {/* مفتاحٌ بنصفَين متساويَين (مرآةُ `SegmentedControl`) — والعدّادُ في نصّ الخيار. */}
       <Segmented<"open" | "history">
         label={O.title}

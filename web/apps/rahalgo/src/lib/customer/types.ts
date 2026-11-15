@@ -346,6 +346,9 @@ export interface MyOrder {
   to_door_eta_sec?: number | null;
   /** **مدّةُ التوصيل المتوقّعة بالدقائق** — من المحرّك، وصفرٌ لا تقدير. */
   delivery_estimate_min?: number;
+  /** **«هل هذا عنوانك الصحيح؟»** — مكانُ التسليم المقترح لعنوانه المحفوظ، و`null` لا اقتراح. */
+  dropoff_suggest_lat?: number | null;
+  dropoff_suggest_lng?: number | null;
 }
 
 /**

@@ -15,6 +15,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/routing"
 )
 
@@ -25,12 +26,18 @@ import (
 // مدخلُ البناية · «موقعك الصح هون؟» · طريقٌ مسكّر · «أضف معلم» · متاجرُنا على الخريطة.
 
 const (
-	entranceMaxFromPinM   = 150.0 // **أبعدُ من هذا ليس بابَ هذا العنوان**
+	entranceMaxFromPinM   = 150.0 // **أبعدُ من هذا ليس بابَ هذا العنوان** — فلا يُحفظ مدخلاً
 	entranceMatchAddressM = 30.0  // **العنوانُ الذي نُسخت منه نقطةُ الطلب**
 	dropoffSuggestMinM    = 100.0 // **أبعدُ من هذا يُقترَح على الزبون تعديلُ نقطته**
-	closureMergeM         = 40.0
-	closureFirstTTL       = 24 * time.Hour
-	closureConfirmedTTL   = 72 * time.Hour
+	// dropoffSuggestMaxM **أبعدُ من هذا مكانٌ آخرُ لا خطأُ دبّوس** (قرارُ المالك ٢٠٢٦-١١-١٥) —
+	// والاقتراحُ لم يعد محصوراً بـ١٥٠ م: أسوأُ الدبابيس أبعدُها.
+	dropoffSuggestMaxM = 3000.0
+	// موقعُ السائق لحظةَ التسليم: **حديثٌ ودقيق**، وإلّا فلا نقطة.
+	deliveryFixFresh    = 2 * time.Minute
+	deliveryFixMaxAccuM = 50.0
+	closureMergeM       = 40.0
+	closureFirstTTL     = 24 * time.Hour
+	closureConfirmedTTL = 72 * time.Hour
 )
 
 var (
@@ -53,6 +60,10 @@ func validPoint(lat, lng float64) bool {
 
 // handleDriverEntrance **«أنا عند باب البناية»** بعد التسليم — يُحفظ مع عنوان الزبون،
 // **وإن بعُد عن نقطته** اقتُرح عليه تعديلُها. POST /driver/orders/{id}/entrance
+//
+// **وحدّا البُعد منفصلان** (قرارُ المالك ٢٠٢٦-١١-١٥): حتّى ١٥٠ م يُحفظ مدخلاً (ويُقترح
+// فوق ١٠٠ م)، **ومن ١٥٠ م إلى ٣ كم لا يُحفظ مدخلاً ويُقترح مع ذلك** — فأسوأُ الدبابيس
+// أبعدُها. **وأبعدُ من ٣ كم يُردّ** `entrance_too_far`: ليس هذا العنوان.
 func (s *Server) handleDriverEntrance(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Lat float64 `json:"lat"`
@@ -92,12 +103,12 @@ func (s *Server) handleDriverEntrance(w http.ResponseWriter, r *http.Request) {
 	case status != "delivered":
 		s.respondErr(w, errEntranceNotYet)
 		return
-	case dist > entranceMaxFromPinM:
+	case dist > dropoffSuggestMaxM:
 		s.respondErr(w, errEntranceFar)
 		return
 	}
 	saved := int64(0)
-	if customer != nil {
+	if customer != nil && dist <= entranceMaxFromPinM {
 		tag, err := s.pg.Exec(ctx, `
 			UPDATE user_addresses a
 			   SET entrance = ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, entrance_set_at = now()
@@ -112,33 +123,84 @@ func (s *Server) handleDriverEntrance(w http.ResponseWriter, r *http.Request) {
 		saved = tag.RowsAffected()
 	}
 	// **«موقعك الصح هون؟»** — بعيدٌ عن نقطته ⇒ اقتراحٌ وإشعار، **ولا تعديلَ بلا موافقته.**
+	// **وشرطُه عنوانٌ محفوظٌ نُسخت منه نقطةُ الطلب** — فما يُعدَّل إلّا هو.
 	suggested := false
-	if customer != nil && saved > 0 && dist > dropoffSuggestMinM {
-		if _, err := s.pg.Exec(ctx, `UPDATE orders SET dropoff_suggest = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
-			WHERE id = $1`, orderID, req.Lng, req.Lat); err == nil {
-			suggested = true
-			s.notify.Notify(ctx, notifications.Input{
-				UserID: *customer, Kind: notifications.KindOrder,
-				Title:  "هل هذا عنوانك الصحيح؟",
-				Body:   "تم تسليم طلبك في موقع يختلف عن عنوانك المحفوظ. اضغط لاعتماده لطلباتك القادمة.",
-				Entity: "order", EntityID: orderID, Href: "/portal/orders",
-				Apps: []string{notifications.AppCustomer},
-			})
-			s.touch("order", "customer:"+*customer)
-		}
+	if customer != nil && dist > dropoffSuggestMinM && (saved > 0 || s.dropoffFromSavedAddress(ctx, orderID, *customer)) {
+		suggested = s.offerDropoffFix(ctx, orderID, *customer, req.Lat, req.Lng)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"saved": saved > 0, "suggested": suggested})
 }
 
-// suggestFromDelivery **«موقعك الصح هون؟» من مكان التسليم** (قرارُ المالك ٢٠٢٦-١٠-٢١: «نسأل
-// الزبون إذا هذا عنوان بيتك الصحيح») — شُهد على الجهاز طلبٌ سُلّم على بُعد ٦٣٣ م من دبّوسه
-// فلم يُسأل أحد، لأنّ «باب البناية» لا يُقبل أبعدَ من ١٥٠ م.
+// dropoffFromSavedAddress **أنُسخت نقطةُ الطلب من عنوانٍ محفوظٍ للزبون؟** — على ٣٠ م منها.
+func (s *Server) dropoffFromSavedAddress(ctx context.Context, orderID, customer string) bool {
+	var ok bool
+	err := s.pg.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM orders o JOIN user_addresses a ON a.user_id = $2::uuid
+		                WHERE o.id = $1 AND ST_DWithin(a.location, o.dropoff, $3))`,
+		orderID, customer, entranceMatchAddressM).Scan(&ok)
+	return err == nil && ok
+}
+
+// dropoffFixCollapse **مفتاحُ السؤال لكلّ طلب** — به يُعرف أنّه سُئل، فلا يُسأل مرّتين.
+func dropoffFixCollapse(orderID string) string { return "dropoff_fix:" + orderID }
+
+// offerDropoffFix **يكتب الاقتراحَ ويُشعر الزبون — مرّةً واحدةً للطلب.**
 //
-// **مكانُ التسليم موقعُ السائق لحظتَه** (قرارُ المالك: «السائق والزبون اجتمعو وسلم — هي أصحّ
-// نقطة») — آخرُ نقطةٍ له في الدقيقتين، وإلّا موقعُ الزبون المباشر في الدقائق الثلاث؛
-// **وكلاهما بدقّةٍ لا تتجاوز ٥٠ م**. وأبعدُ من ١٠٠ م عن الدبّوس وأقربُ من
-// ٥ كم ⇒ اقتراحٌ وإشعار. **ولا يُغيَّر شيءٌ بلا موافقته**: ربّما استلم في شغله.
-func (s *Server) suggestFromDelivery(ctx context.Context, orderID string) {
+// **لا يكتب فوق اقتراحٍ معلّق**، **ولا يعيد السؤالَ بعد جوابٍ عليه** (قبولٌ أو «لا، عنواني
+// صحيح» يمحوان الاقتراح، والإشعارُ الأوّل يبقى شاهداً). وسقوطُه صامت: لا يُسقط ما قبله.
+func (s *Server) offerDropoffFix(ctx context.Context, orderID, customer string, lat, lng float64) bool {
+	key := dropoffFixCollapse(orderID)
+	tag, err := s.pg.Exec(ctx, `
+		UPDATE orders o SET dropoff_suggest = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
+		 WHERE o.id = $1 AND o.dropoff_suggest IS NULL
+		   AND NOT EXISTS (SELECT 1 FROM notifications n
+		                    WHERE n.user_id = o.customer_id AND n.collapse_key = $4)`,
+		orderID, lng, lat, key)
+	if err != nil || tag.RowsAffected() == 0 {
+		return false
+	}
+	s.notify.Notify(ctx, notifications.Input{
+		UserID: customer, Kind: notifications.KindOrder,
+		Title:  "هل هذا عنوانك الصحيح؟",
+		Body:   "تم تسليم طلبك في موقع يختلف عن عنوانك المحفوظ. اضغط لاعتماده لطلباتك القادمة.",
+		Entity: "order", EntityID: orderID, Href: "/portal/orders",
+		Apps:     []string{notifications.AppCustomer},
+		Collapse: key,
+	})
+	s.touch("order", "customer:"+customer)
+	return true
+}
+
+// customerLiveAtDelivery **موقعُ الزبون المباشر لحظةَ «سُلّم»** — حديثٌ (`orders.LiveFreshFor`)
+// ودقيقٌ (`orders.live_location_max_accuracy_m`) كما يحكم به الطريق، وإلّا لا شيء.
+// **يُقرأ قبل الانتقال**: زنادُ القاعدة يمحوه مع التسليم. وسقوطُه لا يمسّ التسليم.
+func (s *Server) customerLiveAtDelivery(ctx context.Context, orderID string) *orders.LivePoint {
+	pts, err := s.orders.LiveFor(ctx, []string{orderID}, "", s.liveRule(ctx))
+	if err != nil {
+		return nil
+	}
+	if p := pts[orderID]; p != nil && p.Precise {
+		return p
+	}
+	return nil
+}
+
+// suggestFromDelivery **«موقعك الصح هون؟» تلقائيّاً عند التسليم** — بلا ضغطةٍ من السائق
+// (قرارُ المالك ٢٠٢٦-١١-١٥؛ وأصلُه ٢٠٢٦-١٠-٢١: شُهد طلبٌ سُلّم على ٦٣٣ م من دبّوسه فلم يُسأل أحد).
+//
+// **البابُ الحقيقيّ**: موقعُ الزبون المباشر إن كان حديثاً ودقيقاً (`live`، يُقرأ قبل التسليم)،
+// **وإلّا آخرُ نقطةٍ للسائق** في الدقيقتين، دقّتُها لا تتجاوز ٥٠ م ولا مزيّفة. وأبعدُ من
+// ١٠٠ م عن الدبّوس وأقربُ من ٣ كم، **والدبّوسُ من عنوانٍ محفوظ** ⇒ اقتراحٌ وإشعار.
+// **ولا يُغيَّر شيءٌ بلا موافقته**: ربّما استلم في شغله.
+//
+// **وهو بعد تثبيت التسليم وبمهلةٍ قصيرة** — لا يُسقطه ولا يؤخّره، ولا يقطعه انقطاعُ السائق.
+func (s *Server) suggestFromDelivery(ctx context.Context, orderID string, live *orders.LivePoint) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	var liveLat, liveLng *float64
+	if live != nil && live.Precise {
+		liveLat, liveLng = &live.Lat, &live.Lng
+	}
 	var customer string
 	var lat, lng float64
 	err := s.pg.QueryRow(ctx, `
@@ -147,36 +209,27 @@ func (s *Server) suggestFromDelivery(ctx context.Context, orderID string) {
 			 WHERE id = $1 AND status = 'delivered' AND dropoff IS NOT NULL
 			   AND customer_id IS NOT NULL AND dropoff_suggest IS NULL
 		), here AS (
-			SELECT point, 2 AS pri FROM order_live_locations l, o
-			 WHERE l.order_id = o.id AND l.at > now() - interval '3 minutes'
-			   AND COALESCE(l.accuracy_m, 0) <= 50
+			SELECT ST_SetSRID(ST_MakePoint($5::float8, $4::float8), 4326)::geography AS point, 1 AS pri
+			 WHERE $4::float8 IS NOT NULL AND $5::float8 IS NOT NULL
 			UNION ALL
-			SELECT * FROM (SELECT t.at AS point, 1 AS pri FROM driver_track t, o
-			 WHERE t.driver_id = o.driver_id AND t.created_at > now() - interval '2 minutes'
-			   AND COALESCE(t.accuracy_m, 0) <= 50
-			 ORDER BY t.created_at DESC LIMIT 1) d
+			SELECT * FROM (SELECT t.at AS point, 2 AS pri FROM driver_track t, o
+			 WHERE t.driver_id = o.driver_id AND NOT t.mocked
+			   AND t.created_at > now() - make_interval(secs => $7::int)
+			   AND COALESCE(t.recorded_at, t.created_at) > now() - make_interval(secs => $7::int)
+			   AND COALESCE(t.accuracy_m, 0) <= $8
+			 ORDER BY COALESCE(t.recorded_at, t.created_at) DESC LIMIT 1) d
 		)
 		SELECT o.customer_id::text, ST_Y(h.point::geometry), ST_X(h.point::geometry)
 		  FROM o, (SELECT point FROM here ORDER BY pri LIMIT 1) h
-		 WHERE ST_Distance(h.point, o.dropoff) BETWEEN $2 AND 5000
+		 WHERE ST_Distance(h.point, o.dropoff) > $2 AND ST_Distance(h.point, o.dropoff) <= $6
 		   AND EXISTS (SELECT 1 FROM user_addresses a
 		                WHERE a.user_id = o.customer_id AND ST_DWithin(a.location, o.dropoff, $3))`,
-		orderID, dropoffSuggestMinM, entranceMatchAddressM).Scan(&customer, &lat, &lng)
+		orderID, dropoffSuggestMinM, entranceMatchAddressM, liveLat, liveLng, dropoffSuggestMaxM,
+		int(deliveryFixFresh/time.Second), deliveryFixMaxAccuM).Scan(&customer, &lat, &lng)
 	if err != nil {
 		return
 	}
-	if _, err := s.pg.Exec(ctx, `UPDATE orders SET dropoff_suggest = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
-		WHERE id = $1 AND dropoff_suggest IS NULL`, orderID, lng, lat); err != nil {
-		return
-	}
-	s.notify.Notify(ctx, notifications.Input{
-		UserID: customer, Kind: notifications.KindOrder,
-		Title:  "هل هذا عنوانك الصحيح؟",
-		Body:   "تم تسليم طلبك في موقع يختلف عن عنوانك المحفوظ. اضغط لاعتماده لطلباتك القادمة.",
-		Entity: "order", EntityID: orderID, Href: "/portal/orders",
-		Apps: []string{notifications.AppCustomer},
-	})
-	s.touch("order", "customer:"+customer)
+	s.offerDropoffFix(ctx, orderID, customer, lat, lng)
 }
 
 // handleAcceptDropoffSuggestion **الزبونُ وافق: نقطةُ عنوانه تصير البابَ.**

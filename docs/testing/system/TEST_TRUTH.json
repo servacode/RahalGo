@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 143,
-    "notify_targeted": 75,
+    "notify_sites": 142,
+    "notify_targeted": 74,
     "publish_rooms": [
       "customer",
       "driver",
@@ -33,8 +33,8 @@
     "setting_defs": 290,
     "behaviour_settings": 245,
     "order_fields": 148,
-    "test_files": 845,
-    "test_funcs": 3224
+    "test_files": 846,
+    "test_funcs": 3229
   },
   "flows": [
     {
@@ -18459,6 +18459,36 @@
     {
       "name": "TestDriverMonitor_DayFollowsPlatformDayAndFlagsAfterClose",
       "file": "internal/qa/driver_work_day_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDropoffFix_CustomerLiveWins",
+      "file": "internal/qa/dropoff_fix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDropoffFix_FarDriverBeyondOldCap",
+      "file": "internal/qa/dropoff_fix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDropoffFix_ImpreciseLiveFallsBackToDriver",
+      "file": "internal/qa/dropoff_fix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDropoffFix_None",
+      "file": "internal/qa/dropoff_fix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestEntrance_BeyondCapStillSuggests",
+      "file": "internal/qa/dropoff_fix_test.go",
       "package": "qa",
       "orphan": true
     },

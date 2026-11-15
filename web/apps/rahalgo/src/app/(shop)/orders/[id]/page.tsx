@@ -42,6 +42,7 @@ import { useShopToast } from "@/components/customer/toast";
 import { ComplaintBox, RateButton } from "@/components/customer/feedback";
 import { ReorderButton } from "@/components/customer/ReorderButton";
 import { LiveStartButton } from "@/components/customer/LiveShare";
+import { DropoffFix } from "@/components/customer/DropoffFix";
 import WebPushCard from "@/components/WebPushCard";
 import { CustomPhotoGrid } from "@/components/CustomPhotos";
 
@@ -150,6 +151,9 @@ export default function OrderPage() {
 
       {/* **مرّةً بعد أوّل طلب** — «بدك يوصلك خبر طلبك؟» ثمّ لا يعود (٢٠٢٦-١٠-١٧). */}
       {!ended && <WebPushCard app="customer" variant="prompt" />}
+
+      {/* **«هل هذا عنوانك الصحيح؟»** — سُلّم بعيداً عن دبّوسه (مرآةُ التطبيق، ٢٠٢٦-١١-١٥). */}
+      <DropoffFix order={order} onDone={load} onMessage={(t) => toast(t)} />
 
       <DeliveryCode order={order} />
 
