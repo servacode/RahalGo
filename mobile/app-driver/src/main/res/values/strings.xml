@@ -740,6 +740,7 @@
     <string name="entrance_yes">احفظ الباب</string>
     <string name="entrance_no">لا</string>
     <string name="entrance_saved">تم حفظ باب البناية — شكراً لك</string>
+    <string name="entrance_asked_customer">أنت بعيد عن نقطة الزبون، فما حفظنا الباب. بعتنالو يصحّح عنوانه — شكراً لك</string>
     <string name="entrance_too_far">أنت بعيد جداً عن نقطة الزبون — لم يتم حفظ الباب</string>
     <string name="closure_button">الطريق مغلق؟</string>
     <string name="closure_title">ما الذي يغلق الطريق هنا؟</string>

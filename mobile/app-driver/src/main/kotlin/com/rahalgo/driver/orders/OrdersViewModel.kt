@@ -1617,8 +1617,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             try {
-                backend.driver.saveEntrance(id, at.first, at.second)
-                com.rahalgo.ui.Flash.ok(app.getString(R.string.entrance_saved))
+                val saved = backend.driver.saveEntrance(id, at.first, at.second)
+                com.rahalgo.ui.Flash.ok(app.getString(if (saved) R.string.entrance_saved else R.string.entrance_asked_customer))
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: com.rahalgo.shared.net.ApiClient.ApiException) {

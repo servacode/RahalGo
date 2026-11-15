@@ -351,14 +351,18 @@ class DriverApi(private val api: ApiClient) {
      */
     /**
      * **«أنا عند باب البناية»** بعد التسليم (قرارُ المالك ٢٠٢٦-١٠-٢١) — يُحفظ مع عنوان الزبون.
-     * والردُّ `entrance_too_far` إن بعُد أكثرَ من ١٥٠ م عن نقطته.
+     * والردُّ `entrance_too_far` إن بعُد أكثرَ من ٣ كم عن نقطته.
+     *
+     * **ويعيد `true` إن حُفظ البابُ فعلاً** (٢٠٢٦-١١-١٥): بين ١٥٠ م و٣ كم لا يُحفظ بابٌ، **بل يُسأل
+     * الزبونُ أن يصحّح عنوانه** — فلا يُقال للسائق «تم الحفظ» وما حُفظ شيء.
      */
-    suspend fun saveEntrance(orderId: String, lat: Double, lng: Double) {
-        api.call<Ack>(
+    suspend fun saveEntrance(orderId: String, lat: Double, lng: Double): Boolean {
+        val reply = api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/entrance",
             HttpMethod.Post,
             mapOf("lat" to lat, "lng" to lng),
         )
+        return (reply["saved"] as? kotlinx.serialization.json.JsonPrimitive)?.content != "false"
     }
 
     /** **«الطريق مسكّر هون»** (٢٠٢٦-١٠-٢١) — `reason`: works · barrier · market · traffic · other. */
