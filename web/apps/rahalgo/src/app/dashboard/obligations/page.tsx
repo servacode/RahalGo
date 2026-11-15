@@ -362,8 +362,9 @@ export default function ObligationsPage() {
     !!data?.can_manage &&
     f.state === "open" &&
     !!head &&
-    rows.every((o) => o.party_id === head.party_id && o.party_kind === head.party_kind) &&
-    (!!f.party || (data?.total ?? 0) <= rows.length);
+    // **وبالبحث باسم المتجر كمان** (المالك ٢٠٢٦-١١-١٥: «بالفلتر في اسم المتجر ويطالع كل ديونه») —
+    // ولو الديونُ أكتر من صفحة: النافذةُ تجيبها كلَّها وتوقف إن لقت طرفاً تاني (`bulkMixed`).
+    rows.every((o) => o.party_id === head.party_id && o.party_kind === head.party_kind);
 
   const partyTiles = [
     { k: "merchant" as const, icon: IconStore, label: O.merchantsTotal, total: sum?.merchants_total ?? 0 },
