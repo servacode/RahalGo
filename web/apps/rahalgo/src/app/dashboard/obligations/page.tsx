@@ -259,6 +259,8 @@ export default function ObligationsPage() {
   const [deciding, setDeciding] = useState<string | null>(null);
   /** **الرفضُ بتأكيد** — الطلبُ اللي عم يسأل «متأكد؟». */
   const [rejecting, setRejecting] = useState<string | null>(null);
+  /** **نافذةُ «شطب الكل»** — لديون طرفٍ واحد (طلبُ المالك ٢٠٢٦-١١-١٥). */
+  const [bulk, setBulk] = useState(false);
 
   useEffect(() => {
     const init = readUrl();
@@ -350,6 +352,18 @@ export default function ObligationsPage() {
   /** **مهلةُ صفر = بلا تنبيه** — فلا دينَ متأخّر ولا لونَ أحمر (`finance.obligation_alert_days`). */
   const alertOn = alertDays > 0;
   const isOverdue = (o: Obligation) => alertOn && o.state === "open" && o.age_days >= alertDays;
+  /**
+   * **«شطب الكل» لطرفٍ واحدٍ وحدَه** (طلبُ المالك ٢٠٢٦-١١-١٥: «ما بدي اشطبهن واحد واحد») — الديونُ
+   * المفتوحةُ كلُّها لنفس الطرف، **وكلُّها ظاهرةٌ أو الطرفُ مختارٌ بالفلتر** — فلا تُشطب ديونُ متاجرَ
+   * أخرى بالغلط. **والشطبُ نفسُه بابُ «شطب الدين» لكلّ دين** — لا مسارَ جديدَ في الخادم.
+   */
+  const head = rows[0];
+  const oneParty =
+    !!data?.can_manage &&
+    f.state === "open" &&
+    !!head &&
+    rows.every((o) => o.party_id === head.party_id && o.party_kind === head.party_kind) &&
+    (!!f.party || (data?.total ?? 0) <= rows.length);
 
   const partyTiles = [
     { k: "merchant" as const, icon: IconStore, label: O.merchantsTotal, total: sum?.merchants_total ?? 0 },
@@ -509,6 +523,11 @@ export default function ObligationsPage() {
                 {O.pendingOnly}
               </Button>
               {f.party && <Badge variant="neutral">{O.partyFiltered}</Badge>}
+              {oneParty && (
+                <Button type="button" variant="danger" onClick={() => setBulk(true)}>
+                  {O.bulkWriteOff.replace("{n}", fmtNum(data?.total ?? rows.length))}
+                </Button>
+              )}
               {filtered && (
                 <Button
                   type="button"
@@ -758,7 +777,151 @@ export default function ObligationsPage() {
           }}
         />
       )}
+
+      {bulk && head && (
+        <BulkWriteOffModal
+          first={head}
+          qs={qs}
+          auto={!!data?.auto_applies && !!data?.can_approve_writeoff}
+          onClose={() => setBulk(false)}
+          onDone={(msg) => {
+            setBulk(false);
+            setNotice(msg);
+            reload();
+          }}
+        />
+      )}
     </PageContainer>
+  );
+}
+
+/**
+ * **«شطب الكل» لطرفٍ واحد** (طلبُ المالك ٢٠٢٦-١١-١٥).
+ *
+ * **يجمع الديونَ المفتوحةَ كلَّها أوّلاً** (صفحةً صفحة بمرشّحات الشاشة نفسِها) ثمّ يشطبها **واحداً
+ * واحداً ببابِ «شطب الدين» نفسِه** — بسببٍ واحدٍ يُكتب مرّة. **ولا يلمس** ديناً لطرفٍ آخر (يتوقّف
+ * إن وجده) ولا ديناً عليه طلبٌ ينتظر الموافقة. والنتيجةُ تُقال بعددها: كم انشطب وكم ما زبط.
+ */
+function BulkWriteOffModal({
+  first,
+  qs,
+  auto,
+  onClose,
+  onDone,
+}: {
+  first: Obligation;
+  qs: string;
+  auto: boolean;
+  onClose: () => void;
+  onDone: (msg: string) => void;
+}) {
+  const [list, setList] = useState<Obligation[] | null>(null);
+  const [skipped, setSkipped] = useState(0);
+  const [loadErr, setLoadErr] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(0);
+
+  useEffect(() => {
+    let dead = false;
+    (async () => {
+      try {
+        const all: Obligation[] = [];
+        for (let pg = 1; pg <= 50; pg++) {
+          const r = await api<ObligationsPage>(`/api/v1/admin/obligations?page=${pg}&per_page=100${qs ? `&${qs}` : ""}`);
+          const got = r?.obligations ?? [];
+          all.push(...got);
+          if (got.length === 0 || all.length >= (r?.total ?? 0)) break;
+        }
+        if (dead) return;
+        if (all.some((o) => o.party_id !== first.party_id || o.party_kind !== first.party_kind)) {
+          setLoadErr(O.bulkMixed);
+          return;
+        }
+        const open = all.filter((o) => o.state === "open" && o.outstanding > 0);
+        setSkipped(open.filter((o) => o.pending).length);
+        setList(open.filter((o) => !o.pending));
+      } catch (e) {
+        if (!dead) setLoadErr(errorText(e));
+      }
+    })();
+    return () => {
+      dead = true;
+    };
+  }, [qs, first.party_id, first.party_kind]);
+
+  const total = (list ?? []).reduce((s, o) => s + o.outstanding, 0);
+  const invalid = !note.trim() || !list || list.length === 0;
+
+  async function send() {
+    if (busy || invalid || !list) return;
+    setBusy(true);
+    let ok = 0;
+    let lastErr = "";
+    for (const o of list) {
+      try {
+        await api(`/api/v1/admin/obligations/${o.id}/write-off`, {
+          method: "POST",
+          body: JSON.stringify({ note }),
+        });
+        ok++;
+      } catch (e) {
+        lastErr = errorText(e);
+      }
+      setDone((d) => d + 1);
+    }
+    const failed = list.length - ok;
+    onDone(
+      failed === 0
+        ? (auto ? O.bulkDone : O.bulkSent).replace("{n}", fmtNum(ok))
+        : O.bulkPartial
+            .replace("{done}", fmtNum(ok))
+            .replace("{n}", fmtNum(list.length))
+            .replace("{failed}", fmtNum(failed))
+            .replace("{err}", lastErr),
+    );
+  }
+
+  return (
+    <Modal open onClose={busy ? () => undefined : onClose} title={O.bulkTitle.replace("{name}", first.party_name || "—")}>
+      <form
+        className="space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          send();
+        }}
+      >
+        {loadErr ? (
+          <Alert tone="error">{loadErr}</Alert>
+        ) : !list ? (
+          <p className="text-sm text-ink-muted">{O.bulkLoading}</p>
+        ) : (
+          <>
+            <div className="rounded-control bg-field px-3 py-2.5">
+              <span className="block truncate text-sm font-bold">{first.party_name || "—"}</span>
+              <span className="block text-xs text-ink-muted">{O.bulkCount.replace("{n}", fmtNum(list.length))}</span>
+              <Money value={total} className="figure block text-danger" />
+            </div>
+            <p className="text-sm text-ink-muted">{auto ? O.bulkHintAuto : O.bulkHint}</p>
+            {skipped > 0 && <Alert tone="info">{O.bulkSkipped.replace("{n}", fmtNum(skipped))}</Alert>}
+            <Input id="obl-bulk-note" label={O.reasonField} value={note} onChange={(e) => setNote(e.target.value)} />
+            {busy && (
+              <p className="text-sm font-bold">
+                {O.bulkProgress.replace("{done}", fmtNum(done)).replace("{n}", fmtNum(list.length))}
+              </p>
+            )}
+          </>
+        )}
+        <FormActions
+          submit
+          busy={busy || invalid || !!loadErr}
+          onCancel={onClose}
+          cancelLabel={O.cancel}
+          saveLabel={O.bulkConfirm.replace("{n}", fmtNum(list?.length ?? 0))}
+          tone="danger"
+        />
+      </form>
+    </Modal>
   );
 }
 
