@@ -690,6 +690,10 @@
     <string name="err_order_edit_reason_required">اكتب سبب التعديل.</string>
     <string name="err_order_edit_settlement_state">حق هذا المتجر لا يُصحَّح آلياً.</string>
     <string name="err_order_edit_needs_driver">الطلب بلا سائق.</string>
+    <string name="err_fee_edit_range">الأجرة لازم تكون أكبر من حصة المنصة.</string>
+    <string name="err_fee_edit_cash_collected">الأجرة انقبضت نقداً، فما بتتعدّل هلق.</string>
+    <string name="err_fee_edit_merchant_wallet">رصيد محفظة المتجر ما بيكفي الزيادة.</string>
+    <string name="err_fee_edit_not_agreed">الكابتن لسا ما حدّد أجرة هالطلب.</string>
     <string name="err_partner_not_purchase">الربط بمتجر تابع لطلبات المشتريات وحدها.</string>
     <string name="err_partner_goods_documented">ثمن البضاعة موثق — لا ربط ولا إلغاء ربط بعده.</string>
     <string name="err_partner_merchant_inactive">المتجر غير فعال — اختر متجرا فعالا.</string>

@@ -86,6 +86,7 @@ import { OrderChatModal } from "./OrderChat";
 import { payerIsCash, payerLabel, payerOf } from "./payer";
 import { WaiveCommissionDialog, WAIVE_ROUTE } from "./WaiveCommissionDialog";
 import { OrderEditor } from "./OrderEditor";
+import { FeeEditor } from "./FeeEditor";
 import { EditRequestBox } from "./EditRequestBox";
 import {
   AmanahPointsSection,
@@ -3142,6 +3143,7 @@ function OrderActions({
    * وإضافةٌ وسعر، بسببٍ إجباريّ ومعاينةٍ يحسبها الخادم. انظر `OrderEditor.tsx`.
    */
   const [editing, setEditing] = useState(false);
+  const [feeEditing, setFeeEditing] = useState(false);
   /**
    * **تعديلُ عرض الطلب الخاصّ** — نموذجٌ يُملأ، ثمّ مراجعةٌ تُؤكَّد قبل الإرسال.
    *
@@ -4271,6 +4273,33 @@ function OrderActions({
         >
           <BtnLabel icon={IconEdit}>{m.admin.ordersPage.orderEdit.button}</BtnLabel>
         </Button>
+      )}
+      {/* **«تعديل الأجرة»** (قرارُ المالك ٢٠٢٦-١١-١٨) — على كلّ الأنواع (عاديّ · خاصّ · توصيلة ·
+          واتساب) لحتّى التسليم، بقدرة تعديل الطلب نفسِها. **والخادمُ يحسب ويردّ** ما لا يجوز (نقدٌ
+          قُبض، أو محفظةُ متجرٍ لا تكفي). والخاصُّ قبل توثيق أجرته بابُه «تعديل عرض السعر». */}
+      {canIntervene &&
+        !CLOSED_STATUSES.has(o.status) &&
+        (o.kind !== "custom" || o.custom_fee != null) && (
+        <Button
+          variant="secondary"
+          disabled={busy !== ""}
+          onClick={() => setFeeEditing(true)}
+        >
+          <BtnLabel icon={IconEdit}>{m.admin.ordersPage.feeEdit.button}</BtnLabel>
+        </Button>
+      )}
+      {feeEditing && (
+        <FeeEditor
+          orderId={o.id}
+          orderNumber={o.number}
+          currentFee={o.kind === "custom" ? o.custom_fee ?? 0 : o.delivery_fee + (o.free_waived ?? 0)}
+          onClose={() => setFeeEditing(false)}
+          onDone={(res) => {
+            setFeeEditing(false);
+            setNotice(m.admin.ordersPage.feeEdit.done.replace("{total}", fmtMoney(res.new_total)));
+            onChanged();
+          }}
+        />
       )}
       {/* **طلب تعديل من الكابتن** (قرارُ المالك ٢٠٢٦-١١-١٠) — وافق أو ارفض بمعاينة المحرّك. */}
       {o.board?.edit_request_at && !CLOSED_STATUSES.has(o.status) && (

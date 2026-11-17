@@ -70,3 +70,42 @@ func (s *Server) handleOrderEdit(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"order": view, "result": res})
 }
+
+// handleOrderDeliveryFee **«تعديل الأجرة» على كلّ طلبٍ لحتّى التسليم** (قرارُ المالك ٢٠٢٦-١١-١٨) —
+// بمعاينةٍ (`dry_run`) تُحسب كلُّها في الخادم ثمّ تُطوى، وسببٍ إجباريّ. بقدرة تعديل الطلب نفسِها.
+// والحسبةُ لكلّ نوعٍ في `orders/order_fee_edit.go`.
+func (s *Server) handleOrderDeliveryFee(w http.ResponseWriter, r *http.Request) {
+	var req orders.EditFeeRequest
+	if err := json.NewDecoder(http.MaxBytesReader(nil, r.Body, 1<<14)).Decode(&req); err != nil {
+		s.respondErr(w, errValidation)
+		return
+	}
+	orderID := chi.URLParam(r, "id")
+	o, res, err := s.orders.EditDeliveryFee(r.Context(), userIDFrom(r), orderID, req,
+		func(ctx context.Context, q dbtx.Querier, res orders.EditFeeResult) error {
+			return s.auditTx(ctx, q, r, "ops.order_fee_edit", "order", orderID, map[string]any{
+				"reason": res.Reason, "kind": res.Kind, "payer": res.Payer,
+				"old_fee": res.OldFee, "new_fee": res.NewFee,
+				"old_driver_fee": res.OldDriverFee, "driver_fee": res.DriverFee,
+				"old_total": res.OldTotal, "new_total": res.NewTotal,
+				"old_cash_due": res.OldCashDue, "cash_due": res.CashDue,
+				"refunded": res.Refunded, "charged": res.Charged,
+				"after_pickup": res.AfterPickup, "reconfirm": res.Reconfirm,
+			})
+		})
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if req.DryRun {
+		httpx.JSON(w, http.StatusOK, map[string]any{"result": res})
+		return
+	}
+	s.touch("order", "ops")
+	view, err := orderView(orders.AudienceOps, o)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"order": view, "result": res})
+}

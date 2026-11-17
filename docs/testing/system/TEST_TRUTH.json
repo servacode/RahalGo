@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 717,
+    "routes": 718,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 290,
-    "behaviour_settings": 245,
+    "setting_defs": 291,
+    "behaviour_settings": 246,
     "order_fields": 148,
-    "test_files": 846,
-    "test_funcs": 3229
+    "test_files": 849,
+    "test_funcs": 3244
   },
   "flows": [
     {
@@ -5246,6 +5246,27 @@
       "group": "drivers",
       "kind": "money",
       "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.rewards_enabled",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": true,
       "money": true,
       "flows": [
         "F-07",
@@ -12463,6 +12484,48 @@
       "orphan": true
     },
     {
+      "name": "TestFeeEdit_CustomDecrease",
+      "file": "internal/orders/order_fee_edit_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFeeEdit_CustomIncreaseReconfirm",
+      "file": "internal/orders/order_fee_edit_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFeeEdit_CustomNotAgreed",
+      "file": "internal/orders/order_fee_edit_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFeeEdit_Guards",
+      "file": "internal/orders/order_fee_edit_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFeeEdit_StandardCash",
+      "file": "internal/orders/order_fee_edit_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFeeEdit_StandardFreeDeliveryCap",
+      "file": "internal/orders/order_fee_edit_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFeeEdit_StandardWallet",
+      "file": "internal/orders/order_fee_edit_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestPartnerCommission_FollowsStoreUntilDelivery",
       "file": "internal/orders/partner_store_test.go",
       "package": "orders_test",
@@ -19385,6 +19448,42 @@
         "FULL"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestFEE01_MerchantWalletRefundAndCharge",
+      "file": "internal/qa/fee_edit_merchant_delivery_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFEE02_MerchantWalletShortRefused",
+      "file": "internal/qa/fee_edit_merchant_delivery_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFEE03_RecipientCashAtDelivery",
+      "file": "internal/qa/fee_edit_merchant_delivery_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFEE04_MerchantCashAfterPickupRefused",
+      "file": "internal/qa/fee_edit_merchant_delivery_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFEE05_WhatsAppOrderFee",
+      "file": "internal/qa/fee_edit_merchant_delivery_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFEE06_PermissionAndReason",
+      "file": "internal/qa/fee_edit_merchant_delivery_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestFIN_FI06d_RejectedWalletOrderIsNotAViolation",
@@ -31824,6 +31923,18 @@
     {
       "name": "TestDriverQueue_Responds",
       "file": "internal/server/driver_queue_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverRewardsOff_ManualRewardRefusedPenaltyKept",
+      "file": "internal/server/driver_rewards_switch_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverRewardsOff_TargetNotPaidAndScreenSilent",
+      "file": "internal/server/driver_rewards_switch_test.go",
       "package": "server",
       "orphan": true
     },

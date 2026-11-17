@@ -48,6 +48,8 @@ var t = struct {
 	itemUnavailable string
 	// **تعديلُ المكتب للطلب العاديّ** (قرارُ المالك ٢٠٢٦-١١-٠٣) — الزبونُ والسائقُ والمتجر.
 	orderEdited, orderEditedDriver, orderEditedMerchant string
+	// **تعديلُ أجرة التوصيل من المكتب** (قرارُ المالك ٢٠٢٦-١١-١٨) — الدافعُ والسائق.
+	feeEdited, feeEditedDriver string
 	// **طلب تعديل من الكابتن** (قرارُ المالك ٢٠٢٦-١١-١٠) — يوصل المكتب، وقرارُه يوصل الكابتن.
 	editRequestOps, editRequestRejectedDriver string
 	// المكتب وافق على طلب تعديل الكابتن — يحلّ محل إشعار «تعدّل الطلب» للكابتن.
@@ -109,6 +111,8 @@ var t = struct {
 	liveLocationRequested:      "الكابتن طالب موقعك المباشر ليوصلك بالضبط — افتح التطبيق وشارك موقعك",
 	itemUnavailable:            "صنف غير متوفر في طلبك",
 	orderEdited:                "تعدّل طلبك",
+	feeEdited:                  "تعدّلت أجرة التوصيل",
+	feeEditedDriver:            "تعدّلت أجرة الطلب الذي معك",
 	editRequestOps:             "طلب تعديل من الكابتن — وافق أو ارفض",
 	editRequestRejectedDriver:  "المكتب رفض طلب التعديل",
 	editRequestApprovedDriver:  "المكتب وافق على التعديل",

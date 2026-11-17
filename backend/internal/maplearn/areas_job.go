@@ -32,6 +32,8 @@ func loadAddressEvidence(ctx context.Context, pg *pgxpool.Pool) ([]AddrEvidence,
 		       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry)
 		  FROM orders o
 		 WHERE o.status = 'delivered' AND o.dropoff IS NOT NULL AND o.dropoff_known
+		   -- **والتوصيلةُ وطلبُ الواتساب بلا زبون** — فراغُه كان يُسقط الجولةَ كلَّها.
+		   AND o.customer_id IS NOT NULL
 		   AND o.created_at >= now() - interval '1 year'
 		UNION ALL
 		SELECT ua.user_id::text, ua.address_text,

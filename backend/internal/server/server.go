@@ -1681,6 +1681,10 @@ func (s *Server) Router() http.Handler {
 				Get("/orders/{id}/edit-catalog", s.handleOrderEditCatalog)
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/edit", s.handleOrderEdit)
+			// **«تعديل الأجرة» على كلّ أنواع الطلب لحتّى التسليم** (قرارُ المالك ٢٠٢٦-١١-١٨) — بقدرة
+			// التعديل نفسِها، وبمعاينة. انظر `orders/order_fee_edit.go`.
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/delivery-fee", s.handleOrderDeliveryFee)
 			// **طلب تعديل الكابتن** (قرارُ المالك ٢٠٢٦-١١-١٠) — الموافقة من باب التعديل نفسه وبقدرته
 			// بعد الاستلام. انظر `order_edit_request.go`.
 			r.With(s.RequireCapability(authz.OrdersIntervene)).

@@ -585,6 +585,11 @@ private val CODES: Map<String, Int> = mapOf(
     "order_edit_reason_required" to R.string.err_order_edit_reason_required,
     "order_edit_settlement_state" to R.string.err_order_edit_settlement_state,
     "order_edit_needs_driver" to R.string.err_order_edit_needs_driver,
+    // **«تعديل الأجرة»** (قرارُ المالك ٢٠٢٦-١١-١٨) — بابُ اللوحة، ويُترجم إن بلغ هاتفاً.
+    "fee_edit_range" to R.string.err_fee_edit_range,
+    "fee_edit_cash_collected" to R.string.err_fee_edit_cash_collected,
+    "fee_edit_merchant_wallet" to R.string.err_fee_edit_merchant_wallet,
+    "fee_edit_not_agreed" to R.string.err_fee_edit_not_agreed,
     // ── مشترياتٌ من متجرٍ تابع (قرارُ المالك ٢٠٢٦-١٠-١٥) ──
     "partner_not_purchase" to R.string.err_partner_not_purchase,
     "partner_goods_documented" to R.string.err_partner_goods_documented,

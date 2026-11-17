@@ -4638,6 +4638,26 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/delivery-fee",
+      "handler": "handleOrderDeliveryFee",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "order",
+          "type": "unknown"
+        },
+        {
+          "name": "result",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/admin/orders/{id}/door-resolution",
       "handler": "handleDoorResolution",
       "auth": true,

@@ -240,6 +240,7 @@ export const ADMIN_POLICY: ReadonlyArray<readonly [string, string, string]> = [
   ["POST", "/orders/{id}/compensate-driver", "finance.manage"],
   ["POST", "/orders/{id}/compensation/reject", "finance.manage"],
   ["POST", "/orders/{id}/custom-quote", "orders.intervene"],
+  ["POST", "/orders/{id}/delivery-fee", "orders.intervene"],
   ["POST", "/orders/{id}/door-resolution", "orders.intervene"],
   ["POST", "/orders/{id}/edit", "orders.intervene"],
   ["GET", "/orders/{id}/edit-catalog", "orders.intervene"],

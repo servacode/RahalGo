@@ -133,6 +133,7 @@ var adminPolicy = []Rule{
 	{"POST", "/orders/{id}/items/{itemID}/unavailable", OrdersIntervene}, // صنفٌ غيرُ متوفّر (٢٠٢٦-١٠-١٥)
 	{"GET", "/orders/{id}/edit-catalog", OrdersIntervene},                // تعديلُ الطلب: ما يُضاف (٢٠٢٦-١١-٠٣)
 	{"POST", "/orders/{id}/edit", OrdersIntervene},                       // تعديلُ الطلب — وبعد الاستلام بقدرةٍ أضيق
+	{"POST", "/orders/{id}/delivery-fee", OrdersIntervene},               // تعديلُ الأجرة لكلّ الأنواع لحتّى التسليم (٢٠٢٦-١١-١٨)
 	{"GET", "/orders/{id}/edit-request", OrdersIntervene},                // طلبُ تعديل الكابتن بمعاينته (٢٠٢٦-١١-١٠)
 	{"POST", "/orders/{id}/edit-request/approve", OrdersIntervene},       // الموافقة — وبعد الاستلام بقدرةٍ أضيق
 	{"POST", "/orders/{id}/edit-request/reject", OrdersIntervene},        // الرفض بسبب

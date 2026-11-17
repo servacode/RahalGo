@@ -538,33 +538,9 @@ func (s *Service) AdminOverrideCustomQuoteUSD(ctx context.Context, orderID, admi
 	if err != nil {
 		return nil, err
 	}
-	if row.kind != KindCustom {
-		return nil, ErrNotCustom
-	}
-	// **بعد الانتهاء (تسليماً أو إلغاءً) لا تعديل** — والتصحيحُ حينها تعويضٌ موثَّق.
-	if terminal(row.status) {
-		return nil, ErrCustomLocked
-	}
-	if newUSD != nil {
-		var mode string
-		if err := tx.QueryRow(ctx, `SELECT custom_mode FROM orders WHERE id = $1`, orderID).Scan(&mode); err != nil {
-			return nil, err
-		}
-		if mode != CustomModePurchase {
-			return nil, ErrGoodsUSDNotPurchase
-		}
-	}
-	changed, err := s.applyCustomQuoteTx(ctx, tx, row, newGoods, newFee, newUSD, quoteMutator{
-		actorID: adminID, role: "admin", source: "admin_override", reason: reason,
-	})
+	changed, err := s.adminOverrideCustomTx(ctx, tx, row, adminID, newGoods, newFee, newUSD, reason)
 	if err != nil {
 		return nil, err
-	}
-	// **والمكتبُ يبقى يعدّل** (قرارُ المالك ٢٠٢٦-١١-٠٦) — وتعديلُه يحلّ محلّ طلب الكابتن المعلّق.
-	if changed {
-		if err := closePriceRequestsTx(ctx, tx, orderID, "superseded"); err != nil {
-			return nil, err
-		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
@@ -578,6 +554,42 @@ func (s *Service) AdminOverrideCustomQuoteUSD(ctx context.Context, orderID, admi
 		}
 	}
 	return o, err
+}
+
+// adminOverrideCustomTx **جسمُ تدخّل الأدمن في معاملةٍ ممسوكة** — يشترك فيه «تعديل العرض»
+// و«تعديل الأجرة» (`order_fee_edit.go`، قرارُ المالك ٢٠٢٦-١١-١٨) فلا نسختان من منطق المال.
+// **والمنادي قفل الصفَّ** (`lockCustomRow`) ويُثبّت أو يطوي.
+func (s *Service) adminOverrideCustomTx(ctx context.Context, tx pgx.Tx, row customQuoteRow,
+	adminID string, newGoods, newFee int64, newUSD *int64, reason string) (bool, error) {
+	if row.kind != KindCustom {
+		return false, ErrNotCustom
+	}
+	// **بعد الانتهاء (تسليماً أو إلغاءً) لا تعديل** — والتصحيحُ حينها تعويضٌ موثَّق.
+	if terminal(row.status) {
+		return false, ErrCustomLocked
+	}
+	if newUSD != nil {
+		var mode string
+		if err := tx.QueryRow(ctx, `SELECT custom_mode FROM orders WHERE id = $1`, row.id).Scan(&mode); err != nil {
+			return false, err
+		}
+		if mode != CustomModePurchase {
+			return false, ErrGoodsUSDNotPurchase
+		}
+	}
+	changed, err := s.applyCustomQuoteTx(ctx, tx, row, newGoods, newFee, newUSD, quoteMutator{
+		actorID: adminID, role: "admin", source: "admin_override", reason: reason,
+	})
+	if err != nil {
+		return false, err
+	}
+	// **والمكتبُ يبقى يعدّل** (قرارُ المالك ٢٠٢٦-١١-٠٦) — وتعديلُه يحلّ محلّ طلب الكابتن المعلّق.
+	if changed {
+		if err := closePriceRequestsTx(ctx, tx, row.id, "superseded"); err != nil {
+			return false, err
+		}
+	}
+	return changed, nil
 }
 
 // QuotePending **أينتظر العرضُ الحاليُّ تأكيدَ الزبون؟** — نسخةٌ لم تُؤكَّد بعد.
