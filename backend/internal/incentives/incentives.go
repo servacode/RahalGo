@@ -396,6 +396,11 @@ func (s *Service) GrantRoleTx(ctx context.Context, q dbtx.Querier,
 			return nil, err
 		}
 	}
+	// **ومكافآتُ السائقين موقّفة ⇒ لا تُصرف ولو وافق عليها أحد** (قرارُ المالك ٢٠٢٦-١١-١٨) —
+	// طلبٌ اقتُرح قبل الإيقاف يُردّ عند الموافقة.
+	if kind == KindReward && !s.rewardsOnTx(ctx, q, role) {
+		return nil, ErrDriverRewardsOff
+	}
 	var e Entry
 	if err := q.QueryRow(ctx, `
 		INSERT INTO incentives (user_id, kind, amount, reason, for_target, created_by, role)

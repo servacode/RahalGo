@@ -90,6 +90,7 @@ var FinancialSettings = []string{
 	"drivers.target_reward",
 	"drivers.reward_2",
 	"drivers.reward_3",
+	"drivers.rewards_enabled", // مفتاحُ مكافآت السائقين كلِّها (٢٠٢٦-١١-١٨)
 	"sales.target_reward",
 	"sales.reward_2",
 	"sales.reward_3",

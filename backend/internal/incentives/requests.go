@@ -125,6 +125,10 @@ func (s *Service) Propose(ctx context.Context, q dbtx.Querier, p Proposal) (stri
 	if role == "" {
 		return "", ErrNotEligible
 	}
+	// **ومكافآتُ السائقين موقّفة ⇒ لا يُقترح له مكافأة** (قرارُ المالك ٢٠٢٦-١١-١٨).
+	if p.Kind == KindReward && !s.rewardsOnTx(ctx, q, role) {
+		return "", ErrDriverRewardsOff
+	}
 	// **ولا تُردّ العقوبةُ لقلّة الرصيد** (قرارُ المالك ٢٠٢٦-١٠-١٥): يُؤخذ المتاحُ
 	// عند الموافقة ويصير الباقي ديناً (`GrantTx`). **والمقترَحُ عليه سائقٌ أو مندوبٌ
 	// حتماً** (الفحصُ أعلاه) — فلدينه طرفٌ دائماً.

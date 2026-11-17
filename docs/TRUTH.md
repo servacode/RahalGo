@@ -1344,6 +1344,7 @@ kosom` |
 | `drivers.reward_2` | السائقون | money | `0` |
 | `drivers.target_3` | السائقون | int | `0` |
 | `drivers.reward_3` | السائقون | money | `0` |
+| `drivers.rewards_enabled` | السائقون | bool | `true` |
 | `drivers.failed_compensation_percent` | السائقون | int | `50` |
 | `drivers.require_delivery_photo` | السائقون | bool | `true` |
 | `drivers.proof_max_m` | السائقون | int | `15` |

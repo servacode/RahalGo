@@ -96,6 +96,11 @@ func (s *Service) payPendingRow(ctx context.Context, r pendingRow) (Paid, bool) 
 	if err != nil || state != stateActive {
 		return p, false
 	}
+	// **ومكافآتُ السائقين موقّفة ⇒ يبقى الصفُّ مفتوحاً** (`rewards_switch.go`) — لا يُغلق بصفر
+	// فيضيع ما بلغه قبل الإيقاف.
+	if !s.rewardsOnTx(ctx, tx, r.role) {
+		return p, false
+	}
 	paid, err := s.grantForMonthTx(ctx, tx, r.userID, r.role, r.month)
 	if err != nil {
 		_ = tx.Rollback(ctx)

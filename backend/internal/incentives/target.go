@@ -109,7 +109,7 @@ func levelsFrom(ctx context.Context, st Settings, role string) []Level {
 	if p == "" {
 		return nil
 	}
-	return []Level{
+	levels := []Level{
 		{N: 1,
 			Target: st.GetInt(ctx, p+"monthly_target"),
 			Reward: st.GetInt(ctx, p+"target_reward")},
@@ -120,6 +120,14 @@ func levelsFrom(ctx context.Context, st Settings, role string) []Level {
 			Target: st.GetInt(ctx, p+"target_3"),
 			Reward: st.GetInt(ctx, p+"reward_3")},
 	}
+	// **ومكافآتُ السائقين موقّفة ⇒ المراحلُ عدّاداتٌ بلا مال** (قرارُ المالك ٢٠٢٦-١١-١٨،
+	// `rewards_switch.go`) — فلا صرفَ ولا حفظَ لموقوفٍ ولا وعدَ في الشاشة.
+	if !rewardsOn(ctx, st, role) {
+		for i := range levels {
+			levels[i].Reward = 0
+		}
+	}
+	return levels
 }
 
 // LevelsOf **مراحلُ الدور — للشاشات.**

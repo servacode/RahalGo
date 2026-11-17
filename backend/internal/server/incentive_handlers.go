@@ -530,10 +530,15 @@ func (s *Server) handleMyIncentives(w http.ResponseWriter, r *http.Request) {
 	if role == "sales" {
 		key = "sales.target_reward"
 	}
+	// **ومكافآتُ السائقين موقّفة ⇒ لا وعدَ بمبلغ** (قرارُ المالك ٢٠٢٦-١١-١٨) — صفرٌ كالمراحل.
+	reward := s.settings.GetInt(r.Context(), key)
+	if role == "driver" && !s.incentives.DriverRewardsOn(r.Context()) {
+		reward = 0
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"standing":      st,
 		"entries":       list,
-		"target_reward": s.settings.GetInt(r.Context(), key),
+		"target_reward": reward,
 		"levels":        s.incentives.LevelsOf(r.Context(), role),
 		"kinds":         []string{incentives.KindReward, incentives.KindPenalty},
 	})
