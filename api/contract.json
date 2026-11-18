@@ -6550,6 +6550,120 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/store-message",
+      "handler": "handleStoreMessageState",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "already_today",
+          "type": "unknown"
+        },
+        {
+          "name": "bot_ready",
+          "type": "unknown"
+        },
+        {
+          "name": "config",
+          "type": "unknown"
+        },
+        {
+          "name": "default_gap_ms",
+          "type": "array"
+        },
+        {
+          "name": "eligible",
+          "type": "unknown"
+        },
+        {
+          "name": "runs",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/store-message/config",
+      "handler": "handleStoreMessageConfig",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "config",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/store-message/send",
+      "handler": "handleStoreMessageSend",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "run_id",
+          "type": "unknown"
+        },
+        {
+          "name": "target",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/store-message/stores",
+      "handler": "handleStoreMessageStores",
+      "auth": true,
+      "capability": "content.manage",
+      "response": [
+        {
+          "name": "stores",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/store-message/test",
+      "handler": "handleStoreMessageTest",
+      "auth": true,
+      "capability": "content.manage",
+      "request": [
+        {
+          "name": "merchant_id",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "run_id",
+          "type": "unknown"
+        },
+        {
+          "name": "target",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/tickets",
       "handler": "handleListTickets",
       "auth": true,

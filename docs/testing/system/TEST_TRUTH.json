@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 718,
+    "routes": 723,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 142,
-    "notify_targeted": 74,
+    "notify_sites": 144,
+    "notify_targeted": 75,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 291,
-    "behaviour_settings": 246,
+    "setting_defs": 297,
+    "behaviour_settings": 251,
     "order_fields": 148,
-    "test_files": 849,
-    "test_funcs": 3244
+    "test_files": 850,
+    "test_funcs": 3253
   },
   "flows": [
     {
@@ -7969,6 +7969,101 @@
         "driver",
         "merchant",
         "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "store_message.auto_enabled",
+      "group": "merchants",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "store_message.auto_frequency",
+      "group": "merchants",
+      "kind": "choice",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "store_message.auto_hour",
+      "group": "merchants",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "store_message.auto_weekday",
+      "group": "merchants",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "store_message.title",
+      "group": "merchants",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -28107,6 +28202,60 @@
     {
       "name": "TestStoreAnnounce_OnceWhenVisible",
       "file": "internal/qa/store_announce_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSM01_ManualRunReachesEligibleStoresOnly",
+      "file": "internal/qa/store_message_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSM02_NoDuplicateSameDamascusDay",
+      "file": "internal/qa/store_message_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSM03_TestSendHitsExactlyOneStore",
+      "file": "internal/qa/store_message_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSM04_BotNotReadyStopsRun",
+      "file": "internal/qa/store_message_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSM05_BotDropsMidRun",
+      "file": "internal/qa/store_message_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSM06_SingleFailureDoesNotStopRun",
+      "file": "internal/qa/store_message_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSM07_SchedulerFiresOnlyAtConfiguredHourAndDay",
+      "file": "internal/qa/store_message_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSM08_GapIsRandom20To45AndInjectable",
+      "file": "internal/qa/store_message_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSM09_RestartMarksSendingFailedAndKeepsPending",
+      "file": "internal/qa/store_message_test.go",
       "package": "qa",
       "orphan": true
     },

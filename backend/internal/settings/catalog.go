@@ -1975,6 +1975,25 @@ var Catalog = []Def{
 	// لصاحب المتجر الفعّال الذي عنده أصنافٌ بلا صور. **افتراضُه تشغيل**.
 	{Key: "merchants.photo_nudge_enabled", Group: GroupMerchants, Kind: KindBool, Default: true},
 
+	// **«رسالة للمتاجر»** (قرار المالك ٢٠٢٦-١١-١٨) — رسالةُ واتساب + إشعارُ تطبيقِ المتجر لكلّ متجرٍ فعّالٍ
+	// له رقمُ جوّال. **تُكتب وتُجدوَل من صفحة «رسالة للمتاجر»** (وتظهر هنا أيضاً لمن يبحث عنها).
+	// **الإرسالُ متسلسلٌ بفاصل ٢٠–٤٥ ثانيةً** (حمايةً لرقم البوت الذي يرسل رموز التسجيل)، **ولا تصل متجراً
+	// مرّتين في يومٍ واحد**. **والجدولةُ الآليّةُ مطفأةٌ افتراضاً.**
+	{Key: "store_message.text", Group: GroupMerchants, Kind: KindLongText, Default: StoreMessageDefaultText},
+	{Key: "store_message.title", Group: GroupMerchants, Kind: KindText, Max: 80,
+		Default: "تحديث أسعار أصنافك"},
+	{Key: "store_message.auto_enabled", Group: GroupMerchants, Kind: KindBool, Default: false},
+	// يومي أو أسبوعي — والأسبوعيُّ بيومٍ من `store_message.auto_weekday`.
+	{Key: "store_message.auto_frequency", Group: GroupMerchants, Kind: KindChoice,
+		Options: []string{"daily", "weekly"}, Default: "weekly"},
+	// 0 = الأحد … 6 = السبت (كـ`time.Weekday`).
+	{Key: "store_message.auto_weekday", Group: GroupMerchants, Kind: KindInt,
+		Min: 0, Max: 6, Default: 0,
+		ShowWhen: &Condition{Key: "store_message.auto_frequency", Equals: []string{"weekly"}}},
+	// ساعةُ الإرسال بتوقيت دمشق (0–23).
+	{Key: "store_message.auto_hour", Group: GroupMerchants, Kind: KindInt,
+		Min: 0, Max: 23, Unit: "hour", Default: 10},
+
 	// **مهلةُ قبول المتجر — بعدها يُنبَّه عليه في شاشة العمليات.**
 	//
 	// **ولا تُلغي الطلبَ ولا تُحوّله**: ترفع إشارةً ليتّصل به إنسان. **وقرارُ
@@ -3071,3 +3090,10 @@ func toNumber(v any) (float64, bool) {
 	}
 	return 0, false
 }
+
+// StoreMessageDefaultText **نصُّ «رسالة للمتاجر» الافتراضيّ** (قرار المالك ٢٠٢٦-١١-١٨).
+const StoreMessageDefaultText = "مرحباً شريكنا العزيز 🌿\n" +
+	"حرصاً منّا على أن تظهر أسعار متجرك لزبائن رحّال غو بدقّة دائماً، نرجو عند حدوث أي تغيير بأسعار أصنافك تحديثها مباشرةً من تطبيق المتجر.\n" +
+	"وفي حال تعذّر عليك التعديل لأي سبب، يرجى إبلاغ وكيل رحّال غو المسؤول عن متجرك أو إدارة المنصة، ونقوم بتحديثها عنك بأسرع وقت.\n" +
+	"شكراً لثقتك وتعاونك،\n" +
+	"فريق رحّال غو"

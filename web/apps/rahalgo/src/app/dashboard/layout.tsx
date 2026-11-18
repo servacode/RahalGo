@@ -83,6 +83,9 @@ const ALL_NAV: NavItem[] = [
   // للسائقين مباشرةً. **للأدمن والموظفين بقدرته** — ويمنحها الأدمنُ لأيّ دورٍ من «الأدوار».
   { href: "/dashboard/whatsapp", label: m.admin.nav.whatsappOrders, icon: IconWhatsApp,
     caps: ["orders.whatsapp"] },
+  // **«رسالة للمتاجر»** (قرارُ المالك ٢٠٢٦-١١-١٨) — واتساب وإشعارُ التطبيق لكلّ المتاجر، بقدرة الإعلان نفسِها.
+  { href: "/dashboard/store-message", label: m.admin.nav.storeMessage, icon: IconWhatsApp,
+    caps: ["content.manage"] },
   // ══════════════════════════════════════════════════════════════════
   // **والحساباتُ ثالثاً — أهمُّ ما بعد الطلبات اليوم**
   // ══════════════════════════════════════════════════════════════════

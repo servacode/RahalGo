@@ -450,6 +450,12 @@ var adminPolicy = []Rule{
 	{"", "/campaigns/{id}/cancel", ContentManage},
 	{"POST", "/broadcast", ContentManage},
 	{"GET", "/broadcast/count", ContentManage},
+	// **ورسالةُ المتاجر بالقدرة نفسِها** — صوتُ المنصّة إلى أصحاب المتاجر (قرارُ المالك ٢٠٢٦-١١-١٨).
+	{"GET", "/store-message", ContentManage},
+	{"GET", "/store-message/stores", ContentManage},
+	{"PUT", "/store-message/config", ContentManage},
+	{"POST", "/store-message/send", ContentManage},
+	{"POST", "/store-message/test", ContentManage},
 	// **وملفُّ التطبيق إعدادٌ لا محتوى** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الإعدادات):
 	// كان بقدرة المحتوى — **فموظّفُ المحتوى يبدّل تطبيقَ السائق عند كلّ الكباتن.**
 	{"", "/app-file", SettingsGeneralManage},

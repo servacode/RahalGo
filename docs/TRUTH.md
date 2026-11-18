@@ -1357,6 +1357,16 @@ kosom` |
 | `merchants.usd_reference_rate` | المتاجر | decimal | `0` |
 | `merchants.wa_items_enabled` | المتاجر | bool | `false` |
 | `merchants.photo_nudge_enabled` | المتاجر | bool | `true` |
+| `store_message.text` | المتاجر | longtext | `مرحباً شريكنا العزيز 🌿
+حرصاً منّا على أن تظهر أسعار متجرك لزبائن رحّال غو بدقّة دائماً، نرجو عند حدوث أي تغيير بأسعار أصنافك تحديثها مباشرةً من تطبيق المتجر.
+وفي حال تعذّر عليك التعديل لأي سبب، يرجى إبلاغ وكيل رحّال غو المسؤول عن متجرك أو إدارة المنصة، ونقوم بتحديثها عنك بأسرع وقت.
+شكراً لثقتك وتعاونك،
+فريق رحّال غو` |
+| `store_message.title` | المتاجر | text | `تحديث أسعار أصنافك` |
+| `store_message.auto_enabled` | المتاجر | bool | `false` |
+| `store_message.auto_frequency` | المتاجر | choice | `weekly` |
+| `store_message.auto_weekday` | المتاجر | int | `0` |
+| `store_message.auto_hour` | المتاجر | int | `10` |
 | `merchants.cancel_ban_mode` | المتاجر | choice | `manual` |
 | `merchants.cancel_ban_count` | المتاجر | int | `5` |
 | `merchants.cancel_ban_days` | المتاجر | int | `30` |

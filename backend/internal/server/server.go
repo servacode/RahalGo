@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -110,6 +111,11 @@ type Server struct {
 	// (`OTP_PROVIDER=dev`)، **وحقلٌ يُلزم نوعاً واحداً يجعل التطويرَ
 	// يحمل واتساباً لا يحتاجه.**
 	merchant MerchantNotifier
+	// رسالةُ المتاجر — انظر store_message.go (الفاصلُ والساعةُ قابلان للحقن في الفحوص).
+	storeMsgGapFn func() time.Duration
+	storeMsgClock func() time.Time
+	storeMsgOnce  sync.Once
+	storeMsgWake  chan struct{}
 	// opsT **ذاكرةُ مراقبة التشغيل** — نافذةُ الحكم وحالُ الانقطاع
 	// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»). انظر `ops_health.go`.
 	opsT opsTracker
@@ -1900,6 +1906,12 @@ func (s *Server) Router() http.Handler {
 			r.Post("/campaigns/{id}/cancel", s.handleCampaignCancel)
 			r.Get("/broadcast/count", s.handleBroadcastCount)
 			r.Post("/broadcast", s.handleBroadcast)
+			// **رسالةٌ للمتاجر** (قرارُ المالك ٢٠٢٦-١١-١٨) — واتساب بفاصلٍ يحمي رقمَ البوت + إشعارُ التطبيق.
+			r.Get("/store-message", s.handleStoreMessageState)
+			r.Get("/store-message/stores", s.handleStoreMessageStores)
+			r.Put("/store-message/config", s.handleStoreMessageConfig)
+			r.Post("/store-message/send", s.handleStoreMessageSend)
+			r.Post("/store-message/test", s.handleStoreMessageTest)
 
 			// **وملفُّ التطبيق قرارُ هويّةٍ لا قرارُ مال** — للإدارة وحدَها.
 			r.Post("/app-file", s.handleUploadAppFile)

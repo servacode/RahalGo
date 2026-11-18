@@ -127,6 +127,10 @@ const SERVER_MOBILE = new Set([
 
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */
 const SERVER_ADMIN = new Set([
+  // **رسالةُ المتاجر** — صفحةُ اللوحة وحدَها (٢٠٢٦-١١-١٨).
+  "store_message_no_whatsapp",
+  "store_message_bot_not_ready",
+  "store_message_empty",
   // **الخريطةُ من حركة السائقين** (٢٠٢٦-١١-٠٣) — أبوابُ اللوحة وحدَها.
   "candidate_decided",
   "place_decided",
