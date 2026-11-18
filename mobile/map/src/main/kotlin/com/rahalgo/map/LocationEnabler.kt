@@ -49,6 +49,9 @@ fun rememberLocationEnabler(onResult: (enabled: Boolean) -> Unit): () -> Unit {
         {
             if (locationServiceEnabled(context)) {
                 latest(true)
+            } else if (!RgLocation.hasGms(context)) {
+                // **وبلا خدمات غوغل لا نافذة** (هواوي، ٢٠٢٦-١١-١٨) — الإعداداتُ مباشرةً لا انتظارُ ردٍّ لا يأتي.
+                openLocationSettings(context)
             } else {
                 val req = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5_000L).build()
                 LocationServices.getSettingsClient(context)

@@ -8,7 +8,6 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -44,7 +43,7 @@ object LiveFix {
     var running by mutableStateOf(false)
         private set
 
-    private var client: FusedLocationProviderClient? = null
+    private var client: com.rahalgo.map.RgLocation.Client? = null
     private var callback: LocationCallback? = null
     private var bestAtMs = 0L
 
@@ -61,7 +60,7 @@ object LiveFix {
     @SuppressLint("MissingPermission")
     fun start(context: Context) {
         if (running || !Here.granted(context)) return
-        val c = LocationServices.getFusedLocationProviderClient(context.applicationContext)
+        val c = com.rahalgo.map.RgLocation.client(context.applicationContext)
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1_000L)
             .setMinUpdateIntervalMillis(500L)
             .setWaitForAccurateLocation(false)

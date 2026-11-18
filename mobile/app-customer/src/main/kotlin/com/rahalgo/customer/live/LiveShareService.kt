@@ -57,7 +57,7 @@ import kotlinx.coroutines.withContext
 class LiveShareService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val client by lazy { LocationServices.getFusedLocationProviderClient(this) }
+    private val client by lazy { com.rahalgo.map.RgLocation.client(this) }
     private val api by lazy { CustomerApi(AppCore.get().api) }
 
     private var orderId: String? = null

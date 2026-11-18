@@ -147,7 +147,7 @@ object Here {
             }, TIMEOUT_MS)
         }
 
-        val client = LocationServices.getFusedLocationProviderClient(context)
+        val client = com.rahalgo.map.RgLocation.client(context)
 
         // ══════════════════════════════════════════════════════════════
         // **والمرحلةُ الأولى: آخرُ موضعٍ معروف**

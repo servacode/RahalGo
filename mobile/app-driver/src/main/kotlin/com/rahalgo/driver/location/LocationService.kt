@@ -76,7 +76,7 @@ class LocationService : Service() {
 
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val client by lazy { LocationServices.getFusedLocationProviderClient(this) }
+    private val client by lazy { com.rahalgo.map.RgLocation.client(this) }
 
     // **وتقرؤه النبضةُ من خيطٍ آخر** لتحسب موعدَها منه (A6.5) — فيُرى ما كُتب للتوّ.
     @Volatile

@@ -57,7 +57,7 @@ class LocationEngine(private val context: Context) {
     var onFix: ((NavFix) -> Unit)? = null
 
     private val client by lazy {
-        LocationServices.getFusedLocationProviderClient(context.applicationContext)
+        com.rahalgo.map.RgLocation.client(context.applicationContext)
     }
 
     private var active = false

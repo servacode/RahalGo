@@ -1561,7 +1561,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             kotlinx.coroutines.suspendCancellableCoroutine<android.location.Location?> { cont ->
                 val cancel = com.google.android.gms.tasks.CancellationTokenSource()
                 cont.invokeOnCancellation { cancel.cancel() }
-                com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(getApplication<Application>())
+                com.rahalgo.map.RgLocation.client(getApplication<Application>())
                     .getCurrentLocation(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, cancel.token)
                     .addOnCompleteListener { t ->
                         if (cont.isActive) cont.resumeWith(Result.success(if (t.isSuccessful) t.result else null))
@@ -1588,7 +1588,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                         .setMaxUpdateAgeMillis(HERE_FRESH_MAX_AGE_MS)
                         .setDurationMillis(HERE_FRESH_TIMEOUT_MS)
                         .build()
-                    com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(getApplication<Application>())
+                    com.rahalgo.map.RgLocation.client(getApplication<Application>())
                         .getCurrentLocation(req, cancel.token)
                         .addOnCompleteListener { t ->
                             if (cont.isActive) cont.resumeWith(Result.success(if (t.isSuccessful) t.result else null))

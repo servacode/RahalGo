@@ -121,7 +121,7 @@ private const val REFINE_MS = 20_000L
 private fun lastKnownFix(context: android.content.Context, onFix: (LatLng, Float) -> Unit) {
     if (!Here.granted(context)) return
     runCatching {
-        LocationServices.getFusedLocationProviderClient(context.applicationContext)
+        com.rahalgo.map.RgLocation.client(context.applicationContext)
             .lastLocation
             .addOnSuccessListener { loc ->
                 if (loc == null || !loc.hasAccuracy()) return@addOnSuccessListener
