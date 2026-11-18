@@ -138,6 +138,7 @@ fun AddressPage(
             // **والجديدُ وحدَه يحدّد موقعَه عند الفتح** — عنوانٌ محفوظٌ يُعدَّل لا تُنقل
             // نقطتُه إلى حيث يقف صاحبُه الآن.
             autoLocate = existing == null,
+            dragHint = com.rahalgo.map.R.string.map_drag_to_set_address,
         )
 
         // ── ٤ · النوع ──

@@ -40,6 +40,7 @@
     <!-- **بطاقةُ الخريطة الصغيرة** — للمتجر والمندوب (٢٠٢٦-١٠-٢٩). -->
     <string name="map_tap_to_move">اضغط لتحريك الخريطة</string>
     <string name="map_drag_to_set">حرّك الخريطة حتى يصبح الدبوس فوق المتجر</string>
+    <string name="map_drag_to_set_address">حرّك الخريطة حتى يصبح الدبوس فوق مكان التوصيل</string>
     <string name="map_point_chosen">تم اختيار موقع جديد، ولم يُحفظ بعد</string>
     <string name="map_locating">جارٍ تحديد موقعك…</string>
     <string name="map_locating_acc">جارٍ تحديد موقعك… الدقة %1$s م</string>

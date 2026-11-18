@@ -150,6 +150,11 @@ fun PointMapCard(
      * لصفحاتٍ طويلةٍ فيها خريطةٌ في الوسط (أضف فرع).
      */
     tapToActivate: Boolean = false,
+    /**
+     * **جملةُ «حرّك الخريطة» فوق الخريطة** — «فوق المتجر» افتراضاً (المتجر والوكيل)، **وعنوانُ الزبون
+     * «فوق مكان التوصيل»** (صورة المالك ٢٠٢٦-١١-١٨: كانت تقول للزبون «فوق المتجر»).
+     */
+    dragHint: Int = R.string.map_drag_to_set,
 ) {
     val context = LocalContext.current
     var active by remember { mutableStateOf(!tapToActivate) }
@@ -344,7 +349,7 @@ fun PointMapCard(
             )
             if (!set && !gps.value) {
                 Text(
-                    stringResource(R.string.map_drag_to_set),
+                    stringResource(dragHint),
                     color = Rahal.colors.canvas,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
