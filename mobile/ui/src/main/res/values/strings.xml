@@ -681,6 +681,11 @@
     <string name="err_edit_request_pending_deliver">ناطر موافقة المكتب على طلب التعديل</string>
     <string name="err_edit_request_empty">اختار سطر ناقص أو ملغى، أو ضيف صنف.</string>
     <string name="err_edit_request_stale">الطلب تغيّر من وقت ما انبعت طلب التعديل — لازم يبعت طلب جديد.</string>
+    <string name="err_wa_goods_not_whatsapp">ثمن الطلب من هون لطلبات الواتساب بس.</string>
+    <string name="err_fee_request_stage">طلب تعديل الأجرة لطلبات الواتساب الماشية بس.</string>
+    <string name="err_fee_request_same">هي نفس الأجرة الحالية.</string>
+    <string name="err_fee_request_not_pending">طلب تعديل الأجرة انقرّر أو انبدّل بطلب أحدث.</string>
+    <string name="err_fee_request_stale">الأجرة تغيّرت من وقت ما انبعت الطلب — ابعت طلب جديد إذا لازم.</string>
     <string name="err_edit_request_not_pending">طلب التعديل انقرّر أو انبدّل بطلب أحدث.</string>
     <string name="err_edit_request_reject_reason">اكتب سبب الرفض ليعرفه الكابتن.</string>
     <string name="err_order_edit_after_pickup">تعديل الطلب بعد الاستلام للإدارة وحدها.</string>

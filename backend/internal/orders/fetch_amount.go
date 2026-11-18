@@ -25,7 +25,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
+	"unicode/utf8"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -124,7 +127,7 @@ func (s *Service) ProposeFetchAmountCurrency(ctx context.Context, orderID, drive
 	}
 	// **وطلبُ الواتساب: ثمنُ الطلب بلا موافقة** (قرارُ المالك ٢٠٢٦-١١-٠٦) — `whatsAppGoodsAmount`.
 	if origin == OriginWhatsApp {
-		if err := s.whatsAppGoodsAmount(ctx, tx, orderID, driverID, kind, status, amount, currency); err != nil {
+		if err := s.whatsAppGoodsAmount(ctx, tx, orderID, driverID, kind, status, amount, currency, ""); err != nil {
 			return nil, err
 		}
 		if err := tx.Commit(ctx); err != nil {
@@ -279,9 +282,12 @@ func (s *Service) notifyFetchAmount(ctx context.Context, o *Order) {
 // whatsAppGoodsStages **متى يكتبه السائق** — من مكان الاستلام لحدّ باب الزبون.
 var whatsAppGoodsStages = map[string]bool{StAtPickup: true, StPickedUp: true, StOnTheWay: true, StAtDropoff: true}
 
+// `officeReason` **غيرُ فارغٍ: المكتبُ هو الكاتب** (قرارُ المالك ٢٠٢٦-١١-١٨: «تعديل السعر على طلبية الواتس اب
+// من الكرت») — فـ`driverID` هو الموظّف، **ومن القبول لحدّ التسليم** لا من مكان الاستلام وحدَه، والسببُ بالسجلّ.
 func (s *Service) whatsAppGoodsAmount(ctx context.Context, tx pgx.Tx, orderID, driverID, kind, status string,
-	amount int64, currency string) error {
-	if kind != KindMerchantDelivery || !whatsAppGoodsStages[status] {
+	amount int64, currency, officeReason string) error {
+	office := officeReason != ""
+	if kind != KindMerchantDelivery || (!whatsAppGoodsStages[status] && !(office && !terminal(status))) {
 		return ErrFetchAmountStage
 	}
 	// **وصفرٌ = أمانةٌ بلا ثمن بضاعة** (قرارُ المالك ٢٠٢٦-١١-٠٨: «خيار امانه بدون سعر ويقبل رقم صفر») —
@@ -352,10 +358,74 @@ func (s *Service) whatsAppGoodsAmount(ctx context.Context, tx pgx.Tx, orderID, d
 		note = fmt.Sprintf("السائق عدّل ثمن الطلب من %s إلى %s — وصل للزبون برسالة",
 			AmountText(*prev, prevCurrency), AmountText(amount, currency))
 	}
+	if office {
+		from := "—"
+		if prev != nil && prevVersion > 0 {
+			from = AmountText(*prev, prevCurrency)
+		}
+		note = fmt.Sprintf("المكتب عدّل ثمن الطلب من %s إلى %s: %s", from, AmountText(amount, currency), officeReason)
+		_, err := tx.Exec(ctx, `
+			INSERT INTO order_events (order_id, from_status, to_status, actor_id, note, driver_id)
+			SELECT $1, $2, $2, NULLIF($3, '')::uuid, $4, driver_id FROM orders WHERE id = $1`,
+			orderID, status, driverID, note)
+		return err
+	}
 	_, err := tx.Exec(ctx, `
 		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note, driver_id)
 		VALUES ($1, $2, $2, $3, $4, $3)`, orderID, status, driverID, note)
 	return err
+}
+
+// ErrWAGoodsNotWhatsApp **تعديلُ ثمن الطلب من الكارت لطلب الواتساب وحدَه.**
+var ErrWAGoodsNotWhatsApp = httpx.NewError(http.StatusConflict, "wa_goods_not_whatsapp", "errors.wa_goods_not_whatsapp")
+
+// OfficeSetWhatsAppGoods **المكتبُ يكتب ثمنَ طلب الواتساب أو يصحّحه** (قرارُ المالك ٢٠٢٦-١١-١٨) — بالطريق
+// نفسِه الذي يكتبه فيه الكابتن (`whatsAppGoodsAmount`): المبلغُ يُقبض من المستلِم، والدولارُ يُلقط سعرُه،
+// **وصفرٌ أمانةٌ بلا ثمن.** والسببُ إلزاميّ. **والزبونُ يُخبَر برسالة المبالغ** من الباب (`WhatsAppGoodsNotice`).
+func (s *Service) OfficeSetWhatsAppGoods(ctx context.Context, actorID, orderID string, amount int64,
+	currency, reason string) (*Order, error) {
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return nil, ErrOrderEditReason
+	}
+	if utf8.RuneCountInString(reason) > 500 || amount < 0 || amount > MaxFetchAmount {
+		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+	}
+	if _, err := uuid.Parse(orderID); err != nil {
+		return nil, httpx.ErrNotFound
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var kind, status, origin string
+	err = tx.QueryRow(ctx, `SELECT kind, status, origin FROM orders WHERE id = $1 FOR UPDATE`, orderID).
+		Scan(&kind, &status, &origin)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, httpx.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if origin != OriginWhatsApp {
+		return nil, ErrWAGoodsNotWhatsApp
+	}
+	if terminal(status) {
+		return nil, ErrOrderEditClosed
+	}
+	if err := s.whatsAppGoodsAmount(ctx, tx, orderID, actorID, kind, status, amount, currency, reason); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	o, err := s.GetByID(ctx, orderID)
+	if err != nil {
+		return nil, err
+	}
+	s.publishOrder(o)
+	return o, nil
 }
 
 // WhatsAppGoodsNotice **رسالةُ المبالغ للزبون** — رقمُه ونصُّها، **أو `false`** إن لم يكن طلبَ واتساب

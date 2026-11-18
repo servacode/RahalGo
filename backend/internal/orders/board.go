@@ -27,6 +27,7 @@ package orders
 
 import (
 	"context"
+	"encoding/json"
 	"strconv"
 )
 
@@ -280,6 +281,8 @@ type BoardInfo struct {
 	// EditRequestAt **طلب تعديل من الكابتن بانتظار المكتب — من إمتى** (قرارُ المالك ٢٠٢٦-١١-١٠).
 	// وفاضي: ما في. وتفصيله ومعاينته من `GET /admin/orders/{id}/edit-request`.
 	EditRequestAt *string `json:"edit_request_at,omitempty"`
+	// FeeRequest **طلب أجرة من الكابتن بانتظار المكتب** (قرارُ المالك ٢٠٢٦-١١-١٨) — وnil: ما في.
+	FeeRequest *FeeRequestView `json:"fee_request,omitempty"`
 }
 
 // BoardInfoOf **معلوماتُ المكتب لصفحةٍ من الطلبات** — في رحلةٍ واحدة.
@@ -309,7 +312,12 @@ func (s *Service) BoardInfoOf(ctx context.Context, ids []string) (map[string]*Bo
 		       `+CasesSQL+`, `+TransferredSQL+`, `+LateDeliverySQL(l)+`,
 		       sc.currency, sc.amount, sc.status,
 		       (SELECT to_char(er.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
-		          FROM order_edit_requests er WHERE er.order_id = o.id AND er.status = 'pending')
+		          FROM order_edit_requests er WHERE er.order_id = o.id AND er.status = 'pending'),
+		       (SELECT json_build_object('id', fr.id::text, 'old_fee', fr.old_fee, 'fee', fr.fee,
+		                 'reason', fr.reason, 'status', fr.status,
+		                 'created_at', to_char(fr.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+		                 'driver_name', COALESCE((SELECT u.full_name FROM users u WHERE u.id = fr.driver_id), ''))::text
+		          FROM order_fee_requests fr WHERE fr.order_id = o.id AND fr.status = 'pending')
 		FROM orders o LEFT JOIN order_ratings rt ON rt.order_id = o.id
 		LEFT JOIN shamcash_movements sc ON sc.order_id = o.id AND sc.kind = 'driver_transfer'
 		WHERE o.id = ANY($1::uuid[])`, ids)
@@ -321,12 +329,19 @@ func (s *Service) BoardInfoOf(ctx context.Context, ids []string) (map[string]*Bo
 		var id string
 		b := &BoardInfo{}
 		var since *string
+		var feeReq *string
 		if err := rows.Scan(&id, &b.AlertReason, &since, &b.EmergencyOpen,
 			&b.OfferExpiresAt, &b.OfferPassed, &b.GoodsCost, &b.StoreCompensated, &b.SeenAt,
 			&b.DeliveredByCode, &b.PlatformStars, &b.DriverStars,
 			&b.Cases, &b.Transferred, &b.Late,
-			&b.ShamcashCurrency, &b.ShamcashAmount, &b.ShamcashStatus, &b.EditRequestAt); err != nil {
+			&b.ShamcashCurrency, &b.ShamcashAmount, &b.ShamcashStatus, &b.EditRequestAt, &feeReq); err != nil {
 			return nil, err
+		}
+		if feeReq != nil {
+			var fr FeeRequestView
+			if json.Unmarshal([]byte(*feeReq), &fr) == nil {
+				b.FeeRequest = &fr
+			}
 		}
 		if b.AlertReason != "" {
 			b.AlertSince = since

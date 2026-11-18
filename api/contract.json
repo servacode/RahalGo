@@ -4857,6 +4857,78 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/orders/{id}/fee-request",
+      "handler": "handleAdminGetFeeRequest",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "request",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/fee-request/approve",
+      "handler": "handleAdminApproveFeeRequest",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "request_id",
+          "type": "string"
+        },
+        {
+          "name": "dry_run",
+          "type": "bool"
+        }
+      ],
+      "response": [
+        {
+          "name": "order",
+          "type": "unknown"
+        },
+        {
+          "name": "result",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/fee-request/reject",
+      "handler": "handleAdminRejectFeeRequest",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "request_id",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "ok",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/orders/{id}/goods",
       "handler": "handleGoods",
@@ -7878,6 +7950,36 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/admin/whatsapp-orders/{id}/goods",
+      "handler": "handleOfficeWhatsAppGoods",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "amount",
+          "type": "?float64"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "order",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/admin/whatsapp/pair",
       "handler": "inline",
       "auth": true,
@@ -9216,6 +9318,52 @@
         },
         {
           "name": "suggested",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/driver/orders/{id}/fee-request",
+      "handler": "handleDriverGetFeeRequest",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "request",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/fee-request",
+      "handler": "handleDriverFeeRequest",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "fee",
+          "type": "int64"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "request",
           "type": "unknown"
         }
       ],

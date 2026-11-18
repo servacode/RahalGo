@@ -137,6 +137,10 @@ var adminPolicy = []Rule{
 	{"GET", "/orders/{id}/edit-request", OrdersIntervene},                // طلبُ تعديل الكابتن بمعاينته (٢٠٢٦-١١-١٠)
 	{"POST", "/orders/{id}/edit-request/approve", OrdersIntervene},       // الموافقة — وبعد الاستلام بقدرةٍ أضيق
 	{"POST", "/orders/{id}/edit-request/reject", OrdersIntervene},        // الرفض بسبب
+	{"POST", "/whatsapp-orders/{id}/goods", OrdersIntervene},             // ثمنُ طلب الواتساب من الكارت (٢٠٢٦-١١-١٨)
+	{"GET", "/orders/{id}/fee-request", OrdersIntervene},                 // طلبُ أجرة الكابتن (٢٠٢٦-١١-١٨)
+	{"POST", "/orders/{id}/fee-request/approve", OrdersIntervene},        // الموافقة — من باب «تعديل الأجرة»
+	{"POST", "/orders/{id}/fee-request/reject", OrdersIntervene},         // الرفض بسبب
 	{"POST", "/orders/{id}/partner", OrdersIntervene},                    // ربطُ متجرٍ تابعٍ بالمشتريات (٢٠٢٦-١٠-١٥)
 	{"DELETE", "/orders/{id}/partner", OrdersIntervene},                  // وفكُّه
 	{"POST", "/orders/{id}/external-store", OrdersIntervene},             // «من متجر غير تابع لنا» (٢٠٢٦-١٠-٢٩)

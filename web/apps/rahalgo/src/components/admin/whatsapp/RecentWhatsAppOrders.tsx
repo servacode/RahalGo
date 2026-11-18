@@ -44,6 +44,9 @@ import {
 import { api } from "@/lib/api";
 import { fill } from "@/lib/customer/texts";
 import { AssignDialog } from "../orders/AssignDialog";
+import { FeeEditor, FEE_EDIT_ROUTE } from "../orders/FeeEditor";
+import { GoodsEditor, GOODS_EDIT_ROUTE } from "../orders/GoodsEditor";
+import { useCanCall } from "@/lib/policy";
 import { AmanahPointsSection } from "../orders/CardSections";
 
 const m = getMessages(defaultLocale);
@@ -63,6 +66,10 @@ interface WaRow {
   dropoff_known?: boolean;
   /** **ثمنُ الطلب كتبه السائق** (قرارُ المالك ٢٠٢٦-١١-٠٦) — ووصل الزبونَ برسالة. */
   fetch_amount?: number | null;
+  /** **عملةُ ثمن الطلب** — والدولارُ بالسنتات. */
+  amount_currency?: string;
+  /** **ما أُعفي من الأجرة** — فالأجرةُ قبل الإعفاء `delivery_fee + free_waived`. */
+  free_waived?: number;
   /** **«أمانة من شخص»، وانتظارُها موقعَ صاحبها** (قرارُ المالك ٢٠٢٦-١١-١١) — غلافُ القائمة. */
   wa_amanah?: boolean;
   pickup_pending?: boolean;
@@ -98,6 +105,12 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
   const [assignFor, setAssignFor] = useState<WaRow | null>(null);
   // **«بدّل السائق» = اختيارُ السائق الجديد بنفس النافذة** (طلبُ المالك ٢٠٢٦-١١-٠٩) — لا رجوعَ للتوزيع.
   const [swapFor, setSwapFor] = useState<WaRow | null>(null);
+  /** **«تعديل الأجرة» و«عدّل ثمن الطلب» من القائمة** (قرارُ المالك ٢٠٢٦-١١-١٨) — بنفس نافذتَي كرت اللوحة. */
+  const [feeFor, setFeeFor] = useState<WaRow | null>(null);
+  const [goodsFor, setGoodsFor] = useState<WaRow | null>(null);
+  const canCall = useCanCall();
+  const canFee = canCall(...FEE_EDIT_ROUTE);
+  const canGoods = canCall(...GOODS_EDIT_ROUTE);
 
   const load = useCallback(async () => {
     try {
@@ -285,6 +298,16 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
                       {W.editAddress}
                     </Button>
                   )}
+                  {canFee && ADDRESS_EDITABLE.has(o.status) && (
+                    <Button size="sm" variant="secondary" onClick={() => setFeeFor(o)}>
+                      {m.admin.ordersPage.feeEdit.button}
+                    </Button>
+                  )}
+                  {canGoods && ADDRESS_EDITABLE.has(o.status) && !o.wa_amanah && (
+                    <Button size="sm" variant="secondary" onClick={() => setGoodsFor(o)}>
+                      {m.admin.ordersPage.goodsEdit.button}
+                    </Button>
+                  )}
                   {DRIVER_CHANGEABLE.has(o.status) && o.driver_name && (
                     <Button
                       size="sm"
@@ -318,6 +341,34 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
             />
           ))}
         </RowList>
+      )}
+
+      {feeFor && (
+        <FeeEditor
+          orderId={feeFor.id}
+          orderNumber={feeFor.number}
+          currentFee={feeFor.delivery_fee + (feeFor.free_waived ?? 0)}
+          onClose={() => setFeeFor(null)}
+          onDone={(res) => {
+            setFeeFor(null);
+            setDone(m.admin.ordersPage.feeEdit.done.replace("{total}", fmtMoney(res.new_total)));
+            void load();
+          }}
+        />
+      )}
+      {goodsFor && (
+        <GoodsEditor
+          orderId={goodsFor.id}
+          orderNumber={goodsFor.number}
+          current={goodsFor.fetch_amount}
+          currency={goodsFor.amount_currency}
+          onClose={() => setGoodsFor(null)}
+          onDone={() => {
+            setGoodsFor(null);
+            setDone(m.admin.ordersPage.goodsEdit.done);
+            void load();
+          }}
+        />
       )}
 
       <Modal open={target !== null} onClose={() => setTarget(null)} title={target ? fill(W.cancelTitle, { n: target.number }) : W.cancel}>

@@ -52,6 +52,7 @@ var t = struct {
 	feeEdited, feeEditedDriver string
 	// **طلب تعديل من الكابتن** (قرارُ المالك ٢٠٢٦-١١-١٠) — يوصل المكتب، وقرارُه يوصل الكابتن.
 	editRequestOps, editRequestRejectedDriver string
+	feeRequestOps, feeRequestRejectedDriver   string
 	// المكتب وافق على طلب تعديل الكابتن — يحلّ محل إشعار «تعدّل الطلب» للكابتن.
 	editRequestApprovedDriver string
 	// walletScopeDriver **الزبونُ بدّل الدفعَ من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — ما يقبضه الكابتن تبدّل.
@@ -115,6 +116,8 @@ var t = struct {
 	feeEditedDriver:            "تعدّلت أجرة الطلب الذي معك",
 	editRequestOps:             "طلب تعديل من الكابتن — وافق أو ارفض",
 	editRequestRejectedDriver:  "المكتب رفض طلب التعديل",
+	feeRequestOps:              "الكابتن طلب تعديل أجرة التوصيل — وافق أو ارفض",
+	feeRequestRejectedDriver:   "المكتب رفض طلب تعديل الأجرة",
 	editRequestApprovedDriver:  "المكتب وافق على التعديل",
 	orderEditedDriver:          "تعدّل الطلب الذي معك",
 	orderEditedMerchant:        "تعدّل طلب من متجرك",

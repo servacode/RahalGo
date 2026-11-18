@@ -597,6 +597,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             persistTrip()
             // **وحالة «طلب التعديل» مع كل تحديث** — موافقة المكتب أو رفضه بيوصلوا بالوصلة الحيّة.
             loadEditRequest()
+            loadFeeRequest()
         } else {
             restoreTrip()
         }
@@ -1927,6 +1928,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             editRequestOpen = editRequestOpen,
             editRequestError = editRequestError,
             editRequest = editRequest?.takeIf { editRequestOrder == order.id },
+            feeRequestOpen = feeRequestOpen,
+            feeRequestError = feeRequestError,
+            feeRequest = feeRequest?.takeIf { feeRequestOrder == order.id },
             emergencyOpen = emergencyOpen,
             emergencyBusy = emergencyBusy,
             emergencyError = emergencyError,
@@ -2891,6 +2895,64 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             }
             detail = detail.copy(busy = false)
             reload()
+        }
+    }
+
+    /** **«اطلب تعديل الأجرة» لطلب الواتساب** (قرار المالك ٢٠٢٦-١١-١٨) — والإدارة توافق أو ترفض. */
+    var feeRequestOpen by mutableStateOf(false)
+        private set
+    var feeRequestError by mutableStateOf("")
+        private set
+    private var feeRequest by mutableStateOf<com.rahalgo.shared.model.DriverFeeRequest?>(null)
+    private var feeRequestOrder: String? = null
+
+    fun askFeeRequest() {
+        feeRequestError = ""
+        feeRequestOpen = true
+    }
+
+    fun dismissFeeRequest() {
+        feeRequestError = ""
+        feeRequestOpen = false
+    }
+
+    fun sendFeeRequest(fee: Long, reason: String) {
+        val id = currentId() ?: return
+        if (detail.busy) return
+        feeRequestError = ""
+        detail = detail.copy(busy = true, error = "")
+        viewModelScope.launch {
+            try {
+                feeRequest = backend.driver.feeRequest(id, fee, reason)
+                feeRequestOrder = id
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                feeRequestError = describe(e)
+                detail = detail.copy(busy = false)
+                return@launch
+            }
+            feeRequestOpen = false
+            detail = detail.copy(busy = false)
+            reload()
+        }
+    }
+
+    /** **يقرأ آخر طلب أجرة للطلب المفتوح** — طلب الواتساب بين القبول والتسليم بس. */
+    private suspend fun loadFeeRequest() {
+        val id = currentId() ?: return
+        val order = state.mine.firstOrNull { it.id == id } ?: return
+        if (!com.rahalgo.driver.trip.canRequestFee(order)) {
+            if (feeRequestOrder == id) feeRequest = null
+            return
+        }
+        try {
+            feeRequest = backend.driver.feeRequestStatus(id)
+            feeRequestOrder = id
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // **قراءة فاشلة ما بتمسح الحالة المعروضة** — بتنعاد بالتحديث الجاي.
         }
     }
 

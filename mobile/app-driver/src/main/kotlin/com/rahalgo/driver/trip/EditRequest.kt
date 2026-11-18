@@ -127,6 +127,24 @@ fun editStoreChoices(order: DriverOrder): List<com.rahalgo.shared.model.PickupSt
 fun editRequestBlocksDelivery(order: DriverOrder, req: DriverEditRequest?): Boolean =
     editRequestBadge(order, req) == EditRequestBadge.PENDING
 
+/**
+ * **«اطلب تعديل الأجرة»: طلب الواتساب من القبول لحد التسليم** (قرار المالك ٢٠٢٦-١١-١٨) — والإدارة
+ * توافق. والأجرة الحالية قبل أي إعفاء.
+ */
+fun canRequestFee(order: DriverOrder): Boolean = isWhatsApp(order) && order.status in editRequestStages
+
+fun currentFeeOf(order: DriverOrder): Long = order.deliveryFee + order.freeWaived
+
+fun feeRequestBadge(order: DriverOrder, req: com.rahalgo.shared.model.DriverFeeRequest?): EditRequestBadge {
+    if (req == null || !canRequestFee(order)) return EditRequestBadge.NONE
+    return when (req.status) {
+        "pending" -> EditRequestBadge.PENDING
+        "rejected" -> EditRequestBadge.REJECTED
+        "stale" -> EditRequestBadge.STALE
+        else -> EditRequestBadge.NONE
+    }
+}
+
 /** **حالة الطلب بالبطاقة** — معلّق، أو رفضه المكتب، أو صار قديم؛ وغيره ما بيبيّن. */
 enum class EditRequestBadge { NONE, PENDING, REJECTED, STALE }
 

@@ -1161,6 +1161,17 @@ fun TripScreen(
         )
     }
 
+    // **«اطلب تعديل الأجرة» لطلب الواتساب** (قرار المالك ٢٠٢٦-١١-١٨) — والإدارة توافق.
+    if (state.feeRequestOpen && roomyWindow()) {
+        FeeRequestDialog(
+            currentFee = currentFeeOf(order),
+            error = state.feeRequestError,
+            busy = state.busy,
+            onSend = actions.sendFeeRequest,
+            onDismiss = actions.dismissFeeRequest,
+        )
+    }
+
     if (state.emergencyOpen && roomyWindow()) {
         EmergencyDialog(
             busy = state.emergencyBusy,
@@ -2220,6 +2231,29 @@ private fun TripCard(
                             else -> Unit
                         }
 
+                        // ── **«اطلب تعديل الأجرة» لطلب الواتساب** (قرار المالك ٢٠٢٦-١١-١٨) ──
+                        when (feeRequestBadge(order, state.feeRequest)) {
+                            EditRequestBadge.PENDING -> InfoBox(
+                                icon = com.rahalgo.ui.R.drawable.ic_time,
+                                text = stringResource(R.string.fee_req_pending, money(state.feeRequest?.fee ?: 0L)),
+                                tint = Rahal.colors.brand,
+                                bold = true,
+                            )
+                            EditRequestBadge.REJECTED -> InfoBox(
+                                icon = R.drawable.ic_warning,
+                                text = stringResource(R.string.fee_req_rejected, state.feeRequest?.rejectReason.orEmpty()),
+                                tint = Rahal.colors.danger,
+                                bold = true,
+                            )
+                            EditRequestBadge.STALE -> InfoBox(
+                                icon = R.drawable.ic_warning,
+                                text = stringResource(R.string.fee_req_stale),
+                                tint = Rahal.colors.danger,
+                                bold = true,
+                            )
+                            else -> Unit
+                        }
+
                         // ── **طلب تعديل بالطلب العادي** (قرار المالك ٢٠٢٦-١١-١٠) ──
                         when (editRequestBadge(order, state.editRequest)) {
                             EditRequestBadge.PENDING -> {
@@ -2415,6 +2449,17 @@ private fun TripCard(
                                     ) { openWhatsApp(ctx, recipient, hello) }
                                 }
                                 // **ولونُ العلامة لا الأخضر** — الأخضرُ لاتّصالٍ وواتساب (المالك ٢٠٢٦-١١-١٠).
+                                if (canRequestFee(order)) {
+                                    com.rahalgo.ui.RahalOutlineButton(
+                                        onClick = actions.askFeeRequest,
+                                        enabled = !state.busy,
+                                        tone = Tone.Brand,
+                                        compact = true,
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Text(stringResource(R.string.fee_req_button), style = Rahal.type.button, maxLines = 1)
+                                    }
+                                }
                                 if (canEdit) {
                                     com.rahalgo.ui.RahalOutlineButton(
                                         onClick = actions.askEditRequest,

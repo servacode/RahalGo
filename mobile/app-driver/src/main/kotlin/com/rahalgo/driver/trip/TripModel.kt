@@ -229,6 +229,10 @@ data class TripState(
     val editRequestOpen: Boolean = false,
     val editRequestError: String = "",
     val editRequest: com.rahalgo.shared.model.DriverEditRequest? = null,
+    /** **«اطلب تعديل الأجرة» لطلب الواتساب** (قرار المالك ٢٠٢٦-١١-١٨). */
+    val feeRequestOpen: Boolean = false,
+    val feeRequestError: String = "",
+    val feeRequest: com.rahalgo.shared.model.DriverFeeRequest? = null,
     /** محطّاته كلّها — **وواحدةٌ منها هي المعروضة.** */
     val stops: List<Stop> = emptyList(),
     /** **أنافذة الطارئ مفتوحة؟** — تُفتح حين لا سببَ يُختار. */
@@ -333,6 +337,9 @@ data class TripActions(
     val askEditRequest: () -> Unit = {},
     val sendEditRequest: (EditDraft) -> Unit = {},
     val dismissEditRequest: () -> Unit = {},
+    val askFeeRequest: () -> Unit = {},
+    val sendFeeRequest: (Long, String) -> Unit = { _, _ -> },
+    val dismissFeeRequest: () -> Unit = {},
     val withdrawEditRequest: () -> Unit = {},
     /** **«إحضار»: ما دفعه بمكان الاستلام** — يصل المتجرَ ليوافق (قرارُ المالك ٢٠٢٦-١٠-١٦). */
     // **بعملة الطلب وبالوحدة الكبرى** (١٣٫٢٥ للدولار) — قرارُ المالك ٢٠٢٦-١٠-٢٠.

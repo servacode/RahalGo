@@ -1103,6 +1103,9 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/edit-request", s.idempotent(s.handleDriverEditRequest))
 			r.Get("/orders/{id}/edit-request", s.handleDriverGetEditRequest)
 			r.Post("/orders/{id}/edit-request/withdraw", s.handleDriverWithdrawEditRequest)
+			// **«اطلب تعديل الأجرة» لطلب الواتساب** (قرارُ المالك ٢٠٢٦-١١-١٨) — والإدارة توافق.
+			r.Post("/orders/{id}/fee-request", s.handleDriverFeeRequest)
+			r.Get("/orders/{id}/fee-request", s.handleDriverGetFeeRequest)
 			r.Get("/orders", s.handleDriverOrders)
 			// **مسارُ الطرف الحاليّ** — خطُّ الشوارع ومسافتُه ومدّتُه.
 			// **ونداءٌ وحدَه لا حقلٌ في القائمة**: القائمةُ خمسةُ طلبات
@@ -1691,6 +1694,16 @@ func (s *Server) Router() http.Handler {
 			// التعديل نفسِها، وبمعاينة. انظر `orders/order_fee_edit.go`.
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/delivery-fee", s.handleOrderDeliveryFee)
+			// **سعرُ طلب الواتساب من الكارت ومن الكابتن** (قرارُ المالك ٢٠٢٦-١١-١٨) — ثمنُ الطلب يكتبه المكتب،
+			// وطلبُ أجرة الكابتن يوافق عليه أو يرفضه. انظر `order_fee_request.go`.
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/whatsapp-orders/{id}/goods", s.handleOfficeWhatsAppGoods)
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Get("/orders/{id}/fee-request", s.handleAdminGetFeeRequest)
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/fee-request/approve", s.handleAdminApproveFeeRequest)
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/fee-request/reject", s.handleAdminRejectFeeRequest)
 			// **طلب تعديل الكابتن** (قرارُ المالك ٢٠٢٦-١١-١٠) — الموافقة من باب التعديل نفسه وبقدرته
 			// بعد الاستلام. انظر `order_edit_request.go`.
 			r.With(s.RequireCapability(authz.OrdersIntervene)).

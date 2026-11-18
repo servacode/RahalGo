@@ -689,6 +689,26 @@ class DriverApi(private val api: ApiClient) {
         )
     }
 
+    /**
+     * **«اطلب تعديل الأجرة» لطلب الواتساب** (قرار المالك ٢٠٢٦-١١-١٨) — الأجرة الجديدة بالليرة والسبب،
+     * والإدارة توافق. طلب جديد بيحلّ محل المعلّق.
+     */
+    suspend fun feeRequest(orderId: String, fee: Long, reason: String): com.rahalgo.shared.model.DriverFeeRequest? =
+        api.call<com.rahalgo.shared.model.DriverFeeRequestReply>(
+            "/api/v1/driver/orders/" + orderId + "/fee-request",
+            HttpMethod.Post,
+            FeeRequestBody(fee, reason),
+        ).request
+
+    /** **آخر طلب أجرة بعته على هالطلب** — و`null`: ما في. */
+    suspend fun feeRequestStatus(orderId: String): com.rahalgo.shared.model.DriverFeeRequest? =
+        api.call<com.rahalgo.shared.model.DriverFeeRequestReply>(
+            "/api/v1/driver/orders/" + orderId + "/fee-request",
+        ).request
+
+    @kotlinx.serialization.Serializable
+    private data class FeeRequestBody(val fee: Long, val reason: String)
+
     @kotlinx.serialization.Serializable
     private data class WithdrawEditBody(@kotlinx.serialization.SerialName("request_id") val requestId: String)
 

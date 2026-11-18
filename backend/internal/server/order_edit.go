@@ -101,6 +101,10 @@ func (s *Server) handleOrderDeliveryFee(w http.ResponseWriter, r *http.Request) 
 		httpx.JSON(w, http.StatusOK, map[string]any{"result": res})
 		return
 	}
+	// **وطلبُ الواتساب: الزبونُ يُخبَر بالمبالغ الجديدة** (٢٠٢٦-١١-١٨) — إن كان ثمنُه مكتوباً.
+	if o.Origin == orders.OriginWhatsApp {
+		s.sendWhatsAppGoodsNotice(context.WithoutCancel(r.Context()), orderID)
+	}
 	s.touch("order", "ops")
 	view, err := orderView(orders.AudienceOps, o)
 	if err != nil {

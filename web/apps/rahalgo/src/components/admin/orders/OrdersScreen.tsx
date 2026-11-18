@@ -87,6 +87,8 @@ import { payerIsCash, payerLabel, payerOf } from "./payer";
 import { WaiveCommissionDialog, WAIVE_ROUTE } from "./WaiveCommissionDialog";
 import { OrderEditor } from "./OrderEditor";
 import { FeeEditor } from "./FeeEditor";
+import { GoodsEditor } from "./GoodsEditor";
+import { FeeRequestBox, type FeeRequestBrief } from "./FeeRequestBox";
 import { EditRequestBox } from "./EditRequestBox";
 import {
   AmanahPointsSection,
@@ -400,6 +402,8 @@ interface BoardInfo extends ShamcashBoard {
   ended_by_name?: string;
   /** **طلب تعديل من الكابتن بانتظار المكتب — من إمتى** (قرارُ المالك ٢٠٢٦-١١-١٠). */
   edit_request_at?: string | null;
+  /** **طلب أجرة من الكابتن بانتظار المكتب** (قرارُ المالك ٢٠٢٦-١١-١٨) — طلب الواتساب. */
+  fee_request?: FeeRequestBrief | null;
 }
 
 /** **إعداداتُ اللوحة من الخادم** (`GET /orders/board`) — لا من `/settings` (المشكلة ٣٢). */
@@ -1591,6 +1595,12 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           <span className="flex w-full items-center gap-2 rounded-control border border-warning-edge bg-warning-tint px-3 py-2 text-sm font-bold text-warning">
             <IconWarning size={16} />
             {m.admin.ordersPage.editRequest.badge}
+          </span>
+        )}
+        {live && !o.closed_at && o.board?.fee_request && (
+          <span className="flex w-full items-center gap-2 rounded-control border border-warning-edge bg-warning-tint px-3 py-2 text-sm font-bold text-warning">
+            <IconWarning size={16} />
+            {m.admin.ordersPage.feeRequest.badge}
           </span>
         )}
         {/* **سطرُ التنبيه تحت الرأس — بلونه، ويغيب حين لا مشكلة** (قرارُ المالك ٢٠٢٦-١١-٠٣). */}
@@ -3149,6 +3159,8 @@ function OrderActions({
    */
   const [editing, setEditing] = useState(false);
   const [feeEditing, setFeeEditing] = useState(false);
+  /** **«عدّل ثمن الطلب» لطلب الواتساب** (قرارُ المالك ٢٠٢٦-١١-١٨). */
+  const [goodsEditing, setGoodsEditing] = useState(false);
   /**
    * **تعديلُ عرض الطلب الخاصّ** — نموذجٌ يُملأ، ثمّ مراجعةٌ تُؤكَّد قبل الإرسال.
    *
@@ -4312,6 +4324,31 @@ function OrderActions({
             onChanged();
           }}
         />
+      )}
+      {/* **«عدّل ثمن الطلب» لطلب الواتساب** (قرارُ المالك ٢٠٢٦-١١-١٨) — الكابتن بيكتبه من المحل، والمكتب
+          بيكتبه أو بيصحّحه من هون لحد التسليم، والزبون بتوصله رسالة المبالغ. */}
+      {canIntervene && o.origin === "whatsapp" && !o.wa_amanah && !CLOSED_STATUSES.has(o.status) && (
+        <Button variant="secondary" disabled={busy !== ""} onClick={() => setGoodsEditing(true)}>
+          <BtnLabel icon={IconEdit}>{m.admin.ordersPage.goodsEdit.button}</BtnLabel>
+        </Button>
+      )}
+      {goodsEditing && (
+        <GoodsEditor
+          orderId={o.id}
+          orderNumber={o.number}
+          current={o.fetch_amount}
+          currency={o.amount_currency}
+          onClose={() => setGoodsEditing(false)}
+          onDone={() => {
+            setGoodsEditing(false);
+            setNotice(m.admin.ordersPage.goodsEdit.done);
+            onChanged();
+          }}
+        />
+      )}
+      {/* **«الكابتن طلب تعديل الأجرة»** (قرارُ المالك ٢٠٢٦-١١-١٨) — وافق أو ارفض بمعاينة المحرّك. */}
+      {o.board?.fee_request && !CLOSED_STATUSES.has(o.status) && (
+        <FeeRequestBox key={o.board.fee_request.id} orderId={o.id} request={o.board.fee_request} onChanged={onChanged} />
       )}
       {/* **طلب تعديل من الكابتن** (قرارُ المالك ٢٠٢٦-١١-١٠) — وافق أو ارفض بمعاينة المحرّك. */}
       {o.board?.edit_request_at && !CLOSED_STATUSES.has(o.status) && (

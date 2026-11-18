@@ -338,6 +338,15 @@
     <!-- تعديل ثمن البضاعة بعد الاستلام والزبون يوافق (قرار المالك ٢٠٢٦-١١-٠٦) -->
     <!-- طلب تعديل بالطلب العادي (قرار المالك ٢٠٢٦-١١-١٠): ناقص · الزبون لغاه · انزاد صنف، والمكتب يوافق -->
     <string name="edit_req_button">طلب تعديل</string>
+    <string name="fee_req_button">تعديل الأجرة</string>
+    <string name="fee_req_title">اطلب تعديل أجرة التوصيل</string>
+    <string name="fee_req_hint">الأجرة هلق %1$s. اكتب الأجرة الجديدة والسبب، والإدارة بتوافق، وبعدها بيتعدّل المبلغ اللي بتقبضه من الزبون.</string>
+    <string name="fee_req_fee">الأجرة الجديدة (ل.س)</string>
+    <string name="fee_req_reason">السبب</string>
+    <string name="fee_req_send">ابعت للإدارة</string>
+    <string name="fee_req_pending">طلبت أجرة %1$s — بانتظار الإدارة</string>
+    <string name="fee_req_rejected">الإدارة رفضت تعديل الأجرة: %1$s</string>
+    <string name="fee_req_stale">الأجرة تغيّرت من وقت طلبك — ابعت طلب جديد إذا لازم</string>
     <string name="edit_req_title">طلب تعديل للمكتب</string>
     <string name="edit_req_hint">اختار شو تغيّر. المكتب بيوافق، وبعدها بيتعدّل المبلغ اللي بتقبضه.</string>
     <string name="edit_req_missing">ناقص</string>

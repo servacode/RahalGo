@@ -727,3 +727,24 @@ data class DriverEditRequestAdd(
 /** **ردّ «آخر طلب تعديل»** — و`null`: ما في. */
 @Serializable
 data class DriverEditRequestReply(val request: DriverEditRequest? = null)
+
+/**
+ * **«اطلب تعديل الأجرة» لطلب الواتساب** (قرار المالك ٢٠٢٦-١١-١٨) — الكابتن بيكتب الأجرة الجديدة والسبب،
+ * **والإدارة توافق أو ترفض.** (`orders.FeeRequestView` بالمحرّك — نفس الأسماء.)
+ *
+ * `status`: `pending` · `approved` · `rejected` · `stale` (الأجرة تغيّرت من وقت الطلب).
+ */
+@Serializable
+data class DriverFeeRequest(
+    val id: String = "",
+    val status: String = "",
+    @SerialName("old_fee") val oldFee: Long = 0,
+    val fee: Long = 0,
+    val reason: String = "",
+    @SerialName("reject_reason") val rejectReason: String = "",
+    @SerialName("created_at") val createdAt: String = "",
+)
+
+/** **ردّ «آخر طلب أجرة»** — و`null`: ما في. */
+@Serializable
+data class DriverFeeRequestReply(val request: DriverFeeRequest? = null)
