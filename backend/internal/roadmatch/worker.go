@@ -1024,6 +1024,22 @@ func MarkDirty(ctx context.Context, db DB, driverID string, oldest time.Time) er
 	return err
 }
 
+// Covered **المطابق غطّى أثر السائق لحد `until`؟** — الكانس ما بيثبّت رقم دوام والمطابقة شغّالة قبل ما
+// تنطابق قطعه (`server/drive_sweeper.go`): Valhalla واقع ساعتين كان بيثبّت الدوام بالخط المستقيم للأبد.
+// مغطّى = في مؤشّر للسائق، وما في نقاط متأخرة بتنعاد قبل `until`، وما في نقطة أثر بعد المؤشّر لحد `until`.
+func Covered(ctx context.Context, db DB, driverID string, until time.Time) (bool, error) {
+	var ok bool
+	err := db.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM driver_road_progress p
+		   WHERE p.driver_id = $1::uuid AND p.matched_until IS NOT NULL
+		     AND (p.dirty_from IS NULL OR p.dirty_from > $2)
+		     AND NOT EXISTS (SELECT 1 FROM driver_trail t
+		                      WHERE t.driver_id = p.driver_id AND t.recorded_at > p.matched_until
+		                        AND t.recorded_at <= $2))`, driverID, until).Scan(&ok)
+	return ok, err
+}
+
 // Freeze **عقد كنّاس العدّاد**: ما قبل `before` صار نهائي ⇒ المطابق ما بيخزّن ولا بيعيد ولا بيرجع قبله.
 func Freeze(ctx context.Context, db DB, driverID string, before time.Time) error {
 	_, err := db.Exec(ctx, `

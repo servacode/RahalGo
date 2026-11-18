@@ -33,8 +33,8 @@
     "setting_defs": 297,
     "behaviour_settings": 251,
     "order_fields": 148,
-    "test_files": 851,
-    "test_funcs": 3257
+    "test_files": 853,
+    "test_funcs": 3265
   },
   "flows": [
     {
@@ -9188,6 +9188,42 @@
     {
       "name": "TestNextShown_StandingJitterKeepsPoint",
       "file": "internal/drivermonitor/display_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestMoved_GapWithHeartbeatsBridged",
+      "file": "internal/drivermonitor/meter_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestMoved_IndoorJitterIsZero",
+      "file": "internal/drivermonitor/meter_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestMoved_MockedNotCounted",
+      "file": "internal/drivermonitor/meter_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestMoved_OnRoadUsesWholeStep",
+      "file": "internal/drivermonitor/meter_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestMoved_SlowTrafficCounts",
+      "file": "internal/drivermonitor/meter_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestMoved_SpikeIsZero",
+      "file": "internal/drivermonitor/meter_test.go",
       "package": "drivermonitor",
       "orphan": true
     },
@@ -18586,6 +18622,12 @@
     },
     {
       "name": "TestOrderDrive_LatePointsThenFrozen",
+      "file": "internal/qa/driver_shifts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderDrive_RoadOnWaitsForMatch",
       "file": "internal/qa/driver_shifts_test.go",
       "package": "qa",
       "orphan": true
@@ -30487,6 +30529,12 @@
     {
       "name": "TestWorker_TimeoutOpensBreakerSplitsNextTime",
       "file": "internal/roadmatch/roadmatch_test.go",
+      "package": "roadmatch",
+      "orphan": true
+    },
+    {
+      "name": "TestTruth_KmVsGroundTruth",
+      "file": "internal/roadmatch/truth_test.go",
       "package": "roadmatch",
       "orphan": true
     },

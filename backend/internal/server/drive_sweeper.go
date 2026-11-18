@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/drivermonitor"
+	"github.com/servacode/rahalgo/backend/internal/roadmatch"
 )
 
 // driveSweepBatch أقصى دوامات في الجولة.
@@ -91,7 +92,7 @@ func (s *Server) SweepDrives(ctx context.Context, now time.Time) int {
 		 WHERE NOT s.final AND s.opened_at <= $1
 		   AND (s.computed_at IS NULL
 		        OR (s.closed_at IS NOT NULL AND (s.computed_at < s.closed_at
-		                                         OR s.closed_at <= $2
+		                                         OR (s.closed_at <= $2 AND s.computed_at < s.closed_at + ($1 - $2))
 		                                         OR s.computed_at < $1 - interval '10 minutes'))
 		        OR (s.closed_at IS NULL AND s.computed_at < $1 - interval '15 minutes')
 		        OR (s.closed_at IS NULL AND s.computed_at < $1 - interval '1 minute'
@@ -148,6 +149,19 @@ func (s *Server) measureShift(ctx context.Context, sp drivermonitor.ShiftSpan, n
 		return err
 	}
 	final := sp.ClosedAt != nil && !sp.ClosedAt.After(now.Add(-drivermonitor.FinalAfter))
+	// **والمطابقة شغّالة: ما بيثبت قبل ما تنطابق قطعه** (لحد `RoadFinalWait`) — وإلا Valhalla واقع
+	// ساعتين كان بيثبّت الدوام ومسافة طلباته بالخط المستقيم للأبد. وبيرجع ينحسب كل ١٠ دقايق.
+	roadOn := s.roadMatchOn(ctx)
+	roadReady := func(until time.Time, endedAt time.Time) bool {
+		if !roadOn || now.Sub(endedAt) >= drivermonitor.RoadFinalWait {
+			return true
+		}
+		ok, err := roadmatch.Covered(ctx, s.pg, sp.DriverID, until)
+		return err == nil && ok
+	}
+	if final && !roadReady(sp.ClosedAt.Add(drivermonitor.ShiftPad), *sp.ClosedAt) {
+		final = false
+	}
 	// **أيُّ قطعةٍ انتهت منذ آخر حساب؟** — منها وحدها يُنبَّه تطبيقُ السائق (عدّادُه يزيد)،
 	// لا مع كلّ دقيقةٍ وطلبٌ بيده.
 	newlyEnded := false
@@ -187,7 +201,8 @@ func (s *Server) measureShift(ctx context.Context, sp drivermonitor.ShiftSpan, n
 	for _, d := range drives {
 		// **وقطعةُ الطلب تثبت بعد ساعتين وعشر دقائق من نهايتها** — لا من سكّر الدوام: دوامٌ
 		// مفتوحٌ طويلاً لا يُبقي طلباتِه القديمة تُعاد كتابتُها.
-		pieceFinal := d.EndedAt != nil && !d.EndedAt.After(now.Add(-drivermonitor.FinalAfter))
+		pieceFinal := d.EndedAt != nil && !d.EndedAt.After(now.Add(-drivermonitor.FinalAfter)) &&
+			roadReady(*d.EndedAt, *d.EndedAt)
 		b.Queue(`
 			INSERT INTO order_drives (order_id, driver_id, shift_id, started_at, picked_up_at, ended_at,
 			                          end_kind, to_pickup_m, with_order_m, shared, gap_min, points,

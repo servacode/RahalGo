@@ -243,15 +243,46 @@ func TestRealDrive_EqualsValidatedSQL(t *testing.T) {
 			t.Errorf("%s: Go=%.9f و SQL=%.9f", name, goV, sqlV)
 		}
 	}
+	// **المحسوب كله** (كل مقطع بتصنيفه) ما بيتعلّق بالمقياس ⇒ من اللوحة نفسها.
 	check("km_total", got.KmTotal, kmTotal)
 	check("km_with", got.KmWithOrder, kmWith)
 	check("km_to", got.KmToPickup, kmTo)
 	check("km_no", got.KmNoOrder, kmNo)
-	check("drive_orders", got.DriveKmWithOrder+got.DriveKmToPickup, driveOrders)
-	check("drive_no", got.DriveKmNoOrder, driveNo)
-	check("slow_or_drift", got.NotDrivingKm, kmSlow)
-	check("drive_total", got.DriveKmTotal, driveOrders+driveNo)
+
+	// **والقاعدة القديمة (`RealDrive`) = الـSQL حرفاً** — بنفس النقاط والولايات، بالتحليل نفسه.
+	// (من ٢٠٢٦-١١-١٨ المقياس المعتمد `Moved` — `drivermonitor/meter.go` — والقديمة للمقارنة بس.)
+	now := time.Now()
+	trail, err := drivermonitor.LoadPoints(ctx, h.Pool, drv.ID, from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wins, err := drivermonitor.LoadTenures(ctx, h.Pool, drv.ID, from, to, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy := drivermonitor.DefaultConfig()
+	legacy.Meter = drivermonitor.RealDrive{Cfg: legacy}
+	end := to
+	if now.Before(end) {
+		end = now
+	}
+	old := drivermonitor.Analyze(drivermonitor.Input{Points: trail, Windows: wins, Now: end, Cfg: legacy}).Summary
+	check("drive_orders", old.DriveKmWithOrder+old.DriveKmToPickup, driveOrders)
+	check("drive_no", old.DriveKmNoOrder, driveNo)
+	check("slow_or_drift", old.NotDrivingKm, kmSlow)
+	check("drive_total", old.DriveKmTotal, driveOrders+driveNo)
 	t.Logf("SQL: كل=%.3f بطلب=%.3f بلا=%.3f بطيء=%.3f", kmTotal, driveOrders, driveNo, kmSlow)
+
+	// **والمقياس المعتمد بيحسب الزحف ٢ م/ث** (٣٦٠ م — كانت «بطيء» بالقديمة) ورجفة الواقف بتضل برّا.
+	if got.DriveKmTotal < old.DriveKmTotal+0.3 {
+		t.Errorf("القيادة باللوحة %.3f كم والقديمة %.3f — الزحف ٢ م/ث ما انحسب", got.DriveKmTotal, old.DriveKmTotal)
+	}
+	if got.DriveKmTotal > got.KmTotal {
+		t.Errorf("القيادة %.3f أكتر من المحسوب كله %.3f — رجفة صارت قيادة", got.DriveKmTotal, got.KmTotal)
+	}
+	if math.Abs(got.DriveKmTotal+got.NotDrivingKm-got.KmTotal) > eps {
+		t.Errorf("القيادة + ما انحسب = %.6f ≠ المحسوب %.6f", got.DriveKmTotal+got.NotDrivingKm, got.KmTotal)
+	}
 }
 
 // TestDriverMonitor_AlertUsesRealDriving **التنبيه بالقيادة لا بالرجفة**: ١٥ كم زحف

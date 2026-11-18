@@ -42,7 +42,23 @@ type Config struct {
 	DriveMinSpeedMps      float64
 	DriveMinPhoneSpeedMps float64
 	DriveMaxAccuracyM     float64
-	// Meter **المقياس الواحد** لكل رقم مسافة بالمنصّة — فارغ = RealDrive بهالعتبات.
+	// ── الإزاحة عن المرساة (`Moved`، طلب المالك ٢٠٢٦-١١-١٨) ──
+	// MoveMinM أصغر نصف قطر رجفة، و MoveAccFactor × مجموع دقّة النقطتين لو أكبر، و MoveNilAccM دقّة
+	// النقطة اللي ما إلها دقّة (نبضة الواقف).
+	MoveMinM      float64
+	MoveAccFactor float64
+	MoveNilAccM   float64
+	// MoveMeanWindow و MoveMeanM و MoveMeanAccFactor: متوسّط المواضع بالشبّاك قبل المرساة وبعد النقطة
+	// لازم يبعدوا max(MoveMeanM، العامل × مجموع متوسّط دقّتهن) — الرجفة متوسّطها بيضل بمكانه.
+	MoveMeanWindow    time.Duration
+	MoveMeanM         float64
+	MoveMeanAccFactor float64
+	// MoveFastAccFactor خطوة بقاعدة `IsDrive` وأبعد من العامل × مجموع الدقّتين بتنحسب ولو المتوسّط ما
+	// تغيّر (لفّة حول بلوك).
+	MoveFastAccFactor float64
+	// MoveContinueMax أطول مدّة لخطوة «تكملة» (آخر المشوار قبل الوقفة — `meter.go`).
+	MoveContinueMax time.Duration
+	// Meter **المقياس الواحد** لكل رقم مسافة بالمنصّة — فارغ = `Moved` بهالعتبات.
 	Meter DriveMeter
 }
 
@@ -68,6 +84,14 @@ func DefaultConfig() Config {
 		DriveMinSpeedMps:      3,
 		DriveMinPhoneSpeedMps: 1.5,
 		DriveMaxAccuracyM:     30,
+		MoveMinM:              15,
+		MoveAccFactor:         1,
+		MoveNilAccM:           10,
+		MoveMeanWindow:        2 * time.Minute,
+		MoveMeanM:             50,
+		MoveMeanAccFactor:     2,
+		MoveFastAccFactor:     1.5,
+		MoveContinueMax:       30 * time.Second,
 	}
 }
 
@@ -78,9 +102,9 @@ func DefaultConfig() Config {
 // كل رقم مسافة بالمنصّة يمرّ من هون: صفحة المراقبة، ومسافة كل طلب، وعدّاد السائق،
 // وأرقام الدوام مقابل العدّاد. **فما في رقمين بيختلفوا لأنهم انحسبوا بطريقتين.**
 //
-// واليوم المقياس هو القاعدة المعتمدة (`RealDrive`): مسافة الهواء للمقطع وقت يكون
-// قيادة. ودفعة لاحقة بتبدّله بمطابقة الطريق (Valhalla) — **بتبديل هالواجهة وحدها**،
-// وما بيتغيّر أيّ مستهلك.
+// واليوم المقياس هو `Moved` (`meter.go`، طلب المالك ٢٠٢٦-١١-١٨): الإزاحة عن مرساة بدل
+// سرعة المقطع — ومع المطابقة الخطوة ع الشارع (`RoadDriveMeter`). والقاعدة القديمة
+// (`RealDrive`) باقية للمقارنة بمختبر الحقيقة وأوراكل الـSQL، **وما بيستعملها أيّ رقم**.
 
 // DriveMeter يحوّل نقاطاً منظّفة مرتّبة بالزمن إلى أمتار مقطوعة فعلاً.
 type DriveMeter interface {
@@ -89,7 +113,8 @@ type DriveMeter interface {
 	Meters(pts []Point) []float64
 }
 
-// RealDrive القاعدة المعتمدة: مسافة الهواء للمقطع حين يكون قيادة (`IsDrive`).
+// RealDrive **القاعدة القديمة** (٢٠٢٦-١١-٠٤ لـ٢٠٢٦-١١-١٨): مسافة الهواء للمقطع حين يكون قيادة (`IsDrive`).
+// مختبر الحقيقة قاس فيها الزحمة ٥–١٥ كم/س −٨٨٪ — فانستبدلت بـ`Moved`.
 type RealDrive struct{ Cfg Config }
 
 // Meters انظر DriveMeter.
@@ -290,7 +315,7 @@ func Analyze(in Input) Result {
 	}
 	meter := cfg.Meter
 	if meter == nil {
-		meter = RealDrive{Cfg: cfg}
+		meter = Moved{Cfg: cfg}
 	}
 	raw := append([]Point(nil), in.Points...)
 	sort.Slice(raw, func(a, b int) bool { return raw[a].At.Before(raw[b].At) })
@@ -457,7 +482,19 @@ func Analyze(in Input) Result {
 	}
 
 	// ── المقاطع: تصنيف + كيلومترات + قيادة فعلية + مسافة كل طلب + مسار ──
-	meters := meter.Meters(pts)
+	// **والطريقُ المطابق للخطوة كلها** — المقياس اللي بيعرفه (`RoadDriveMeter`) بيسأل أمتار الطريق بين
+	// المرساة والنقطة، والمقياس القديم بيبدّل مقاطعه وحدها (تحت).
+	var meters []float64
+	rm, roadAware := meter.(RoadDriveMeter)
+	_, isMoved := meter.(Moved)
+	if roadAware && in.Road != nil {
+		meters = rm.MetersOnRoad(pts, func(i, j int) (float64, bool) {
+			seg := in.Road.Segment(pts[i], pts[j], cfg)
+			return seg.M, seg.Kind == SegRoad || seg.Kind == SegInferred
+		})
+	} else {
+		meters = meter.Meters(pts)
+	}
 	// windowsAt مفتاح الطلبات اللي مع السائق بلحظة — الجزء بينقسم لما يتغيّر.
 	windowsAt := func(t time.Time) string {
 		key := ""
@@ -509,27 +546,42 @@ func Analyze(in Input) Result {
 		}
 		d := seg.M
 		drive := 0.0
-		if cls != ClassGap && cls != ClassStopped && k < len(meters) {
+		// **والقيادة بتصنيف الطلب** — حتى جوّا «واقف»: الوقفة بتبلّش لحد ٤٠ م قبل مكانها (آخر
+		// المشوار)، والمقياس ما بيحسب رجفتها أصلاً (`Moved`). والقديم (`RealDrive`) متل قبل.
+		dcls := cls
+		if cls != ClassGap && k < len(meters) && (cls != ClassStopped || roadAware || isMoved) {
 			drive = meters[k]
 		}
+		if cls == ClassStopped && drive > 0 {
+			w, to, list := activeAt(mid)
+			acts = list
+			dcls = ClassNoOrder
+			if w {
+				dcls = ClassWithOrder
+			} else if to {
+				dcls = ClassToPickup
+			}
+		}
 		// **والقيادةُ على الطريق المطابق إن انطابق** — فمسافةُ الطلب والعدّاد يمشيان ع الشارع
-		// نفسِه (المقياس الواحد)، والمقطعُ يبقى قيادةً أو لا بقاعدة `IsDrive`.
-		if drive > 0 && (seg.Kind == SegRoad || seg.Kind == SegInferred) {
+		// نفسِه (المقياس الواحد). والمقياس اللي بيعرف الطريق (`Moved`) حسبها بالخطوة كلها.
+		if !roadAware && drive > 0 && (seg.Kind == SegRoad || seg.Kind == SegInferred) {
 			drive = seg.M
 		}
 		switch cls {
 		case ClassWithOrder:
 			res.Summary.KmWithOrder += d / 1000
-			res.Summary.DriveKmWithOrder += drive / 1000
 		case ClassToPickup:
 			res.Summary.KmToPickup += d / 1000
-			res.Summary.DriveKmToPickup += drive / 1000
 		case ClassNoOrder:
 			res.Summary.KmNoOrder += d / 1000
-			res.Summary.DriveKmNoOrder += drive / 1000
 		}
-		if (cls == ClassWithOrder || cls == ClassToPickup || cls == ClassNoOrder) && drive <= 0 {
-			res.Summary.NotDrivingKm += d / 1000
+		switch dcls {
+		case ClassWithOrder:
+			res.Summary.DriveKmWithOrder += drive / 1000
+		case ClassToPickup:
+			res.Summary.DriveKmToPickup += drive / 1000
+		case ClassNoOrder:
+			res.Summary.DriveKmNoOrder += drive / 1000
 		}
 		// **والقيادةُ بطلبٍ تُقسَم على الطلبات التي بيده بالتساوي** — فلا تُعدّ مرّتين.
 		if drive > 0 && len(acts) > 0 {
@@ -586,6 +638,8 @@ func Analyze(in Input) Result {
 	}
 	res.Summary.KmTotal = res.Summary.KmWithOrder + res.Summary.KmToPickup + res.Summary.KmNoOrder
 	res.Summary.DriveKmTotal = res.Summary.DriveKmWithOrder + res.Summary.DriveKmToPickup + res.Summary.DriveKmNoOrder
+	// **وما انحسب** = المحسوب ناقص القيادة (رجفة الواقف، والزيادة بالخط المتعرّج حول الطريق).
+	res.Summary.NotDrivingKm = math.Max(0, res.Summary.KmTotal-res.Summary.DriveKmTotal)
 	if countedM > 0 {
 		res.Summary.RoadShare = roadM / countedM
 	}

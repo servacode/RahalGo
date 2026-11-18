@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/servacode/rahalgo/backend/internal/drivermonitor"
 	"github.com/servacode/rahalgo/backend/internal/shifts"
 )
 
@@ -792,5 +793,55 @@ func TestAccountDeletion_ShiftCloseFailureStillRevokes(t *testing.T) {
 	}
 	if me := h.GET("/api/v1/driver/me", drv.Token); me.Code < http.StatusBadRequest {
 		t.Fatalf("جلسةُ حسابٍ محذوف ما زالت تمرّ: %d", me.Code)
+	}
+}
+
+// TestOrderDrive_RoadOnWaitsForMatch **والمطابقة شغّالة ما بيثبت الدوام قبل ما تنطابق قطعه**
+// (٢٠٢٦-١١-١٨): Valhalla واقع ساعتين كان بيثبّت الدوام ومسافة الطلب بالخط المستقيم للأبد. بعد ما
+// يغطّي المطابق الأثر بيثبت؛ ولو ما غطّاه أبداً بيثبت بعد `RoadFinalWait` بالخط المستقيم.
+func TestOrderDrive_RoadOnWaitsForMatch(t *testing.T) {
+	h := New(t)
+	h.Setting("drivers.road_match_enabled", "true")
+	f := h.Factory()
+	m := f.Merchant()
+	shiftFinal := func(id string) bool {
+		var fin bool
+		if err := h.Pool.QueryRow(ctxBG(), `SELECT final FROM driver_shifts WHERE id = $1::uuid`, id).Scan(&fin); err != nil {
+			t.Fatal(err)
+		}
+		return fin
+	}
+	run := func(base time.Time) (drv, oid, shift string, closed time.Time, lastAt time.Time) {
+		d := f.Driver()
+		start := rdPoint{at: base, lat: 35.81, lng: 38.91, acc: rdF(6), spd: rdF(5)}
+		leg := append([]rdPoint{start}, rdDrive(start, 1000, 5, 10*time.Second)...)
+		rdPut(t, h, d.ID, leg)
+		o, _ := odOrder(t, h, d.ID, m.ID, base, base.Add(time.Minute), rdLast(leg).at)
+		c := rdLast(leg).at.Add(5 * time.Minute)
+		return d.ID, o, odShift(t, h, d.ID, base.Add(-time.Minute), &c), c, rdLast(leg).at
+	}
+
+	// ١ · ما انطابق ⇒ ما بيثبت بعد ساعتين وعشر؛ وبعد ما يغطّيه المطابق بيثبت.
+	base := time.Now().Add(-30 * time.Hour).Truncate(time.Second)
+	drv, oid, shift, closed, lastAt := run(base)
+	sweepUntil(t, h, shift, closed.Add(2*time.Hour+11*time.Minute))
+	if _, _, fin, _ := driveRow(t, h, oid, drv); fin || shiftFinal(shift) {
+		t.Fatalf("ثبت والمطابقة ما غطّت الأثر: طلب=%v دوام=%v", fin, shiftFinal(shift))
+	}
+	if _, err := h.Pool.Exec(ctxBG(), `
+		INSERT INTO driver_road_progress (driver_id, matched_until, backfill_before) VALUES ($1::uuid, $2, $2)
+		ON CONFLICT (driver_id) DO UPDATE SET matched_until = EXCLUDED.matched_until`, drv, lastAt); err != nil {
+		t.Fatal(err)
+	}
+	sweepUntil(t, h, shift, closed.Add(2*time.Hour+30*time.Minute))
+	if _, _, fin, _ := driveRow(t, h, oid, drv); !fin || !shiftFinal(shift) {
+		t.Fatalf("المطابق غطّى الأثر وما ثبت: طلب=%v دوام=%v", fin, shiftFinal(shift))
+	}
+
+	// ٢ · ما انطابق أبداً ⇒ بيثبت بعد RoadFinalWait (بالخط المستقيم) — ما بيضل مفتوح للأبد.
+	drv2, oid2, shift2, closed2, _ := run(base.Add(time.Hour))
+	sweepUntil(t, h, shift2, closed2.Add(drivermonitor.RoadFinalWait+time.Minute))
+	if wp, wo, fin, _ := driveRow(t, h, oid2, drv2); !fin || !shiftFinal(shift2) || wp+wo < 900 {
+		t.Fatalf("بعد الانتظار الأقصى: طلب=%v دوام=%v مسافة=%d", fin, shiftFinal(shift2), wp+wo)
 	}
 }

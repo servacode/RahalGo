@@ -25,7 +25,7 @@ import (
 
 // ParamsVersion **نسخة قواعد التقطيع والطلب والمواضع.** لما تتغيّر، القطع الأقدم بتنعاد مطابقتها
 // بسرعة الرجوع (`worker.go`).
-const ParamsVersion = 1
+const ParamsVersion = 2
 
 // عتبات التقطيع (B2).
 const (
@@ -83,7 +83,9 @@ func Chunks(raw []drivermonitor.Point, cfg drivermonitor.Config, until time.Time
 	if cfg.GapAfter == 0 {
 		cfg = drivermonitor.DefaultConfig()
 	}
-	pts := drivermonitor.Clean(raw, cfg)
+	// **ونبضات الواقف مو مواضع** (`drivermonitor.Resent`): بالانقطاع التطبيق بيعيد آخر موضع لحد ٥ دقايق،
+	// فكانت تعمل «وقفة» تقطع القطعة والانقطاع ما بيتطابق ع الطريق.
+	pts := drivermonitor.Clean(drivermonitor.DropResent(raw), cfg)
 	if len(pts) == 0 {
 		return nil
 	}
