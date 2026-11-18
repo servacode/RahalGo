@@ -123,6 +123,7 @@ object MapStyleBinding {
         style.put("metadata", metadata)
 
         addLandmarks(style, sources)
+        addAreaNames(style, sources)
         addStores(style, sources)
 
         return Bound(
@@ -165,6 +166,48 @@ object MapStyleBinding {
         }
         if (clones.isEmpty()) return
         sources.put("rahalgo-landmarks", JSONObject().put("type", "geojson").put("data", url))
+        clones.forEach { layers.put(it) }
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **أسماءُ الأحياء والشوارع المُقرَّة** (قرارُ المالك ٢٠٢٦-١١-١٨: «تطلع عند الكل»)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **ما يوافق عليه المديرُ في «تعلّم الخريطة» يظهر في كلّ تطبيقٍ بلا نسخةٍ جديدةٍ لكلّ اسم** —
+     * من الخادم كالمعالم. **وتُستنسخ طبقتا البلاطة** (`place-neighbourhood` و`road-label-minor`)
+     * فيُكتب الاسمُ بخطّها ولونها: **الحيُّ بالعريض كما في الويب، والشارعُ على خطّه.**
+     * **وبلا اتّصالٍ يفشل المصدرُ صامتاً** والخريطةُ كما هي.
+     */
+    private fun addAreaNames(style: JSONObject, sources: JSONObject) {
+        val url = MapStores.areasUrl
+        if (url.isBlank()) return
+        val layers = style.optJSONArray("layers") ?: return
+        val clones = ArrayList<JSONObject>()
+        for (i in 0 until layers.length()) {
+            val l = layers.optJSONObject(i) ?: continue
+            val kind = when (l.optString("id")) {
+                "place-neighbourhood" -> "neighbourhood"
+                "road-label-minor" -> "street"
+                else -> continue
+            }
+            val c = JSONObject(l.toString())
+            c.put("id", "rahalgo-area-$kind")
+            c.put("source", "rahalgo-areas")
+            c.remove("source-layer")
+            c.put("filter", org.json.JSONArray().put("==").put(org.json.JSONArray().put("get").put("kind")).put(kind))
+            val layout = c.optJSONObject("layout") ?: JSONObject().also { c.put("layout", it) }
+            layout.put("text-field", org.json.JSONArray().put("get").put("name"))
+            layout.remove("symbol-sort-key")
+            if (kind == "neighbourhood") {
+                c.put("minzoom", 12)
+                c.put("maxzoom", 17.5)
+                layout.put("text-font", org.json.JSONArray().put("RahalGo Bold"))
+            }
+            clones += c
+        }
+        if (clones.isEmpty()) return
+        sources.put("rahalgo-areas", JSONObject().put("type", "geojson").put("data", url))
         clones.forEach { layers.put(it) }
     }
 

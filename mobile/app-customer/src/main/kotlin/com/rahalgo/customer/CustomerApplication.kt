@@ -58,6 +58,8 @@ class CustomerApplication : Application() {
         com.rahalgo.map.data.MapStores.url = Backend.BASE_URL + "/api/v1/public/map/stores?format=geojson"
         // **ومعالمُ الخريطة** (٢٠٢٦-١١-٠٣) — بلا متاجر: لها طبقتُها.
         com.rahalgo.map.data.MapStores.landmarksUrl = Backend.BASE_URL + "/api/v1/public/map/landmarks?format=geojson&stores=0"
+        // **وأسماءُ الأحياء والشوارع المُقرَّة** (٢٠٢٦-١١-١٨) — نفسُ ما في الويب.
+        com.rahalgo.map.data.MapStores.areasUrl = Backend.BASE_URL + "/api/v1/public/map/areas"
         MapStyleRepository.init(this, MapConfig(baseUrl = Backend.MAPS_BASE_URL))
     }
 

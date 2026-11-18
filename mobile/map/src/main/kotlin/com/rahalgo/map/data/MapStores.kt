@@ -15,4 +15,11 @@ object MapStores {
      */
     @Volatile
     var landmarksUrl: String = ""
+
+    /**
+     * **أسماءُ الأحياء والشوارع المُقرَّة من عناوين الزبائن** (قرارُ المالك ٢٠٢٦-١١-١٨: «تطلع عند الكل»)
+     * — `/api/v1/public/map/areas`، **نفسُ ما تقرؤه خرائطُ الويب. وفارغُه: لا أسماء.**
+     */
+    @Volatile
+    var areasUrl: String = ""
 }
