@@ -1698,6 +1698,9 @@ func (s *Server) Router() http.Handler {
 			// وطلبُ أجرة الكابتن يوافق عليه أو يرفضه. انظر `order_fee_request.go`.
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/whatsapp-orders/{id}/goods", s.handleOfficeWhatsAppGoods)
+			// **الموقعُ المباشر اليوم** (قرارُ المالك ٢٠٢٦-١١-١٨) — سطرٌ بلوحة الطلبات. انظر `orders/live_nudge.go`.
+			r.With(s.RequireCapability(authz.OrdersRead)).
+				Get("/orders/live-stats", s.handleLiveStats)
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Get("/orders/{id}/fee-request", s.handleAdminGetFeeRequest)
 			r.With(s.RequireCapability(authz.OrdersIntervene)).

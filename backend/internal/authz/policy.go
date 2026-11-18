@@ -138,6 +138,7 @@ var adminPolicy = []Rule{
 	{"POST", "/orders/{id}/edit-request/approve", OrdersIntervene},       // الموافقة — وبعد الاستلام بقدرةٍ أضيق
 	{"POST", "/orders/{id}/edit-request/reject", OrdersIntervene},        // الرفض بسبب
 	{"POST", "/whatsapp-orders/{id}/goods", OrdersIntervene},             // ثمنُ طلب الواتساب من الكارت (٢٠٢٦-١١-١٨)
+	{"GET", "/orders/live-stats", OrdersRead},                            // الموقعُ المباشر اليوم (٢٠٢٦-١١-١٨)
 	{"GET", "/orders/{id}/fee-request", OrdersIntervene},                 // طلبُ أجرة الكابتن (٢٠٢٦-١١-١٨)
 	{"POST", "/orders/{id}/fee-request/approve", OrdersIntervene},        // الموافقة — من باب «تعديل الأجرة»
 	{"POST", "/orders/{id}/fee-request/reject", OrdersIntervene},         // الرفض بسبب

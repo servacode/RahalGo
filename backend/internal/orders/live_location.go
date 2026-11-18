@@ -107,6 +107,19 @@ func (p *LivePoint) Switch() bool {
 // بين الفحص والكتابة يُغلق فيها الطلب.**
 func (s *Service) SaveLive(ctx context.Context, orderID, customerID string,
 	lat, lng float64, accuracyM *float64) (string, error) {
+	return s.SaveLiveFrom(ctx, orderID, customerID, lat, lng, accuracyM, LiveSourceApp)
+}
+
+// مصادرُ الموقع المباشر — `orders.live_first_source` (قرارُ المالك ٢٠٢٦-١١-١٨).
+const (
+	LiveSourceApp      = "app"
+	LiveSourceWhatsApp = "whatsapp"
+)
+
+// SaveLiveFrom **كـ`SaveLive` ومعه من وين وصل** — والأوّلُ يُعلَّم على الطلب (`live_first_at`)
+// لأنّ صفَّ النقطة يُمحى عند إيقاف المشاركة، **فبلا العلامة لا يُعرف «وصل موقعٌ أم لا».**
+func (s *Service) SaveLiveFrom(ctx context.Context, orderID, customerID string,
+	lat, lng float64, accuracyM *float64, source string) (string, error) {
 	var driverID *string
 	err := s.db.QueryRow(ctx, `
 		WITH o AS (
@@ -128,6 +141,11 @@ func (s *Service) SaveLive(ctx context.Context, orderID, customerID string,
 	}
 	if err != nil {
 		return "", err
+	}
+	if _, err := s.db.Exec(ctx, `
+		UPDATE orders SET live_first_at = now(), live_first_source = $2
+		 WHERE id = $1::uuid AND live_first_at IS NULL`, orderID, source); err != nil {
+		s.logger.Warn("الموقع المباشر: تعليمُ أوّل موقع سقط", "order", orderID, "error", err)
 	}
 	if driverID == nil {
 		return "", nil

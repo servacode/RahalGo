@@ -109,9 +109,29 @@ function better(a: Reading, b: Reading): boolean {
   return x <= y;
 }
 
-/** **الطلبُ الذي يُسأل صاحبُه الآن** — بالطريق ولم يُقرَّر فيه. */
-export function pendingAsk(open: MyOrder[], decided: string[]): MyOrder | null {
-  return open.find((o) => o.status === ASK_STATUS && !decided.includes(o.id)) ?? null;
+/** **مفتاحُ «طُلب موقعك»** — الطلبُ ووقتُ الطلب، فكلُّ طلبٍ جديدٍ يُسأل عنه مرّة. */
+export function requestKey(o: MyOrder): string {
+  return o.id + "@" + (o.live_requested_at ?? "");
+}
+
+/**
+ * **الطلبُ الذي يُسأل صاحبُه الآن** — بالطريق ولم يُقرَّر فيه، **أو طُلب موقعُه من جديد** (زرُّ الكابتن
+ * أو تذكيرُ المحرّك، ٢٠٢٦-١١-١٨) — مرآةُ `LiveSharePolicy.pending` بالتطبيق.
+ */
+export function pendingAsk(open: MyOrder[], decided: string[], activeId: string | null = null): MyOrder | null {
+  return (
+    open.find((o) => o.status === ASK_STATUS && !decided.includes(o.id)) ??
+    open.find(
+      (o) => !!o.live_requested_at && LIVE_STATUSES.has(o.status) && !decided.includes(requestKey(o)) && activeId !== o.id,
+    ) ??
+    null
+  );
+}
+
+/** **يُذكر القرارُ على الطلب وعلى طلب الموقع معاً** — فلا يُسأل عنهما ثانيةً. */
+export function decideOrder(decide: (k: string) => void, o: MyOrder): void {
+  decide(o.id);
+  if (o.live_requested_at) decide(requestKey(o));
 }
 
 type StopReason = "user" | "ended" | "inactive" | "timeout" | "denied";
@@ -333,7 +353,7 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
     if (!decidedReady || activeId || !open || !liveAutoOn()) return;
     const o = pendingAsk(open, decided);
     if (!o) return;
-    decide(o.id);
+    decideOrder(decide, o);
     start(o.id);
   }, [decidedReady, open, decided, activeId, decide, start]);
 

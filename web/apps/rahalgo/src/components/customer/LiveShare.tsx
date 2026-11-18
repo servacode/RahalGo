@@ -18,7 +18,7 @@ import { createPortal } from "react-dom";
 import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import { Alert, Button, IconLocation, usePlatform } from "@rahalgo/ui";
 import { useActiveOrders } from "@/lib/customer/active";
-import { COARSE_ACCURACY_M, isAppleMobile, liveAutoOn, pendingAsk, useLiveShare } from "@/lib/customer/live";
+import { COARSE_ACCURACY_M, decideOrder, isAppleMobile, liveAutoOn, pendingAsk, useLiveShare } from "@/lib/customer/live";
 import { quotePending } from "./orderParts";
 
 const m = getMessages(defaultLocale);
@@ -52,14 +52,14 @@ export function LiveAsk() {
           <button
             type="button"
             onClick={() => {
-              live.decide(o.id);
+              decideOrder(live.decide, o);
               live.start(o.id);
             }}
             className="w-full rounded-control bg-success px-4 py-3 text-sm font-bold text-on-bright transition-opacity hover:opacity-90"
           >
             {L.share}
           </button>
-          <Button variant="danger" className="w-full py-3" onClick={() => live.decide(o.id)}>
+          <Button variant="danger" className="w-full py-3" onClick={() => decideOrder(live.decide, o)}>
             {L.no}
           </Button>
         </div>

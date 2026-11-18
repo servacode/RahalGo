@@ -272,6 +272,8 @@ data class TripState(
     val liveSwitched: Boolean = false,
     /** **كان يُقاد إليه فشاخ موقعُه** — فعاد إلى الدبّوس بكلمة. */
     val liveStale: Boolean = false,
+    /** **الزبونُ على التطبيق** (عاديّ أو خاصّ) — فموقعُه المباشر منتظَر؛ و«لدي توصيلة» مستلِمُها ليس عليه. */
+    val customerOnApp: Boolean = false,
     /** **البابُ الذي يُقاس عليه الوصول** — الزبونُ الآن إن تحوّل الطريق، وإلّا الدبّوس. */
     val door: LatLng? = null,
     val busy: Boolean = false,

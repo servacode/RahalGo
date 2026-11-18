@@ -44,6 +44,8 @@ var t = struct {
 	priceRequestRejectedDriver, priceRequestLateOps string
 	// liveLocationRequested **السائقُ طلب موقعَ الزبون المباشر** (٢٠٢٦-١٠-٢١).
 	liveLocationRequested string
+	// liveNudge **المحرّكُ يذكّر الزبونَ بالمشاركة** (٢٠٢٦-١١-١٨) — بلا موقعٍ بعد دقيقةٍ بالطريق.
+	liveNudge string
 	// **صنفٌ غيرُ متوفّر** (قرارُ المالك ٢٠٢٦-١٠-١٥).
 	itemUnavailable string
 	// **تعديلُ المكتب للطلب العاديّ** (قرارُ المالك ٢٠٢٦-١١-٠٣) — الزبونُ والسائقُ والمتجر.
@@ -110,6 +112,7 @@ var t = struct {
 	priceRequestRejectedDriver: "رفض الزبون السعر الجديد — رجع السعر القديم، والمكتب رح يتواصل",
 	priceRequestLateOps:        "تعديل سعر الكابتن ما انردّ عليه — تدخّل",
 	liveLocationRequested:      "الكابتن طالب موقعك المباشر ليوصلك بالضبط — افتح التطبيق وشارك موقعك",
+	liveNudge:                  "الكابتن بالطريق لعندك — افتح التطبيق وشارك موقعك المباشر ليوصلك بالضبط",
 	itemUnavailable:            "صنف غير متوفر في طلبك",
 	orderEdited:                "تعدّل طلبك",
 	feeEdited:                  "تعدّلت أجرة التوصيل",

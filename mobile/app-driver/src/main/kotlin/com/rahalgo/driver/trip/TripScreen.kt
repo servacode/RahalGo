@@ -1448,6 +1448,10 @@ private fun LiveCustomerNotice(state: TripState) {
     when {
         state.liveSwitched -> TopNotice(stringResource(R.string.trip_live_switched), Rahal.colors.success)
         state.liveStale -> TopNotice(stringResource(R.string.trip_live_stale), Rahal.colors.ink)
+        // **«الزبون ما شارك موقعو»** (قرارُ المالك ٢٠٢٦-١١-١٨: «لازم يوصلنا موقع مباشر») — بعد الاستلام
+        // وما في ولا نقطة منه: الكابتن بيعرف يطلبو (📍) أو يتصل، **والمحرّك عم يذكّر الزبون لحاله.**
+        state.step >= TripStep.PICKED_UP && state.customerLive == null && state.customerOnApp ->
+            TopNotice(stringResource(R.string.trip_live_none), Rahal.colors.ink)
     }
     if (state.customerLive != null && state.liveAgeSec >= 0) {
         val age = if (state.liveAgeSec < 60) {

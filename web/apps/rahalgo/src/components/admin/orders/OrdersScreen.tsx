@@ -89,6 +89,7 @@ import { OrderEditor } from "./OrderEditor";
 import { FeeEditor } from "./FeeEditor";
 import { GoodsEditor } from "./GoodsEditor";
 import { FeeRequestBox, type FeeRequestBrief } from "./FeeRequestBox";
+import { LiveShareStats } from "./LiveShareStats";
 import { EditRequestBox } from "./EditRequestBox";
 import {
   AmanahPointsSection,
@@ -1086,6 +1087,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   // افتراضاتٍ مكتوبةً هنا (مهلةَ ١٠ و«المنصّة تدير») **قد تخالف إعداداتِ المالك**
   // (المشكلة ٣٢). **والآن يرسلها الخادمُ مع العدّادات** لمن يقرأ الطلبات.
   const [counts0, setCounts0] = useState<Record<string, number> | null>(null);
+  /** **ونبضةُ «الموقع المباشر اليوم»** — تزيد مع كلّ قراءةٍ للّوحة فيُعاد سطرُه. */
+  const [liveStatsTick, setLiveStatsTick] = useState(0);
   /** **حدُّ توقّف موضع السائق** — من المحرّك لا رقمٌ هنا. */
   const [staleMin, setStaleMin] = useState(15);
   const [countsFailed, setCountsFailed] = useState(false);
@@ -1095,6 +1098,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         "/api/v1/admin/orders/board",
       );
       setCounts0(r.counts);
+      setLiveStatsTick((n) => n + 1);
       setCountsFailed(false);
       setAssignAfterMin(r.meta.manual_assign_after_min);
       setCashBanDays(r.meta.cash_ban_days);
@@ -2171,6 +2175,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           ))}
         </div>
       )}
+      {/* **«الموقع المباشر اليوم»** (قرارُ المالك ٢٠٢٦-١١-١٨) — يتحدّث مع عدّادات اللوحة. */}
+      {live && counts0 && <LiveShareStats tick={liveStatsTick} />}
       {/* **أعدادُ الحالات سطرٌ صغير** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «الكل 9 · تسلّم 4 · فشل 2 …»، وكلُّ رقمٍ
           يُضغط فيفلتر، والمختارُ مُعلَّم. **و«مسترجع» يغيب حين لا شيءَ فيه.** */}
       {!live && counts && !inverted && (

@@ -1336,6 +1336,9 @@ kosom` |
 | `orders.route_margin_pct` | السائقون | int | `50` |
 | `orders.live_location_switch_m` | السائقون | int | `50` |
 | `orders.live_location_max_accuracy_m` | السائقون | int | `30` |
+| `orders.live_nudge_enabled` | السائقون | bool | `true` |
+| `orders.live_nudge_push_sec` | السائقون | int | `60` |
+| `orders.live_nudge_wa_sec` | السائقون | int | `120` |
 | `orders.near_notice_m` | السائقون | int | `300` |
 | `drivers.require_whatsapp` | السائقون | bool | `true` |
 | `drivers.monthly_target` | السائقون | int | `0` |

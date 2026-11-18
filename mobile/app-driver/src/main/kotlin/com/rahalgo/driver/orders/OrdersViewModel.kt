@@ -1998,6 +1998,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             livePrecise = order.customerLive?.precise == true,
             liveSwitched = liveDoor(order) != null,
             liveStale = liveStaleFor == order.id && liveDoor(order) == null,
+            customerOnApp = order.kind == "standard" || order.kind == "custom",
             door = (liveDoor(order) ?: com.rahalgo.driver.trip.dropoffPoint(order))
                 ?.let { (la, ln) -> LatLng(la, ln) },
             busy = detail.busy,

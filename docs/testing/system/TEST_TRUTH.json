@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 729,
+    "routes": 730,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 146,
+    "notify_sites": 147,
     "notify_targeted": 76,
     "publish_rooms": [
       "customer",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 297,
-    "behaviour_settings": 251,
+    "setting_defs": 300,
+    "behaviour_settings": 254,
     "order_fields": 148,
-    "test_files": 854,
-    "test_funcs": 3269
+    "test_files": 856,
+    "test_funcs": 3273
   },
   "flows": [
     {
@@ -6679,6 +6679,69 @@
     },
     {
       "key": "orders.live_location_switch_m",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.live_nudge_enabled",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.live_nudge_push_sec",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.live_nudge_wa_sec",
       "group": "drivers",
       "kind": "int",
       "sensitive": false,
@@ -18717,6 +18780,12 @@
       "orphan": true
     },
     {
+      "name": "TestEDITREQ_BoardShowsPending",
+      "file": "internal/qa/edit_request_board_probe_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestDRVDEF001_EmergencyDedupedPerOpenOrder",
       "file": "internal/qa/emergency_dedup_test.go",
       "package": "qa",
@@ -20963,6 +21032,24 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestLIVENUDGE01_PushThenWhatsAppOnce",
+      "file": "internal/qa/live_nudge_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLIVENUDGE02_NoNudgeWhileSharing",
+      "file": "internal/qa/live_nudge_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLIVENUDGE03_WhatsAppFromStrangerIgnored",
+      "file": "internal/qa/live_nudge_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestLiveRequest_DriverAsksCustomerAgain",

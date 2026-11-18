@@ -34,6 +34,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -192,6 +193,10 @@ func (s *Server) HandleWALocationKind(ctx context.Context, from string, lat, lng
 	phone, ok := identity.NormalizePhone(from)
 	if !ok || !orders.ValidPoint(lat, lng) {
 		return ""
+	}
+	// **وزبونُ التطبيق وطلبُه بالطريق يردّ بموقعه** (قرارُ المالك ٢٠٢٦-١١-١٨) — `waCustomerLive`.
+	if reply, handled := s.waCustomerLive(ctx, phone, lat, lng, accuracy, live); handled {
+		return reply
 	}
 	if !live && s.liveLocationOnly(ctx) {
 		var open bool
@@ -615,4 +620,51 @@ func linkAmanahLocationTx(ctx context.Context, q dbtx.Querier, reqID, customerID
 		return nil, nil, errAmanahLocReq
 	}
 	return lat, lng, err
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **زبونُ التطبيق يردّ بموقعه المباشر بالواتساب** (قرارُ المالك ٢٠٢٦-١١-١٨: «لازم يوصلنا موقع مباشر»)
+// ══════════════════════════════════════════════════════════════════════
+//
+// المحرّكُ يبعت للزبون «ردّ بموقعك المباشر» إذا طلبُه بالطريق وما وصل موقع (`orders/live_nudge.go`).
+// **والردُّ يُكتب موقعاً مباشراً لطلبه** بنفس طريق التطبيق (`SaveLiveFrom`) — فيراه الكابتن والمكتب.
+// **وكلُّ تحديثٍ من مشاركة واتساب المباشرة يحدّثه**، والجوابُ مرّةً للطلب فلا يُغرَق بالرسائل.
+//
+// **وطلبُ موقعٍ مفتوحٌ لنفس الرقم يسبق** (توصيلة متجر · أمانة) — ذاك طريقُه القديم كما هو.
+func (s *Server) waCustomerLive(ctx context.Context, phone string, lat, lng, accuracy float64, live bool) (string, bool) {
+	var open bool
+	if err := s.pg.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM recipient_location_requests
+		                WHERE phone = $1 AND received_at IS NULL AND expires_at > now())`,
+		phone).Scan(&open); err != nil || open {
+		return "", false
+	}
+	var orderID, customerID string
+	err := s.pg.QueryRow(ctx, `
+		SELECT o.id::text, o.customer_id::text FROM orders o JOIN users u ON u.id = o.customer_id
+		 WHERE u.phone = $1 AND o.closed_at IS NULL AND o.status = ANY($2) AND o.kind IN ('standard', 'custom')
+		 ORDER BY o.created_at DESC LIMIT 1`, phone, orders.LiveStatuses).Scan(&orderID, &customerID)
+	if err != nil {
+		return "", false
+	}
+	acc := locReqAcc(&accuracy)
+	driverID, err := s.orders.SaveLiveFrom(ctx, orderID, customerID, lat, lng, acc, orders.LiveSourceWhatsApp)
+	if err != nil {
+		s.logger.Warn("موقع الزبون بالواتساب: الحفظ سقط", "order", orderID, "error", err)
+		return "", false
+	}
+	s.notifyCustomerLive(driverID, orderID)
+	s.publishCustomerLiveToOps(orderID, &lat, &lng, acc)
+	// **والجوابُ مرّةً للطلب** — تحديثاتُ المشاركة المباشرة بتوصل كلّ شوي، وما منردّ على كلّ وحدة.
+	if s.rdb != nil {
+		first, err := s.rdb.SetNX(ctx, "walive:replied:"+orderID+":"+strconv.FormatBool(live), "1", 3*time.Hour).Result()
+		if err == nil && !first {
+			return "", true
+		}
+	}
+	if live {
+		return "وصلنا موقعك المباشر ✅ الكابتن شايفو هلق وجاي لعندك.", true
+	}
+	return "وصلنا موقعك ✅ الكابتن شايفو. إذا بتقدر شارك الموقع المباشر ليضل محدّث: " +
+		"اضغط 📎 ← الموقع ← شارك الموقع المباشر", true
 }

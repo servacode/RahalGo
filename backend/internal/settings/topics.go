@@ -211,6 +211,7 @@ var placeRules = []placeRule{
 	// **ودقّةُ موقع الزبون وتنبيهُ القرب معه** (قرارُ المالك ٢٠٢٦-١٠-١٦) — حكمٌ واحدٌ في قسمٍ واحد.
 	{prefix: "orders.live_location_max_accuracy_m", exact: true, topic: TopicOrders, section: "orders.dispatch"},
 	{prefix: "orders.near_notice_m", exact: true, topic: TopicOrders, section: "orders.dispatch"},
+	{prefix: "orders.live_nudge_", topic: TopicOrders, section: "orders.dispatch"},
 	{prefix: "orders.", topic: TopicOrders, section: "orders.timeouts"},
 	{prefix: "drivers.assignment_mode", exact: true, topic: TopicOrders, section: "orders.dispatch"},
 	{prefix: "drivers.direct_assign", exact: true, topic: TopicOrders, section: "orders.dispatch"},

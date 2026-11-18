@@ -386,8 +386,9 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// +4: drivers.late_shift_* (عقوبةُ تأخير فتح الدوام — قرارُ المالك ٢٠٢٦-١١-١٤).
 	// +1: drivers.rewards_enabled (مفتاحُ مكافآت السائقين — قرارُ المالك ٢٠٢٦-١١-١٨).
 	// +5: store_message.* (رسالةُ المتاجر — قرارُ المالك ٢٠٢٦-١١-١٨؛ ستّةُ مفاتيح، والمقيسُ منها خمسةٌ).
-	if d.BehaviourSettings != 251 {
-		t.Errorf("إعداداتُ السلوك = %d لا 251 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// +3: orders.live_nudge_* (تذكيرُ الزبون بالموقع المباشر — قرارُ المالك ٢٠٢٦-١١-١٨).
+	if d.BehaviourSettings != 254 {
+		t.Errorf("إعداداتُ السلوك = %d لا 254 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

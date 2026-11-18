@@ -4407,6 +4407,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/orders/live-stats",
+      "handler": "handleLiveStats",
+      "auth": true,
+      "capability": "orders.read",
+      "response": [
+        {
+          "name": "@st",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/orders/{id}",
       "handler": "handleGetOrder",
       "auth": true,

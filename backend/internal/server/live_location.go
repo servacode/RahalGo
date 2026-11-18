@@ -185,3 +185,13 @@ func (s *Server) liveRouteTarget(ctx context.Context, orderID, driverID string) 
 	}
 	return nil
 }
+
+// handleLiveStats **الموقعُ المباشر اليوم** — `GET /admin/orders/live-stats` (قرارُ المالك ٢٠٢٦-١١-١٨).
+func (s *Server) handleLiveStats(w http.ResponseWriter, r *http.Request) {
+	st, err := s.orders.LiveStatsToday(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, st)
+}

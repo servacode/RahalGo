@@ -135,7 +135,7 @@
   {
    "code": "orders.read",
    "description": "قراءة الطلبات ولوحة العمليات",
-   "guards_routes": 34
+   "guards_routes": 35
   },
   {
    "code": "orders.whatsapp",
@@ -273,7 +273,7 @@
   }
  ],
  "route_policy": {
-  "rules": 385,
+  "rules": 386,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
