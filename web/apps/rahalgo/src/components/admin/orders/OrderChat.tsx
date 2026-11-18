@@ -37,18 +37,33 @@ function senderLabel(l: { sender: string; role: string }): string {
   return l.sender || PARTIES[l.role] || roleLabelByCode(l.role);
 }
 
-export function OrderChatView({ orderId }: { orderId: string }) {
+/** **كلّ كم تُقرأ دردشةُ طلبٍ ماشٍ** (م ث) — الرسالةُ الجديدةُ تظهر بلا سكّرٍ وفتح. */
+const LIVE_POLL_MS = 5000;
+
+/**
+ * `live` **للطلب الماشي** (المالك ٢٠٢٦-١١-١٨): تُعاد القراءةُ كلَّ خمس ثوانٍ والصفحةُ ظاهرة، **وخطأُ
+ * قراءةٍ عابرٍ لا يمحو ما ظهر** — يبقى آخرُ ما قُرئ حتّى تنجح القراءةُ التالية.
+ */
+export function OrderChatView({ orderId, live = false }: { orderId: string; live?: boolean }) {
   const [chat, setChat] = useState<{ lines: ChatLine[] } | null | "failed">(null);
   useEffect(() => {
     let alive = true;
     setChat(null);
-    api<{ lines: ChatLine[] }>(`/api/v1/admin/orders/${orderId}/chat`)
-      .then((r) => alive && setChat(r))
-      .catch(() => alive && setChat("failed"));
+    const load = () =>
+      api<{ lines: ChatLine[] }>(`/api/v1/admin/orders/${orderId}/chat`)
+        .then((r) => alive && setChat(r))
+        .catch(() => alive && setChat((prev) => (prev && prev !== "failed" ? prev : "failed")));
+    void load();
+    const timer = live
+      ? setInterval(() => {
+          if (typeof document === "undefined" || document.visibilityState === "visible") void load();
+        }, LIVE_POLL_MS)
+      : undefined;
     return () => {
       alive = false;
+      if (timer) clearInterval(timer);
     };
-  }, [orderId]);
+  }, [orderId, live]);
 
   return (
     <>
@@ -94,19 +109,23 @@ export function OrderChatView({ orderId }: { orderId: string }) {
   );
 }
 
-/** **نافذةُ الدردشة من بطاقة السجلّ** — تفتح المحادثةَ مباشرةً بلا لوحةِ الملف. */
+/**
+ * **نافذةُ الدردشة** — من بطاقة السجلّ، **ومن بطاقة الطلب الماشي** (`live`: تتحدّث لحالها).
+ */
 export function OrderChatModal({
   orderId,
   orderNumber,
   onClose,
+  live = false,
 }: {
   orderId: string;
   orderNumber: number;
   onClose: () => void;
+  live?: boolean;
 }) {
   return (
     <Modal open onClose={onClose} size="lg" title={`${H.chat} · #${orderNumber}`}>
-      <OrderChatView orderId={orderId} />
+      <OrderChatView orderId={orderId} live={live} />
     </Modal>
   );
 }

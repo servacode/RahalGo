@@ -3111,6 +3111,11 @@ function OrderActions({
   // **وأزرارُ هذه البطاقة تُبوَّب بالقدرة** — **والفعلُ الماليُّ فيها
   // ليس من عمل العمليّات** (بندُ المالك ٨).
   const { can } = useAuth();
+  /**
+   * **دردشةُ الطلب وهو ماشي** (المالك ٢٠٢٦-١١-١٨: «وقت الطلب لسا عم يمشي مافي زر دردشة») — كانت
+   * بكرت السجلّ وحده، **والخلافُ يُحكَم وقتَه لا بعده.**
+   */
+  const [chatOpen, setChatOpen] = useState(false);
   /** **نافذةُ الإسناد اليدويّ** — بالقرب وبتأكيدٍ وسبب (`AssignDialog`). */
   const [assigning, setAssigning] = useState(false);
   /**
@@ -4113,6 +4118,13 @@ function OrderActions({
             )}
           </span>
         ))}
+
+      {can("orders.communications.read") && (
+        <Button variant="secondary" onClick={() => setChatOpen(true)}>
+          <BtnLabel icon={IconChat}>{H.card.chatBtn}</BtnLabel>
+        </Button>
+      )}
+      {chatOpen && <OrderChatModal orderId={o.id} orderNumber={o.number} live onClose={() => setChatOpen(false)} />}
 
       {/* **التحويلُ إلى المتجر — في الوضعين لا في وضعٍ واحد.**
 
