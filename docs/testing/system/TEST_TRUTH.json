@@ -33,8 +33,8 @@
     "setting_defs": 297,
     "behaviour_settings": 251,
     "order_fields": 148,
-    "test_files": 850,
-    "test_funcs": 3253
+    "test_files": 851,
+    "test_funcs": 3257
   },
   "flows": [
     {
@@ -9134,6 +9134,30 @@
     {
       "name": "TestShiftTenures_CarriedOnlyWhenEndedInShift",
       "file": "internal/drivermonitor/analyze_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestNextShown_IndoorJitterNeverMoves",
+      "file": "internal/drivermonitor/display_motion_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestNextShown_RealRideMoves",
+      "file": "internal/drivermonitor/display_motion_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestNextShown_SlowCrawlEventuallyMoves",
+      "file": "internal/drivermonitor/display_motion_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestNextShown_SpeedNeedsTwoFixes",
+      "file": "internal/drivermonitor/display_motion_test.go",
       "package": "drivermonitor",
       "orphan": true
     },

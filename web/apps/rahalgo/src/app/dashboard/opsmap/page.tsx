@@ -114,6 +114,8 @@ import {
   type FocusMode,
   type LngLat,
   acceptPush,
+  accuracyRadius,
+  ageText,
   applyFocus,
   clampGlide,
   headingOf,
@@ -133,6 +135,9 @@ const OpsMapCanvas = dynamic(
 const m = getMessages(defaultLocale);
 const T = m.admin.opsMap;
 const P = T.pro;
+
+/** **«قبل كم» تحت اسم السائق** (٢٠٢٦-١١-١٨) — ثوانٍ لحدّ الدقيقة، وبعدها دقائق. */
+const driverAge = (seconds: number) => ageText(seconds, T.driver.agoSec, T.driver.agoMin, fmtNum);
 
 /**
  * **كلُّ قيمةٍ من الخادم تُترجم قبل أن تُعرض** (تدقيقُ ٢٠٢٦-١٠-٢٧: «حالُ الحساب: active») —
@@ -216,6 +221,8 @@ interface Driver {
   bearing?: number;
   speed_mps?: number;
   rough?: boolean;
+  /** **دقّةُ آخر نقطة** بالمتر (٢٠٢٦-١١-١٨) — دائرةٌ باهتةٌ حولَه. */
+  accuracy_m?: number;
 }
 
 interface Merchant {
@@ -712,8 +719,8 @@ export default function OpsMapPage() {
   // **وإيقاعُ كلِّ سائق** (`live.ts` ٧) — كم بين نبضاته، **فينزلق كلٌّ على قدّ ما يبعت.**
   // وقبل أن يُعرف إيقاعُه: نبضةُ الإعدادات — مع طلبٍ أو بلا طلب.
   const cadence = useRef(new Map<string, Cadence>());
-  const pingIdleSec = meta.data?.location_ping_sec ?? 10;
-  const pingActiveSec = meta.data?.location_ping_active_sec ?? 4;
+  const pingIdleSec = meta.data?.location_ping_sec ?? 5;
+  const pingActiveSec = meta.data?.location_ping_active_sec ?? 3;
   const fallbackMs = useCallback(
     (d: { active_orders?: number } | undefined) =>
       clampGlide(((d?.active_orders ?? 0) > 0 ? pingActiveSec : pingIdleSec) * 1000),
@@ -769,6 +776,7 @@ export default function OpsMapPage() {
       bearing: num(e.bearing),
       speed_mps: num(e.speed_mps),
       rough: e.rough === true,
+      accuracy_m: num(e.accuracy_m),
     };
     if (!acceptPush(fixes.current, id, fix)) return;
     // **ونبضةُ البثّ تُعدّ في إيقاعه** — والواقفةُ والرجفةُ لا تُعدّان (`noteFix`).
@@ -1536,6 +1544,13 @@ export default function OpsMapPage() {
   // **ولا يُجمَّعون**: فقّاعةٌ خضراءُ تخفي برتقاليّاً بداخلها، **والحالُ هو
   // ما جاء المكتبُ يراه.** ومن لا موضعَ له لا يُرسَم (البند ٤).
   const driverLayer = useMemo<LayerSpec>(() => {
+    // **لونُ حاله** — للحلقة النابضة ودائرة الدقّة معاً.
+    const driverToneExpr = [
+      "match", ["get", "icon"],
+      "driver-available", toneColor("driver-available"),
+      "driver-busy", toneColor("driver-busy"),
+      toneColor("driver-idle"),
+    ];
     return {
       id: "drivers",
       kind: "symbol",
@@ -1549,15 +1564,10 @@ export default function OpsMapPage() {
       // **واسمُه فوق رمزه** (٢٠٢٦-١٠-١٧) — ويتراكب، فلا يختفي سائقٌ لأنّ جاره قريب.
       labelField: "name",
       labelOverlap: true,
-      pulse: {
-        field: "live",
-        color: [
-          "match", ["get", "icon"],
-          "driver-available", toneColor("driver-available"),
-          "driver-busy", toneColor("driver-busy"),
-          toneColor("driver-idle"),
-        ],
-      },
+      // **وتحت اسمه «قبل كم» سمعنا منه** ودائرةُ دقّته باهتةً بلون حاله (قرارُ المالك ٢٠٢٦-١١-١٨).
+      age: { field: "at_ms", label: driverAge },
+      accuracy: { field: "acc_m", color: driverToneExpr },
+      pulse: { field: "live", color: driverToneExpr },
       data: fc(
         focused.drivers
           .filter((d) => d.freshness !== "NO_LOCATION")
@@ -1565,6 +1575,10 @@ export default function OpsMapPage() {
             const props: Record<string, unknown> = {
               id: d.id, name: d.name, icon: driverTone(d.tone), live: d.freshness === "LIVE",
             };
+            const at = Date.parse(d.last_location_at);
+            if (Number.isFinite(at)) props.at_ms = at;
+            const acc = accuracyRadius(d.accuracy_m);
+            if (acc != null) props.acc_m = acc;
             if (smooth) {
               // **مدّةُ انزلاقه من إيقاعه** (وصفرٌ: يُوضع)، **والباهتُ باهت**، **والسهمُ وهو ماشٍ.**
               props._glide = cadence.current.get(d.id)?.glideMs ?? 0;

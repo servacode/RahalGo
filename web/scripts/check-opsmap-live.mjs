@@ -383,6 +383,33 @@ check(L.stuckIncreased(1, undefined) === false, "٣ · غيابُ الرقم ع�
   check(typeof L.frameGap === "function" && L.frameGap([], 1000) === L.SLOW_FRAME_MS, "٩ · بلا حركةٍ معدّلٌ سريع");
 }
 
+// ── ١٠ · عمرُ آخر نقطة ودائرةُ الدقّة (قرارُ المالك ٢٠٢٦-١١-١٨) ─────────
+{
+  const sec = "قبل {n} ث";
+  const min = "قبل {n} د";
+  check(L.ageText(4.4, sec, min) === "قبل 4 ث", "١٠ · أربعُ ثوانٍ لم تُكتب ثوانيَ");
+  check(L.ageText(60, sec, min) === "قبل 60 ث", "١٠ · الدقيقةُ نفسُها كُتبت دقائق");
+  check(L.ageText(61, sec, min) === "قبل 1 د" && L.ageText(185, sec, min) === "قبل 3 د",
+    "١٠ · فوق الدقيقة لم يُكتب بالدقائق");
+  check(L.ageText(-3, sec, min) === "قبل 0 ث", "١٠ · ساعةُ المتصفّح السابقةُ أعطت عمراً سالباً");
+  const now = 1_000_000;
+  const [a, b] = L.stampAges([pt("d1", 39, 35.9, { at_ms: now - 12_000 }), pt("d2", 39, 35.9)], "at_ms", now,
+    (s) => L.ageText(s, sec, min));
+  check(a.properties[L.AGE_PROP] === "قبل 12 ث", "١٠ · المعلَمُ لم يُختم بعمره");
+  check(!(L.AGE_PROP in b.properties), "١٠ · معلَمٌ بلا وقتٍ خُتم بعمر");
+  check(L.accuracyRadius(35) === 35 && L.accuracyRadius(9000) === L.ACCURACY_MAX_M,
+    "١٠ · نصفُ قطر الدقّة لم يُقصّ");
+  check(L.accuracyRadius(undefined) === null && L.accuracyRadius(0) === null,
+    "١٠ · دقّةٌ مجهولةٌ رُسمت دائرة");
+  // **والدقّةُ تمشي مع موضعها** — صفُّ القائمة الأقدمُ لا يُبدّلها.
+  const book = new Map();
+  L.acceptPush(book, "d1", { lat: 35.9, lng: 39, last_location_at: "2026-11-18T09:00:10Z", age_sec: 0,
+    freshness: "LIVE", accuracy_m: 12 });
+  const [r] = L.mergeRows(book, [{ id: "d1", lat: 35.8, lng: 39, last_location_at: "2026-11-18T09:00:00Z",
+    age_sec: 10, freshness: "LIVE", accuracy_m: 40 }]);
+  check(r.accuracy_m === 12, "١٠ · صفٌّ أقدمُ بدّل دقّةَ النبضة");
+}
+
 if (bad) {
   console.error(`\n**حسابُ الخريطة الحيّة مكسور** — ${bad} من ${cases}.`);
   process.exit(1);

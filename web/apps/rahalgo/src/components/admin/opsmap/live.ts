@@ -328,7 +328,8 @@ export function orderRoute(
 // **والآن لكلّ سائقٍ حركتُه**: من حيث هو الآن إلى نقطته الجديدة بخطٍّ مستقيم، **مدّتُها وسيطُ ما
 // بين نبضاته** (آخرُ خمسة فواصل بين نبضتين متحرّكتين متتاليتين من البثّ — لا النبضةُ الواقفة ولا
 // الرجفة ولا صفُّ القائمة). فيصل كلَّ نقطةٍ قرابةَ وصول التالية: **حركةٌ متّصلةٌ بسرعةٍ ثابتة،
-// متأخّرةٌ عن أحدث نقطةٍ نبضةً واحدة** — ٤ ثوانٍ مع طلب، و٢٠–٤٠ بلا طلب.
+// متأخّرةٌ عن أحدث نقطةٍ نبضةً واحدة** — ٣ ثوانٍ مع طلب و٥ بلا طلب (افتراضُ ٢٠٢٦-١١-١٨؛ وكانت
+// ٢٠–٤٠ بلا طلب لأنّ الواقفَ ما كان يبعت).
 //
 // **ويُوضع وضعاً** (يظهر في مكانه الجديد خلال ٣٠٠ م ث، لا ينزلق فوق البيوت) بعد صمتٍ أطولَ بكثيرٍ
 // من عادته — max(٢٫٥ × وسيطه، دقيقة) — أو قفزةٍ فوق كيلو ونصف أو أسرعَ من ١٢٠ كم/س.
@@ -640,6 +641,8 @@ export interface DriverFix {
   bearing?: number;
   speed_mps?: number;
   rough?: boolean;
+  /** **دقّةُ آخر نقطة** بالمتر (٢٠٢٦-١١-١٨) — دائرةٌ باهتةٌ حولَه. */
+  accuracy_m?: number;
 }
 
 /** **حقولُ الموضع من صفٍّ بعينه** — بأنواعها هي. */
@@ -655,6 +658,7 @@ function fixOf<R extends DriverFix>(r: R): FixOf<R> {
     bearing: r.bearing,
     speed_mps: r.speed_mps,
     rough: r.rough,
+    accuracy_m: r.accuracy_m,
   };
 }
 
@@ -682,4 +686,52 @@ export function mergeRows<R extends DriverFix & { id: string }>(book: Map<string
     book.set(r.id, fixOf(r));
     return r;
   });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **١٠ · عمرُ آخر نقطة ودائرةُ الدقّة** — تحت كلّ سائق (قرارُ المالك ٢٠٢٦-١١-١٨)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **«قبل كم ثانية سمعنا منه» تحت اسمه** — يتحدّث كلَّ ثانيةٍ من حلقة الخريطة نفسِها
+// (`canvas.tsx`) لا من React: **ولا تُعاد الصفحةُ كلُّها كلَّ ثانية.** وفوق الدقيقة بالدقائق.
+
+/** **خاصّةُ نصِّ العمر** في المعلَم — تكتبها الخريطةُ وتقرؤها طبقةُ الاسم. */
+export const AGE_PROP = "_ago";
+
+/** **حدُّ الثواني** — فوقه يُكتب بالدقائق. */
+export const AGE_SEC_MAX = 60;
+
+/**
+ * **نصُّ العمر** — `sec` و`min` قالبان فيهما `{n}` (من القاموس)، و`num` يكتب الرقم.
+ * **والسالبُ صفر** (ساعةُ المتصفّح تسبق ساعةَ الخادم).
+ */
+export function ageText(seconds: number, sec: string, min: string, num: (n: number) => string = String): string {
+  const s = Number.isFinite(seconds) ? Math.max(0, Math.round(seconds)) : 0;
+  return s <= AGE_SEC_MAX ? sec.replace("{n}", num(s)) : min.replace("{n}", num(Math.floor(s / 60)));
+}
+
+/**
+ * **يختم كلَّ معلَمٍ بنصّ عمره** — من خاصّة `field` (وقتُ آخر نقطةٍ بالميلّي ثانية)،
+ * **وما لا وقتَ له يبقى كما هو.**
+ */
+export function stampAges<F extends PointFeature>(
+  features: F[],
+  field: string,
+  nowMs: number,
+  label: (seconds: number) => string,
+): F[] {
+  return features.map((f) => {
+    const at = f.properties?.[field];
+    if (typeof at !== "number" || !Number.isFinite(at)) return f;
+    return { ...f, properties: { ...f.properties, [AGE_PROP]: label((nowMs - at) / 1000) } };
+  });
+}
+
+/** **أقصى نصفِ قطرٍ يُرسم للدقّة** (بالمتر) — ما فوقه دائرةٌ تغطّي الحيَّ ولا تقول شيئاً. */
+export const ACCURACY_MAX_M = 500;
+
+/** **نصفُ قطر الدقّة الذي يُرسم** — أو `null` لما لا يُعرف أو لا يُرسم. */
+export function accuracyRadius(m: number | null | undefined): number | null {
+  if (m == null || !Number.isFinite(m) || m <= 0) return null;
+  return Math.min(m, ACCURACY_MAX_M);
 }

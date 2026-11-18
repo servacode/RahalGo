@@ -57,9 +57,10 @@ import kotlinx.coroutines.sync.Mutex
  *
  * ١ · **فترة من المحرّك لا من الشيفرة** (`drivers.location_ping_sec`) —
  *     فتُضبط للمدينة كلّها من لوحة الإدارة بلا نسخة جديدة.
- * ٢ · **فلتر مسافة**: من وقف عند إشارة لا تُرسل نقطته عشرين مرّة.
- * ٣ · **دفعات**: يُسمح للنظام أن يجمّع تحديثات ويسلّمها معا
- *     (`setMaxUpdateDelayMillis`) — **فيوقظ الجهاز مرّة بدل خمس.**
+ * ٢ · **فلتر مسافة أثناء التوصيل** (خمسة أمتار) — **وبلا طلبٍ لا فلتر** (٢٠٢٦-١١-١٨): نقطةٌ
+ *     كلَّ فترةٍ ولو واقف، ورجفتُه يمسكها الخادم.
+ * ٣ · **ولا دفعات** (٢٠٢٦-١١-١٨، `setMaxUpdateDelayMillis(0)`) — كان النظامُ يجمّع بلا طلب،
+ *     **ونقطتان في دفعةٍ صارتا نداءين** بعد ما صار يرسل كلَّ فترةٍ ولو واقف.
  *
  * # ولا منطق عمل هنا
  *
@@ -83,6 +84,13 @@ class LocationService : Service() {
 
     /** **حارسُ التردّد** — على قدر الفترة أثناء التوصيل (`request`). */
     private var minSendGapMs = MIN_SEND_GAP_MS
+
+    /**
+     * **كم صمتٍ قبل نبضة الواقف** — دقيقتان أثناء التوصيل، **وضعفُ الفترة بلا طلب** (٢٠٢٦-١١-١٨):
+     * الواقفُ بلا طلبٍ يرسل كلَّ فترةٍ من النظام نفسِه، والنبضةُ احتياطٌ لنظامٍ سكت. وتقرؤه حلقتُها.
+     */
+    @Volatile
+    private var heartbeatEveryMs = Heartbeat.EVERY_MS
     // **ونبضةٌ واحدةٌ لا اثنتان** — `onStartCommand` يُنادى مرّاتٍ
     // (إعادةُ تشغيلٍ بعد قتلٍ، أو تبديلُ تردّد)، **وحلقةٌ لكلّ نداءٍ
     // تُضاعف النداءات بلا أن يظهر ذلك في شيء.**
@@ -137,6 +145,7 @@ class LocationService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val seconds = intent?.getLongExtra(EXTRA_PING_SEC, 0L)?.takeIf { it > 0 } ?: DEFAULT_PING_SEC
+        val live = intent?.getBooleanExtra(EXTRA_LIVE, false) ?: false
         // ══════════════════════════════════════════════════════════════
         // **وإذنٌ سُحب والورديّةُ مفتوحة** (`AB-09`، قِيس ٢٠٢٦-٠٩-١٦)
         // ══════════════════════════════════════════════════════════════
@@ -171,9 +180,10 @@ class LocationService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        request(seconds)
+        request(seconds, live)
         heartbeat()
         appliedSec = seconds
+        appliedLive = live
         // **ويُعاد تشغيلها إن قتلها النظام تحت ضغط الذاكرة** — الوردية
         // مفتوحة ولا أحد يعرف أنّ الموقع انقطع.
         return START_STICKY
@@ -204,14 +214,15 @@ class LocationService : Service() {
         scope.launch {
             var lastBeat = SystemClock.elapsedRealtime()
             while (true) {
-                delay(Heartbeat.waitMs(SystemClock.elapsedRealtime(), lastSentAt, lastBeat))
+                val every = heartbeatEveryMs
+                delay(Heartbeat.waitMs(SystemClock.elapsedRealtime(), lastSentAt, lastBeat, every))
                 val now = SystemClock.elapsedRealtime()
-                if (Heartbeat.due(now, lastSentAt)) lastBeat = now
+                if (Heartbeat.due(now, lastSentAt, every)) lastBeat = now
                 val p = LastPoint.value
                 // **ولا يُغسَل موضعٌ مزيَّفٌ بنبضة** — **`isMocked` تُقرأ من
                 // `Location` الذي سلّمه النظام**، وموضعٌ نبنيه نحن يُقرأ أصيلاً
                 // دائماً. **فمن زيّف موضعَه يشيخ** — وذلك صوابٌ لا نقص.
-                when (Heartbeat.decide(now, lastSentAt, p)) {
+                when (Heartbeat.decide(now, lastSentAt, p, every)) {
                     Heartbeat.Act.WAIT -> Unit
                     Heartbeat.Act.RESEND -> {
                         Log.i(TAG, "نبضةُ واقف: يُعاد آخرُ موضع")
@@ -265,6 +276,7 @@ class LocationService : Service() {
 
     override fun onDestroy() {
         appliedSec = 0L
+        appliedLive = false
         client.removeLocationUpdates(callback)
         // **ولا إنذارَ «إشارةٌ مفقودة» لمن أغلق ورديّته.**
         GpsSignal.alive()
@@ -272,27 +284,44 @@ class LocationService : Service() {
         super.onDestroy()
     }
 
-    private fun request(seconds: Long) {
+    private fun request(seconds: Long, live: Boolean) {
         val ms = seconds * 1000
         // ══════════════════════════════════════════════════════════════
         // **وأثناء التوصيل نبضةٌ حيّة** (قرارُ المالك ٢٠٢٦-١٠-١٩)
         // ══════════════════════════════════════════════════════════════
         //
-        // **فترةٌ قصيرةٌ تعني طلباً شغّالاً** (`HomeViewModel.syncService`) — فلا
+        // **طلبٌ شغّال** (`HomeViewModel.syncService` يقولها صراحةً، `live`) — فلا
         // تجميعَ يؤخّر النقطة، **وحدُّ الحركة خمسةُ أمتار** فيُرى السائقُ يمشي لا يقفز،
         // **وحارسُ التردّد على قدر الفترة** لا خمسَ ثوانٍ ثابتة.
-        val live = seconds <= LIVE_MAX_SEC
-        minSendGapMs = if (live) (ms - LIVE_SLACK_MS).coerceAtLeast(2_000L) else MIN_SEND_GAP_MS
+        //
+        // ══════════════════════════════════════════════════════════════
+        // **وبلا طلبٍ يرسل كلَّ فترةٍ ولو ما تحرّك** (قرارُ المالك ٢٠٢٦-١١-١٨)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كان حدُّ العشرين متراً يُسكت الواقف**، فلا يُسمع إلّا بنبضة الدقيقتين — فتقول الخريطةُ
+        // «قبل دقيقتين» عن سائقٍ واقفٍ على الدوام. **والآن لا حدَّ مسافة**: نقطةٌ كلَّ فترة
+        // (`drivers.location_ping_sec`، خمسٌ افتراضاً)، **ورجفتُه يمسكها فلترُ العرض في الخادم**
+        // (`drivermonitor.NextShown`). **ولا أسرعَ من الفترة**: لا نقطةَ قبل الفترة من النظام
+        // (`setMinUpdateIntervalMillis`)، والحارسُ لا ينزل تحت `MIN_SEND_GAP_MS` إلّا بهامش
+        // `LIVE_SLACK_MS` — نقطةٌ تصل قبل موعدها بأجزاء ثانيةٍ لا تُرمى فتصير الفترةُ ضعفين.
+        // **ولا تجميع**: نقطتان في دفعةٍ نداءان للشبكة بدل نداء.
+        //
+        // **ونسخةٌ قديمةٌ من `HomeViewModel` لا تقول `live`** غير ممكنة — الخدمةُ والشاشةُ في
+        // التطبيق نفسِه. **والإقلاعُ اللاصقُ وبعد إقلاع الهاتف بلا طلب** حتّى تقرأ الشاشةُ الحال.
+        minSendGapMs = if (live) {
+            (ms - LIVE_SLACK_MS).coerceAtLeast(2_000L)
+        } else {
+            (ms - LIVE_SLACK_MS).coerceAtLeast(MIN_SEND_GAP_MS - LIVE_SLACK_MS)
+        }
+        heartbeatEveryMs = if (live) Heartbeat.EVERY_MS else (ms * 2).coerceIn(IDLE_HEARTBEAT_MIN_MS, Heartbeat.EVERY_MS)
         val req = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, ms)
-            // **ولا نقطة أسرع من نصف الفترة** — حتّى لا يغرقنا مزوّد
-            // نشيط بتحديثات لا نحتاجها.
-            .setMinUpdateIntervalMillis(ms / 2)
-            // **ومن وقف لا يُرسل**: عشرون مترا حدّ الحركة الحقيقيّة،
-            // **ودونها ضجيج قمر صناعيّ لا تنقّل.**
-            .setMinUpdateDistanceMeters(if (live) LIVE_MIN_MOVE_M else MIN_MOVE_M)
-            // **ويُسمح للنظام أن يجمّع** — يوقظ الجهاز مرّة بدل مرّات. **إلّا
-            // أثناء التوصيل**: نقطةٌ مجمّعةٌ تصل متأخّرةً لا تُري حركة.
-            .setMaxUpdateDelayMillis(if (live) 0L else ms * 2)
+            // **ولا نقطة أسرع من نصف الفترة أثناء التوصيل** — حتّى لا يغرقنا مزوّد
+            // نشيط بتحديثات لا نحتاجها. **وبلا طلبٍ ولا أسرعَ من الفترة نفسِها.**
+            .setMinUpdateIntervalMillis(if (live) ms / 2 else ms.coerceAtLeast(MIN_SEND_GAP_MS))
+            // **وأثناء التوصيل خمسةُ أمتارٍ حدُّ الحركة** — **وبلا طلبٍ لا حدّ** (فوق).
+            .setMinUpdateDistanceMeters(if (live) LIVE_MIN_MOVE_M else 0f)
+            // **ولا تجميع** — نقطةٌ مجمّعةٌ تصل متأخّرةً لا تُري حركة، وبلا طلبٍ تضاعف النداءات.
+            .setMaxUpdateDelayMillis(0L)
             .build()
         try {
             client.requestLocationUpdates(req, callback, mainLooper)
@@ -503,11 +532,13 @@ class LocationService : Service() {
         private const val NOTE_ID = 1001
         private const val EXTRA_PING_SEC = "ping_sec"
         private const val DEFAULT_PING_SEC = 20L
-        private const val MIN_MOVE_M = 20f
         private const val MIN_SEND_GAP_MS = 5_000L
 
-        /** **فترةٌ لا تتجاوز هذا تعني طلباً شغّالاً** — نبضةٌ حيّة (٢٠٢٦-١٠-١٩). */
-        private const val LIVE_MAX_SEC = 10L
+        /** **أقصرُ نبضة واقفٍ بلا طلب** — ضعفُ أقصر فترة؛ النظامُ نفسُه يرسل كلَّ فترة (`request`). */
+        private const val IDLE_HEARTBEAT_MIN_MS = 10_000L
+
+        /** **أمعه طلبٌ شغّال؟** — من الشاشة صراحةً (٢٠٢٦-١١-١٨)، لا من طول الفترة. */
+        private const val EXTRA_LIVE = "live"
 
         /** **هامشُ حارس التردّد أثناء التوصيل** — نقطةٌ تصل قبل موعدها بقليلٍ لا تُرمى. */
         private const val LIVE_SLACK_MS = 800L
@@ -535,6 +566,9 @@ class LocationService : Service() {
         //
         // (حكمُ المالك ٢٠٢٦-٠٩-٢٩: «لا يجوز ألّا يُعرض أيُّ طلبٍ على سائقٍ
         //  لأنّه متوقّف، هذا غلطٌ كبير».)
+        //
+        // (**وبلا طلبٍ صار بلا مرشِّح** منذ ٢٠٢٦-١١-١٨ — يرسل كلَّ فترة، والنبضةُ بضعفها احتياط؛
+        //  وما يلي عن المرشِّح يبقى لأثناء التوصيل.)
         //
         // **والمرشِّحُ يبقى** — النبضةُ تُكمله لا تُلغيه: **الخادمُ يحتاج
         // «أعرف أين هو الآن» لا «تحرّك».** وإعادةُ آخرِ موضعٍ معلومٍ حزمةٌ
@@ -569,11 +603,17 @@ class LocationService : Service() {
         var appliedSec: Long = 0L
             private set
 
+        /** **أتعمل الآن بنبضة التوصيل؟** — مع `appliedSec`: تتبدّل فتُعاد الخدمة. */
+        @Volatile
+        var appliedLive: Boolean = false
+            private set
+
         /** **تبدأ مع الوردية** — والفترة من المحرّك. */
-        fun start(context: Context, pingSec: Long, fromBoot: Boolean = false) {
+        fun start(context: Context, pingSec: Long, fromBoot: Boolean = false, live: Boolean = false) {
             val intent = Intent(context, LocationService::class.java)
                 .putExtra(EXTRA_PING_SEC, pingSec)
                 .putExtra(EXTRA_FROM_BOOT, fromBoot)
+                .putExtra(EXTRA_LIVE, live)
             context.startForegroundService(intent)
         }
 

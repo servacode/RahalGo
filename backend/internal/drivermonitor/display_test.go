@@ -60,9 +60,13 @@ func TestNextShown_StandingJitterKeepsPoint(t *testing.T) {
 	if s = NextShown(s, fixAt(8, -6, f64(10), nil), cfg); s.Lat != home {
 		t.Fatalf("رجفة بلا سرعة حرّكته: %+v", s)
 	}
-	// ونفس المسافة وهو ماشي (٥ م/ث) حركة حقيقية.
-	if s = NextShown(s, fixAt(12, 7, f64(10), f64(5)), cfg); s.Lat == home {
-		t.Fatalf("حركة بسرعة ٥ م/ث انمسكت كرجفة: %+v", s)
+	// ونقطة وحدة بسرعة ٥ م/ث لسا رجفة (٢٠٢٦-١١-١٨: السرعة لازم على نقطتين ورا بعض)…
+	if s = NextShown(s, fixAt(12, 7, f64(10), f64(5)), cfg); s.Lat != home {
+		t.Fatalf("نقطة سريعة وحدة حرّكته: %+v", s)
+	}
+	// …والتانية ورا الأولى وإزاحة فوق ٨ م حركة حقيقية.
+	if s = NextShown(s, fixAt(16, 12, f64(10), f64(5)), cfg); s.Lat == home {
+		t.Fatalf("حركة بسرعة ٥ م/ث على نقطتين انمسكت كرجفة: %+v", s)
 	}
 }
 

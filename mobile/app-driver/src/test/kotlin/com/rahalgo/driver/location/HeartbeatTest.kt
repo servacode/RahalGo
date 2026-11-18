@@ -94,4 +94,17 @@ class HeartbeatTest {
         assertEquals(lastFix + Heartbeat.EVERY_MS, resends[0])
         assertEquals(resends[0] + Heartbeat.EVERY_MS, resends[1])
     }
+
+    /**
+     * **بلا طلبٍ النبضةُ بضعف الفترة** (٢٠٢٦-١١-١٨) — الواقفُ يرسل كلَّ فترةٍ من النظام، وإن سكت
+     * النظامُ (هاتفٌ نائم) أُعيد آخرُ موضعٍ بعد عشر ثوانٍ لا بعد دقيقتين.
+     */
+    @Test
+    fun `an idle phone with a silent provider speaks every ten seconds`() {
+        val every = 10_000L
+        assertEquals(Heartbeat.Act.WAIT, Heartbeat.decide(now, now - 6_000, point(6_000), every))
+        assertEquals(Heartbeat.Act.RESEND, Heartbeat.decide(now, now - 10_000, point(10_000), every))
+        assertEquals(4_000L, Heartbeat.waitMs(now, now - 6_000, 0L, every))
+        assertEquals(every, Heartbeat.waitMs(now, now, 0L, every))
+    }
 }

@@ -1262,8 +1262,8 @@ kosom` |
 | `app.min_version.driver` | السائقون | int | `0` |
 | `drivers.assignment_mode` | السائقون | choice | `rotation` |
 | `drivers.assigned_silence_sec` | السائقون | int | `180` |
-| `drivers.location_ping_sec` | السائقون | int | `10` |
-| `drivers.location_ping_active_sec` | السائقون | int | `4` |
+| `drivers.location_ping_sec` | السائقون | int | `5` |
+| `drivers.location_ping_active_sec` | السائقون | int | `3` |
 | `drivers.ops_map_smooth` | السائقون | bool | `true` |
 | `drivers.trail_retention_days` | السائقون | int | `30` |
 | `drivers.monitor_km_alert` | السائقون | int | `10` |

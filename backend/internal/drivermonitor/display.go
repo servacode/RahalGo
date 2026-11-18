@@ -54,10 +54,18 @@ const (
 	ShownHopHold = 30 * time.Second
 	// ShownHopMinM القفزة أقل من هيك ما بتنعدّ مستحيلة (نفس قاعدة `Clean`).
 	ShownHopMinM = 100.0
-	// ShownStillM أقل نصف قطر للرجفة وهو واقف (أو نص الدقة إذا أكبر).
-	ShownStillM = 8.0
-	// ShownStillSpeedMps سرعة الجهاز تحتها (أو بلا سرعة) = واقف.
-	ShownStillSpeedMps = 1.0
+	// ShownMoveMinM **أقل مسافة عن الموضع المعروض بتنعدّ حركة** (أو الدقة إذا أكبر) — قرار
+	// المالك ٢٠٢٦-١١-١٨: «السائق الواقف عم يبين ماشي». جوّا البيت الجوال بدقة ٣٠–٥٠ م بيرجف
+	// ٢٠–٤٠ م وسرعته عشوائية، وكانت العتبة ٨ م أو نص الدقة فكانت الرجفة تنعدّ مشي.
+	ShownMoveMinM = 20.0
+	// ShownMoveSpeedMps سرعة الجهاز من هيك وطالع (~٧ كم/س) **على نقطتين ورا بعض** = ماشي
+	// ولو المسافة لسا تحت العتبة — والواقف سرعته العشوائية ما بتطلع مرتين ورا بعض.
+	ShownMoveSpeedMps = 2.0
+	// ShownMoveSpeedFixes كم نقطة دقيقة ورا بعض لازم تكون بسرعة `ShownMoveSpeedMps`.
+	ShownMoveSpeedFixes = 2
+	// ShownSpeedMinMoveM حتى طريق السرعة بدو إزاحة فعلية عن الموضع المعروض — سرعتان
+	// عشوائيتان ورا بعض بنفس المكان ما بيحرّكوه.
+	ShownSpeedMinMoveM = 8.0
 )
 
 // Shown **وين منرسم السائق** على خريطة العمليات.
@@ -76,6 +84,7 @@ type Shown struct {
 
 	goodAt   time.Time // آخر نقطة دقتها مقبولة
 	hopSince time.Time // أول نقطة قفزة مستحيلة انمسكت (صفر = ما في)
+	fastRun  int       // كم نقطة دقيقة ورا بعض سرعتها ≥ ShownMoveSpeedMps
 }
 
 // Known **في موضع معروض؟** — قبل أول نقطة (أو بعد إعادة تشغيل الخادم) لأ.
@@ -88,8 +97,11 @@ func (s Shown) Known() bool { return !s.At.IsZero() }
 //     `ShownRoughAfter` ⇒ منعرضها باهتة.
 //  3. قفزة عن الموضع المعروض أسرع من `MaxSpeedMps` وأبعد من `ShownHopMinM` ⇒ الموضع بيضل
 //     لحد `ShownHopHold`، بعدها بتنقبل.
-//  4. ضمن max(`ShownStillM`، نص الدقة) وسرعة الجهاز أقل من `ShownStillSpeedMps` (أو بلا سرعة)
-//     ⇒ الموضع بيضل ووقته بيتحدّث.
+//  4. **الموضع بيضل (ووقته بيتحدّث)** إلا إذا الإزاحة عن الموضع المعروض أكبر من
+//     max(`ShownMoveMinM`، الدقة) — أو سرعة الجهاز ≥ `ShownMoveSpeedMps` على
+//     `ShownMoveSpeedFixes` نقاط دقيقة ورا بعض والإزاحة أكبر من `ShownSpeedMinMoveM`.
+//     والإزاحة من **الموضع الممسوك** مو من النقطة اللي قبلها، فاللي عم يزحف بالزحمة
+//     بتتجمّع إزاحته لحد ما تقطع العتبة فبيتحرّك.
 //  5. غير هيك ⇒ منعرضها.
 //
 // ونقطة أقدم من آخر وحدة سمعناها ما بتغيّر شي.
@@ -146,18 +158,34 @@ func NextShown(prev Shown, fix Point, cfg Config) Shown {
 		return take(false)
 	}
 
-	// ٤ · رجفة وهو واقف
-	still := ShownStillM
-	if fix.AccuracyM != nil {
-		still = math.Max(still, *fix.AccuracyM/2)
+	// ٤ · واقف إلا إذا الإزاحة أو السرعة قالت غير هيك
+	fast := 0
+	if fix.SpeedMps != nil && *fix.SpeedMps >= ShownMoveSpeedMps {
+		fast = prev.fastRun + 1
 	}
-	if d <= still && (fix.SpeedMps == nil || *fix.SpeedMps < ShownStillSpeedMps) {
+	move := ShownMoveMinM
+	if fix.AccuracyM != nil {
+		move = math.Max(move, *fix.AccuracyM)
+	}
+	if d <= move && !(fast >= ShownMoveSpeedFixes && d > ShownSpeedMinMoveM) {
 		held.PosAt = fix.At
-		held.SpeedMps = fix.SpeedMps
 		held.hopSince = time.Time{}
+		held.fastRun = fast
+		// **والدقة دقة آخر نقطة** — دائرة الدقة على الخريطة بتقول قديش منثق فيه هلق.
+		held.AccuracyM = fix.AccuracyM
+		// **وواقف يعني واقف**: سرعة الجهاز العشوائية ما بتنبثّ مع موضع ممسوك — وإلا طلع سهم
+		// الاتجاه على سائق ما عم يتحرّك.
+		if fix.SpeedMps != nil {
+			zero := 0.0
+			held.SpeedMps = &zero
+		} else {
+			held.SpeedMps = nil
+		}
 		return held
 	}
 
 	// ٥ · حركة حقيقية
-	return take(false)
+	s := take(false)
+	s.fastRun = fast
+	return s
 }

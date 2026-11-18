@@ -17,7 +17,7 @@ import (
 // # ولا `SLO` جديدٌ يُخترَع (البند ٥)
 //
 // **المنصّةُ تملك رقمَها**: `drivers.location_ping_sec` — كم بين نبضةٍ
-// وأخرى (افتراضُه ١٠ ثوانٍ منذ ٢٠٢٦-١١-٠٦). **ومنه تُشتقّ الطزاجةُ ولا تُبتكَر:**
+// وأخرى (افتراضُه ٥ ثوانٍ منذ ٢٠٢٦-١١-١٨). **ومنه تُشتقّ الطزاجةُ ولا تُبتكَر:**
 //
 //	LIVE   ≤ 3 نبضاتٍ    — نبضةٌ ضاعت أو اثنتان، والشبكةُ تتعثّر
 //	FRESH  ≤ 15 دقيقة    — **وهو الحدُّ الذي يستعمله المحرّك فعلاً**
@@ -138,6 +138,9 @@ type Driver struct {
 	Bearing  *float64 `json:"bearing,omitempty"`
 	SpeedMps *float64 `json:"speed_mps,omitempty"`
 	Rough    bool     `json:"rough,omitempty"`
+	// AccuracyM **دقّةُ آخر نقطةٍ سمعناها منه** (٢٠٢٦-١١-١٨) — دائرةٌ باهتةٌ حولَه على الخريطة.
+	// **وتغيب حين لا نعرفها** (الحركةُ الناعمة مطفأة، أو بعد إعادة تشغيل المحرّك).
+	AccuracyM *float64 `json:"accuracy_m,omitempty"`
 
 	// Tone **حالُه في لون** — `available` · `busy` · `idle` (`DriverTone`).
 	Tone string `json:"tone"`

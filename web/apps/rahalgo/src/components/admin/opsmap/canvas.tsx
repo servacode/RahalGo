@@ -62,7 +62,9 @@ import {
   needsUpload,
   positionAt,
   positionsOf,
+  stampAges,
   tweenPoints,
+  AGE_PROP,
   type LngLat,
   type Motion,
   type Uploaded,
@@ -144,6 +146,13 @@ export interface LayerSpec {
    * الآن»** بنظرة. ولونُها تعبيرٌ كاللون.
    */
   pulse?: { field: string; color: unknown };
+  /**
+   * **عمرُ آخر نقطةٍ تحت الاسم** (٢٠٢٦-١١-١٨) — خاصّةُ `field` وقتُها بالميلّي ثانية، و`label`
+   * يكتب النصَّ من الثواني. **يتحدّث كلَّ ثانيةٍ هنا لا في React.** لطبقات `symbol` ذات الاسم.
+   */
+  age?: { field: string; label: (seconds: number) => string };
+  /** **دائرةُ الدقّة الباهتة تحت الرمز** — نصفُ قطرها بالمتر من خاصّة `field`، ولونُها تعبير. */
+  accuracy?: { field: string; color: unknown };
   /** **خصائصُ التجميع** — تُجمَع في العامل (`clusterProperties`). */
   clusterProperties?: Record<string, unknown>;
   /** **لونُ فقّاعة التجميع** — تعبيرٌ يقرأ خصائصَ التجميع؛ وافتراضُه `color`. */
@@ -282,6 +291,11 @@ function reducedMotion(): boolean {
   } catch {
     return false;
   }
+}
+
+/** **معالمُ الطبقة مختومةً بعمرها** — إن طلبت الطبقةُ العمر (`age`)، وإلّا كما هي. */
+function aged<F extends FeatureCollection["features"][number]>(spec: LayerSpec, features: F[]): F[] {
+  return spec.age ? stampAges(features, spec.age.field, Date.now(), spec.age.label) : features;
 }
 
 function radiusExpression(field: string) {
@@ -545,7 +559,7 @@ export function OpsMapCanvas({
         const act = anyActive(mv, now);
         if (act || moving.current.has(id)) {
           const src = m.getSource(`src-${id}`) as maplibregl.GeoJSONSource | undefined;
-          src?.setData({ type: "FeatureCollection", features: frameFeatures(spec.data.features, mv, now) } as never);
+          src?.setData({ type: "FeatureCollection", features: aged(spec, frameFeatures(spec.data.features, mv, now)) } as never);
         }
         if (act) {
           moving.current.add(id);
@@ -696,6 +710,22 @@ export function OpsMapCanvas({
             void src.getClusterExpansionZoom(id).then((z) => m.easeTo({ center: [lng, lat], zoom: z }));
           });
         }
+        // **ودائرةُ الدقّة تحت كلّ شيء** (٢٠٢٦-١١-١٨) — من المصدر نفسِه فتنزلق معه، باهتةً بالمتر.
+        if (spec.accuracy) {
+          m.addLayer({
+            id: `${spec.id}-accuracy`, type: "circle", source: srcID,
+            filter: ["has", spec.accuracy.field],
+            paint: {
+              "circle-radius": radiusExpression(spec.accuracy.field) as never,
+              "circle-color": spec.accuracy.color as never,
+              "circle-opacity": 0.08,
+              "circle-stroke-width": 1,
+              "circle-stroke-color": spec.accuracy.color as never,
+              "circle-stroke-opacity": 0.3,
+              "circle-pitch-alignment": "map",
+            },
+          } as never);
+        }
         // **والحلقةُ النابضةُ تحت الرمز** — من المصدر نفسِه فتنزلق معه.
         if (spec.pulse) {
           m.addLayer({
@@ -739,7 +769,10 @@ export function OpsMapCanvas({
               "icon-ignore-placement": true,
               ...(spec.labelField
                 ? {
-                    "text-field": ["get", spec.labelField] as never,
+                    // **والعمرُ سطرٌ ثانٍ أصغر** (`age`) — نصُّه تكتبه الحلقةُ كلَّ ثانية.
+                    "text-field": (spec.age
+                      ? ["format", ["get", spec.labelField], {}, "\n", {}, ["coalesce", ["get", AGE_PROP], ""], { "font-scale": 0.72 }]
+                      : ["get", spec.labelField]) as never,
                     // **خطٌّ عريضٌ وأكبر** (المالك ٢٠٢٦-١١-٠٣: «الاسم ما بيبين») — وبلا `text-font` كان يقع على خطّ
                     // افتراضيٍّ رفيعٍ ليس في حزمة الخريطة.
                     "text-font": ["RahalGo Bold"] as never,
@@ -825,7 +858,7 @@ export function OpsMapCanvas({
       } else {
         const mv = advanceMotions(motions.current.get(spec.id), spec.data.features, now);
         motions.current.set(spec.id, mv);
-        src?.setData({ type: "FeatureCollection", features: frameFeatures(spec.data.features, mv, now) } as never);
+        src?.setData({ type: "FeatureCollection", features: aged(spec, frameFeatures(spec.data.features, mv, now)) } as never);
         if (anyActive(mv, now)) {
           moving.current.add(spec.id);
           kick();
@@ -854,7 +887,7 @@ export function OpsMapCanvas({
         !spec.animate || !spec.visible || !from || from.size === 0 || !interpolates("tween", reducedMotion()) ||
         !anyMoved(from, spec.data.features);
       if (still) {
-        src?.setData((spec.visible ? spec.data : EMPTY) as never);
+        src?.setData((spec.visible ? { ...spec.data, features: aged(spec, spec.data.features) } : EMPTY) as never);
         if (spec.animate) shown.current.set(spec.id, spec.visible ? positionsOf(spec.data.features) : new Map());
       } else {
         // ── الانزلاق — لقطةٌ كلَّ إطارٍ حتّى الهدف ─────────────────
@@ -863,7 +896,7 @@ export function OpsMapCanvas({
         const step = (now: number) => {
           const t = Math.min(1, (now - start) / TWEEN_MS);
           const frame = t >= 1 ? target : tweenPoints(from, target, easeInOut(t));
-          src?.setData({ type: "FeatureCollection", features: frame } as never);
+          src?.setData({ type: "FeatureCollection", features: aged(spec, frame) } as never);
           shown.current.set(spec.id, positionsOf(frame));
           if (t < 1) tweens.current.set(spec.id, requestAnimationFrame(step));
           else tweens.current.delete(spec.id);
@@ -872,7 +905,7 @@ export function OpsMapCanvas({
       }
     }
 
-    for (const id of [spec.id, `${spec.id}-line`, `${spec.id}-cluster`, `${spec.id}-count`, `${spec.id}-label`, `${spec.id}-pulse`, `${spec.id}-heading`]) {
+    for (const id of [spec.id, `${spec.id}-line`, `${spec.id}-cluster`, `${spec.id}-count`, `${spec.id}-label`, `${spec.id}-pulse`, `${spec.id}-heading`, `${spec.id}-accuracy`]) {
       if (m.getLayer(id)) {
         m.setLayoutProperty(id, "visibility", spec.visible ? "visible" : "none");
       }
@@ -883,6 +916,27 @@ export function OpsMapCanvas({
     if (!ready) return;
     for (const spec of [...layers].sort((a, b) => a.order - b.order)) sync(spec);
   }, [layers, ready, sync]);
+
+  // ── عمرُ آخر نقطة — مرّةً في الثانية، للطبقات الساكنة وحدَها (٢٠٢٦-١١-١٨) ────
+  //
+  // **ما يتحرّك تختمه حلقةُ الإطارات** (`aged`)، **وما وقف يُرفع هنا مرّةً في الثانية** — ولا
+  // يمسّ React: الصفحةُ لا تُعاد، والطبقةُ وحدَها تُرفع. **والصفحةُ المخفيّةُ لا تُرفع.**
+  useEffect(() => {
+    if (!ready) return;
+    const h = window.setInterval(() => {
+      const m = map.current;
+      if (!m || document.hidden) return;
+      for (const spec of specs.current.values()) {
+        if (!spec.age || !spec.visible || moving.current.has(spec.id) || tweens.current.has(spec.id)) continue;
+        const src = m.getSource(`src-${spec.id}`) as maplibregl.GeoJSONSource | undefined;
+        const base = spec.motion === "glide"
+          ? frameFeatures(spec.data.features, motions.current.get(spec.id), performance.now())
+          : spec.data.features;
+        src?.setData({ type: "FeatureCollection", features: aged(spec, base) } as never);
+      }
+    }, 1000);
+    return () => window.clearInterval(h);
+  }, [ready]);
 
   // ── النبض — حلقةٌ تتّسع وتخفت، عشرين مرّةً في الثانية لا ستّين ────
   //

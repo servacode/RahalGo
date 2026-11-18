@@ -109,6 +109,7 @@ func overlayShown(drivers []opsmap.Driver) {
 		d.Bearing = cleanBearing(p.BearingDeg)
 		d.SpeedMps = p.SpeedMps
 		d.Rough = p.Rough
+		d.AccuracyM = p.AccuracyM
 	}
 }
 

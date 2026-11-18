@@ -147,12 +147,16 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         // العاديّة فلا تنفد بطّاريّتُه وهو ينتظر. **والطلبُ يُعرف من المحرّك**
         // (`active_orders`)، ويُعاد قراءتُه مع كلّ نبضةِ تحديث.
         val normal = me.locationPingSec.takeIf { it > 0 } ?: 20L
-        val pingSec = if (me.activeOrders > 0) me.locationPingActiveSec.takeIf { it > 0 } ?: normal else normal
+        // **ومعه طلبٌ يُقال صراحةً** (٢٠٢٦-١١-١٨) — لا يُستنتج من طول الفترة: الفترتان صارتا ٣ و٥.
+        val live = me.activeOrders > 0
+        val pingSec = if (live) me.locationPingActiveSec.takeIf { it > 0 } ?: normal else normal
         com.rahalgo.driver.location.ShiftMemory.remember(app, me.onShift, pingSec)
         // **ولا يُعاد التشغيلُ إلّا إن تغيّر شيء** — كانت كلُّ نبضةِ تحديثٍ
         // تُعيد رفعَ الخدمة الأماميّة وطلبَ الموقع والفترةُ هي هي.
         if (me.onShift && LocationPermission.granted(app)) {
-            if (LocationService.appliedSec != pingSec) LocationService.start(app, pingSec)
+            if (LocationService.appliedSec != pingSec || LocationService.appliedLive != live) {
+                LocationService.start(app, pingSec, live = live)
+            }
         } else {
             // **والإيقافُ يبقى دائماً** — لا يُعيد تشغيلَ شيء، ويلحق خدمةً طُلبت ولم تقم بعد.
             LocationService.stop(app)
