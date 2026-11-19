@@ -16,7 +16,10 @@ package orders
 //	    والبوت بيلتقط الردّ (`server.waCustomerLive`). مرّة وحدة للطلب (`live_nudge_wa_at`) — **والرقم نفسه
 //	    رقم رموز التسجيل، فالقلّة حماية من الحظر.**
 //
-// والمفتاح `orders.live_nudge_enabled` بيطفي الاتنين.
+// والمفتاح `orders.live_nudge_enabled` بيطفيه.
+//
+// **وتعديل ٢٠٢٦-١١-١٩ (قرار المالك): رسالةُ الواتساب انشالت** — الزبون طالب عالتطبيق وعنوانو محدّد،
+// والإشعار بيكفي. (فوق: وصفُها لتاريخ القرار.)
 
 import (
 	"context"
@@ -25,50 +28,45 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
-// LiveNudgeWAText **رسالةُ الواتساب** — بلا رابط، ورقمُ الطلب ليعرف الزبونُ عن أيّ طلبٍ نسأل.
-func LiveNudgeWAText(number int64) string {
-	return fmt.Sprintf("السلام عليكم 🌷 الكابتن بالطريق لعندك بطلبك #%d من تطبيق رحّال غو.\n"+
-		"لحتى يوصلك بالضبط، ردّ على هالرسالة بموقعك المباشر: اضغط 📎 ← الموقع ← شارك الموقع المباشر", number)
-}
-
 // liveNudgeStatuses **من «بالطريق» لحد الباب** — قبلها الكابتن لسا ما طلع لعند الزبون.
 var liveNudgeStatuses = []string{StOnTheWay, StAtDropoff}
 
 // SweepLiveNudgeOnce **جولةٌ واحدة** — والراصدُ يناديها كلّ نبضة.
+//
+// **ورسالةُ الواتساب انشالت** (قرارُ المالك ٢٠٢٦-١١-١٩): كانت تنبعت لطلبات التطبيق بس (طلبُ الواتساب
+// ما إلو زبون عالتطبيق فما بيشمله التذكير)، وطلبُ التطبيق عنوانو محدّد وبيكفيه إشعارُ التطبيق.
+// فـ`orders.live_nudge_wa_sec` ما عاد إلو شغل، وردُّ الزبون بموقعه عالواتساب لسا بينقبل لو بعته لحالو.
 func (s *Service) SweepLiveNudgeOnce(ctx context.Context) {
 	if s.settings == nil || !s.settings.GetBool(ctx, "orders.live_nudge_enabled") {
 		return
 	}
 	pushSec := s.settings.GetInt(ctx, "orders.live_nudge_push_sec")
-	waSec := s.settings.GetInt(ctx, "orders.live_nudge_wa_sec")
+	// **و«بالطريق» هو الانتقالُ الحقيقيّ** — سطورُ السجلّ اللي بتضل بنفس الحالة (متل سطر التذكير نفسه)
+	// ما بتنحسب «بالطريق» جديد.
 	rows, err := s.db.Query(ctx, `
-		SELECT o.id::text, o.number, o.customer_id::text, COALESCE(u.phone::text, ''),
-		       o.live_nudge_push_at IS NULL,
-		       o.live_nudge_wa_at IS NULL AND ow.at < now() - make_interval(secs => $3)
-		         AND (l.at IS NULL OR l.at < ow.at)
+		SELECT o.id::text, o.number, o.customer_id::text
 		  FROM orders o
-		  JOIN users u ON u.id = o.customer_id
 		  JOIN LATERAL (SELECT max(e.created_at) AS at FROM order_events e
-		                 WHERE e.order_id = o.id AND e.to_status = 'on_the_way') ow ON true
+		                 WHERE e.order_id = o.id AND e.to_status = 'on_the_way'
+		                   AND e.from_status IS DISTINCT FROM e.to_status) ow ON true
 		  LEFT JOIN order_live_locations l ON l.order_id = o.id
-		 WHERE o.status = ANY($1) AND o.closed_at IS NULL AND o.kind = ANY($4)
+		 WHERE o.status = ANY($1) AND o.closed_at IS NULL AND o.kind = ANY($3)
+		   AND o.customer_id IS NOT NULL AND o.live_nudge_push_at IS NULL
 		   AND ow.at IS NOT NULL AND ow.at < now() - make_interval(secs => $2)
 		   AND (l.at IS NULL OR l.at < now() - interval '60 seconds')
-		   AND (o.live_nudge_push_at IS NULL OR o.live_nudge_wa_at IS NULL)
-		 ORDER BY ow.at LIMIT 50`, liveNudgeStatuses, pushSec, waSec, liveKinds)
+		 ORDER BY ow.at LIMIT 50`, liveNudgeStatuses, pushSec, liveKinds)
 	if err != nil {
 		s.logger.Warn("تذكير الموقع المباشر: القراءة سقطت", "error", err)
 		return
 	}
 	type due struct {
-		id, customer, phone string
-		number              int64
-		push, wa            bool
+		id, customer string
+		number       int64
 	}
 	var list []due
 	for rows.Next() {
 		var d due
-		if err := rows.Scan(&d.id, &d.number, &d.customer, &d.phone, &d.push, &d.wa); err != nil {
+		if err := rows.Scan(&d.id, &d.number, &d.customer); err != nil {
 			rows.Close()
 			s.logger.Warn("تذكير الموقع المباشر: القراءة سقطت", "error", err)
 			return
@@ -77,12 +75,7 @@ func (s *Service) SweepLiveNudgeOnce(ctx context.Context) {
 	}
 	rows.Close()
 	for _, d := range list {
-		if d.push {
-			s.liveNudgePush(ctx, d.id, d.customer, d.number)
-		}
-		if d.wa && d.phone != "" {
-			s.liveNudgeWA(ctx, d.id, d.phone, d.number)
-		}
+		s.liveNudgePush(ctx, d.id, d.customer, d.number)
 	}
 }
 
@@ -102,24 +95,6 @@ func (s *Service) liveNudgePush(ctx context.Context, orderID, customerID string,
 	if s.notify != nil {
 		s.notify.Notify(ctx, notificationLiveNudge(customerID, orderID, number))
 	}
-}
-
-func (s *Service) liveNudgeWA(ctx context.Context, orderID, phone string, number int64) {
-	if s.whatsapp == nil || !s.whatsapp.Ready() {
-		return
-	}
-	tag, err := s.db.Exec(ctx, `
-		UPDATE orders SET live_nudge_wa_at = now() WHERE id = $1 AND live_nudge_wa_at IS NULL`, orderID)
-	if err != nil || tag.RowsAffected() != 1 {
-		return
-	}
-	note := "ما وصل موقع مباشر — انبعتت للزبون رسالة واتساب يرد بموقعه"
-	if !s.whatsapp.SendText(ctx, phone, LiveNudgeWAText(number)) {
-		note = "ما وصل موقع مباشر — رسالة الواتساب للزبون ما وصلت"
-	}
-	_, _ = s.db.Exec(ctx, `
-		INSERT INTO order_events (order_id, from_status, to_status, note, driver_id)
-		SELECT id, status, status, $2, driver_id FROM orders WHERE id = $1`, orderID, note)
 }
 
 func notificationLiveNudge(customerID, orderID string, number int64) notifications.Input {

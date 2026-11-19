@@ -95,21 +95,14 @@ func TestLIVENUDGE01_PushThenWhatsAppOnce(t *testing.T) {
 	if told != 1 {
 		t.Fatalf("**إشعار الزبون** %d", told)
 	}
-	if bot.count() != 0 {
-		t.Fatalf("**واتساب قبل الدقيقتين**")
-	}
 
-	// **بعد دقيقتين: واتسابٌ واحدٌ بلا رابط.**
+	// **بعد دقيقتين: طلب التطبيق ما بيوصلو واتساب** (قرار المالك ٢٠٢٦-١١-١٩) — عنوانو محدّد وبيكفيه الإشعار.
 	onTheWayAgo(t, h, oid, 130)
 	h.Orders.SweepLiveNudgeOnce(ctxBG())
-	h.Orders.SweepLiveNudgeOnce(ctxBG())
-	if bot.count() != 1 {
-		t.Fatalf("رسائل الواتساب %d والمنتظَر 1", bot.count())
+	if bot.count() != 0 {
+		t.Fatalf("**طلب التطبيق وصلو واتساب** %d", bot.count())
 	}
-	msg := bot.sent[0]
-	if !strings.HasPrefix(msg, cust.Phone+"|") || strings.Contains(msg, "http") || !strings.Contains(msg, "شارك الموقع المباشر") {
-		t.Fatalf("الرسالة: %q", msg)
-	}
+
 	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM notifications WHERE entity_id = $1 AND user_id = $2::uuid
 		AND title LIKE '%شارك موقعك المباشر%'`, oid, cust.ID).Scan(&told)
 	if told != 1 {
@@ -136,7 +129,7 @@ func TestLIVENUDGE01_PushThenWhatsAppOnce(t *testing.T) {
 
 	// **واللوحةُ تعدّه.**
 	st, err := h.Orders.LiveStatsToday(ctxBG())
-	if err != nil || st.OnTheWay < 1 || st.FromWhatsApp < 1 || st.NudgedPush < 1 || st.NudgedWA < 1 {
+	if err != nil || st.OnTheWay < 1 || st.FromWhatsApp < 1 || st.NudgedPush < 1 || st.NudgedWA != 0 {
 		t.Fatalf("الأرقام: %+v %v", st, err)
 	}
 }
@@ -179,5 +172,26 @@ func TestLIVENUDGE03_WhatsAppFromStrangerIgnored(t *testing.T) {
 	h := New(t)
 	if r := h.API.HandleWALocationKind(ctxBG(), "+963999123456", 35.95, 39.01, 5, true); r != "" {
 		t.Fatalf("ردّ على غريب: %q", r)
+	}
+}
+
+// TestLIVENUDGE04_PushTimingFromRealTransition **«بالطريق» من الانتقال الحقيقي** (٢٠٢٦-١١-١٩) — سطرٌ
+// بنفس الحالة (متل سطر تذكيرٍ أو ملاحظة) ما بيأخّر الإشعار.
+func TestLIVENUDGE04_PushTimingFromRealTransition(t *testing.T) {
+	h := New(t)
+	oid, _, _ := liveNudgeOrder(t, h)
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE order_events SET created_at = now() - interval '90 seconds'
+		WHERE order_id = $1 AND to_status = 'on_the_way'`, oid); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.Pool.Exec(ctxBG(), `INSERT INTO order_events (order_id, from_status, to_status, note)
+		VALUES ($1, 'on_the_way', 'on_the_way', 'ملاحظة')`, oid); err != nil {
+		t.Fatal(err)
+	}
+	h.Orders.SweepLiveNudgeOnce(ctxBG())
+	var pushAt *string
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT live_nudge_push_at::text FROM orders WHERE id = $1`, oid).Scan(&pushAt)
+	if pushAt == nil {
+		t.Fatal("**سطرٌ بنفس الحالة أخّر الإشعار**")
 	}
 }
