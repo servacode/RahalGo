@@ -93,6 +93,8 @@ fun CustomScreen(
     // أين الأمانة، **فيكتب من هي عنده ويطلب الموقعَ منه** كـ«إحضار» المتجر.
     var holderName by vm::draftHolderName
     var holderPhone by vm::draftHolderPhone
+    var amanahDir by vm::draftAmanahDir
+    val sending = mode == "amanah" && amanahDir == "send"
     // ══════════════════════════════════════════════════════════════════
     // **ولا تُختار طريقةُ الدفع هنا** — Batch 2c (قرارُ المالك)
     // ══════════════════════════════════════════════════════════════════
@@ -147,6 +149,7 @@ fun CustomScreen(
         mode = "purchase"
         holderName = ""
         holderPhone = ""
+        amanahDir = ""
         vm.resetAsk()
         request = ""
         notes = ""
@@ -158,7 +161,8 @@ fun CustomScreen(
     // من أوّل الصفحة وسببُ تعطيله فوقه، **والحقولُ تمرّ فوقه.**
     // **وما ينقص والزرُّ يُحسبان قبل الصفحة** — كلاهما في الشريط.
     val missing = if (mode != "amanah") emptyList() else buildList {
-        if (holderName.isBlank()) add(stringResource(R.string.cst_holder_name))
+        if (amanahDir.isEmpty()) add(stringResource(R.string.cst_dir_missing))
+        if (holderName.isBlank()) add(stringResource(if (sending) R.string.cst_recipient_name else R.string.cst_holder_name))
         if (holderPhone.count { it.isDigit() } < 9) add(stringResource(R.string.cst_holder_phone))
     }
     val needHolder = missing.isNotEmpty()
@@ -170,7 +174,13 @@ fun CustomScreen(
         // والجملةُ الطويلةُ تحته شرحاً — كعنوان السلّة والطلبات.
         ScreenTitle(
             stringResource(if (mode == "amanah") R.string.cst_title_amanah else com.rahalgo.ui.R.string.nav_custom_order),
-            stringResource(if (mode == "amanah") R.string.cst_heading_amanah else R.string.cst_heading),
+            stringResource(
+                when {
+                    sending -> R.string.cst_heading_amanah_send
+                    mode == "amanah" -> R.string.cst_heading_amanah
+                    else -> R.string.cst_heading
+                },
+            ),
         )
 
         // ══════════════════════════════════════════════════════════════
@@ -199,6 +209,27 @@ fun CustomScreen(
             selected = if (mode == "amanah") 1 else 0,
             onSelect = { mode = if (it == 1) "amanah" else "purchase" },
         )
+        // ══════════════════════════════════════════════════════════════
+        // **«بدّي أبعت أمانة» أو «بدّي أستقبل أمانة»** (قرارُ المالك ٢٠٢٦-١١-١٩)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // «لازم في سؤال مربع ترسل امانة او تستقبل امانة مشان نعرف صح»: **أبعت** = الكابتن بياخدها من
+        // عنواني ويوصّلها للشخص، **أستقبل** = بيجيبها من الشخص لعنواني. **ولا اختيارَ مسبق** — ما بينبعت
+        // الطلب حتّى يختار.
+        if (mode == "amanah") {
+            Spacer(Modifier.height(Rahal.space.md))
+            Text(stringResource(R.string.cst_dir_question), style = Rahal.type.sectionTitle)
+            Spacer(Modifier.height(Rahal.space.sm))
+            com.rahalgo.ui.SegmentedToggle(
+                options = listOf(stringResource(R.string.cst_dir_send), stringResource(R.string.cst_dir_receive)),
+                selected = when (amanahDir) {
+                    "send" -> 0
+                    "receive" -> 1
+                    else -> -1
+                },
+                onSelect = { amanahDir = if (it == 0) "send" else "receive" },
+            )
+        }
         // **ولا سطرَ شرحٍ تحت النوع** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
         Spacer(Modifier.height(Rahal.space.md))
         // **وحقلُ الطلب واسعٌ** — من يكتب «كيلو لحمة من ملحمة أبو أحمد
@@ -214,7 +245,13 @@ fun CustomScreen(
             label = { Text(stringResource(R.string.cst_what)) },
             supportingText = {
                 Text(
-                    stringResource(if (mode == "amanah") R.string.cst_what_hint_amanah else R.string.cst_what_hint),
+                    stringResource(
+                        when {
+                            sending -> R.string.cst_what_hint_amanah_send
+                            mode == "amanah" -> R.string.cst_what_hint_amanah
+                            else -> R.string.cst_what_hint
+                        },
+                    ),
                     color = Rahal.colors.inkMuted,
                     style = Rahal.type.caption,
                     modifier = Modifier.padding(top = Rahal.space.xs),
@@ -244,6 +281,15 @@ fun CustomScreen(
         // المحيط الأطلسيّ، **تُرسل سائقاً إلى لا مكان.** والعنوانُ
         // المحفوظُ يحمل نقطتَه معه.
         Spacer(Modifier.height(Rahal.space.md))
+        // **والعنوانُ بيقول شو دورو** (٢٠٢٦-١١-١٩) — بـ«أبعت» منّو بياخدها الكابتن، وبـ«أستقبل» لعندو بيوصّلها.
+        if (mode == "amanah" && amanahDir.isNotEmpty()) {
+            Text(
+                stringResource(if (sending) R.string.cst_addr_is_pickup else R.string.cst_addr_is_dropoff),
+                color = Rahal.colors.inkMuted,
+                style = Rahal.type.caption,
+            )
+            Spacer(Modifier.height(Rahal.space.xs))
+        }
         AddressCard(address, onOpenAddresses)
 
         // ══════════════════════════════════════════════════════════════
@@ -258,7 +304,7 @@ fun CustomScreen(
             OutlinedTextField(
                 value = holderName,
                 onValueChange = { holderName = TextLimits.fit(it, 80) },
-                label = { Text(stringResource(R.string.cst_holder_name)) },
+                label = { Text(stringResource(if (sending) R.string.cst_recipient_name else R.string.cst_holder_name)) },
                 singleLine = true,
                 enabled = !vm.busy,
                 modifier = Modifier.fillMaxWidth(),
@@ -403,6 +449,7 @@ fun CustomScreen(
                         request.trim(), it.text, it.lat, it.lng, notes.trim(), "cash", mode,
                         holderName.trim().takeIf { mode == "amanah" },
                         holderPhone.trim().takeIf { mode == "amanah" },
+                        amanahDir.takeIf { mode == "amanah" && it.isNotEmpty() },
                     )
                 }
             },
@@ -431,6 +478,11 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
     var draftMode by mutableStateOf("purchase")
     var draftHolderName by mutableStateOf("")
     var draftHolderPhone by mutableStateOf("")
+    /**
+     * **«بدّي أبعت أمانة» أم «بدّي أستقبل أمانة»** (قرارُ المالك ٢٠٢٦-١١-١٩) — `send` · `receive`، **وفارغٌ:
+     * لسا ما اختار** — والإرسالُ ممنوعٌ حتّى يختار، «مشان نعرف صح».
+     */
+    var draftAmanahDir by mutableStateOf("")
 
     private val api = CustomerApi(AppCore.get().api)
 
@@ -609,6 +661,7 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
         mode: String = "purchase",
         holderName: String? = null,
         holderPhone: String? = null,
+        amanahDirection: String? = null,
     ) {
         if (busy || uploadingPhoto) return
         busy = true
@@ -627,6 +680,7 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
                         photoIds = photos.map { it.id }.takeIf { it.isNotEmpty() && mode != "amanah" },
                         holderName = holderName, holderPhone = holderPhone,
                         locationRequestId = if (mode == "amanah") linkedRequestId() else null,
+                        amanahDirection = amanahDirection,
                     ),
                     attemptKey = key,
                 )

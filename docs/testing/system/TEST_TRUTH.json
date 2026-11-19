@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 147,
-    "notify_targeted": 76,
+    "notify_sites": 148,
+    "notify_targeted": 77,
     "publish_rooms": [
       "customer",
       "driver",
@@ -32,9 +32,9 @@
     ],
     "setting_defs": 300,
     "behaviour_settings": 254,
-    "order_fields": 148,
-    "test_files": 856,
-    "test_funcs": 3273
+    "order_fields": 149,
+    "test_files": 857,
+    "test_funcs": 3276
   },
   "flows": [
     {
@@ -14568,6 +14568,24 @@
     {
       "name": "TestAmanahPickup_ExplicitPointStillWorks",
       "file": "internal/qa/amanah_pickup_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAmanahSend_ReceiveUnchanged",
+      "file": "internal/qa/amanah_send_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAmanahSend_SharedAfterSend",
+      "file": "internal/qa/amanah_send_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAmanahSend_SharedBeforeSendAndCodeToRecipient",
+      "file": "internal/qa/amanah_send_test.go",
       "package": "qa",
       "orphan": true
     },

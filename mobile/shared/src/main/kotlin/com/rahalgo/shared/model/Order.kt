@@ -39,6 +39,8 @@ data class DriverOrder(
      * ليعرف السائقُ أين الأمانة إن لم يشارك صاحبُها موقعَه. للسائق المُسنَد وحدَه، وفارغان لغيرها.
      */
     @SerialName("holder_name") val holderName: String = "",
+    /** **«أبعت» أم «أستقبل»** (٢٠٢٦-١١-١٩) — بـ`send`: استلم من الزبون واقبض منه، وسلّم لـ`holderName`. */
+    @SerialName("amanah_direction") val amanahDirection: String = "",
     @SerialName("holder_phone") val holderPhone: String = "",
     /**
      * **أصلُ الطلب** — `app` أو `whatsapp` (قرارُ المالك ٢٠٢٦-١١-٠٥): طلبٌ كتبه المكتبُ من رسالة
@@ -734,6 +736,9 @@ data class DriverEditRequestReply(val request: DriverEditRequest? = null)
  *
  * `status`: `pending` · `approved` · `rejected` · `stale` (الأجرة تغيّرت من وقت الطلب).
  */
+/** **اتّجاهُ الأمانة** (قرارُ المالك ٢٠٢٦-١١-١٩) — `send` من عنوان الزبون للمستلِم، وغيرُه «أستقبل». */
+fun isAmanahSend(direction: String?): Boolean = direction == "send"
+
 @Serializable
 data class DriverFeeRequest(
     val id: String = "",

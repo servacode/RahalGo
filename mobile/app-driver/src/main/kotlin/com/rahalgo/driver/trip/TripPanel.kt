@@ -178,6 +178,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
                     stringResource(
                         when {
                             // **وأجرةُ المنصّة لا «اتّفاقَ» فيها** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢).
+                            isAmanahSend(order) -> R.string.trip_p_amanah_send
                             fixedCustomFee(order) != null && order.customMode == "amanah" -> R.string.trip_p_fixed_amanah
                             fixedCustomFee(order) != null -> R.string.trip_p_fixed_purchase
                             order.customMode == "amanah" -> R.string.trip_p_custom_amanah

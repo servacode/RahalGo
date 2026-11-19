@@ -111,13 +111,15 @@ func (s *Service) issueDeliveryCode(ctx context.Context, tx pgx.Tx, orderID, kin
 	allowWA := channel != "app"
 
 	var number int64
-	var custPhone, recipPhone, mode, owner string
+	var custPhone, recipPhone, mode, owner, amanahTo string
 	if err := tx.QueryRow(ctx, `
 		SELECT o.number, COALESCE(cu.phone::text, ''), COALESCE(o.recipient_phone, ''),
-		       o.delivery_mode, COALESCE(m.owner_user_id::text, '')
+		       o.delivery_mode, COALESCE(m.owner_user_id::text, ''),
+		       CASE WHEN o.kind = 'custom' AND o.custom_mode = 'amanah' AND o.amanah_direction = 'send'
+		            THEN COALESCE(o.amanah_holder_phone, '') ELSE '' END
 		FROM orders o LEFT JOIN users cu ON cu.id = o.customer_id
 		LEFT JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.id = $1`, orderID).Scan(&number, &custPhone, &recipPhone, &mode, &owner); err != nil {
+		WHERE o.id = $1`, orderID).Scan(&number, &custPhone, &recipPhone, &mode, &owner, &amanahTo); err != nil {
 		return nil, err
 	}
 
@@ -154,6 +156,15 @@ func (s *Service) issueDeliveryCode(ctx context.Context, tx pgx.Tx, orderID, kin
 		}
 		if waReady && custPhone != "" {
 			rt.phone = custPhone
+		}
+		// **«أبعت أمانة»: الكودُ للمستلِم بالواتساب** (قرارُ المالك ٢٠٢٦-١١-١٩) — هو اللي بيعطيه للكابتن
+		// عند الباب؛ والمرسِلُ يراه بتطبيقه كمان.
+		if amanahTo != "" {
+			rt.sms = amanahTo
+			rt.phone = ""
+			if waReady {
+				rt.phone = amanahTo
+			}
 		}
 	}
 	// **ولا واتسابَ ولا تطبيق ⇒ المنصّةُ تبعثه رسالةً عاديّة** إن كان مَن يُنبَّه —

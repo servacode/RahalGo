@@ -159,7 +159,7 @@ const orderSelect = `
 	       ent.lat, ent.lng,
 	       ST_Y(o.dropoff_suggest::geometry), ST_X(o.dropoff_suggest::geometry),
 	       -- **وصاحبُ الأمانة ورقمُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
-	       COALESCE(o.amanah_holder_name, ''), COALESCE(o.amanah_holder_phone, ''),
+	       COALESCE(o.amanah_holder_name, ''), COALESCE(o.amanah_holder_phone, ''), o.amanah_direction,
 	       -- **وعنوانُ المتجر المفصّل** (قرارُ المالك ٢٠٢٦-١١-٠٣) — للمكتب، تحت اسم المتجر على البطاقة.
 	       -- **وفي طلب الواتساب العنوانُ المكتوب** (٢٠٢٦-١١-٠٥).
 	       COALESCE(NULLIF(mr.address_text, ''), NULLIF(ptn.address_text, ''), o.pickup_address, ''),
@@ -232,7 +232,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
 		&o.AmountCurrency, &o.NearLandmark, &o.LiveRequestedAt, &o.LiveRequestCount,
 		&o.EntranceLat, &o.EntranceLng, &o.DropoffSuggestLat, &o.DropoffSuggestLng,
-		&o.HolderName, &o.HolderPhone, &o.PickupAddress,
+		&o.HolderName, &o.HolderPhone, &o.AmanahDirection, &o.PickupAddress,
 		&o.Origin, &o.WAAmanah, &o.CreatedByName, &o.PickupMerchantID, &o.Stops, &o.CustomPhotos)
 	if err != nil {
 		return nil, err

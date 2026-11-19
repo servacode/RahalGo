@@ -621,6 +621,7 @@ fun kindLabel(order: DriverOrder): Int = when {
     isWhatsApp(order) -> R.string.kind_whatsapp
     isFetch(order) -> R.string.kind_fetch
     order.kind == "merchant_delivery" -> R.string.kind_delivery
+    isAmanahSend(order) -> R.string.kind_amanah_send
     order.kind == "custom" && order.customMode == "amanah" -> R.string.kind_amanah
     order.kind == "custom" -> R.string.kind_purchase
     else -> R.string.kind_standard
@@ -638,6 +639,13 @@ fun isFetch(order: DriverOrder): Boolean =
  * المتجر ويقبض من المستلِم كـ«لدي توصيلة» تماماً، **والكلماتُ وحدَها تختلف.**
  */
 fun isWhatsApp(order: DriverOrder): Boolean = order.origin == "whatsapp"
+
+/**
+ * **«أبعت أمانة»** (قرارُ المالك ٢٠٢٦-١١-١٩) — استلمها من الزبون واقبض الأجرة منه، وسلّمها للمستلِم
+ * (`holderName`/`holderPhone`). وغيرُها «أستقبل»: من صاحب الأمانة للزبون.
+ */
+fun isAmanahSend(order: DriverOrder): Boolean =
+    order.kind == "custom" && order.customMode == "amanah" && order.amanahDirection == "send"
 
 /**
  * **رقمُ المستلم لزرَّي «اتّصل» و«واتساب»** — في «لدي توصيلة» بعد الاستلام وحدَه (قرارُ المالك
@@ -847,6 +855,8 @@ fun feePaidFromWallet(order: DriverOrder): Boolean = order.walletScope == "deliv
 
 fun cashFrom(order: DriverOrder, pickedUp: Boolean): CashFrom {
     if (order.cashDue <= 0) return CashFrom.NONE
+    // **«أبعت أمانة»: المرسِلُ يدفع وقت تاخدها منه** (قرارُ المالك ٢٠٢٦-١١-١٩) — وعند المستلِم ما بتقبض شي.
+    if (isAmanahSend(order)) return if (pickedUp) CashFrom.NONE else CashFrom.STORE
     // **ومن يقف عند نقطة الاستلام يدفع عندها** (قرارُ المالك ٢٠٢٦-١٠-١٥) — المتجرُ في «توصيل»،
     // **والمستلِمُ في «إحضار»** (والخادمُ قلب الوقفتين، فـ`STORE` هنا «عند الاستلام»).
     val fromStore = order.kind == "merchant_delivery" && if (isFetch(order)) {

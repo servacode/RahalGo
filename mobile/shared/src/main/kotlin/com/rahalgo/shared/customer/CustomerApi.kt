@@ -613,6 +613,8 @@ data class NewCustom(
     @SerialName("holder_phone") val holderPhone: String? = null,
     /** **«اطلب الموقع منه»** — طلبُ موقعٍ أُنشئ قبل الإرسال، فنقطتُه نقطةُ الاستلام الآن أو حين تصل. */
     @SerialName("location_request_id") val locationRequestId: String? = null,
+    /** **«أبعت» أم «أستقبل»** (قرارُ المالك ٢٠٢٦-١١-١٩) — `send` · `receive`؛ وغيابُه «أستقبل». */
+    @SerialName("amanah_direction") val amanahDirection: String? = null,
 )
 
 @Serializable
@@ -826,6 +828,8 @@ data class MyOrder(
     @SerialName("custom_goods_usd") val customGoodsUsd: Long? = null,
     /** **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — اختيارُه عند الطلب. */
     @SerialName("custom_mode") val customMode: String = "purchase",
+    /** **«أبعت» أم «أستقبل»** (قرارُ المالك ٢٠٢٦-١١-١٩) — بـ`send` الأجرةُ تُدفع عند الاستلام. */
+    @SerialName("amanah_direction") val amanahDirection: String = "",
     /** **وُثّقت الأجرةُ والثمنُ بعد الشراء** — فيُوافَق على الأجرة الآن. */
     @SerialName("custom_goods_pending") val customGoodsPending: Boolean = false,
     @SerialName("custom_fee") val customFee: Long? = null,

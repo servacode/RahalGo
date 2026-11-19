@@ -230,6 +230,9 @@ type Order struct {
 	// والسائقُ يتّصل به ويطلب موقعَه. **في الأمانة وحدَها** — للزبون والسائق والإدارة.
 	HolderName  string `json:"holder_name,omitempty"`
 	HolderPhone string `json:"holder_phone,omitempty"`
+	// AmanahDirection **«أبعت» أم «أستقبل»** (قرارُ المالك ٢٠٢٦-١١-١٩) — `receive` (الافتراض: من الشخص
+	// لعنوان الزبون) أو `send` (من عنوان الزبون للمستلم، و`Holder*` هو المستلم). في الأمانة وحدَها.
+	AmanahDirection string `json:"amanah_direction,omitempty"`
 	// Kind **نوعُ الطلب** — `standard` من متجر، و`custom` طلبٌ خاصٌّ بلا متجر.
 	Kind string `json:"kind"`
 	// CustomRequest ما طلبه الزبونُ بلفظه — في الخاصّ وحدَه.

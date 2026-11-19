@@ -43,6 +43,8 @@ const MAX_REQUEST = 1000;
 const MAX_NOTES = 500;
 
 type Mode = "purchase" | "amanah";
+/** **«بدّي أبعت أمانة» أم «بدّي أستقبل أمانة»** (قرارُ المالك ٢٠٢٦-١١-١٩) — وفارغٌ: لسا ما اختار. */
+type Dir = "" | "send" | "receive";
 
 /** **«اطلب الموقع منه»** — ردُّ الخادم وحالُه (مرآةُ «إحضار» المتجر). */
 type AskReq = { id: string; whatsapp_sent: boolean; link: string; wa_url: string };
@@ -68,6 +70,8 @@ export default function CustomOrderPage() {
   // تصير نقطةَ الاستلام قبل الإرسال أو بعده. مرآةُ `CustomScreen.kt`.
   const [holderName, setHolderName] = useState("");
   const [holderPhone, setHolderPhone] = useState("");
+  const [dir, setDir] = useState<Dir>("");
+  const sending = mode === "amanah" && dir === "send";
   const [ask, setAsk] = useState<AskState>("idle");
   const [askReq, setAskReq] = useState<AskReq | null>(null);
   const [askPhone, setAskPhone] = useState("");
@@ -117,7 +121,11 @@ export default function CustomOrderPage() {
   const phoneDigits = holderPhone.replace(/\D/g, "").length;
   const missing =
     mode === "amanah"
-      ? [!holderName.trim() ? K.holderName : "", phoneDigits < 9 ? K.holderPhone : ""].filter(Boolean)
+      ? [
+          !dir ? K.dirMissing : "",
+          !holderName.trim() ? (sending ? K.recipientName : K.holderName) : "",
+          phoneDigits < 9 ? K.holderPhone : "",
+        ].filter(Boolean)
       : [];
   const needHolder = missing.length > 0;
 
@@ -172,6 +180,7 @@ export default function CustomOrderPage() {
             ? {
                 holder_name: holderName.trim(),
                 holder_phone: holderPhone.trim(),
+                amanah_direction: dir || "receive",
                 ...(askReq && (ask === "waiting" || ask === "received") ? { location_request_id: askReq.id } : {}),
               }
             : {}),
@@ -184,6 +193,7 @@ export default function CustomOrderPage() {
       setMode("purchase");
       setHolderName("");
       setHolderPhone("");
+      setDir("");
       resetAsk();
       toast(fill(K.done, { n: fmtRef(ref.number) }));
       router.push(ref.id ? `/orders/${ref.id}` : "/orders");
@@ -210,7 +220,7 @@ export default function CustomOrderPage() {
           الطويلةُ تحته شرحاً — كعنوان السلّة والطلبات. مرآةُ `CustomScreen.kt`. */}
       <div className="flex flex-col gap-1 lg:col-span-2">
         <h1 className="heading-page">{mode === "amanah" ? K.titleAmanah : K.titlePurchase}</h1>
-        <p className="text-sm text-ink-muted">{mode === "amanah" ? K.subtitleAmanah : K.subtitle}</p>
+        <p className="text-sm text-ink-muted">{sending ? K.subtitleAmanahSend : mode === "amanah" ? K.subtitleAmanah : K.subtitle}</p>
       </div>
       <div className="flex flex-col gap-4 lg:col-span-2">
         {closed && <Alert tone="warning">{closedText}</Alert>}
@@ -220,12 +230,28 @@ export default function CustomOrderPage() {
         {/* **ولا «نوع الطلب» ولا سطرَ شرحٍ** — الخياران يشرحان نفسَيهما (قرارُ المالك ٢٠٢٦-١٠-٣٠).
             **ومفتاحُ نصفَين** كطلباتي (مرآةُ `SegmentedControl`) لا زرٌّ مصمتٌ وزرٌّ بحدّ. */}
         <Segmented<Mode> label={K.modeTitle} items={modes} value={mode} onChange={setMode} />
+        {/* **«بدّي أبعت أمانة» أو «بدّي أستقبل أمانة»** (قرارُ المالك ٢٠٢٦-١١-١٩) — مرآةُ `CustomScreen.kt`:
+            ولا اختيارَ مسبق، والإرسالُ ممنوعٌ حتّى يختار. */}
+        {mode === "amanah" && (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-bold">{K.dirQuestion}</p>
+            <Segmented<Dir>
+              label={K.dirQuestion}
+              items={[
+                { id: "send", label: K.dirSend },
+                { id: "receive", label: K.dirReceive },
+              ]}
+              value={dir}
+              onChange={setDir}
+            />
+          </div>
+        )}
 
         {/* **والمثالُ نصٌّ رماديٌّ داخلَ الحقل يزول بالكتابة** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
         <Textarea
           id="custom-request"
           label={K.what}
-          placeholder={mode === "amanah" ? K.whatHintAmanah : K.whatHint}
+          placeholder={sending ? K.whatHintAmanahSend : mode === "amanah" ? K.whatHintAmanah : K.whatHint}
           value={request}
           onChange={(e) => setRequest(e.target.value.slice(0, MAX_REQUEST))}
           rows={4}
@@ -235,6 +261,9 @@ export default function CustomOrderPage() {
         {/* **شِيلت «إضافة صورة»** (قرارُ المالك ٢٠٢٦-١١-١٣) — الصورةُ تُبعث بالدردشة. */}
       </section>
 
+      {mode === "amanah" && dir && (
+        <p className="-mb-2 text-caption text-ink-muted">{sending ? K.addrIsPickup : K.addrIsDropoff}</p>
+      )}
       <AddressChip onOpen={() => setPickAddr(true)} />
 
       {/* **صاحبُ الأمانة ورقمُه، و«اطلب الموقع منه»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كـ«إحضار» المتجر. */}
@@ -242,7 +271,7 @@ export default function CustomOrderPage() {
         <section className={`${OUTLINE_CARD} flex flex-col gap-3`}>
           <Input
             id="holder-name"
-            label={K.holderName}
+            label={sending ? K.recipientName : K.holderName}
             value={holderName}
             maxLength={MAX_NAME}
             disabled={busy}

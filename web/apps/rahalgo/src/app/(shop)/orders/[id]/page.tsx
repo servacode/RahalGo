@@ -213,7 +213,9 @@ export default function OrderPage() {
                 <p className="text-xs text-ink-muted">
                   {adminFee
                     ? order.custom_mode === "amanah"
-                      ? m.shop.custom.amanahPay
+                      ? order.amanah_direction === "send"
+                        ? m.shop.custom.amanahPaySend
+                        : m.shop.custom.amanahPay
                       : m.shop.custom.totalPending
                     : O.awaitingQuote}
                 </p>

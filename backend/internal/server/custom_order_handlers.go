@@ -61,6 +61,9 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 		// LocationRequestID **«اطلب الموقع منه»** — طلبُ موقعٍ أنشأه قبل الإرسال
 		// (`POST /my/location-requests`)، **فيُربط بالطلب**: نقطتُه نقطةُ الاستلام الآن أو حين تصل.
 		LocationRequestID string `json:"location_request_id"`
+		// AmanahDirection **«أبعت» أم «أستقبل»** (قرارُ المالك ٢٠٢٦-١١-١٩) — `send` أو `receive`، وغيابُه
+		// `receive` (التطبيقُ القديم). وفي «أبعت» الاسمُ والرقمُ للمستلِم، وموقعُه نقطةُ التسليم.
+		AmanahDirection string `json:"amanah_direction"`
 		// PhotoIDs **صورُ القائمة أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١) — ١ إلى ٣ معرّفاتٍ رفعها
 		// صاحبُ الطلب قبله (`POST /me/custom-photo`). **اختياريّةٌ، والنصُّ لا يلزم معها.**
 		PhotoIDs []string `json:"photo_ids"`
@@ -140,9 +143,35 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 				return IdempotentBody{}, err
 			}
 			o.HolderName, o.HolderPhone = holderName, holderPhone
+			// **«بدّي أبعت أمانة»** (قرارُ المالك ٢٠٢٦-١١-١٩) — الاستلامُ من عنوانه، والتسليمُ لموقع المستلِم.
+			if req.AmanahDirection == orders.AmanahSend {
+				var rLat, rLng *float64
+				if req.LocationRequestID != "" {
+					lat, lng, err := linkAmanahLocationTx(ctx, q, req.LocationRequestID, userIDFrom(r), o.ID)
+					if err != nil {
+						return IdempotentBody{}, err
+					}
+					rLat, rLng = lat, lng
+				}
+				known, err := s.orders.SetAmanahSendTx(ctx, q, o.ID, rLat, rLng)
+				if err != nil {
+					return IdempotentBody{}, err
+				}
+				sLat, sLng := req.Lat, req.Lng
+				o.AmanahDirection = orders.AmanahSend
+				o.AmanahPickupLat, o.AmanahPickupLng = &sLat, &sLng
+				o.PickupNote = orders.AmanahSenderNote
+				o.DropoffKnown = known
+				if known {
+					o.Lat, o.Lng = *rLat, *rLng
+				}
+				req.PickupLat, req.PickupLng, req.LocationRequestID = nil, nil, ""
+			} else {
+				o.AmanahDirection = orders.AmanahReceive
+			}
 			// **وموقعُه إن طلبه منه** — وصل قبل الإرسال؟ نقطةُ استلامٍ الآن. وإلّا كُتب حين يصل.
 			shared := false
-			if req.LocationRequestID != "" {
+			if req.LocationRequestID != "" && o.AmanahDirection == orders.AmanahReceive {
 				lat, lng, err := linkAmanahLocationTx(ctx, q, req.LocationRequestID, userIDFrom(r), o.ID)
 				if err != nil {
 					return IdempotentBody{}, err
@@ -151,7 +180,7 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 					req.PickupLat, req.PickupLng, shared = lat, lng, true
 				}
 			}
-			if req.PickupLat != nil && req.PickupLng != nil {
+			if req.PickupLat != nil && req.PickupLng != nil && o.AmanahDirection == orders.AmanahReceive {
 				if err := s.orders.SetAmanahPickupTx(ctx, q, o.ID, *req.PickupLat, *req.PickupLng); err != nil {
 					// **وموقعٌ شاركه صاحبُها خارجَ التغطية لا يُسقط الطلب** — السائقُ يتّصل به.
 					if !shared {

@@ -12043,6 +12043,10 @@
           "type": "string"
         },
         {
+          "name": "amanah_direction",
+          "type": "string"
+        },
+        {
           "name": "photo_ids",
           "type": "[]string"
         }

@@ -531,6 +531,7 @@ private fun CustomQuoteSection(
             Text(
                 stringResource(
                     when {
+                        fixed && order.customMode == "amanah" && order.amanahDirection == "send" -> R.string.cst_amanah_pay_send
                         fixed && order.customMode == "amanah" -> R.string.cst_amanah_pay
                         fixed -> R.string.cst_total_pending
                         else -> R.string.ord_awaiting_quote

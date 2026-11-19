@@ -245,6 +245,8 @@ interface OrderRow {
   /** **أصلُ الطلب** — `whatsapp` لطلبٍ كتبه المكتبُ من رسالة واتساب (قرارُ المالك ٢٠٢٦-١١-٠٥). */
   origin?: string;
   /** **«أمانة من شخص» بالواتساب** (٢٠٢٦-١١-١٢) — صندوقا «الاستلام من» و«التسليم لـ». */
+  /** **«أبعت» أم «أستقبل»** (قرارُ المالك ٢٠٢٦-١١-١٩). */
+  amanah_direction?: string;
   wa_amanah?: boolean;
   /** **أنقطةُ التسليم معروفة؟** — خطأٌ: الموقعُ لم يصل بعد. */
   dropoff_known?: boolean;
@@ -4675,6 +4677,8 @@ function kindLabel(o: OrderRow): string {
   const OP = m.admin.ordersPage;
   if (o.origin === "whatsapp") return OP.kindWhatsApp;
   if (o.kind === "merchant_delivery") return o.delivery_mode === "fetch" ? OP.kindMdFetch : OP.kindMdSend;
+  // **«أمانة مُرسلة»** (قرارُ المالك ٢٠٢٦-١١-١٩) — من عنوان الزبون للمستلِم، والأجرةُ عند الاستلام.
+  if (o.kind === "custom" && o.custom_mode === "amanah" && o.amanah_direction === "send") return OP.kindAmanahSend;
   if (o.kind === "custom") return o.custom_mode === "amanah" ? OP.kindAmanah : OP.kindPurchase;
   return OP.kindStd;
 }

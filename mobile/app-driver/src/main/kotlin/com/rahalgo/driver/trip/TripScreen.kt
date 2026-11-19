@@ -2046,10 +2046,14 @@ private fun TripCard(
                         // مكان الاستلام (٢٠٢٦-١٠-١٥؛ والخادمُ كتب اسمَه في موضع المتجر).
                         if (cashFrom == CashFrom.STORE) {
                             MoneyBox(
-                                label = if (isFetch(order)) {
-                                    stringResource(R.string.trip_collect_from, order.merchantName)
-                                } else {
-                                    stringResource(R.string.detail_fee_from_store)
+                                label = when {
+                                    isFetch(order) -> stringResource(R.string.trip_collect_from, order.merchantName)
+                                    // **«أبعت أمانة»: من المرسِل وقت تاخدها** (٢٠٢٦-١١-١٩).
+                                    isAmanahSend(order) -> stringResource(
+                                        R.string.trip_collect_from,
+                                        customerShownName(order.customerName) ?: stringResource(R.string.detail_customer),
+                                    )
+                                    else -> stringResource(R.string.detail_fee_from_store)
                                 },
                                 amount = money(order.cashDue),
                                 tint = CollectTint(),
@@ -2395,12 +2399,18 @@ private fun TripCard(
                         val recipient = recipientContactPhone(order, pickedUp)
                         // **وصاحبُ الأمانة قبل الاستلام** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — الزبونُ كتب اسمَه ورقمَه،
                         // **فيتّصل به السائقُ أو يراسله** ليعرف أين الأمانة إن لم يشارك موقعَه.
+                        // **و«أبعت أمانة»: المستلِمُ بعد الاستلام** (٢٠٢٦-١١-١٩) — هو اللي بتسلّمه.
+                        val send = isAmanahSend(order)
                         val holder = order.holderPhone.takeIf {
-                            order.kind == "custom" && order.customMode == "amanah" && it.isNotBlank() && !pickedUp
+                            order.kind == "custom" && order.customMode == "amanah" && it.isNotBlank() && pickedUp == send
                         }
                         if (holder != null) {
                             Text(
-                                stringResource(R.string.amanah_holder_line, order.holderName.ifBlank { "—" }, holder),
+                                stringResource(
+                                    if (send) R.string.amanah_recipient_line else R.string.amanah_holder_line,
+                                    order.holderName.ifBlank { "—" },
+                                    holder,
+                                ),
                                 color = Rahal.colors.ink,
                                 fontWeight = FontWeight.Bold,
                                 style = Rahal.type.body,

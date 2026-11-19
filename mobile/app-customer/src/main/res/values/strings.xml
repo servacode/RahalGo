@@ -103,6 +103,16 @@
     <!-- **عنوانُ شاشة الطلب الخاص** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — بدل «طلب خاص» فوقها. -->
     <string name="cst_heading">اطلب أي شيء من داخل المدينة ونحن نوصله إليك</string>
     <string name="cst_heading_amanah">استلم أمانة من شخص ونوصلها إلى بابك</string>
+    <string name="cst_heading_amanah_send">نستلم الأمانة من عنوانك ونوصلها للشخص اللي بتكتبه</string>
+    <string name="cst_dir_question">شو بدّك تعمل بالأمانة؟</string>
+    <string name="cst_dir_send">📦 بدّي أبعت أمانة</string>
+    <string name="cst_dir_receive">📥 بدّي أستقبل أمانة</string>
+    <string name="cst_dir_missing">اختار أبعت أو أستقبل</string>
+    <string name="cst_recipient_name">اسم المستلم</string>
+    <string name="cst_what_hint_amanah_send">مثال: مفتاح أو ظرف أو كيس أغراض بدّك تبعته</string>
+    <string name="cst_addr_is_pickup">الكابتن بياخد الأمانة من هالعنوان</string>
+    <string name="cst_addr_is_dropoff">الكابتن بيوصّل الأمانة لهالعنوان</string>
+    <string name="cst_amanah_pay_send">تدفع الأجرة نقداً للكابتن لما ياخد الأمانة منك.</string>
     <string name="cst_title_amanah">أمانة</string>
     <string name="cst_mode_purchase">مشتريات</string>
     <string name="cst_mode_amanah">أمانة</string>
