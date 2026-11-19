@@ -128,6 +128,8 @@ type Server struct {
 	// mon**ذاكرةُ راصد المنصّة** — ما أُنذر به ومتى، وآخرُ تقريرٍ صباحيّ.
 	// انظر `monitoring_watch.go`.
 	mon monitorState
+	// waChoice **«أيّ واحد؟» معلّق لسلفة الواتساب** — `wa_advance.go`.
+	waChoice waAdvanceChoice
 	// alertOut **من يكتب للمالك في محادثته مع نفسه** — البوت. **وفارغٌ في
 	// التطوير** فتذهب التنبيهاتُ إلى إشعارات اللوحة وحدَها.
 	alertOut AlertSender

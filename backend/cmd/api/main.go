@@ -402,6 +402,8 @@ func run(logger *slog.Logger) error {
 				srv.SetAlertSender(waBot)
 			}
 			go srv.RunMonitoring(ctx, time.Minute)
+			// **و«سلفة» من الواتساب بتتطبّق بعد ١٠ دقايق** — wa_advance.go (قرار المالك ٢٠٢٦-١١-١٩).
+			go srv.RunWAAdvance(ctx, 30*time.Second)
 			// **وسلسلةُ تعريف المتجر بالإشعارات** — merchant_onboarding.go (طلبُ المالك ٢٠٢٦-١٠-١٢).
 			go srv.RunMerchantOnboarding(ctx, time.Minute)
 			// **وتذكيرُ الأصناف بلا صور** — merchant_photo_nudge.go (قرارُ المالك ٢٠٢٦-١١-١١).

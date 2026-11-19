@@ -60,7 +60,8 @@ func reportKind(text string) string {
 func (s *Server) ReportForSelf(ctx context.Context, text string) string {
 	kind := reportKind(text)
 	if kind == "" {
-		return ""
+		// **و«سلفة» من محادثة المالك مع نفسه** (٢٠٢٦-١١-١٩) — `wa_advance.go`.
+		return s.waAdvanceSelf(ctx, text)
 	}
 	return s.platformReport(ctx, kind)
 }
