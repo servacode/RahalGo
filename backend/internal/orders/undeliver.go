@@ -298,6 +298,11 @@ func (s *Service) undeliverTx(ctx context.Context, q wallet.Querier,
 		}
 	}
 
+	// (٨ب) **«ديون الطلبات»** — المفتوحُ يسقط، والمدفوعُ دينٌ على الكابتن (يستردّ من المتجر).
+	if err := voidOrderDriverDebts(ctx, q, orderID, actorID); err != nil {
+		return res, err
+	}
+
 	// (٩) **الخزينة** — بعد كلّ ما سبق، فتقرأ ما بقي مقيَّداً.
 	if err := s.creditTreasury(ctx, q, orderID, actorID); err != nil {
 		return res, err

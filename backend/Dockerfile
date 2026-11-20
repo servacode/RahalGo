@@ -44,10 +44,20 @@ RUN go mod download
 COPY agent/ameen-sync/ ./
 RUN CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w -H=windowsgui" -o /out/RahalGoSync.exe .  && grep -o 'var Version = "[^"]*"' main.go | cut -d'"' -f2 > /out/agent-version
 
+# ══════════════════════════════════════════════════════════════════════
+# ── قراءة صور وتسجيلات الدردشة (قرار المالك ٢٠٢٦-١١-٢٠، internal/mediascan) ──
+# whisper.cpp بيحوّل التسجيل لكلام عربي على سيرفرنا — بلا GGML_NATIVE حتى يشتغل على أي معالج.
+FROM alpine:3.21 AS whisper
+RUN apk add --no-cache build-base cmake git curl
+RUN git clone --depth 1 --branch v1.7.4 https://github.com/ggml-org/whisper.cpp /w  && cmake -S /w -B /w/build -DBUILD_SHARED_LIBS=OFF -DGGML_NATIVE=OFF -DWHISPER_BUILD_TESTS=OFF       -DCMAKE_BUILD_TYPE=Release  && cmake --build /w/build -j --config Release --target whisper-cli  && curl -fL -o /model.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin
+
 FROM alpine:3.21
 # **وشهاداتُ الجذر لازمة**: المحرّكُ ينادي واتساب وخدمةَ العناوين عبر HTTPS،
 # **وصورةٌ بلاها تردّ «x509: certificate signed by unknown authority».**
-RUN apk add --no-cache ca-certificates tzdata && adduser -D -u 10001 rahal
+# **وقراءة الصور (tesseract) وتحويل الصوت (ffmpeg + whisper)** — للدردشة (٢٠٢٦-١١-٢٠).
+RUN apk add --no-cache ca-certificates tzdata tesseract-ocr tesseract-ocr-data-ara ffmpeg libstdc++ libgomp  && adduser -D -u 10001 rahal
+COPY --from=whisper /w/build/bin/whisper-cli /usr/local/bin/whisper-cli
+COPY --from=whisper /model.bin /opt/whisper/model.bin
 WORKDIR /app
 COPY --from=build /out/api /app/api
 COPY --from=agent /out/ /app/agent/

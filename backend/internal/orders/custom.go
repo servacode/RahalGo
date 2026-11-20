@@ -1034,6 +1034,10 @@ func (s *Service) settleCustomStore(ctx context.Context, q wallet.Querier, in se
 		if err := recordAdvanceReturn(ctx, q, in.orderID, *in.driverID, storePaid-cashIn+collect, in.actorID); err != nil {
 			return err
 		}
+		// **«ديون الطلبات»** (٢٠٢٦-١١-٢٠): النموذج ٢ — ما دفعه للمتجر ولم يقبضه دينٌ عالمنصّة له.
+		if err := recordOrderDriverDebt(ctx, q, in.orderID, in.driverID, storePaid, cashIn, in.moneyModel); err != nil {
+			return err
+		}
 	}
 	// **ونصيبُ مندوب المتجر التابع من العمولة** — القاعدةُ نفسُها في الطلب العاديّ
 	// (`settleRep`): الموقوفُ يُحجز، والمشتري نفسُه لا يأخذ، والكوبونُ يُطرح.

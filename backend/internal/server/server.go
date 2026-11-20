@@ -28,6 +28,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/incentives"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/mediascan"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/opsmap"
@@ -130,6 +131,8 @@ type Server struct {
 	mon monitorState
 	// waChoice **«أيّ واحد؟» معلّق لسلفة الواتساب** — `wa_advance.go`.
 	waChoice waAdvanceChoice
+	// scan **قراءة صور وتسجيلات الدردشة** — chat_media_scan.go (٢٠٢٦-١١-٢٠).
+	scan mediascan.Scanner
 	// alertOut **من يكتب للمالك في محادثته مع نفسه** — البوت. **وفارغٌ في
 	// التطوير** فتذهب التنبيهاتُ إلى إشعارات اللوحة وحدَها.
 	alertOut AlertSender
@@ -310,7 +313,7 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
 		comms:  comms.New(pg),
 		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
-		media: mediaSvc, hub: hub, otpStatus: otpStatus, otpUnpair: otpUnpair, otpPair: otpPair,
+		media: mediaSvc, scan: mediascan.FromEnv(), hub: hub, otpStatus: otpStatus, otpUnpair: otpUnpair, otpPair: otpPair,
 		notify: notify, push: pushSvc, geo: geoSvc, route: routeClient,
 		routeEngine: cfg.RoutingEngine, osrm: osrmClient}
 	// **والطلبُ من عدّة متاجر لا يُفتح حتّى تُفرض نسخةُ السائق التي تعرف
@@ -1146,6 +1149,8 @@ func (s *Server) Router() http.Handler {
 			// **ومعالمُه اليوم من المطلوب** (قرارُ المالك ٢٠٢٦-١١-٠٥، landmark_quota.go).
 			r.Get("/landmarks/today", s.handleDriverLandmarksToday)
 			r.Get("/cash", s.handleDriverCash)
+			// **وما إله عالمكتب من طلباتٍ دُفعت من المحفظة** (٢٠٢٦-١١-٢٠، order_debts.go).
+			r.Get("/order-debts", s.handleDriverOrderDebts)
 			// **هدفُه وما ناله** — ومكافأةٌ لا يراها صاحبُها لم تُصرف في نظره.
 			r.Get("/incentives", s.handleMyIncentives)
 		})
@@ -1639,6 +1644,8 @@ func (s *Server) Router() http.Handler {
 			// **ومسارٌ ثانٍ لا توسعةُ صلاحية الطرفين**: لو صارت الإدارةُ طرفاً
 			// لَاستطاعت أن تكتب، **فيقرأ الزبونُ سطراً باسم سائقه لم يقله.**
 			r.Get("/orders/{id}/chat", s.handleAdminOrderChat)
+			// **صورة محجوزة فيها رقم ← «مرّرها»** (٢٠٢٦-١١-٢٠، chat_media_scan.go).
+			r.Post("/order-messages/{id}/release", s.handleReleaseHeldChatPhoto)
 			// إرسال الطلب إلى المتجر على واتساب — في وضع «المنصة تدير»
 			r.Get("/orders/{id}/message", s.handleOrderMessagePreview)
 			r.Post("/orders/{id}/whatsapp", s.handleSendOrderToMerchant)
@@ -1896,6 +1903,10 @@ func (s *Server) Router() http.Handler {
 			r.Get("/finance/goods-balances", s.handleGoodsBalances)
 			// **«مصاري الكابتن عالقة»** — قرارُ المكتب (النموذج ٢، القرار ٤).
 			r.Post("/orders/{id}/stuck-goods", s.handleStuckGoodsDecision)
+			// **«ديون الطلبات»** — الزبونُ دفع الطلبَ كلَّه من المحفظة والكابتنُ إله عالمكتب (٢٠٢٦-١١-٢٠).
+			r.Get("/finance/order-debts", s.handleOrderDebtsSummary)
+			r.Get("/finance/order-debts/{driverID}", s.handleOrderDebtsOf)
+			r.Post("/finance/order-debts/{driverID}/pay", s.handlePayOrderDebts)
 			// **نزاعاتُ المنصة مع الأربعة** — المتجرِ والسائقِ والمندوبِ
 			// والزبون. **ونزاعٌ لا يُرى مجموعاً لا يُتابَع**، وثلاثةٌ منها لم
 			// يكن لها مكانٌ إطلاقاً قبل هجرة `0063`.

@@ -543,6 +543,7 @@ private val CODES: Map<String, Int> = mapOf(
     "order_changed" to R.string.err_order_changed,
     "wallet_scope_not_allowed" to R.string.err_wallet_scope_not_allowed,
     "wallet_full_removed" to R.string.err_wallet_full_removed,
+    "no_open_order_debts" to R.string.err_no_open_order_debts,
     "stuck_goods_none" to R.string.err_stuck_goods_none,
     "stuck_goods_decided" to R.string.err_stuck_goods_decided,
     "quote_not_confirmed" to R.string.err_quote_not_confirmed,
@@ -766,6 +767,8 @@ private val CODES: Map<String, Int> = mapOf(
     "comms_no_driver" to R.string.err_comms_no_driver,
     // **صورةٌ وصوتٌ في الحديث** (قرارُ المالك ٢٠٢٦-١١-١٢).
     "chat_attachments_limit" to R.string.err_chat_attachments_limit,
+    "chat_photo_held" to R.string.err_chat_photo_held,
+    "chat_message_not_held" to R.string.err_chat_message_not_held,
     "invalid_audio" to R.string.err_invalid_audio,
     "audio_too_large" to R.string.err_audio_too_large,
     // **«ما استلمت العمولة»** (٢٠٢٦-١٠-٢٦) — بابُ لوحةٍ، والحارسُ يطلب نصَّه لأنّه في `orders`.

@@ -72,6 +72,7 @@ class SectionsViewModel(app: Application) : AndroidViewModel(app) {
                 } else if (c != null && !cashMoreBusy) {
                     runCatching { cash = backend.driver.cash(); me = backend.driver.me() }
                 }
+                if (c != null) runCatching { orderDebts = backend.driver.orderDebts() }
                 if (reputation != null) runCatching { reputation = backend.me.reputation() }
             }
         }
@@ -86,6 +87,10 @@ class SectionsViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     var cash by mutableStateOf<CashPage?>(null)
+        private set
+
+    /** **«إلك عالمكتب»** — يُجلب مع الكشف، **وتعذّرُه لا يُسقط الكشفَ** (يبقى فارغاً فلا بطاقة). */
+    var orderDebts by mutableStateOf<com.rahalgo.shared.model.OrderDebts?>(null)
         private set
 
     /** **سقفُ صندوقه وما فيه** — من `driver/me`، وهو ما يقرؤه الويب. */
@@ -104,7 +109,11 @@ class SectionsViewModel(app: Application) : AndroidViewModel(app) {
     fun open(item: MenuItem, force: Boolean = false) {
         error = ""
         when (item) {
-            MenuItem.Cash -> if (force || cash == null) load { cash = backend.driver.cash(); me = backend.driver.me() }
+            MenuItem.Cash -> if (force || cash == null) load {
+                cash = backend.driver.cash()
+                me = backend.driver.me()
+                orderDebts = runCatching { backend.driver.orderDebts() }.getOrNull()
+            }
             MenuItem.Tickets -> if (force || reputation == null) load { reputation = backend.me.reputation() }
             // **والدردشاتُ والسجلُّ لهما عقلُهما** — رُفعت الدردشاتُ
             // إلى `:ui` (٢٠٢٦-٠٨-١٤) **لأنّ كلَّ دورٍ يدردش.**

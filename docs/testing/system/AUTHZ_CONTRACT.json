@@ -54,12 +54,12 @@
   {
    "code": "finance.manage",
    "description": "اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة",
-   "guards_routes": 51
+   "guards_routes": 52
   },
   {
    "code": "finance.read",
    "description": "قراءة المال والتقارير المالية",
-   "guards_routes": 39
+   "guards_routes": 41
   },
   {
    "code": "finance.recompute",
@@ -130,7 +130,7 @@
   {
    "code": "orders.intervene",
    "description": "التدخل في طلب: تحويله أو إلغاؤه أو استرجاعه",
-   "guards_routes": 33
+   "guards_routes": 34
   },
   {
    "code": "orders.read",
@@ -273,7 +273,7 @@
   }
  ],
  "route_policy": {
-  "rules": 386,
+  "rules": 390,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

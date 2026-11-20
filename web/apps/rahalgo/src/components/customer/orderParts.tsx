@@ -272,17 +272,18 @@ export function QuotePanel({
   onMessage: (text: string) => void;
 }) {
   const ownReserved = order.payment_method === "wallet" ? order.custom_reserved_amount : 0;
-  // **المحفظةُ تدفع التوصيلَ وحدَه** (قرارُ المالك ٢٠٢٦-١١-١٠) — «الكل من المحفظة» انشال، والبضاعةُ
-  // كاش للكابتن. ويظهر الخيارُ حين يغطّي الرصيدُ الأجرة. مرآةُ `QuoteConfirmPanel`.
+  // **ثلاثُ طرق دفع** (قرارُ المالك ٢٠٢٦-١١-٢٠): كاش · التوصيل من المحفظة والباقي كاش (حين يغطّي
+  // الرصيدُ الأجرة) · الكل من المحفظة (حين يغطّي الرصيدُ المجموعَ كلَّه). مرآةُ `QuoteConfirmPanel`.
   const deliveryPart = Math.max(0, Math.min(order.delivery_fee, order.total));
   const deliveryOk = deliveryPart > 0 && available + ownReserved >= deliveryPart;
-  const walletOk = deliveryOk;
-  const [method, setMethod] = useState<"cash" | "delivery">("cash");
+  const fullOk = order.total > 0 && available + ownReserved >= order.total;
+  const walletOk = deliveryOk || fullOk;
+  const [method, setMethod] = useState<"cash" | "full" | "delivery">("cash");
   const [busy, setBusy] = useState(false);
   const [askReject, setAskReject] = useState(false);
   const [error, setError] = useState("");
   const amanah = order.custom_mode === "amanah";
-  const pay = method === "delivery" && !deliveryOk ? "cash" : method;
+  const pay = (method === "delivery" && !deliveryOk) || (method === "full" && !fullOk) ? "cash" : method;
 
   const confirm = async () => {
     const slot = "confirm_" + order.id;
@@ -300,7 +301,7 @@ export function QuotePanel({
         }),
       });
       clearAttempt(slot);
-      onMessage(pay === "delivery" ? O.confirmedDelivery : O.confirmedCash);
+      onMessage(pay === "delivery" ? O.confirmedDelivery : pay === "full" ? O.confirmedWallet : O.confirmedCash);
       onDone();
     } catch (err) {
       const code = (err as { body?: { code?: string } })?.body?.code;
@@ -348,8 +349,9 @@ export function QuotePanel({
         <div role="radiogroup" aria-label={m.shop.cart.payment} className="flex flex-col gap-rg-sm">
           {([
             { id: "cash", label: m.shop.cart.cash },
+            ...(fullOk ? [{ id: "full" as const, label: m.shop.cart.walletFull }] : []),
             ...(deliveryOk ? [{ id: "delivery" as const, label: m.shop.cart.walletDelivery }] : []),
-          ] as { id: "cash" | "delivery"; label: string }[]).map((it) => (
+          ] as { id: "cash" | "full" | "delivery"; label: string }[]).map((it) => (
             <RadioCard key={it.id} selected={pay === it.id} onSelect={() => setMethod(it.id)} title={it.label} />
           ))}
         </div>
@@ -534,16 +536,17 @@ export function PayScope({
   const own = custom ? order.custom_reserved_amount : order.wallet_paid;
   const budget = available + own;
   const deliveryPart = Math.max(0, Math.min(order.delivery_fee, order.total));
-  // **«الكل من المحفظة» لا يُختار بعد اليوم** (قرارُ المالك ٢٠٢٦-١١-١٠) — ويُعرض فقط اسماً لطلبٍ قديمٍ هو عليه.
+  // **ثلاثُ طرق** (قرارُ المالك ٢٠٢٦-١١-٢٠): «الكل من المحفظة» يظهر حين يغطّي الرصيدُ المجموعَ كلَّه
+  // (أو الطلبُ عليه أصلاً).
   const items: { id: "none" | "full" | "delivery"; label: string }[] = [{ id: "none", label: m.shop.cart.cash }];
-  if (scope === "full") items.push({ id: "full", label: m.shop.cart.walletFull });
+  if ((order.total > 0 && budget >= order.total) || scope === "full") items.push({ id: "full", label: m.shop.cart.walletFull });
   if ((deliveryPart > 0 && budget >= deliveryPart) || scope === "delivery") {
     items.push({ id: "delivery", label: m.shop.cart.walletDelivery });
   }
   if (items.length < 2) return null;
 
   const change = async (next: "none" | "full" | "delivery") => {
-    if (next === scope || next === "full" || busy) return;
+    if (next === scope || busy) return;
     const slot = "wallet_scope_" + order.id;
     setBusy(true);
     setError("");

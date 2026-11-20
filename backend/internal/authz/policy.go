@@ -194,6 +194,7 @@ var adminPolicy = []Rule{
 	{"GET", "/orders/{id}", OrdersRead},
 	// **وكلامُ الناس صنفٌ بذاته** — ومن يسوّي حساباً لا يقرؤه.
 	{"GET", "/orders/{id}/chat", OrdersCommunicationsRead},
+	{"POST", "/order-messages/{id}/release", OrdersIntervene},
 	// **ورسالةُ المنصّة إلى المتجر ليست كلامَ الناس** — نصٌّ تبنيه المنصّةُ ورابطُ
 	// واتساب لزرّ «حوّل للمتجر». **وكانت بـ`orders.communications.read`** فموظّفُ
 	// العمليّات يُردّ ٤٠٣ عند التحويل (بلاغُ المالك من التجهيز ٢٠٢٦-١٠-٠٥).
@@ -273,6 +274,10 @@ var adminPolicy = []Rule{
 	// **«أرصدة من بضاعة»** (قرارُ المالك ٢٠٢٦-١١-١٠) — تقريرُ قراءةٍ فقط، لا يحرّك مالاً.
 	{"GET", "/finance/goods-balances", FinanceRead},
 	{"POST", "/orders/{id}/stuck-goods", FinanceManage},
+	// «ديون الطلبات» (٢٠٢٦-١١-٢٠).
+	{"GET", "/finance/order-debts", FinanceRead},
+	{"GET", "/finance/order-debts/{driverID}", FinanceRead},
+	{"POST", "/finance/order-debts/{driverID}/pay", FinanceManage},
 	{"POST", "/drivers/{id}/end-shift", DriversManage},
 	{"GET", "/drivers", DriversRead},
 	// **مراقبةُ حركتهم** — قدرتُها وحدَها (قرارُ المالك ٢٠٢٦-١١-٠٣).

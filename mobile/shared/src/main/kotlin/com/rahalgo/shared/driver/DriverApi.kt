@@ -75,6 +75,13 @@ class DriverApi(private val api: ApiClient) {
         api.call("/api/v1/driver/cash?page=" + page)
 
     /**
+     * **«إلك عالمكتب»** — ما دفعه من جيبه للمتاجر عن طلباتٍ دفعها الزبونُ من محفظته، والمنصّةُ
+     * مديونةٌ له بها (قرارُ المالك ٢٠٢٦-١١-٢٠). (`GET /api/v1/driver/order-debts`.)
+     */
+    suspend fun orderDebts(): com.rahalgo.shared.model.OrderDebts =
+        api.call("/api/v1/driver/order-debts")
+
+    /**
      * **إعادةُ بضاعةِ طلبٍ تعذّر تسليمُه إلى متجرها.**
      *
      * (`POST /api/v1/driver/orders/{id}/return` — وله الآن زرٌّ في سجلّ

@@ -384,10 +384,8 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 		return nil, httpx.NewError(http.StatusForbidden, "not_your_order", "errors.not_your_order")
 	}
 	// **النموذج ٢: المحفظةُ تدفع التوصيلَ وحدَه** (B3) — كما في الإنشاء (`CreateTx`).
-	if row.moneyModel == MoneyModelGoodsOutside && scope == ScopeFull {
-		if !legacyWallet {
-			return nil, ErrWalletFullRemoved
-		}
+	// **و«الكل من المحفظة» رجع** (٢٠٢٦-١١-٢٠) — والقديمُ بلا نطاقٍ يبقى «التوصيل بس».
+	if row.moneyModel == MoneyModelGoodsOutside && scope == ScopeFull && legacyWallet {
 		scope, walletMapped = ScopeDelivery, true
 	}
 	// **لا تأكيدَ قبل اتفاقٍ، ولا بعد نهاية.**

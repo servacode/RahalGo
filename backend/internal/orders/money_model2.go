@@ -153,7 +153,10 @@ func (s *Service) creditTreasuryGoodsOutside(ctx context.Context, q wallet.Queri
 			             WHERE ref = $1 AND kind IN ('order_collection', 'commission_waived',
 			                                         'collection_reversed')), 0),
 			COALESCE((SELECT sum(amount) FROM wallet_transactions
-			           WHERE ref = $1 AND kind IN ('driver_earning', 'commission')), 0),
+			           WHERE ref = $1 AND kind IN ('driver_earning', 'commission')), 0)
+			-- **«ديون الطلبات»** (٢٠٢٦-١١-٢٠): حقُّ البضاعة للكابتن ليس ربحاً — مفتوحاً أو مدفوعاً.
+			+ COALESCE((SELECT sum(amount) FROM order_driver_debts
+			             WHERE order_id = $1::uuid AND state IN ('open', 'paid')), 0),
 			COALESCE((SELECT sum(amount) FROM wallet_transactions WHERE ref = $1 AND kind = 'refund'), 0),
 			COALESCE((SELECT sum(amount) FROM wallet_transactions WHERE ref = $1 AND kind = 'platform_profit'), 0)`,
 		orderID).Scan(&paid, &toParties, &refunded, &posted); err != nil {

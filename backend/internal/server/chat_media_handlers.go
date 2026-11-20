@@ -78,6 +78,7 @@ func (s *Server) handleSendOrderAttachment(w http.ResponseWriter, r *http.Reques
 	}
 
 	in := comms.AttachmentInput{Kind: kind, DurationMs: durationMs}
+	var photoHits []textguard.ContactHit
 	if kind == comms.AttachPhoto {
 		mm, err := s.media.Save(r.Context(), p.SelfID, "chat_photo", file)
 		if err != nil {
@@ -85,6 +86,11 @@ func (s *Server) handleSendOrderAttachment(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		in.MediaID, in.Path, in.Thumb = mm.ID, mm.URL, mm.ThumbURL
+		// **فيها رقم جوال؟** (٢٠٢٦-١١-٢٠) ⇒ بتنحجز وما بتوصل.
+		if text, hits := s.scanChatPhoto(r.Context(), mm.URL); len(hits) > 0 {
+			in.Held, in.ScanText = true, clip(text, 2000)
+			photoHits = hits
+		}
 	} else {
 		raw, err := io.ReadAll(io.LimitReader(file, media.MaxAudioBytes+1))
 		if err != nil {
@@ -104,6 +110,16 @@ func (s *Server) handleSendOrderAttachment(w http.ResponseWriter, r *http.Reques
 		s.respondErr(w, err)
 		return
 	}
+	// **الصورة المحجوزة**: موسومة للإدارة، وتنبيه، والمرسل بيعرف إنها ما انبعتت — ولا إشعار للطرف التاني.
+	if in.Held {
+		if err := s.comms.FlagContact(r.Context(), msg.ID, "صورة فيها رقم: "+textguard.ContactSummary(photoHits)); err != nil {
+			s.logger.Warn("الحديث: تعذّر وسمُ صورةٍ محجوزة", "error", err)
+		}
+		s.alertContactLeak(r.Context(), p)
+		s.touch("order", "ops")
+		s.respondErr(w, comms.ErrPhotoHeld)
+		return
+	}
 	if len(masked) > 0 {
 		if err := s.comms.Flag(r.Context(), msg.ID, masked[0]); err != nil {
 			s.logger.Warn("الحديث: تعذّر وسمُ لفظٍ مسيء", "error", err)
@@ -118,5 +134,8 @@ func (s *Server) handleSendOrderAttachment(w http.ResponseWriter, r *http.Reques
 	}
 	// **والإشعارُ يقول ما وصل** — «📷 صورة» أو «🎤 رسالة صوتية».
 	s.notifyChatPeer(r.Context(), p, comms.Fallback(kind))
+	if kind == comms.AttachAudio {
+		s.queueVoiceScan(p, msg.ID, in.Path)
+	}
 	httpx.JSON(w, http.StatusCreated, msg)
 }

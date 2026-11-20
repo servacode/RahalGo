@@ -515,8 +515,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     // لا خطأٌ عامّ (`L`). **والمحرّكُ سلطان**: المحفظةُ لا تُقبَل بلا رصيدٍ
     // كافٍ، ويُحجَز فوراً. **ومفتاحُ المحاولة يحمله** فلا يُؤكَّد مرّتين.
     //
-    // **و`method` واحدٌ من اتنين** (قرارُ المالك ٢٠٢٦-١١-١٠): `cash` · `delivery` «التوصيل من المحفظة
-    // والباقي كاش». («الكل من المحفظة» انشال، و`wallet` القديمُ = «التوصيل».)
+    // **و`method` واحدٌ من ثلاثة** (قرارُ المالك ٢٠٢٦-١١-٢٠): `cash` · `delivery` «التوصيل من المحفظة
+    // والباقي كاش» · `full` «الكل من المحفظة». (و`wallet` القديمُ بلا نطاقٍ = «التوصيل».)
     fun confirmQuote(order: MyOrder, method: String) {
         if (acting) return
         acting = true
@@ -524,7 +524,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         val slot = "confirm:" + order.id
         val key = Attempt.key(slot)
         val scope = when (method) {
-            "delivery", "full", "wallet" -> "delivery"
+            "full" -> "full"
+            "delivery", "wallet" -> "delivery"
             else -> "none"
         }
         val payment = if (scope == "none") "cash" else "wallet"
@@ -536,6 +537,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     getApplication<Application>().getString(
                         when (scope) {
                             "delivery" -> R.string.ord_confirmed_delivery
+                            "full" -> R.string.ord_confirmed_wallet
                             else -> R.string.ord_confirmed_cash
                         },
                     ),

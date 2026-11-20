@@ -56,6 +56,8 @@ func (s *Service) List(ctx context.Context, p *Permission) ([]Message, error) {
 		FROM order_messages x
 		LEFT JOIN media m ON m.id = x.attachment_media_id
 		WHERE x.order_id = $1 AND x.driver_id = $3
+		  -- **صورةٌ محجوزةٌ لا تُعرض حتّى يمرّرها المكتب** (٢٠٢٦-١١-٢٠).
+		  AND (x.held_at IS NULL OR x.released_at IS NOT NULL)
 		ORDER BY x.created_at`, p.OrderID, p.SelfID, p.DriverID)
 	if err != nil {
 		return nil, err
@@ -112,20 +114,28 @@ func (s *Service) send(ctx context.Context, p *Permission, body string, att *Att
 	if p.DriverID != "" {
 		tenure = p.DriverID
 	}
-	var mediaID, kind, dur any
+	var mediaID, kind, dur, scanText any
+	held := false
 	if att != nil {
 		mediaID, kind = att.MediaID, att.Kind
 		if att.Kind == AttachAudio {
 			dur = att.DurationMs
 		}
+		held = att.Held
+		if att.ScanText != "" {
+			scanText = att.ScanText
+		}
 	}
 	var x Message
 	if err := s.db.QueryRow(ctx, `
 		INSERT INTO order_messages (order_id, sender_id, sender_role, body, flagged, flag_word, driver_id,
-		                            attachment_media_id, attachment_kind, attachment_duration_ms)
-		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9, $10)
+		                            attachment_media_id, attachment_kind, attachment_duration_ms,
+		                            held_at, scan_text, scanned_at)
+		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, $8, $9, $10,
+		        CASE WHEN $11 THEN now() END, $12::text, CASE WHEN $12::text IS NOT NULL THEN now() END)
 		RETURNING id::text, body, sender_role, created_at`,
-		p.OrderID, p.SelfID, string(p.Me), body, word != "", word, tenure, mediaID, kind, dur).
+		p.OrderID, p.SelfID, string(p.Me), body, word != "", word, tenure, mediaID, kind, dur,
+		held, scanText).
 		Scan(&x.ID, &x.Body, &x.Role, &x.CreatedAt); err != nil {
 		return nil, err
 	}
@@ -181,7 +191,8 @@ func (s *Service) Unread(ctx context.Context, orderID string, me Role) (int, err
 	var n int
 	err := s.db.QueryRow(ctx, `
 		SELECT count(*) FROM order_messages
-		WHERE order_id = $1 AND sender_role <> $2 AND read_at IS NULL`,
+		WHERE order_id = $1 AND sender_role <> $2 AND read_at IS NULL
+		  AND (held_at IS NULL OR released_at IS NOT NULL)`,
 		orderID, string(me)).Scan(&n)
 	return n, err
 }

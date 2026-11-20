@@ -1798,9 +1798,9 @@ var All = []Check{
 	},
 	{
 		ID: "FI-17.c", Family: FI17, Status: ProvableNow, Ops: true,
-		Name: "المحفظةُ تدفع التوصيلَ وحدَه في النموذج ٢",
-		Why: "**«الكل من المحفظة» انشال** — طلبٌ من النموذج ٢ بنطاق `full`، أو خُصم أو حُجز له من " +
-			"المحفظة أكثرُ من أجرة توصيله، يعني أنّ المحفظةَ دفعت بضاعة.",
+		Name: "المحفظةُ في النموذج ٢ تدفع التوصيلَ وحدَه — إلّا «الكل من المحفظة»",
+		Why: "**«التوصيل من المحفظة»** لا يُخصم أو يُحجز له من المحفظة أكثرُ من أجرة توصيله، **و«الكل من " +
+			"المحفظة»** (رجع بقرار المالك ٢٠٢٦-١١-٢٠) لا أكثرُ من مجموعه — وإلّا دفعت المحفظةُ ما ليس للطلب.",
 		Flows: []string{"F-01"},
 		Kinds: []string{"order_payment"},
 		// **والخاصُّ الذي ينتظر إعادةَ تأكيدٍ بعد الاستلام يُستثنى** — كـFI-03.e.
@@ -1808,9 +1808,9 @@ var All = []Check{
 			SELECT number, kind, wallet_scope, wallet_paid, custom_reserved_amount, delivery_fee, total
 			FROM orders
 			WHERE money_model = 2
-			  AND (wallet_scope = 'full'
-			       OR (NOT (kind = 'custom' AND quote_confirmed_version IS DISTINCT FROM quote_version)
-			           AND wallet_paid + custom_reserved_amount > GREATEST(LEAST(delivery_fee, total), 0)))`,
+			  AND NOT (kind = 'custom' AND quote_confirmed_version IS DISTINCT FROM quote_version)
+			  AND wallet_paid + custom_reserved_amount > GREATEST(
+			        CASE WHEN wallet_scope = 'full' THEN total ELSE LEAST(delivery_fee, total) END, 0)`,
 	},
 	{
 		ID: "FI-17.d", Family: FI17, Status: ProvableNow, Ops: true,
@@ -1866,11 +1866,16 @@ var All = []Check{
 				SELECT sum(oc.amount) AS back FROM office_cash_entries oc
 				WHERE oc.ref = o.id::text AND oc.source = 'undelivered_return'
 			) a ON true
+			-- **و«ديون الطلبات»** (٢٠٢٦-١١-٢٠): حقُّ البضاعة للكابتن باقٍ بالخزينة وليس ربحاً.
+			LEFT JOIN LATERAL (
+				SELECT sum(d.amount) AS debt FROM order_driver_debts d
+				WHERE d.order_id = o.id AND d.state IN ('open', 'paid')
+			) dd ON true
 			WHERE o.money_model = 2
 			  AND EXISTS (SELECT 1 FROM wallets WHERE is_treasury)
 			  AND EXISTS (SELECT 1 FROM wallet_transactions p
 			              WHERE p.ref = o.id::text AND p.kind = 'platform_profit')
-			  AND COALESCE(l.net, 0) <> COALESCE(c.cash, 0) - COALESCE(a.back, 0)`,
+			  AND COALESCE(l.net, 0) <> COALESCE(c.cash, 0) - COALESCE(a.back, 0) - COALESCE(dd.debt, 0)`,
 	},
 	{
 		ID: "FI-17.f", Family: FI17, Status: ProvableNow, Ops: true,
@@ -1898,5 +1903,31 @@ var All = []Check{
 			FROM merchant_settlements ms
 			JOIN orders o ON o.id = ms.order_id
 			WHERE o.money_model = 2 AND (ms.method <> 'cash' OR NOT ms.off_ledger)`,
+	},
+	{
+		ID: "FI-17.h", Family: FI17, Status: ProvableNow, Ops: true,
+		Name: "«الكل من المحفظة» المسلَّم له دينُ طلبٍ للكابتن بقدّ ما دفعه للمتجر",
+		Why: "**«ديون الطلبات»** (قرار المالك ٢٠٢٦-١١-٢٠): الزبونُ دفع من محفظته والكابتنُ دفع للمتجر من جيبه، " +
+			"فما دفعه ناقصَ ما قبضه دينٌ عالمنصّة له. **غيابُه أو اختلافُه** يعني أنّ الكابتنَ خسر مصاريه " +
+			"أو أخذ أكثر — والخزينةُ حسبت حقَّ البضاعة ربحاً.",
+		Flows: []string{"F-01", "F-14"},
+		SQL: `
+			SELECT o.number, x.paid, x.collected, COALESCE(d.amount, 0) AS الدين
+			FROM orders o
+			CROSS JOIN LATERAL (
+				SELECT COALESCE((SELECT sum(ms.amount - ms.reversed_amount) FROM merchant_settlements ms
+				                  WHERE ms.order_id = o.id AND ms.off_ledger AND ms.paid_via = 'driver'
+				                    AND ms.paid_by = o.driver_id), 0)
+				     + COALESCE((SELECT sum(a.delta) FROM merchant_settlement_adjustments a
+				                  JOIN merchant_settlements ms ON ms.id = a.settlement_id
+				                  WHERE a.order_id = o.id AND ms.off_ledger AND a.paid_via = 'driver'
+				                    AND a.paid_by = o.driver_id), 0)
+				     + CASE WHEN o.kind = 'custom' THEN COALESCE(o.custom_store_paid, 0) ELSE 0 END AS paid,
+				       o.cash_due + o.goods_usd_syp AS collected
+			) x
+			LEFT JOIN order_driver_debts d ON d.order_id = o.id AND d.driver_id = o.driver_id
+			WHERE o.money_model = 2 AND o.wallet_scope = 'full' AND o.status = 'delivered'
+			  AND o.driver_id IS NOT NULL
+			  AND COALESCE(d.amount, 0) <> GREATEST(x.paid - x.collected, 0)`,
 	},
 }

@@ -1193,6 +1193,23 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 		if err := s.collectAndReturnAdvance(ctx, q, in.orderID, in.driverID, in.cashDue, in.actorID); err != nil {
 			return err
 		}
+		// **«ديون الطلبات»** (قرارُ المالك ٢٠٢٦-١١-٢٠): النموذج ٢ والزبونُ دفع من محفظته ما دفعه
+		// الكابتنُ للمتجر ⇒ دينٌ عالمنصّة للكابتن بالفرق — لا ينزل بمحفظته.
+		if in.moneyModel == MoneyModelGoodsOutside && in.driverID != nil {
+			_, mine, err := driverPaidFor(ctx, q, in.orderID, *in.driverID)
+			if err != nil {
+				return err
+			}
+			var usd int64
+			if err := q.QueryRow(ctx, `SELECT goods_usd_syp FROM orders WHERE id = $1`,
+				in.orderID).Scan(&usd); err != nil {
+				return err
+			}
+			if err := recordOrderDriverDebt(ctx, q, in.orderID, in.driverID, mine,
+				in.cashDue+usd, in.moneyModel); err != nil {
+				return err
+			}
+		}
 		if err := s.payDriver(ctx, q, in, out); err != nil {
 			return err
 		}

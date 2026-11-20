@@ -6,8 +6,8 @@ package qa
 //
 // طلبٌ من النموذج ٢ (المفتاحُ `finance.goods_outside` مشغَّلٌ في الاختبار وحدَه):
 //
-//   - «الكل من المحفظة» صريحاً (`wallet_scope=full`) يُردّ `wallet_full_removed` — عاديّاً وخاصّاً
-//     وتبديلاً بعد الإنشاء.
+//   - «الكل من المحفظة» صريحاً (`wallet_scope=full`) **رجع مقبولاً** (قرارُ المالك ٢٠٢٦-١١-٢٠) —
+//     عاديّاً وخاصّاً وتبديلاً، والكابتنُ له «دين طلب» (`order_driver_debts_test.go`).
 //   - **التطبيقُ القديمُ** (`payment_method=wallet` بلا نطاق) يصير «التوصيل من المحفظة والباقي كاش»:
 //     الأجرةُ من المحفظة، والبضاعةُ `cash_due`، **وإشعارٌ للزبون يشرح.**
 //   - **والنموذج ١ كما كان** — `wallet` بلا نطاق = «الكل».
@@ -31,11 +31,11 @@ func TestModel2_WalletPaysDeliveryOnly(t *testing.T) {
 
 	h.Setting("finance.goods_outside", "true")
 
-	// ── ١ · «الكل» صريحاً يُردّ ─────────────────────────────────────────
+	// ── ١ · «الكل» صريحاً مقبول (٢٠٢٦-١١-٢٠) ───────────────────────────────
 	cust := h.Customer()
 	h.Factory().Credit(cust.ID, 50_000, "topup")
-	if r := h.POSTKey("/api/v1/orders", cust.Token, uniq("m2w"), wsBody(item, 1, "", "full")); r.Code != http.StatusBadRequest || r.Err() != "wallet_full_removed" {
-		t.Fatalf("النموذج ٢ قبل «الكل من المحفظة»: %s — يُنتظر 400 wallet_full_removed", r)
+	if r := h.POSTKey("/api/v1/orders", cust.Token, uniq("m2w"), wsBody(item, 1, "", "full")); r.Code >= 400 || r.JSON()["wallet_scope"] != "full" {
+		t.Fatalf("النموذج ٢ «الكل من المحفظة»: %s — يُنتظر مقبول بنطاق full", r)
 	}
 
 	// ── ٢ · التطبيقُ القديمُ ⇒ «التوصيل من المحفظة» + إشعار ─────────────────
@@ -54,9 +54,9 @@ func TestModel2_WalletPaysDeliveryOnly(t *testing.T) {
 		t.Errorf("إشعارُ «المحفظة بتدفع التوصيل بس» للزبون: %d — يُنتظر ١", notes)
 	}
 
-	// ── ٣ · التبديلُ إلى «الكل» يُردّ، والكاشُ والتوصيلُ يمشيان ───────────────
-	if r := wsChange(h, cust, oid, "full", o.total); r.Code != http.StatusBadRequest || r.Err() != "wallet_full_removed" {
-		t.Errorf("التبديلُ إلى «الكل» على النموذج ٢: %s — يُنتظر 400 wallet_full_removed", r)
+	// ── ٣ · التبديلُ إلى «الكل» وإلى الكاش والتوصيل يمشون ─────────────────────
+	if r := wsChange(h, cust, oid, "full", o.total); r.Code >= 400 {
+		t.Errorf("التبديلُ إلى «الكل» على النموذج ٢: %s", r)
 	}
 	if r := wsChange(h, cust, oid, "none", o.total); r.Code >= 400 {
 		t.Errorf("التبديلُ إلى كاش: %s", r)
@@ -65,12 +65,13 @@ func TestModel2_WalletPaysDeliveryOnly(t *testing.T) {
 		t.Errorf("التبديلُ إلى التوصيل: %s", r)
 	}
 
-	// ── ٤ · الخاصّ: «الكل» يُردّ، والقديمُ يصير «التوصيل» ──────────────────
+	// ── ٤ · الخاصّ: «الكل» مقبول، والقديمُ يصير «التوصيل» ──────────────────
 	for _, c := range []struct {
 		name, method, scope, wantErr, wantScope string
+		wantCash, wantReserved                  int64
 	}{
-		{"full", "wallet", "full", "wallet_full_removed", ""},
-		{"old-app", "wallet", "", "", "delivery"},
+		{"full", "wallet", "full", "", "full", 0, 5700},
+		{"old-app", "wallet", "", "", "delivery", 5000, 700},
 	} {
 		cc := h.Customer()
 		h.Factory().Credit(cc.ID, 50_000, "topup")
@@ -104,8 +105,9 @@ func TestModel2_WalletPaysDeliveryOnly(t *testing.T) {
 		var cash, reserved int64
 		_ = h.Pool.QueryRow(ctxBG(), `SELECT wallet_scope, cash_due, custom_reserved_amount
 			FROM orders WHERE id = $1::uuid`, cid).Scan(&scope, &cash, &reserved)
-		if scope != c.wantScope || cash != 5000 || reserved != 700 {
-			t.Errorf("الخاصّ %s: نطاق %s نقد %d حجز %d — يُنتظر delivery و5000 و700", c.name, scope, cash, reserved)
+		if scope != c.wantScope || cash != c.wantCash || reserved != c.wantReserved {
+			t.Errorf("الخاصّ %s: نطاق %s نقد %d حجز %d — يُنتظر %s و%d و%d", c.name, scope, cash, reserved,
+				c.wantScope, c.wantCash, c.wantReserved)
 		}
 	}
 }

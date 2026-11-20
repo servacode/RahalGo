@@ -404,10 +404,9 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		if err != nil {
 			return nil, nil, err
 		}
-		if moneyModel == MoneyModelGoodsOutside && scope == ScopeFull {
-			if !legacyWallet {
-				return nil, nil, ErrWalletFullRemoved
-			}
+		// **و«الكل من المحفظة» رجع** (قرارُ المالك ٢٠٢٦-١١-٢٠) — والكابتنُ له «دين طلب» عالمنصّة
+		// (`order_driver_debts.go`). **والتطبيقُ القديمُ بلا نطاقٍ يبقى «التوصيل بس»** كما كان.
+		if moneyModel == MoneyModelGoodsOutside && scope == ScopeFull && legacyWallet {
 			scope, walletMapped = ScopeDelivery, true
 		}
 		in.PaymentMethod, in.WalletScope = method, scope

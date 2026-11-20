@@ -2367,6 +2367,68 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/finance/order-debts",
+      "handler": "handleOrderDebtsSummary",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "drivers",
+          "type": "unknown"
+        },
+        {
+          "name": "open_total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/finance/order-debts/{driverID}",
+      "handler": "handleOrderDebtsOf",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "items",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/finance/order-debts/{driverID}/pay",
+      "handler": "handlePayOrderDebts",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "ids",
+          "type": "[]string"
+        }
+      ],
+      "response": [
+        {
+          "name": "paid_count",
+          "type": "unknown"
+        },
+        {
+          "name": "paid_total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/free-delivery",
       "handler": "handleGetFreeDelivery",
       "auth": true,
@@ -4345,6 +4407,22 @@
         {
           "name": "id",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/order-messages/{id}/release",
+      "handler": "handleReleaseHeldChatPhoto",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "released",
+          "type": "bool"
         }
       ],
       "statuses": [
@@ -9073,6 +9151,32 @@
       ],
       "statuses": [
         "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/driver/order-debts",
+      "handler": "handleDriverOrderDebts",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "items",
+          "type": "unknown"
+        },
+        {
+          "name": "open_count",
+          "type": "unknown"
+        },
+        {
+          "name": "open_total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
       ]
     },
     {

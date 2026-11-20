@@ -446,16 +446,17 @@ fun CartScreen(
         // **والمحفظةُ لا تُعرض أصلاً حتّى يغطّي رصيدُها الإجماليَّ** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
         // ولا إجماليَّ بعد ⇒ لا محفظة. وإن صار الرصيدُ كافياً ظهرت.
         //
-        // **والمحفظةُ تدفع التوصيلَ وحدَه** (قرارُ المالك ٢٠٢٦-١١-١٠): «الكل من المحفظة» انشال،
-        // والبضاعةُ كاش للكابتن. ويظهر الخيارُ حين يغطّي الرصيدُ الأجرة. مرآةُ موقع الزبون.
+        // **ثلاثُ طرق دفع** (قرارُ المالك ٢٠٢٦-١١-٢٠): كاش · التوصيل من المحفظة والباقي كاش (حين يغطّي
+        // الرصيدُ الأجرة) · الكل من المحفظة (حين يغطّي الرصيدُ الإجماليَّ كلَّه). مرآةُ موقع الزبون.
         val fee0 = q0?.let { cut0?.deliveryFee ?: it.deliveryFee } ?: 0L
         val deliveryPart = payableTotal?.let { minOf(fee0, it) } ?: 0L
         val deliveryOk = payableTotal != null && deliveryPart > 0 && walletBalance >= deliveryPart
-        val walletBlocked = !deliveryOk
+        val fullOk = payableTotal != null && payableTotal > 0 && walletBalance >= payableTotal
+        val walletBlocked = !deliveryOk && !fullOk
         // **وخيارٌ معطّلٌ لا يبقى مختاراً** — من اختار المحفظةَ ثمّ ارتفع
         // الإجماليُّ فوق رصيده يُعاد إلى النقد، فلا يُرسَل بما لا يُقبَل.
-        LaunchedEffect(deliveryOk) {
-            if (vm.walletScope != "none" && !deliveryOk) {
+        LaunchedEffect(deliveryOk, fullOk) {
+            if ((vm.walletScope == "delivery" && !deliveryOk) || (vm.walletScope == "full" && !fullOk)) {
                 vm.walletScope = "none"
             }
         }
@@ -476,6 +477,13 @@ fun CartScreen(
                     on = vm.walletScope == "none",
                     modifier = Modifier.fillMaxWidth(),
                 ) { vm.walletScope = "none" }
+                if (fullOk) {
+                    PayChoice(
+                        text = stringResource(R.string.cart_wallet_full),
+                        on = vm.walletScope == "full",
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { vm.walletScope = "full" }
+                }
                 if (deliveryOk && payableTotal != null) {
                     PayChoice(
                         text = stringResource(R.string.cart_wallet_delivery),
@@ -1158,7 +1166,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
             promoBusy = false
         }
     }
-    /** **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-١٠): `none` كاش · `delivery` التوصيل. («الكل» انشال.) */
+    /** **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٢٠): `none` كاش · `delivery` التوصيل · `full` الكل. */
     var walletScope by mutableStateOf("none")
 
     var priced by mutableStateOf<Quote?>(null)

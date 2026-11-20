@@ -271,10 +271,6 @@ func (s *Service) ChangeWalletScopeTx(ctx context.Context, tx dbtx.Querier, orde
 	if !walletScopeOpen(o.status) {
 		return nil, noop, ErrWalletScopeLocked
 	}
-	// **النموذج ٢: «الكل من المحفظة» انشال** (B3).
-	if o.moneyModel == MoneyModelGoodsOutside && scope == ScopeFull {
-		return nil, noop, ErrWalletFullRemoved
-	}
 	if expectedTotal != o.total {
 		return nil, noop, ErrOrderChanged
 	}

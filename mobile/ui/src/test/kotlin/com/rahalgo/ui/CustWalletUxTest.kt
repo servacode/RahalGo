@@ -46,7 +46,8 @@ class CustWalletUxTest {
         assertTrue(
             "**لا يُحسَب `walletBlocked` من أجرة التوصيل** (المحفظةُ تدفع التوصيلَ وحدَه منذ ٢٠٢٦-١١-١٠)",
             s.contains("val deliveryOk = payableTotal != null && deliveryPart > 0 && walletBalance >= deliveryPart") &&
-                s.contains("val walletBlocked = !deliveryOk"),
+                s.contains("val fullOk = payableTotal != null && payableTotal > 0 && walletBalance >= payableTotal") &&
+                s.contains("val walletBlocked = !deliveryOk && !fullOk"),
         )
         assertTrue(
             "**المحفظةُ لا تغيب حين لا تكفي** — يجب سطرُ «نقداً عند الاستلام» بدل الخيارين",
@@ -103,7 +104,8 @@ class CustWalletUxTest {
         // وخيارٌ معطّلٌ لا يبقى مختاراً (يُعاد إلى النقد)
         assertTrue(
             "**لا يُعاد الخيارُ إلى النقد حين يُعطَّل**",
-            c.contains("if (vm.walletScope != \"none\" && !deliveryOk) {") && c.contains("vm.walletScope = \"none\""),
+            c.contains("(vm.walletScope == \"delivery\" && !deliveryOk) || (vm.walletScope == \"full\" && !fullOk)") &&
+                c.contains("vm.walletScope = \"none\""),
         )
     }
 

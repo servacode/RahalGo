@@ -56,6 +56,31 @@ data class CashEntry(
 )
 
 @Serializable
+data class OrderDebtItem(
+    val id: String = "",
+    @SerialName("order_id") val orderId: String = "",
+    @SerialName("order_number") val orderNumber: Long = 0,
+    val amount: Long = 0,
+    /** `open` أو `paid`. */
+    val state: String = "",
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("paid_at") val paidAt: String? = null,
+    @SerialName("paid_by_name") val paidByName: String? = null,
+)
+
+/**
+ * **«إلك عالمكتب» — ديونُ الطلبات** (قرارُ المالك ٢٠٢٦-١١-٢٠): زبونٌ دفع طلبَه كلَّه من محفظته
+ * فدفع الكابتنُ للمتجر من جيبه، **والمنصّةُ مديونةٌ له** حتّى يعطيه المكتبُ كاشاً.
+ * (`GET /api/v1/driver/order-debts`.)
+ */
+@Serializable
+data class OrderDebts(
+    @SerialName("open_total") val openTotal: Long = 0,
+    @SerialName("open_count") val openCount: Int = 0,
+    val items: List<OrderDebtItem> = emptyList(),
+)
+
+@Serializable
 data class CashPage(
     val entries: List<CashEntry> = emptyList(),
     val total: Int = 0,

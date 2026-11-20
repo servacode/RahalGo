@@ -184,6 +184,9 @@ const ALL_NAV: NavItem[] = [
   // **أرصدة من بضاعة** (قرارُ المالك ٢٠٢٦-١١-١٠) — تقريرُ قراءةٍ فقط لأرصدةٍ قديمةٍ أصلُها بضاعة.
   { href: "/dashboard/goods-balances", label: m.admin.goodsBalances.title, icon: IconBalance,
     caps: ["finance.read"] },
+  // **ديونُ الطلبات** (قرارُ المالك ٢٠٢٦-١١-٢٠) — ما على المنصّة للكباتن حين دُفع الطلبُ كلُّه من المحفظة.
+  { href: "/dashboard/order-debts", label: m.admin.orderDebts.title, icon: IconBalance,
+    caps: ["finance.read"] },
   // **والديونُ من الخزينة وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «موجود بالقائمة وبالخزينة… نخلّيه بالخزينة»).
   // **والخسائرُ والنزاعاتُ وتعويضُ البضاعة صارت تبويباتٍ في «المشاكل والتعويضات»** (٢٠٢٦-١٠-٢٥).
   { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconShieldCheck,

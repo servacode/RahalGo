@@ -698,14 +698,15 @@ private fun QuoteConfirmPanel(
     // **وحجزُ هذا الطلب نفسِه يُحسب** — يُفكّ عند التأكيد قبل حجز الجديد، فرصيدٌ
     // متاحٌ ناقصٌ عن المجموع قد يكفيه مع ما حُجز له أصلاً.
     val ownReserved = if (order.paymentMethod == "wallet") order.customReservedAmount else 0L
-    // **المحفظةُ تدفع التوصيلَ وحدَه** (قرارُ المالك ٢٠٢٦-١١-١٠) — «الكل من المحفظة» انشال،
-    // والبضاعةُ كاش للكابتن. ويظهر الخيارُ حين يغطّي الرصيدُ الأجرة.
+    // **ثلاثُ طرق دفع** (قرارُ المالك ٢٠٢٦-١١-٢٠): كاش · التوصيل من المحفظة والباقي كاش (حين يغطّي
+    // الرصيدُ الأجرة) · الكل من المحفظة (حين يغطّي الرصيدُ المجموعَ كلَّه).
     val deliveryPart = order.deliveryFee.coerceIn(0L, maxOf(total, 0L))
     val deliveryOk = deliveryPart > 0 && walletBalance + ownReserved >= deliveryPart
-    val walletOk = deliveryOk
+    val fullOk = total > 0 && walletBalance + ownReserved >= total
+    val walletOk = deliveryOk || fullOk
     var method by rememberSaveable(order.id, order.quoteVersion) { mutableStateOf("cash") }
     // (J) المحفظةُ لا تبقى مختارةً إن لم تعُد كافية قبل التأكيد.
-    if (method != "cash" && !deliveryOk) method = "cash"
+    if ((method == "delivery" && !deliveryOk) || (method == "full" && !fullOk)) method = "cash"
 
     Spacer(Modifier.height(Rahal.space.md))
     RahalDivider()
@@ -728,6 +729,13 @@ private fun QuoteConfirmPanel(
                 on = method == "cash",
                 modifier = Modifier.fillMaxWidth(),
             ) { method = "cash" }
+            if (fullOk) {
+                com.rahalgo.customer.cart.PayChoice(
+                    text = stringResource(R.string.cart_wallet_full),
+                    on = method == "full",
+                    modifier = Modifier.fillMaxWidth(),
+                ) { method = "full" }
+            }
             if (deliveryOk) {
                 com.rahalgo.customer.cart.PayChoice(
                     text = stringResource(R.string.cart_wallet_delivery),
@@ -987,8 +995,8 @@ private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onCh
     val own = if (custom) order.customReservedAmount else order.walletPaid
     val budget = walletBalance + own
     val deliveryPart = order.deliveryFee.coerceIn(0L, maxOf(order.total, 0L))
-    // **«الكل من المحفظة» لا يُختار بعد اليوم** (قرارُ المالك ٢٠٢٦-١١-١٠) — يُعرض فقط لطلبٍ قديمٍ هو عليه.
-    val showFull = scope == "full"
+    // **«الكل من المحفظة» يظهر حين يغطّي الرصيدُ المجموعَ كلَّه** (قرارُ المالك ٢٠٢٦-١١-٢٠) — أو الطلبُ عليه أصلاً.
+    val showFull = (order.total > 0 && budget >= order.total) || scope == "full"
     val showDelivery = (deliveryPart > 0 && budget >= deliveryPart) || scope == "delivery"
     if (!showFull && !showDelivery) return
     Spacer(Modifier.height(Rahal.space.sm))
@@ -1015,7 +1023,7 @@ private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onCh
                 text = stringResource(R.string.cart_wallet_full),
                 on = scope == "full",
                 modifier = Modifier.fillMaxWidth(),
-            ) {}
+            ) { if (!busy && scope != "full") onChange("full") }
         }
         if (showDelivery) {
             com.rahalgo.customer.cart.PayChoice(

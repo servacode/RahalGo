@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 730,
+    "routes": 735,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 148,
-    "notify_targeted": 77,
+    "notify_sites": 149,
+    "notify_targeted": 78,
     "publish_rooms": [
       "customer",
       "driver",
@@ -33,8 +33,8 @@
     "setting_defs": 300,
     "behaviour_settings": 254,
     "order_fields": 149,
-    "test_files": 858,
-    "test_funcs": 3279
+    "test_files": 860,
+    "test_funcs": 3282
   },
   "flows": [
     {
@@ -16148,6 +16148,12 @@
       "orphan": true
     },
     {
+      "name": "TestCHATSCAN_PhotoWithPhoneHeldVoiceFlagged",
+      "file": "internal/qa/chat_media_scan_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestCHATMEDIA_ClosedChannelRejects",
       "file": "internal/qa/chat_media_test.go",
       "package": "qa",
@@ -24004,6 +24010,18 @@
     {
       "name": "TestOptionModes_WeightFollowsItemPrice",
       "file": "internal/qa/option_price_modes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderDebts_CustomFullFromWallet",
+      "file": "internal/qa/order_driver_debts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderDebts_FullFromWallet",
+      "file": "internal/qa/order_driver_debts_test.go",
       "package": "qa",
       "orphan": true
     },

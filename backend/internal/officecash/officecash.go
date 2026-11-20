@@ -59,6 +59,9 @@ const (
 	// SourceUndeliveredReturn **خارجٌ: تصحيحُ طلبٍ سُجّل تسليمُه خطأً** (قرارُ المالك ٢٠٢٦-١٠-٢٨) —
 	// ما بقي من سلفةِ دفعِ المتجر يُردّ، ومعه ما سلّمه السائقُ للمكتب عن طلبٍ لم يقبض نقدَه.
 	SourceUndeliveredReturn = "undelivered_return"
+	// SourceOrderDebtPaid **خارجٌ: دينُ طلبٍ للكابتن انعطى** (قرارُ المالك ٢٠٢٦-١١-٢٠) — الزبونُ دفع
+	// الطلبَ كلَّه من محفظته والكابتنُ دفع للمتجر من جيبه، فالمكتبُ يردّ له نقداً. بمرجع صفّ الدين.
+	SourceOrderDebtPaid = "order_debt_paid"
 )
 
 // Sources كلُّ المصادر المعروفة واتّجاهُها — يقرؤها الحارسُ والشاشة.
@@ -77,6 +80,7 @@ var Sources = map[string]Direction{
 	SourceOwnerDeposit:       In,
 	SourceAdvance:            Out,
 	SourceUndeliveredReturn:  Out,
+	SourceOrderDebtPaid:      Out,
 }
 
 // Entry سطرٌ واحدٌ في الصندوق.

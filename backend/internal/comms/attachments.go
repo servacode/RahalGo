@@ -61,6 +61,10 @@ type AttachmentInput struct {
 	Path       string
 	Thumb      string
 	DurationMs int
+	// Held **صورةٌ فيها رقم جوّال** (قرارُ المالك ٢٠٢٦-١١-٢٠) — تُكتب للإدارة ولا تُعرض للطرفين
+	// حتّى يمرّرها المكتب. و`ScanText` ما قُرئ منها.
+	Held     bool
+	ScanText string
 }
 
 // Fallback **النصُّ البديلُ لنوعٍ** — وفارغٌ لنوعٍ لا نعرفه.
@@ -137,4 +141,29 @@ func (s *Service) SendAttachment(ctx context.Context, p *Permission, caption str
 		return nil, ErrEmptyBody
 	}
 	return s.send(ctx, p, AttachmentBody(att.Kind, caption), &att)
+}
+
+// ErrPhotoHeld **الصورة فيها رقم جوّال وما انبعتت** (قرارُ المالك ٢٠٢٦-١١-٢٠) — الإدارةُ تراجعها.
+var ErrPhotoHeld = httpx.NewError(http.StatusConflict, "chat_photo_held", "errors.chat_photo_held")
+
+// ErrNotHeld **الرسالة مو محجوزة** أو انمرّرت قبل.
+var ErrNotHeld = httpx.NewError(http.StatusConflict, "chat_message_not_held", "errors.chat_message_not_held")
+
+// Release **المكتبُ يمرّر صورةً محجوزة** — تظهر للطرفين من لحظتها. يُرجع الطلبَ والمرسل.
+func (s *Service) Release(ctx context.Context, messageID, actorID string) (orderID, senderID string, err error) {
+	err = s.db.QueryRow(ctx, `
+		UPDATE order_messages SET released_at = now(), released_by = $2::uuid
+		 WHERE id = $1::uuid AND held_at IS NOT NULL AND released_at IS NULL
+		RETURNING order_id::text, sender_id::text`, messageID, actorID).Scan(&orderID, &senderID)
+	if err != nil {
+		return "", "", ErrNotHeld
+	}
+	return orderID, senderID, nil
+}
+
+// SetScanText **ما سُمع من تسجيلٍ صوتيّ** — يُكتب بعد التحويل بالخلفية.
+func (s *Service) SetScanText(ctx context.Context, messageID, text string) error {
+	_, err := s.db.Exec(ctx, `UPDATE order_messages SET scan_text = $2, scanned_at = now() WHERE id = $1::uuid`,
+		messageID, text)
+	return err
 }

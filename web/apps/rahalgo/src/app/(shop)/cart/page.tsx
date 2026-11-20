@@ -100,7 +100,7 @@ export default function CartPage() {
   const [promoRes, setPromoRes] = useState<PromoPreview | null>(null);
   const [promoBusy, setPromoBusy] = useState(false);
   // **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩): كاش · الكل · التوصيل والباقي كاش.
-  const [scope, setScope] = useState<"none" | "delivery">("none");
+  const [scope, setScope] = useState<"none" | "full" | "delivery">("none");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -172,15 +172,17 @@ export default function CartPage() {
   // **وسلّةٌ موقوفةٌ (`blocked`) لا مجموعَ لها** — المحرّكُ يصفّرها عمداً، و«0 ل.س» يُقرأ سعراً (مرآةُ `CartScreen.kt`).
   const priced = quote && !quote.blocked ? quote : null;
   const payable = priced ? (cut ? Math.max(0, priced.subtotal + fee - cut.discount) : priced.total) : null;
-  // **المحفظةُ تدفع التوصيلَ وحدَه** (قرارُ المالك ٢٠٢٦-١١-١٠) — «الكل من المحفظة» انشال، والبضاعةُ
-  // كاش للكابتن دائماً. **ويظهر الخيارُ حين يغطّي الرصيدُ الأجرة** — مرآةُ `CartScreen.kt`.
+  // **ثلاثُ طرق دفع** (قرارُ المالك ٢٠٢٦-١١-٢٠): كاش · التوصيل من المحفظة والباقي كاش (يظهر حين
+  // يغطّي الرصيدُ الأجرة) · الكل من المحفظة (يظهر حين يغطّي الرصيدُ الإجماليَّ كلَّه) — مرآةُ `CartScreen.kt`.
   const deliveryPart = payable != null ? Math.min(fee, payable) : 0;
   const deliveryOk = payable != null && deliveryPart > 0 && available >= deliveryPart;
-  const walletBlocked = !deliveryOk;
+  const fullOk = payable != null && payable > 0 && available >= payable;
+  const walletBlocked = !deliveryOk && !fullOk;
 
   useEffect(() => {
     if (scope === "delivery" && !deliveryOk) setScope("none");
-  }, [scope, deliveryOk]);
+    if (scope === "full" && !fullOk) setScope("none");
+  }, [scope, deliveryOk, fullOk]);
 
   const fp = useMemo(() => fingerprint(quote, linesKey, point, cut?.discount ?? 0), [quote, linesKey, point, cut]);
   const canSubmit = changes.length === 0 || acked === fp;
@@ -443,6 +445,26 @@ export default function CartPage() {
                   </div>
                 ) : (
                   <div role="radiogroup" aria-label={C.payment} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {fullOk && (
+                      <button
+                        type="button"
+                        id="pay-wallet-full"
+                        role="radio"
+                        aria-checked={scope === "full"}
+                        data-on={scope === "full"}
+                        onClick={() => setScope("full")}
+                        className="shop-opt"
+                      >
+                        <span className="shop-opt-ic">
+                          <IconWallet size={20} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <b className="block">{C.walletFull}</b>
+                          <span className="block text-xs text-ink-muted">{fill(C.walletBalance, { amount: fmtMoney(available) })}</span>
+                        </span>
+                        <i aria-hidden className="shop-opt-dot" />
+                      </button>
+                    )}
                     {deliveryOk && payable != null && (
                       <button
                         type="button"

@@ -54,6 +54,11 @@ type AuditLine struct {
 	DriverName string `json:"driver_name,omitempty"`
 	// Attachment **صورةٌ أو رسالةٌ صوتيّة** (قرارُ المالك ٢٠٢٦-١١-١٢) — برابطٍ موقَّع.
 	Attachment *Attachment `json:"attachment,omitempty"`
+	// Held **صورةٌ محجوزةٌ فيها رقم** (٢٠٢٦-١١-٢٠) — ما وصلت للطرف التاني، والمكتبُ يمرّرها.
+	Held       bool       `json:"held,omitempty"`
+	ReleasedAt *time.Time `json:"released_at,omitempty"`
+	// ScanText **ما قُرئ من الصورة أو سُمع من التسجيل** — للإدارة وحدَها.
+	ScanText string `json:"scan_text,omitempty"`
 }
 
 // AuditThread **حديثُ طلبٍ كاملاً — للمراجعة عند الخلاف.**
@@ -83,7 +88,8 @@ func (s *Service) Audit(ctx context.Context, orderID string) (*AuditThread, erro
 		       x.created_at, x.read_at, x.flagged, COALESCE(x.flag_word, ''),
 		       COALESCE(x.driver_id::text, ''), COALESCE(td.full_name, ''), x.contact_leak,
 		       COALESCE(x.attachment_kind, ''), COALESCE(m.path, ''), COALESCE(m.thumb_path, ''),
-		       COALESCE(x.attachment_duration_ms, 0)
+		       COALESCE(x.attachment_duration_ms, 0),
+		       x.held_at IS NOT NULL, x.released_at, COALESCE(x.scan_text, '')
 		FROM order_messages x
 		LEFT JOIN media m ON m.id = x.attachment_media_id
 		LEFT JOIN users u ON u.id = x.sender_id
@@ -99,7 +105,7 @@ func (s *Service) Audit(ctx context.Context, orderID string) (*AuditThread, erro
 		var a attachmentRow
 		if err := rows.Scan(&l.ID, &l.Body, &l.Role, &l.Sender, &l.CreatedAt, &l.ReadAt,
 			&l.Flagged, &l.FlagWord, &l.DriverID, &l.DriverName, &l.ContactLeak,
-			&a.kind, &a.path, &a.thumb, &a.durationMs); err != nil {
+			&a.kind, &a.path, &a.thumb, &a.durationMs, &l.Held, &l.ReleasedAt, &l.ScanText); err != nil {
 			return nil, err
 		}
 		l.Attachment = a.build(l.Body)

@@ -124,6 +124,41 @@ fun CashScreen(vm: SectionsViewModel) {
             }
         }
 
+        // **«إلك عالمكتب»** (قرارُ المالك ٢٠٢٦-١١-٢٠) — ما دفعه من جيبه عن طلباتٍ دفعها زبائنُها من المحفظة؛
+        // **لا تظهر إلّا إن كان في ذمّة المنصّة له شيء.**
+        vm.orderDebts?.takeIf { it.openTotal > 0 }?.let { debts ->
+            Spacer(Modifier.height(Rahal.space.md))
+            com.rahalgo.ui.RahalCard(
+                variant = com.rahalgo.ui.CardVariant.Tinted,
+                tone = com.rahalgo.ui.StatusTone.Success,
+                padding = Rahal.space.lg,
+            ) {
+                Text(stringResource(R.string.cash_owed_title), color = Rahal.colors.inkMuted, style = Rahal.type.label)
+                Spacer(Modifier.height(Rahal.space.xs))
+                Text(
+                    text = com.rahalgo.driver.Bidi.isolate(money(debts.openTotal)),
+                    color = Rahal.colors.success,
+                    style = Rahal.type.display,
+                )
+                Text(stringResource(R.string.cash_owed_hint), color = Rahal.colors.inkMuted, style = Rahal.type.caption)
+                debts.items.filter { it.state == "open" }.forEach { d ->
+                    Spacer(Modifier.height(Rahal.space.sm))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(
+                            com.rahalgo.driver.Bidi.isolate("#" + d.orderNumber),
+                            color = Rahal.colors.ink,
+                            style = Rahal.type.body,
+                        )
+                        Text(
+                            com.rahalgo.driver.Bidi.isolate(money(d.amount)),
+                            color = Rahal.colors.ink,
+                            style = Rahal.type.price,
+                        )
+                    }
+                }
+            }
+        }
+
         // **والتحذيرُ عند الحدّ لا بعده** — من بلغ السقفَ وقف طابورُه.
         Spacer(Modifier.height(Rahal.space.md))
         when {
