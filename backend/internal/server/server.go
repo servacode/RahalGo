@@ -665,6 +665,7 @@ func (s *Server) Router() http.Handler {
 				r.Use(s.announceWrites)
 				r.Use(s.qaAdminActor)
 				r.Use(s.qaAdminAllCaps)
+				r.With(s.qaOrderScope).Get("/qa/orders/{id}/chat", s.handleAdminOrderChat)                           // chat scan witness (2026-11-20)
 				r.With(s.qaOrderScope).Post("/qa/orders/{id}/transition", s.qaOrderTransition)                       // الاسترجاعُ بعد التسليم
 				r.With(s.qaOrderScope).Post("/qa/orders/{id}/door-resolution", s.handleDoorResolution)               // الفشلُ عند الباب
 				r.With(s.qaOrderScope).Post("/qa/orders/{id}/goods", s.handleGoods)                                  // مصيرُ البضاعة بعد الفشل

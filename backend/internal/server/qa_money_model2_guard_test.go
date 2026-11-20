@@ -19,6 +19,7 @@ import (
 // m2BridgeRoutes **مساراتُ الجسر كما في `server.go`** — وكلُّ واحدٍ بحارسه.
 var m2BridgeRoutes = []string{
 	`r.Get("/qa/money", s.handleQAMoneyReadback)`,
+	`r.With(s.qaOrderScope).Get("/qa/orders/{id}/chat", s.handleAdminOrderChat)`,
 	`r.With(s.qaOrderScope).Post("/qa/orders/{id}/transition", s.qaOrderTransition)`,
 	`r.With(s.qaOrderScope).Post("/qa/orders/{id}/door-resolution", s.handleDoorResolution)`,
 	`r.With(s.qaOrderScope).Post("/qa/orders/{id}/goods", s.handleGoods)`,

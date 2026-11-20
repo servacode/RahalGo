@@ -64,7 +64,7 @@ PRE_PICKUP = {"pending", "accepted", "preparing", "dispatching", "assigned", "at
 # سقف** (`orders/service.go`: `limit <= 0`) — والفهرسُ لا يقبل فوق ١٠٠٠٠٠٠ أصلاً.
 COD_LIMIT_FOR_RUN = 0
 
-SCENARIOS = ["standard_cash", "standard_wallet", "failure_after_pickup", "refund_after_delivery",
+SCENARIOS = ["standard_cash", "standard_wallet", "standard_full", "failure_after_pickup", "refund_after_delivery",
              "custom", "whatsapp", "usd", "edit_after_pickup"]
 
 
@@ -291,6 +291,31 @@ def sc_standard(run, c, wallet):
     common(c, m, name)
 
 
+def sc_full(run, c):
+    """**«الكل من المحفظة» + «ديون الطلبات»** (قرارُ المالك ٢٠٢٦-١١-٢٠)."""
+    name = "standard_full"
+    run.seed("wallet_fund", value_int=30000)
+    oid = run.order(1, "", "full")
+    run.oid = oid
+    run.advance(oid, "assigned")
+    o = run.money(oid)["order"]
+    c(o["wallet_paid"] == o["total"] and o["cash_due"] == 0,
+      "%s: wallet paid %s cash due %s, want the whole total %s from the wallet" % (name, o["wallet_paid"], o["cash_due"], o["total"]))
+    run.advance(oid, "picked_up")
+    run.advance(oid, "delivered")
+    m = run.money(oid)
+    o, led = m["order"], m["ledger"]
+    c(m["driver_box"]["collection"] == 0, "%s: driver box %s, want 0" % (name, m["driver_box"]["collection"]))
+    want = o["wallet_paid"] - o["driver_fee"] - STORE_SHARE
+    c(led["platform_profit"] == want,
+      "%s: platform profit %s, want wallet - driver fee - captain debt = %s" % (name, led["platform_profit"], want))
+    debts = run.api.get("/driver/order-debts", token=run.drv)
+    mine = [x for x in debts.get("items", []) if x.get("order_id") == oid]
+    c(len(mine) == 1 and mine[0].get("amount") == STORE_SHARE and mine[0].get("state") == "open",
+      "%s: captain order debt %s, want one open debt of %s" % (name, mine, STORE_SHARE))
+    common(c, m, name)
+
+
 def sc_failure(run, c):
     name = "failure_after_pickup"
     reasons = run.api.get("/driver/fail-reasons?at=at_dropoff", token=run.drv).get("reasons", [])
@@ -426,6 +451,7 @@ def sc_edit(run, c):
 RUNNERS = {
     "standard_cash": lambda run, c: sc_standard(run, c, False),
     "standard_wallet": lambda run, c: sc_standard(run, c, True),
+    "standard_full": sc_full,
     "failure_after_pickup": sc_failure,
     "refund_after_delivery": sc_refund,
     "custom": sc_custom,
