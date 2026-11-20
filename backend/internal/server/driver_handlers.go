@@ -566,6 +566,9 @@ type driverOrder struct {
 	// DriverNote **ملاحظةُ المتجر للسائق في «لدي توصيلة»** (فحصُ جهاز المالك ٢٠٢٦-١٠-٠٣: «اتّصل قبل
 	// الوصول» كتبها المتجرُ ولم تصل السائق). **وفارغةٌ لغيرها** — ملاحظاتُ الزبون شأنٌ آخر.
 	DriverNote string `json:"driver_note"`
+	// CustomerNote **«ملاحظات للسائق» اللي كتبها الزبون** بالعاديّ والخاصّ (قرارُ المالك ٢٠٢٦-١١-٢٠) —
+	// كانت تُكتب ولا تصل الكابتن. **بلا رقم تواصل** كنصّ الطلب، وفارغةٌ في «لدي توصيلة» (هناك `DriverNote`).
+	CustomerNote string `json:"customer_note"`
 	// FeePayer **من يدفع الأجرة** — و`merchant_cash` يقبضها من المتجر عند الاستلام.
 	FeePayer string `json:"fee_payer"`
 	// DoorInstruction **أمرُ الإدارة عند باب الزبون** — `deliver_now` أو فارغ
@@ -742,7 +745,7 @@ const driverOrderSelect = `
 	       END,
 	       -- **وحقولُ «لدي توصيلة»** — فارغةٌ لغيرها، و«معروفة» صحيحٌ لغيرها.
 	       o.dropoff_known, COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, ''),
-	       CASE WHEN o.kind = 'merchant_delivery' THEN COALESCE(o.notes, '') ELSE '' END,
+	       COALESCE(o.notes, ''),
 	       -- **وأمرُ الإدارة عند الباب** — مساءَ ٢٠٢٦-١٠-٠٢.
 	       o.door_instruction, o.door_instruction_note,
 	       -- **ومشوارُ الإرجاع القائم** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — وفارغٌ لما سواه.
@@ -828,6 +831,9 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 		// **والاسمُ الأوّلُ للزبون وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥) — كما في
 		// `orders.ViewFor` للسائق، **وقبل قلب «إحضار»**. و«لدي توصيلة» اسمُ مستلِمها كاملاً.
 		if o.Kind != orders.KindMerchantDelivery {
+			// **والعمودُ نفسُه ملاحظةُ الزبون هنا** — لا ملاحظةُ متجر.
+			o.CustomerNote, _ = textguard.MaskContacts(o.DriverNote, "***")
+			o.DriverNote = ""
 			o.CustomerName = textguard.FirstName(o.CustomerName)
 			// **وما كتبه الزبونُ بلا رقم تواصل** (البند ١ج) — كما في `orders.ViewFor`،
 			// بالقراءة وحدَها والأصلُ للإدارة.

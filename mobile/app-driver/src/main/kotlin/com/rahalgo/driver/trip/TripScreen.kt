@@ -1955,6 +1955,20 @@ private fun TripCard(
                                     tint = Rahal.colors.success,
                                     bold = true,
                                 )
+                                // **«الكل من المحفظة» بالخاصّ** (قرارُ المالك ٢٠٢٦-١١-٢٠): المشترياتُ من جيبه،
+                                // والمكتبُ بيرجعلو ياها («ديون الطلبات») — يعرف قديش.
+                                if (order.kind == "custom" && order.customMode != "amanah" &&
+                                    ((order.customGoods ?: 0) > 0 || order.customGoodsUsd != null)
+                                ) {
+                                    InfoBox(
+                                        icon = R.drawable.ic_cash,
+                                        text = stringResource(
+                                            R.string.trip_goods_owed,
+                                            order.customGoodsUsd?.let { amountText(it, "USD") } ?: money(order.customGoods ?: 0),
+                                        ),
+                                        tint = Rahal.colors.accent,
+                                    )
+                                }
                             }
                             if (order.addressText.isNotBlank()) {
                                 InfoBox(icon = R.drawable.ic_pin, text = cleanAddress(order.addressText), tint = Rahal.colors.brand)
@@ -2082,6 +2096,16 @@ private fun TripCard(
                             InfoBox(
                                 icon = com.rahalgo.ui.R.drawable.ic_info,
                                 text = stringResource(R.string.detail_driver_note) + ": " + order.driverNote,
+                                tint = Rahal.colors.brand,
+                                bold = true,
+                            )
+                        }
+                        // **وملاحظةُ الزبون للكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٠) — لحتّى التسليم، فـ«رن الجرس»
+                        // بتلزم عند الباب.
+                        if (order.customerNote.isNotBlank()) {
+                            InfoBox(
+                                icon = com.rahalgo.ui.R.drawable.ic_info,
+                                text = stringResource(R.string.card_customer_note) + ": " + order.customerNote,
                                 tint = Rahal.colors.brand,
                                 bold = true,
                             )

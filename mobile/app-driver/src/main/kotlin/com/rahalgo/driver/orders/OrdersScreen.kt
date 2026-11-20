@@ -500,6 +500,11 @@ private fun OrderCard(
             Spacer(Modifier.height(Rahal.space.md))
             WhatBox(stringResource(R.string.card_custom_what), order.customRequest)
         }
+        // **وملاحظةُ الزبون قبل ما يقبل** (قرارُ المالك ٢٠٢٦-١١-٢٠) — بالعاديّ والخاصّ.
+        if (order.customerNote.isNotBlank()) {
+            Spacer(Modifier.height(Rahal.space.md))
+            WhatBox(stringResource(R.string.card_customer_note), order.customerNote)
+        }
         // **وصورُ قائمة الزبون أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١) — تحت وصف الطلب.
         if (custom && order.customPhotos.isNotEmpty()) {
             Spacer(Modifier.height(Rahal.space.sm))

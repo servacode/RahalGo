@@ -520,6 +520,8 @@
     <!-- الطلبُ الخاصّ — بطاقتُه تقول حقيقته -->
     <string name="card_custom_price">السعر يتفق عليه</string>
     <string name="card_custom_what">المطلوب</string>
+    <string name="card_customer_note">ملاحظة الزبون</string>
+    <string name="trip_goods_owed">المشتريات: %1$s — دفعتها من جيبك، والمكتب بيرجعلك ياها</string>
     <string name="detail_parcel">يحمل</string>
     <string name="detail_recipient">المستلم</string>
     <string name="detail_fee_from_store">استلم أجرة التوصيل من المتجر نقداً عند الاستلام</string>
