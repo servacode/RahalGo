@@ -415,7 +415,7 @@ func run(logger *slog.Logger) error {
 			go srv.RunStoreAnnounce(ctx, 10*time.Minute)
 			if waBot != nil {
 				waBot.SetSelfCommand(srv.ReportForSelf)
-				// **«ارسل التطبيق» بمحادثة زبون** (٢٠٢٦-١١-٢١): البوتُ يبعت ملفَّ تطبيق الزبون.
+				// **«ارسل رحال غو» بمحادثة زبون** (٢٠٢٦-١١-٢١): البوتُ يبعت ملفَّ تطبيق الزبون.
 				waBot.SetAppFile(srv.CustomerAppFile)
 				// **«ردّ بموقعك»** (٢٠٢٦-١١-٠٣): موقعٌ وارد يملأ أحدثَ طلبٍ مفتوحٍ لرقمه.
 				waBot.SetInboundLocation(func(c context.Context, from string, l notify.InboundLocation) string {

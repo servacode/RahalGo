@@ -1,12 +1,13 @@
 package notify
 
 // ══════════════════════════════════════════════════════════════════════
-// **«ارسل التطبيق»** (قرارُ المالك ٢٠٢٦-١١-٢١)
+// **«ارسل رحال غو»** (قرارُ المالك ٢٠٢٦-١١-٢١)
 // ══════════════════════════════════════════════════════════════════════
 //
 // «بدي البوت يرسل تطبيق رحال غو الي بالموقع كملف apk للزبون وقت اكتبله ارسل التطبيق.»
+// وبعدها بنفس اليوم: **«رحال غو بس»** — الأمرُ صار «ارسل رحال غو»، و«ارسل التطبيق» ما عاد يشتغل.
 //
-//	صاحبُ رقم البوت يكتب «ارسل التطبيق» بمحادثة زبون  ←  البوتُ يبعت ملفَّ تطبيق الزبون
+//	صاحبُ رقم البوت يكتب «ارسل رحال غو» بمحادثة زبون  ←  البوتُ يبعت ملفَّ تطبيق الزبون
 //	                                                     (آخرُ نسخة مرفوعة باللوحة) بنفس المحادثة.
 //
 // **ومن الرقم نفسِه بس** — الزبونُ إذا كتبها ما بيصير شي (`IsFromMe`). **والأمرُ يضلّ ظاهر**
@@ -37,14 +38,17 @@ const SendAppCaption = "هاد تطبيق رحّال غو، اضغط عليه ل
 const sendAppMissing = "❌ ما في ملف تطبيق زبون مرفوع — ارفعه من اللوحة (الإعدادات ← الإصدار)"
 
 var sendAppVerbs = map[string]bool{"ارسل": true, "ابعت": true, "ابعث": true, "بعت": true, "ارسال": true}
-var sendAppNouns = map[string]bool{"التطبيق": true, "تطبيق": true}
 
-// IsSendAppCommand **«ارسل التطبيق» وأخواتُها** — كلمتان بالضبط (أ/إ/آ متل ا)، وإشارةُ ترقيمٍ بآخرها عادي.
+// IsSendAppCommand **«ارسل رحال غو» وأخواتُها** (قرارُ المالك ٢٠٢٦-١١-٢١: «رحال غو بس»، لا «التطبيق»)
+// — فعلٌ ثمّ «رحال غو» (بالشدّة أو بلاها، مفصولةً أو لزق)، ولا شي غيرُهن؛ أ/إ/آ متل ا، وإشارةُ ترقيمٍ بآخرها عادي.
 func IsSendAppCommand(text string) bool {
-	t := strings.NewReplacer("أ", "ا", "إ", "ا", "آ", "ا").Replace(strings.TrimSpace(text))
+	t := strings.NewReplacer("أ", "ا", "إ", "ا", "آ", "ا", "ّ", "", "ـ", "").Replace(strings.TrimSpace(text))
 	t = strings.TrimRight(t, " .،,!؟?")
 	w := strings.Fields(t)
-	return len(w) == 2 && sendAppVerbs[w[0]] && sendAppNouns[w[1]]
+	if len(w) < 2 || len(w) > 3 || !sendAppVerbs[w[0]] {
+		return false
+	}
+	return strings.Join(w[1:], "") == "رحالغو"
 }
 
 // messageText **نصُّ الرسالة** — عاديّةً أو مطوَّلة.
@@ -94,7 +98,7 @@ func (s *WhatsAppSender) sendAppFile(ctx context.Context, c *whatsmeow.Client, t
 	}
 	f, err := src(ctx)
 	if err != nil || len(f.Data) == 0 {
-		s.logger.Warn("whatsapp: «ارسل التطبيق» بلا ملف", "error", err)
+		s.logger.Warn("whatsapp: «ارسل رحال غو» بلا ملف", "error", err)
 		if c.Store != nil && c.Store.ID != nil {
 			_, _ = c.SendMessage(ctx, c.Store.ID.ToNonAD(), &waE2E.Message{Conversation: proto.String(sendAppMissing)})
 		}
