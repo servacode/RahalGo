@@ -100,7 +100,9 @@ type WhatsAppSender struct {
 	inboundImg   func(ctx context.Context, from string, img InboundImage) string
 	inboundGate  func(ctx context.Context, from string) bool
 	inboundReply func(ctx context.Context, from, text, quotedID string) (string, bool)
-	hooksMu      sync.RWMutex
+	// appFile — «ارسل التطبيق» بمحادثة زبون: ملفُّ تطبيق الزبون (wa_send_app.go).
+	appFile func(ctx context.Context) (OutgoingFile, error)
+	hooksMu sync.RWMutex
 
 	// ══════════════════════════════════════════════════════════════════
 	// **pairWanted — ولا رمزَ إلّا بطلب**
@@ -785,6 +787,14 @@ func (s *WhatsAppSender) onInbound(ctx context.Context, c *whatsmeow.Client, msg
 	inbound, self := s.inbound, s.self
 	s.hooksMu.RUnlock()
 	selfChat := isSelfChat(c, msg)
+	// **«ارسل التطبيق» يكتبه صاحبُ الرقم بمحادثة زبون** (قرارُ المالك ٢٠٢٦-١١-٢١) — البوتُ يبعت الملفّ
+	// بنفس المحادثة، والأمرُ يضلّ ظاهر (قراره).
+	if msg.Info.IsFromMe && !selfChat {
+		if IsSendAppCommand(messageText(msg.Message)) {
+			go s.sendAppFile(ctx, c, msg.Info.Chat.ToNonAD())
+		}
+		return
+	}
 	if (msg.Info.IsFromMe && !selfChat) || (selfChat && self == nil) || (!selfChat && inbound == nil) {
 		return
 	}
