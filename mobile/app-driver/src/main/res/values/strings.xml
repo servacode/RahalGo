@@ -134,12 +134,14 @@
     <string name="loc_channel">الوردية</string>
     <string name="loc_title">ورديتك مفتوحة</string>
     <string name="loc_text">موقعك يرسل ليصلك أقرب طلب</string>
+    <string name="loc_off_title">رحّال غو</string>
+    <string name="loc_off_text">موقعك عم ينبعت (دوامك مسكّر)</string>
     <string name="loc_permission_title">فعّل الموقع</string>
     <string name="loc_permission_text">بدون الموقع لا تعرف كم يبعد المتجر، ولا يصلك أقرب طلب</string>
     <string name="loc_permission_button">فعّل الآن</string>
     <!-- اعداد اول دخول - طبقة رقيقة فوق الجاهزية (C، ٢٠٢٦-٠٩-٢٧) -->
     <string name="setup_title">تجهيز حسابك</string>
-    <string name="setup_why">نحتاج موقعك لنرسل إليك أقرب طلب ونحسب المسافة والأجرة — يُستعمل أثناء العمل فقط. وتُحضَّر خريطة مدينتك تلقائياً لتعمل ولو انقطع الإنترنت.</string>
+    <string name="setup_why">نحتاج موقعك لنرسل إليك أقرب طلب ونحسب المسافة والأجرة — ويبقى يُرسل طول ما أنت مسجّل دخول، حتى بعد ما تسكّر دوامك. وتُحضَّر خريطة مدينتك تلقائياً لتعمل ولو انقطع الإنترنت.</string>
     <string name="setup_step_location">إذن الموقع</string>
     <string name="setup_step_gps">خدمة الموقع في النظام</string>
     <string name="setup_step_background">الموقع طوال الوقت</string>
@@ -544,11 +546,11 @@
     <string name="hist_returned_done">سجل إرجاع البضاعة</string>
 
     <!-- ══ الإفصاحُ الصريح عن الموقع — شرطُ غوغل ══ -->
-    <string name="disc_title">موقعك أثناء الوردية</string>
-    <string name="disc_what">يستخدم رحّال غو موقع جهازك طوال فترة ورديتك.</string>
+    <string name="disc_title">موقعك مع رحّال غو</string>
+    <string name="disc_what">يستخدم رحّال غو موقع جهازك طول ما أنت مسجّل دخول بالتطبيق، وأنت على الدوام وبعد ما تسكّر دوامك.</string>
     <string name="disc_background">ويستخدمه أيضاً والتطبيق مغلق أو الشاشة مطفأة — لأنك تقود والهاتف في جيبك.</string>
     <string name="disc_why">ومنه نرسل إليك أقرب طلب، ويرى الزبون مكان طلبه على الخريطة، ونحسب المسافة وأجرتها، والمسافة التي تقطعها في كل طلب وفي يومك.</string>
-    <string name="disc_stop">ويتوقف استخدام الموقع فور إغلاق ورديتك. يمكنك الرفض، وسيبقى التطبيق يعمل لكن لن تصلك طلبات.</string>
+    <string name="disc_stop">وبرّا الدوام يُرسل موقعك كل دقيقة تقريباً ولا تصلك طلبات، ويتوقف إرساله فقط عند تسجيل الخروج من التطبيق. يمكنك الرفض، وسيبقى التطبيق يعمل لكن لن تصلك طلبات.</string>
     <string name="disc_agree">أوافق</string>
     <string name="disc_deny">ليس الآن</string>
 
@@ -699,6 +701,13 @@
     <string name="trip_collect_customer">اقبض من الزبون</string>
     <string name="trip_prepaid_short">مدفوع ✓</string>
     <string name="trip_cut_line">عمولة رحّال غو %1$s٪: −%2$s من %3$s</string>
+    <string name="commission_title">يوجد عمولة لرحّال غو على هذا المتجر</string>
+    <string name="commission_store">المتجر: %1$s</string>
+    <string name="commission_percent">النسبة: %1$s٪</string>
+    <string name="commission_amount_of">قيمة العمولة: %1$s (من فاتورة %2$s)</string>
+    <string name="commission_amount">قيمة العمولة: %1$s</string>
+    <string name="commission_pay">ادفع للمتجر: %1$s</string>
+    <string name="commission_ok">تمام</string>
     <string name="trip_cut_line_nopct">عمولة رحّال غو: −%1$s من %2$s</string>
     <string name="trip_debt_cut">دين سابق على المتجر −%1$s</string>
     <string name="contact_call_short">اتصل</string>

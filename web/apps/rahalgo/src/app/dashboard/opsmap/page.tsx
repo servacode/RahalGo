@@ -192,7 +192,7 @@ interface Meta {
 
 /** جزءٌ من طريق السائق الأخير (`/driver-monitor/{id}/recent`) — نفس أجزاء صفحة المراقبة. */
 interface RecentPart {
-  class: "with_order" | "to_pickup" | "no_order" | "stopped" | "gap";
+  class: "with_order" | "to_pickup" | "no_order" | "off_shift" | "stopped" | "gap";
   coords: Array<[number, number]>;
   road?: boolean;
   inferred?: boolean;

@@ -149,13 +149,27 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         val normal = me.locationPingSec.takeIf { it > 0 } ?: 20L
         // **ومعه طلبٌ يُقال صراحةً** (٢٠٢٦-١١-١٨) — لا يُستنتج من طول الفترة: الفترتان صارتا ٣ و٥.
         val live = me.activeOrders > 0
-        val pingSec = if (live) me.locationPingActiveSec.takeIf { it > 0 } ?: normal else normal
+        // ══════════════════════════════════════════════════════════════
+        // **ودوامُه مسكّر بيضل يبعت — أبطأ** (قرارُ المالك ٢٠٢٦-١١-٢٢)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // «تطبيق السائق لازم حتى اذا مسكر دوامو اقدر اوصل لموقعه صحيح» — **طالما هو مسجّل
+        // دخول** بيضل يبعت كلَّ `location_ping_off_sec` (٦٠ ث افتراضاً). والخادمُ ما بيدخّل
+        // موقعَ اللي دوامه مسكّر بالتوزيع. **والخروجُ وحدَه بيوقفه** (`finishLogout`، `afterLogout`).
+        val off = !me.onShift
+        val pingSec = when {
+            off -> me.locationPingOffSec.takeIf { it > 0 } ?: OFF_SHIFT_PING_SEC
+            live -> me.locationPingActiveSec.takeIf { it > 0 } ?: normal
+            else -> normal
+        }
         com.rahalgo.driver.location.ShiftMemory.remember(app, me.onShift, pingSec)
         // **ولا يُعاد التشغيلُ إلّا إن تغيّر شيء** — كانت كلُّ نبضةِ تحديثٍ
         // تُعيد رفعَ الخدمة الأماميّة وطلبَ الموقع والفترةُ هي هي.
-        if (me.onShift && LocationPermission.granted(app)) {
-            if (LocationService.appliedSec != pingSec || LocationService.appliedLive != live) {
-                LocationService.start(app, pingSec, live = live)
+        if (LocationPermission.granted(app)) {
+            if (LocationService.appliedSec != pingSec || LocationService.appliedLive != live ||
+                LocationService.appliedOff != off
+            ) {
+                LocationService.start(app, pingSec, live = live && !off, offShift = off)
             }
         } else {
             // **والإيقافُ يبقى دائماً** — لا يُعيد تشغيلَ شيء، ويلحق خدمةً طُلبت ولم تقم بعد.
@@ -632,6 +646,9 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private fun describe(e: Exception): String = apiError(getApplication(), e)
 
     private companion object {
+        /** **نبضةُ برّا الدوام** إن ما قالها المحرّك (محرّكٌ أقدم) — قرارُ المالك «كل ٦٠ ثانية». */
+        const val OFF_SHIFT_PING_SEC = 60L
+
         /** **نصفُ ساعة** بين قراءتين لأفضل الأوقات — الخادمُ نفسُه يحفظها ساعة. */
         const val BUSY_REFRESH_MS = 30 * 60 * 1000L
 

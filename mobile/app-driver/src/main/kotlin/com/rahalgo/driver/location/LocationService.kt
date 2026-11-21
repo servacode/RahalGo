@@ -146,6 +146,7 @@ class LocationService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val seconds = intent?.getLongExtra(EXTRA_PING_SEC, 0L)?.takeIf { it > 0 } ?: DEFAULT_PING_SEC
         val live = intent?.getBooleanExtra(EXTRA_LIVE, false) ?: false
+        val off = intent?.getBooleanExtra(EXTRA_OFF_SHIFT, false) ?: false
         // ══════════════════════════════════════════════════════════════
         // **وإذنٌ سُحب والورديّةُ مفتوحة** (`AB-09`، قِيس ٢٠٢٦-٠٩-١٦)
         // ══════════════════════════════════════════════════════════════
@@ -174,7 +175,7 @@ class LocationService : Service() {
         }
         // **ورفعُ الخدمة قد يُردّ من النظام** — **إذنٌ يُسحب في اللحظة
         // بين السؤال والرفع، أو حالٌ لا تسمح بخدمةٍ أماميّة.**
-        if (!startForegroundSafely()) {
+        if (!startForegroundSafely(off)) {
             // **وبعد الإقلاع يُطلب فتحُ التطبيق** — لا تقف الخدمةُ صامتةً والورديّةُ مفتوحة.
             if (intent?.getBooleanExtra(EXTRA_FROM_BOOT, false) == true) BootResume.askToOpen(this)
             stopSelf()
@@ -184,6 +185,7 @@ class LocationService : Service() {
         heartbeat()
         appliedSec = seconds
         appliedLive = live
+        appliedOff = off
         // **ويُعاد تشغيلها إن قتلها النظام تحت ضغط الذاكرة** — الوردية
         // مفتوحة ولا أحد يعرف أنّ الموقع انقطع.
         return START_STICKY
@@ -277,6 +279,7 @@ class LocationService : Service() {
     override fun onDestroy() {
         appliedSec = 0L
         appliedLive = false
+        appliedOff = false
         client.removeLocationUpdates(callback)
         // **ولا إنذارَ «إشارةٌ مفقودة» لمن أغلق ورديّته.**
         GpsSignal.alive()
@@ -479,7 +482,7 @@ class LocationService : Service() {
 
     /** **إشعار الخدمة** — شرط النظام، ونافذة السائق على حاله. */
     /** **يرفع الخدمةَ أماميّةً** — **ويردّ `false` إن ردّها النظام.** */
-    private fun startForegroundSafely(): Boolean {
+    private fun startForegroundSafely(offShift: Boolean): Boolean {
         val manager = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
@@ -501,8 +504,9 @@ class LocationService : Service() {
         )
         val note: Notification = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_orders)
-            .setContentTitle(getString(R.string.loc_title))
-            .setContentText(getString(R.string.loc_text))
+            // **ودوامُه مسكّر بيقول الإشعار إنّو موقعه عم ينبعت** (٢٠٢٦-١١-٢٢) — مو «ورديّتك مفتوحة».
+            .setContentTitle(getString(if (offShift) R.string.loc_off_title else R.string.loc_title))
+            .setContentText(getString(if (offShift) R.string.loc_off_text else R.string.loc_text))
             .setContentIntent(open)
             .setOngoing(true)
             .build()
@@ -539,6 +543,9 @@ class LocationService : Service() {
 
         /** **أمعه طلبٌ شغّال؟** — من الشاشة صراحةً (٢٠٢٦-١١-١٨)، لا من طول الفترة. */
         private const val EXTRA_LIVE = "live"
+
+        /** **دوامُه مسكّر؟** (٢٠٢٦-١١-٢٢) — بيضل يبعت أبطأ، والإشعارُ بنصّ تاني. */
+        private const val EXTRA_OFF_SHIFT = "off_shift"
 
         /** **هامشُ حارس التردّد أثناء التوصيل** — نقطةٌ تصل قبل موعدها بقليلٍ لا تُرمى. */
         private const val LIVE_SLACK_MS = 800L
@@ -608,12 +615,24 @@ class LocationService : Service() {
         var appliedLive: Boolean = false
             private set
 
+        /** **أتعمل الآن ودوامُه مسكّر؟** — تتبدّل فتُعاد الخدمة (والإشعار). */
+        @Volatile
+        var appliedOff: Boolean = false
+            private set
+
         /** **تبدأ مع الوردية** — والفترة من المحرّك. */
-        fun start(context: Context, pingSec: Long, fromBoot: Boolean = false, live: Boolean = false) {
+        fun start(
+            context: Context,
+            pingSec: Long,
+            fromBoot: Boolean = false,
+            live: Boolean = false,
+            offShift: Boolean = false,
+        ) {
             val intent = Intent(context, LocationService::class.java)
                 .putExtra(EXTRA_PING_SEC, pingSec)
                 .putExtra(EXTRA_FROM_BOOT, fromBoot)
                 .putExtra(EXTRA_LIVE, live)
+                .putExtra(EXTRA_OFF_SHIFT, offShift)
             context.startForegroundService(intent)
         }
 

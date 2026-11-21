@@ -65,6 +65,8 @@ interface Summary {
   km_with_order: number;
   km_to_pickup: number;
   km_no_order: number;
+  /** **برّا الدوام** (٢٠٢٦-١١-٢٢) — داخلة بالمجموع، ومو بالتنبيه. */
+  km_off_shift?: number;
   km_total: number;
   orders: number;
   patterns: number;
@@ -78,6 +80,7 @@ interface Summary {
   drive_km_with_order: number;
   drive_km_to_pickup: number;
   drive_km_no_order: number;
+  drive_km_off_shift?: number;
   drive_km_total: number;
   /** حركة محسوبة وليست قيادة — رجفة GPS أو زحف. */
   not_driving_km: number;
@@ -166,7 +169,7 @@ interface Ev {
   with_order?: boolean;
   count?: number;
 }
-type Cls = "with_order" | "to_pickup" | "no_order" | "stopped" | "gap";
+type Cls = "with_order" | "to_pickup" | "no_order" | "off_shift" | "stopped" | "gap";
 /** جزءٌ من المسار — `road` ع الطريق، `straight` حاولنا وما انطابق، `inferred` مقدَّر، `pending` لسّا. */
 interface PathPart {
   class: Cls;
@@ -281,6 +284,8 @@ function classColor(c: Cls): string {
       return toneColor("order");
     case "no_order":
       return toneColor("driver-busy");
+    case "off_shift":
+      return toneColor("order-stuck");
     default:
       return toneColor("driver-idle");
   }
@@ -407,7 +412,7 @@ function DayView({
       color: toneColor("order-stuck"),
       data: fc(highlighted.map(line)),
     });
-    const classes: Cls[] = ["stopped", "no_order", "to_pickup", "with_order"];
+    const classes: Cls[] = ["stopped", "off_shift", "no_order", "to_pickup", "with_order"];
     const styles: Style[] = ["solid", "dashed", "dotted", "pending"];
     classes.forEach((c, i) => {
       for (const st of styles) {
@@ -506,10 +511,11 @@ function DayView({
         }
       />
       {/* **الكيلومترات قيادةٌ فعليّة** (قرار المالك ٢٠٢٦-١١-٠٥) — والرجفة والزحف بخانةٍ لحالها. */}
-      <div className="mb-1 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
+      <div className="mb-1 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
         <Tile icon={IconRoute} label={T.tiles.kmNoOrder} value={km(s.drive_km_no_order)} tone={data.alert ? "danger" : undefined} />
         <Tile icon={IconRoute} label={T.tiles.kmWithOrder} value={km(s.drive_km_with_order)} />
         <Tile icon={IconRoute} label={T.tiles.kmToPickup} value={km(s.drive_km_to_pickup)} />
+        <Tile icon={IconRoute} label={T.tiles.kmOffShift} value={km(s.drive_km_off_shift ?? 0)} tone={(s.drive_km_off_shift ?? 0) >= 1 ? "warning" : undefined} />
         <Tile icon={IconRoute} label={T.tiles.notDriving} value={km(s.not_driving_km)} />
         <Tile icon={IconUser} label={T.tiles.stoppedMinutes} value={mins(s.stopped_minutes)} />
         <Tile icon={IconWarning} label={T.tiles.gapMinutes} value={mins(s.gap_minutes)} tone={s.gaps > 0 ? "warning" : undefined} />
@@ -541,7 +547,7 @@ function DayView({
           </div>
           <div className="surface p-3">
             <ul className="mb-3 flex flex-wrap gap-x-3 gap-y-1 text-sm">
-              {(["with_order", "to_pickup", "no_order", "stopped"] as Cls[]).map((c) => (
+              {(["with_order", "to_pickup", "no_order", "off_shift", "stopped"] as Cls[]).map((c) => (
                 <li key={c} className="flex items-center gap-1.5">
                   <span className="inline-block h-1.5 w-5 rounded-full" style={{ background: classColor(c) }} />
                   {T.legend[c]}
@@ -717,6 +723,9 @@ function DriverCard({ r, now, onOpen }: { r: Row; now: number; onOpen: () => voi
         <div className="space-y-1 text-sm">
           <Stat label={T.cols.kmNoOrder} value={km(s.drive_km_no_order)} tone={r.alert} />
           <Stat label={T.cols.kmWithOrder} value={km(s.drive_km_with_order + s.drive_km_to_pickup)} />
+          {(s.drive_km_off_shift ?? 0) > 0 && (
+            <Stat label={T.cols.kmOffShift} value={km(s.drive_km_off_shift ?? 0)} tone={(s.drive_km_off_shift ?? 0) >= 1} />
+          )}
           <Stat label={T.cols.patterns} value={s.patterns > 0 ? fmtNum(s.patterns) : "—"} tone={s.patterns > 0} />
           <Stat label={T.cols.stops} value={s.store_stops > 0 ? fmtNum(s.store_stops) : "—"} />
           <Stat label={T.cols.gaps} value={s.gaps > 0 ? fmtNum(s.gaps) : "—"} tone={r.flagged_gaps > 0} />

@@ -15,6 +15,9 @@ const (
 	ClassNoOrder   Class = "no_order"   // يتحرك وما معه طلب
 	ClassStopped   Class = "stopped"    // واقف ≥ ٣ دقائق ضمن ~٤٠ م
 	ClassGap       Class = "gap"        // انقطعت الإشارة
+	// ClassOffShift **يتحرّك ودوامُه مسكّر** (قرارُ المالك ٢٠٢٦-١١-٢٢: «حتى اذا مسكر دوامو اقدر
+	// اوصل لموقعه») — بخانةٍ لحالها، ما بتختلط بـ«بلا طلب» ولا بتطلّع إنذارَه.
+	ClassOffShift Class = "off_shift"
 )
 
 // Config عتبات التحليل. `DefaultConfig` هي المعتمدة.
@@ -190,6 +193,27 @@ type Input struct {
 	From, To time.Time
 	// Road أمتار الطريق المطابق (`road.go`، `LoadRoad`). **nil = متل قبل بالضبط**: خطوط مستقيمة.
 	Road *Road
+	// Shifts **دوامات السائق** — و`OffShiftFrom` غير فارغ ⇒ الحركة بلا طلب بعدَه وبرّا كل
+	// دوام بتصير «برّا الدوام» (`ClassOffShift`). فارغ = متل قبل بالضبط.
+	Shifts       []ShiftSpan
+	OffShiftFrom time.Time
+}
+
+// OffShiftSince **من وين بتبلّش خانة «برّا الدوام»** — يوم صار تطبيقُ السائق يبعت موقعه ودوامُه
+// مسكّر (٢٠٢٦-١١-٢٢). قبلها ما في نقاط برّا الدوام أصلاً، فالأيام القديمة بتضل أرقامها متل ما هي.
+var OffShiftSince = time.Date(2026, 11, 22, 0, 0, 0, 0, time.FixedZone("Damascus", 3*3600))
+
+// offShiftAt **برّا كل دوام لحظةَ t؟** — والدوام المفتوح بلا نهاية.
+func (in Input) offShiftAt(t time.Time) bool {
+	if in.OffShiftFrom.IsZero() || t.Before(in.OffShiftFrom) {
+		return false
+	}
+	for _, s := range in.Shifts {
+		if !t.Before(s.OpenedAt) && (s.ClosedAt == nil || t.Before(*s.ClosedAt)) {
+			return false
+		}
+	}
+	return true
 }
 
 // Part جزء من المسار بتصنيف واحد (للخريطة).
@@ -235,9 +259,11 @@ type Event struct {
 
 // Summary أرقام اليوم.
 type Summary struct {
-	KmWithOrder    float64 `json:"km_with_order"`
-	KmToPickup     float64 `json:"km_to_pickup"`
-	KmNoOrder      float64 `json:"km_no_order"`
+	KmWithOrder float64 `json:"km_with_order"`
+	KmToPickup  float64 `json:"km_to_pickup"`
+	KmNoOrder   float64 `json:"km_no_order"`
+	// KmOffShift **برّا الدوام** (٢٠٢٦-١١-٢٢) — داخلة بـ`KmTotal`.
+	KmOffShift     float64 `json:"km_off_shift"`
 	KmTotal        float64 `json:"km_total"`
 	Orders         int     `json:"orders"`
 	Patterns       int     `json:"patterns"`
@@ -255,8 +281,10 @@ type Summary struct {
 	DriveKmWithOrder float64 `json:"drive_km_with_order"`
 	DriveKmToPickup  float64 `json:"drive_km_to_pickup"`
 	DriveKmNoOrder   float64 `json:"drive_km_no_order"`
-	DriveKmTotal     float64 `json:"drive_km_total"`
-	NotDrivingKm     float64 `json:"not_driving_km"`
+	// DriveKmOffShift **قيادة برّا الدوام** — داخلة بـ`DriveKmTotal`، وبالترتيب، ومو بالتنبيه.
+	DriveKmOffShift float64 `json:"drive_km_off_shift"`
+	DriveKmTotal    float64 `json:"drive_km_total"`
+	NotDrivingKm    float64 `json:"not_driving_km"`
 
 	// ── الطريق المطابق (R1) ──
 	// KmStraight نفس المقاطع المحسوبة بخط مستقيم — للمقارنة كم أسبوع بعد ما تشتغل المطابقة.
@@ -452,6 +480,10 @@ func Analyze(in Input) Result {
 		}
 		withOrder := active(prev.At)
 		far := Dist(prev, cur) >= cfg.DarkResumeM
+		// **وانقطاعٌ برّا الدوام بلا طلب ما بيتعلّم** — جوالُه طافي بالبيت مو شبهة.
+		if !withOrder && in.offShiftAt(prev.At) {
+			moving, far = false, false
+		}
 		mins := int(dt / time.Minute)
 		end := cur.At
 		res.Summary.Gaps++
@@ -537,9 +569,11 @@ func Analyze(in Input) Result {
 				cls = ClassWithOrder
 			} else if to {
 				cls = ClassToPickup
+			} else if in.offShiftAt(mid) {
+				cls = ClassOffShift
 			}
 		}
-		counted := cls == ClassWithOrder || cls == ClassToPickup || cls == ClassNoOrder
+		counted := cls == ClassWithOrder || cls == ClassToPickup || cls == ClassNoOrder || cls == ClassOffShift
 		seg := RoadSeg{Kind: SegNone, M: Dist(a, b), Line: [][2]float64{{a.Lat, a.Lng}, {b.Lat, b.Lng}}}
 		if counted && in.Road != nil {
 			seg = in.Road.Segment(a, b, cfg)
@@ -560,6 +594,8 @@ func Analyze(in Input) Result {
 				dcls = ClassWithOrder
 			} else if to {
 				dcls = ClassToPickup
+			} else if in.offShiftAt(mid) {
+				dcls = ClassOffShift
 			}
 		}
 		// **والقيادةُ على الطريق المطابق إن انطابق** — فمسافةُ الطلب والعدّاد يمشيان ع الشارع
@@ -574,6 +610,8 @@ func Analyze(in Input) Result {
 			res.Summary.KmToPickup += d / 1000
 		case ClassNoOrder:
 			res.Summary.KmNoOrder += d / 1000
+		case ClassOffShift:
+			res.Summary.KmOffShift += d / 1000
 		}
 		switch dcls {
 		case ClassWithOrder:
@@ -582,6 +620,8 @@ func Analyze(in Input) Result {
 			res.Summary.DriveKmToPickup += drive / 1000
 		case ClassNoOrder:
 			res.Summary.DriveKmNoOrder += drive / 1000
+		case ClassOffShift:
+			res.Summary.DriveKmOffShift += drive / 1000
 		}
 		// **والقيادةُ بطلبٍ تُقسَم على الطلبات التي بيده بالتساوي** — فلا تُعدّ مرّتين.
 		if drive > 0 && len(acts) > 0 {
@@ -636,8 +676,10 @@ func Analyze(in Input) Result {
 		cur.Coords = append(cur.Coords, line...)
 		cur.To = b.At
 	}
-	res.Summary.KmTotal = res.Summary.KmWithOrder + res.Summary.KmToPickup + res.Summary.KmNoOrder
-	res.Summary.DriveKmTotal = res.Summary.DriveKmWithOrder + res.Summary.DriveKmToPickup + res.Summary.DriveKmNoOrder
+	res.Summary.KmTotal = res.Summary.KmWithOrder + res.Summary.KmToPickup + res.Summary.KmNoOrder +
+		res.Summary.KmOffShift
+	res.Summary.DriveKmTotal = res.Summary.DriveKmWithOrder + res.Summary.DriveKmToPickup + res.Summary.DriveKmNoOrder +
+		res.Summary.DriveKmOffShift
 	// **وما انحسب** = المحسوب ناقص القيادة (رجفة الواقف، والزيادة بالخط المتعرّج حول الطريق).
 	res.Summary.NotDrivingKm = math.Max(0, res.Summary.KmTotal-res.Summary.DriveKmTotal)
 	if countedM > 0 {
@@ -708,7 +750,7 @@ func Analyze(in Input) Result {
 	}
 	// **والترتيبُ بالقيادة بلا طلب لا برجفة GPS** (قرار المالك ٢٠٢٦-١١-٠٥).
 	res.Score = float64(res.Summary.Patterns)*1000 + float64(res.Summary.StoreStops)*50 +
-		float64(flaggedGaps)*100 + res.Summary.DriveKmNoOrder
+		float64(flaggedGaps)*100 + res.Summary.DriveKmNoOrder + res.Summary.DriveKmOffShift
 	if res.Summary.Mocked > 0 {
 		res.Score += 500
 	}

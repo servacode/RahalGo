@@ -37,10 +37,14 @@ object BootResume {
 
     enum class Act { NOTHING, START, ASK }
 
+    // **ودوامُه مسكّر بترجع الخدمةُ كمان** (قرارُ المالك ٢٠٢٦-١١-٢٢: «حتى اذا مسكر دوامو اقدر
+    // اوصل لموقعه») — طالما مسجّل دخول. **بس ما بينطلب منه يفتح التطبيق** إذا ما قامت: ما عنده
+    // طلبات تفوته، والإزعاجُ برّا الدوام ما إلو داعي.
     fun decide(signedIn: Boolean, onShift: Boolean, fineGranted: Boolean, backgroundGranted: Boolean): Act = when {
-        !signedIn || !onShift -> Act.NOTHING
+        !signedIn -> Act.NOTHING
         fineGranted && backgroundGranted -> Act.START
-        else -> Act.ASK
+        onShift -> Act.ASK
+        else -> Act.NOTHING
     }
 
     private const val CHANNEL = "rahalgo_shift_resume"
@@ -105,21 +109,22 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
         val app = context.applicationContext
         val signedIn = runCatching { Backend.of(app).session.refreshToken().isNotEmpty() }.getOrDefault(false)
+        val onShift = ShiftMemory.onShift(app)
         when (
             BootResume.decide(
                 signedIn = signedIn,
-                onShift = ShiftMemory.onShift(app),
+                onShift = onShift,
                 fineGranted = LocationPermission.granted(app),
                 backgroundGranted = LocationPermission.backgroundGranted(app),
             )
         ) {
             BootResume.Act.NOTHING -> Unit
             BootResume.Act.START -> try {
-                LocationService.start(app, ShiftMemory.pingSec(app), fromBoot = true)
+                LocationService.start(app, ShiftMemory.pingSec(app), fromBoot = onShift, offShift = !onShift)
             } catch (e: Exception) {
                 // **`ForegroundServiceStartNotAllowedException` أو رفضُ أمن** — يُطلب الفتح.
                 Log.w("RahalGo/boot", "رُدّت خدمةُ الموقع بعد الإقلاع", e)
-                BootResume.askToOpen(app)
+                if (onShift) BootResume.askToOpen(app)
             }
             BootResume.Act.ASK -> BootResume.askToOpen(app)
         }

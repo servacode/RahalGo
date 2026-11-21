@@ -53,6 +53,8 @@ data class DriverMe(
     @SerialName("location_ping_sec") val locationPingSec: Long = 0,
     /** **نبضتُه ما دام معه طلبٌ شغّال** (٢٠٢٦-١٠-١٩) — وصفرٌ من محرّكٍ قديمٍ يعني «كالعادة». */
     @SerialName("location_ping_active_sec") val locationPingActiveSec: Long = 0,
+    /** **نبضتُه ودوامُه مسكّر** (قرارُ المالك ٢٠٢٦-١١-٢٢) — بيضل يبعت طالما مسجّل دخول. وصفر = ٦٠. */
+    @SerialName("location_ping_off_sec") val locationPingOffSec: Long = 0,
     @SerialName("avg_speed_kmh") val avgSpeedKmh: Long = 0,
 
     // ── تقييمه ──

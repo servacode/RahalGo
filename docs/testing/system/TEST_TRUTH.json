@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 300,
-    "behaviour_settings": 254,
+    "setting_defs": 301,
+    "behaviour_settings": 255,
     "order_fields": 149,
-    "test_files": 863,
-    "test_funcs": 3286
+    "test_files": 864,
+    "test_funcs": 3287
   },
   "flows": [
     {
@@ -4863,6 +4863,27 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "drivers.location_ping_off_sec",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "drivers.location_ping_sec",
       "group": "drivers",
       "kind": "int",
@@ -9287,6 +9308,12 @@
     {
       "name": "TestMoved_SpikeIsZero",
       "file": "internal/drivermonitor/meter_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestOFF01_OffShiftDrivingHasItsOwnBucket",
+      "file": "internal/drivermonitor/offshift_test.go",
       "package": "drivermonitor",
       "orphan": true
     },

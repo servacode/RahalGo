@@ -94,6 +94,8 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		LocationPingSec int64 `json:"location_ping_sec"`
 		// LocationPingActiveSec **نبضتُه ما دام معه طلبٌ شغّال** (٢٠٢٦-١٠-١٩) — أسرعُ بكثير.
 		LocationPingActiveSec int64 `json:"location_ping_active_sec"`
+		// LocationPingOffSec **نبضتُه ودوامُه مسكّر** (٢٠٢٦-١١-٢٢) — التطبيقُ بيضل يبعت طالما مسجّل دخول.
+		LocationPingOffSec int64 `json:"location_ping_off_sec"`
 
 		// AvgSpeedKmh **منه يُحسب الوقتُ المتوقَّع من المسافة.**
 		//
@@ -229,6 +231,7 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 	out.RequirePhoto = s.settings.GetBool(r.Context(), "drivers.require_delivery_photo")
 	out.LocationPingSec = s.settings.GetInt(r.Context(), "drivers.location_ping_sec")
 	out.LocationPingActiveSec = s.settings.GetInt(r.Context(), "drivers.location_ping_active_sec")
+	out.LocationPingOffSec = s.settings.GetInt(r.Context(), "drivers.location_ping_off_sec")
 	// **وسرعتُه هي سرعتُه** — لا رقمَ واحدٌ لكلّ السائقين. (قرارُ المالك
 	// ٢٠٢٦-٠٨-١٢.) **وإعدادُ المالك يبقى أرضاً** لمن لا تاريخَ له بعد.
 	out.AvgSpeedKmh = s.driverSpeedKmh(r.Context(), uid)

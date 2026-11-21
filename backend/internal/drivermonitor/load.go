@@ -328,6 +328,14 @@ func Measure(ctx context.Context, db DB, driverID string, from, to time.Time, wi
 		return Result{}, err
 	}
 	in := Input{Points: pts, Windows: wins, Stores: stores, Cfg: DefaultConfig(), Road: road}
+	// **وبرّا الدوام بخانةٍ لحالها** (٢٠٢٦-١١-٢٢) — من يوم صار التطبيق يبعت ودوامُه مسكّر.
+	if to.After(OffShiftSince) {
+		spans, err := LoadShifts(ctx, db, driverID, from, to)
+		if err != nil {
+			return Result{}, err
+		}
+		in.Shifts, in.OffShiftFrom = spans, OffShiftSince
+	}
 	if now.Before(to) {
 		in.Now = now
 	} else {
@@ -348,6 +356,27 @@ func DriverDay(ctx context.Context, db DB, driverID string, from, to time.Time, 
 	}
 	res, err := Measure(ctx, db, driverID, from, to, wins, stores, now, roadOn)
 	return res, wins, err
+}
+
+// LoadShifts **دوامات السائق اللي بتلمس** `[from, to)` — والمفتوح بلا نهاية.
+func LoadShifts(ctx context.Context, db DB, driverID string, from, to time.Time) ([]ShiftSpan, error) {
+	rows, err := db.Query(ctx, `
+		SELECT id::text, opened_at, closed_at FROM driver_shifts
+		 WHERE driver_id = $1::uuid AND opened_at < $3 AND (closed_at IS NULL OR closed_at > $2)
+		 ORDER BY opened_at`, driverID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []ShiftSpan
+	for rows.Next() {
+		s := ShiftSpan{DriverID: driverID}
+		if err := rows.Scan(&s.ID, &s.OpenedAt, &s.ClosedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
 }
 
 // Row سطر سائق في قائمة اليوم.

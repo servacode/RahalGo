@@ -1193,6 +1193,12 @@ var Catalog = []Def{
 	{Key: "drivers.location_ping_active_sec", Group: GroupDrivers, Kind: KindInt,
 		Min: 3, Max: 10, Unit: "second", Default: 3},
 
+	// **ونبضتُه ودوامُه مسكّر** (قرارُ المالك ٢٠٢٦-١١-٢٢: «حتى اذا مسكر دوامو اقدر اوصل لموقعه
+	// صحيح»، و«كل ٦٠ ثانية») — طالما هو مسجّل دخول بيضل يبعت، **أبطأ** لحتى ما تخلص بطاريته.
+	// وموقعُ اللي دوامه مسكّر ما بيدخل بالتوزيع أبداً (`orders.QueueVisibleSQL` بيشرط `on_shift`).
+	{Key: "drivers.location_ping_off_sec", Group: GroupDrivers, Kind: KindInt,
+		Min: 30, Max: 600, Unit: "second", Default: 60},
+
 	// **حركةُ السائقين الناعمة على خريطة العمليات** (طلبُ المالك ٢٠٢٦-١١-٠٥: «ما بدنا نطّات»).
 	// **مفعّلة**: الخادمُ يبثّ «نقطةَ العرض» (`drivermonitor.NextShown` — لا موقعَ دقّتُه ضعيفة ولا
 	// قفزةً مستحيلة ولا رجفةَ الواقف)، **وكلُّ سائقٍ ينزلق وحدَه بخطٍّ مستقيمٍ على قدّ ما يبعت.**

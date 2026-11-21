@@ -12,9 +12,17 @@ import org.junit.Test
 class BootResumeTest {
 
     @Test
-    fun `nothing for a driver who is signed out or off shift`() {
+    fun `nothing for a driver who is signed out`() {
         assertEquals(BootResume.Act.NOTHING, BootResume.decide(false, true, true, true))
-        assertEquals(BootResume.Act.NOTHING, BootResume.decide(true, false, true, true))
+        assertEquals(BootResume.Act.NOTHING, BootResume.decide(false, false, true, true))
+    }
+
+    // **ودوامُه مسكّر بترجع الخدمةُ كمان** (قرارُ المالك ٢٠٢٦-١١-٢٢) — بلا ما ينطلب منه يفتح التطبيق.
+    @Test
+    fun `off shift the service still resumes, but he is never nagged to open the app`() {
+        assertEquals(BootResume.Act.START, BootResume.decide(true, false, true, true))
+        assertEquals(BootResume.Act.NOTHING, BootResume.decide(true, false, true, false))
+        assertEquals(BootResume.Act.NOTHING, BootResume.decide(true, false, false, false))
     }
 
     @Test

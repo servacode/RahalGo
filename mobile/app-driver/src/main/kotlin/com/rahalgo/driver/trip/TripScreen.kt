@@ -1585,6 +1585,9 @@ private fun TripCard(
         return
     }
 
+    // **نافذةُ العمولة** (قرارُ المالك ٢٠٢٦-١١-٢٢) — مرّة لكلّ متجرٍ بكلّ طلب (`CommissionNotice`).
+    CommissionNotice(order)
+
     Column(
         modifier
             .fillMaxWidth()
