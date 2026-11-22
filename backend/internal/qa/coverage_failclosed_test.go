@@ -50,6 +50,8 @@ import (
 func wipeZones(t *testing.T, hh *Harness) {
 	t.Helper()
 	isolateZones(t, hh)
+	// **ومنطقةُ الحزمة تُعاد بعده** — قد تُحذف هنا إن لم يُشِر إليها طلبٌ بعد.
+	t.Cleanup(func() { _, _ = hh.Pool.Exec(ctxBG(), seedZoneSQL) })
 	// **وما لا يشير إليه طلبٌ يُحذَف فعلاً** — فيُقاس الحدّان.
 	if _, err := hh.Pool.Exec(ctxBG(), `
 		DELETE FROM delivery_zones z

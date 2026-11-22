@@ -33,8 +33,8 @@
     "setting_defs": 301,
     "behaviour_settings": 255,
     "order_fields": 149,
-    "test_files": 864,
-    "test_funcs": 3287
+    "test_files": 865,
+    "test_funcs": 3289
   },
   "flows": [
     {
@@ -30395,6 +30395,18 @@
     {
       "name": "TestWS_DriverLocationNeedsDriversRead",
       "file": "internal/qa/ws_driver_location_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZD01_ZoneWithFinishedOrdersDeletes",
+      "file": "internal/qa/zone_delete_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZD02_ZoneWithOpenOrderIsRefusedClearly",
+      "file": "internal/qa/zone_delete_test.go",
       "package": "qa",
       "orphan": true
     },

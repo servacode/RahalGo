@@ -132,7 +132,23 @@ func (s *Service) UpdateZone(ctx context.Context, actorID, id string, in ZoneInp
 	return z, nil
 }
 
+// ErrZoneHasOpenOrders **منطقةٌ فيها طلباتٌ شغّالة لا تُحذف** (بلاغُ المالك ٢٠٢٦-١١-٢٢) —
+// توزيعُها وتسعيرُها قائمان عليها الآن؛ **تُوقَف بدل الحذف.**
+var ErrZoneHasOpenOrders = httpx.NewError(http.StatusConflict, "zone_has_open_orders", "errors.zone_has_open_orders")
+
+// DeleteZone يحذف منطقةً. **والطلباتُ القديمةُ لا تمنعه** (`0556`): يبقى الطلبُ بأرقامه
+// وتُفرَّغ منطقتُه. **والطلبُ الشغّالُ يمنعه** — رسالةٌ واضحة لا خطأٌ عامّ.
 func (s *Service) DeleteZone(ctx context.Context, actorID, id, ip string) error {
+	var open bool
+	if err := s.db.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM orders
+		 WHERE zone_id::text = $1 AND closed_at IS NULL
+		   AND status NOT IN ('delivered','rejected','cancelled','failed','refunded'))`, id).Scan(&open); err != nil {
+		return err
+	}
+	if open {
+		return ErrZoneHasOpenOrders
+	}
 	tag, err := s.db.Exec(ctx, `DELETE FROM delivery_zones WHERE id = $1`, id)
 	if err != nil {
 		return err

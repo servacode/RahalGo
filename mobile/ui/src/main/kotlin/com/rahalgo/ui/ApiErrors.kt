@@ -686,6 +686,7 @@ private val CODES: Map<String, Int> = mapOf(
     // عمليّاً)، لكنّ حارسَ الرموز يفحص حزمةَ `catalog` فيلزمه تعيينٌ ونصّ.
     "transfer_reason_required" to R.string.err_transfer_reason_required,
     "invalid_zone" to R.string.err_invalid_zone,
+    "zone_has_open_orders" to R.string.err_zone_has_open_orders,
     "over_settle" to R.string.err_over_settle,
     "cash_limit_exceeded" to R.string.err_cash_limit_exceeded,
     // ── رموزٌ تولد في `internal/server` وتبلغ الهاتف — `XG-45` ────────

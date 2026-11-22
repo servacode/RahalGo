@@ -358,16 +358,20 @@ func ownPushQueue(t *testing.T, pool *pgxpool.Pool) {
 //
 // **والدبّوسُ في `orderBody` هو الرقّة** (`35.9506, 39.0094`) — فدائرةٌ
 // حولها بخمسةٍ وعشرين كيلومتراً تغطّي كلَّ ما تطلبه الحزمة.
-func seedZone(t *testing.T, pool *pgxpool.Pool) {
-	t.Helper()
-	// **ومرّةً واحدةً في العمليّة** — لا في كلّ اختبار.
-	zoneOnce.Do(func() {
-		_, zoneErr = pool.Exec(context.Background(), `
+// seedZoneSQL **منطقةُ الحزمة** — تُزرع مرّةً، **وتُعاد بعد كلِّ اختبارٍ يُخلي التغطية**
+// (`wipeZones`): منذ `0556` صار حذفُ المناطق يمرّ فعلاً، **فلا تبقى بعده ركامُ مناطقَ تغطّي عنها.**
+const seedZoneSQL = `
 			INSERT INTO delivery_zones (name, center, radius_m, delivery_fee, min_order, active)
 			SELECT 'منطقة QA',
 			       ST_SetSRID(ST_MakePoint(39.0094, 35.9506), 4326)::geography,
 			       25000, 100, 0, true
-			WHERE NOT EXISTS (SELECT 1 FROM delivery_zones WHERE name = 'منطقة QA')`)
+			WHERE NOT EXISTS (SELECT 1 FROM delivery_zones WHERE name = 'منطقة QA')`
+
+func seedZone(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	// **ومرّةً واحدةً في العمليّة** — لا في كلّ اختبار.
+	zoneOnce.Do(func() {
+		_, zoneErr = pool.Exec(context.Background(), seedZoneSQL)
 	})
 	if zoneErr != nil {
 		t.Fatalf("qa: تعذّر زرعُ منطقة التسليم: %v", zoneErr)

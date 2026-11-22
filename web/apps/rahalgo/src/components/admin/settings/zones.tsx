@@ -74,6 +74,30 @@ interface Drawing {
   history: [number, number][][];
   /** الرأسُ المحدَّد للحذف (لمساً). */
   selected: number | null;
+  /** **آخرُ موضعٍ لمقبض التحريك** أثناء سحب الشكل كلِّه — فيُزاح بالفرق. */
+  anchor?: [number, number];
+}
+
+/** **وسطُ الحلقة** — متوسّطُ رؤوسها؛ منه يُكبَّر الشكلُ ويُصغَّر وعليه مقبضُ التحريك. */
+function ringCenter(r: [number, number][]): [number, number] {
+  let x = 0;
+  let y = 0;
+  for (const p of r) {
+    x += p[0];
+    y += p[1];
+  }
+  return [x / (r.length || 1), y / (r.length || 1)];
+}
+
+/** **مساحةُ حلقةٍ تقريبيّة** (بالدرجات) — لاختيار أكبر قطعةٍ في متعدّد القطع. */
+function ringArea(r: Pt[]): number {
+  let a = 0;
+  for (let i = 0; i < r.length; i++) {
+    const p = r[i]!;
+    const q = r[(i + 1) % r.length]!;
+    a += p[0] * q[1] - q[0] * p[1];
+  }
+  return Math.abs(a / 2);
 }
 
 const fc = (features: FeatureCollection["features"]): FeatureCollection => ({
@@ -228,13 +252,30 @@ export default function ZonesPanel() {
     setDrawing({ id: z.id, name: z.name, ring: [], mode: "draw", history: [], selected: null });
   }
 
-  /** **حلقةُ المنطقة القابلةُ للتعديل** — مضلَّعٌ واحد؛ ومتعدّدُ القطع يُعاد رسمُه. */
+  /**
+   * **حلقةُ المنطقة القابلةُ للتعديل** — كلُّ منطقةٍ تُعدَّل (طلبُ المالك ٢٠٢٦-١١-٢٢: «المضلع لازم
+   * اعدله بكيفي»): **الدائرةُ تصير مضلَّعاً بأربعٍ وعشرين نقطة**، ومتعدّدُ القطع تُعدَّل أكبرُ قطعه.
+   */
   function editableRing(z: Zone): [number, number][] | null {
-    if (z.shape !== "polygon" || !z.area) return null;
+    if (z.shape === "radius") {
+      return z.radius_m > 0 ? (circleRing(z.lng, z.lat, z.radius_m, 24) as [number, number][]) : null;
+    }
+    if (!z.area) return null;
     const rings = outerRings(z.area);
-    if (rings.length !== 1) return null;
-    const r = openRing(rings[0]!);
+    if (rings.length === 0) return null;
+    const biggest = rings.reduce((a, b) => (ringArea(b) > ringArea(a) ? b : a));
+    const r = openRing(biggest);
     return r.length >= 3 ? r : null;
+  }
+
+  /** **كبّر/صغّر الشكلَ كلَّه من وسطه** — كلُّ كبسةٍ عشرةٌ بالمئة. */
+  function scaleRing(k: number) {
+    setDrawing((d) => {
+      if (!d || d.mode !== "edit" || d.ring.length < 3) return d;
+      const [cx, cy] = ringCenter(d.ring);
+      const ring = d.ring.map(([x, y]) => [cx + (x - cx) * k, cy + (y - cy) * k] as [number, number]);
+      return { ...d, history: [...d.history, d.ring], ring, selected: null };
+    });
   }
 
   function startEdit(z: Zone) {
@@ -248,7 +289,10 @@ export default function ZonesPanel() {
   const handles = useMemo<MapHandle[]>(() => {
     if (!drawing || drawing.mode !== "edit") return [];
     const ring = drawing.ring;
+    const [cx, cy] = ringCenter(ring);
     return [
+      // **مقبضُ الوسط يسحب الشكلَ كلَّه.**
+      { id: "c", lng: cx, lat: cy, move: true, label: Z.moveHandle },
       ...ring.map((p, i) => ({
         id: `v${i}`, lng: p[0], lat: p[1], selected: drawing.selected === i, label: Z.vertexHandle,
       })),
@@ -261,6 +305,15 @@ export default function ZonesPanel() {
   function onHandleMove(id: string, lng: number, lat: number, phase: HandlePhase) {
     setDrawing((d) => {
       if (!d || d.mode !== "edit") return d;
+      // **سحبُ الشكل كلِّه** — يُزاح كلُّ رأسٍ بفرق المقبض منذ آخر حركة.
+      if (id === "c") {
+        if (phase === "start") return { ...d, history: [...d.history, d.ring], anchor: [lng, lat] };
+        const from = d.anchor ?? ringCenter(d.ring);
+        const dx = lng - from[0];
+        const dy = lat - from[1];
+        const ring = d.ring.map(([x, y]) => [x + dx, y + dy] as [number, number]);
+        return { ...d, ring, anchor: phase === "end" ? undefined : [lng, lat] };
+      }
       const i = Number(id.slice(1));
       if (id[0] === "v") {
         if (!d.ring[i]) return d;
@@ -450,6 +503,16 @@ export default function ZonesPanel() {
               </p>
               {selfCross && <Alert>{Z.selfIntersects}</Alert>}
               {editing && (
+                <div className="flex gap-2">
+                  <Button variant="secondary" className="flex-1" onClick={() => scaleRing(1.1)}>
+                    {Z.grow}
+                  </Button>
+                  <Button variant="secondary" className="flex-1" onClick={() => scaleRing(1 / 1.1)}>
+                    {Z.shrink}
+                  </Button>
+                </div>
+              )}
+              {editing && (
                 <Button
                   variant="secondary"
                   disabled={drawing.selected == null}
@@ -499,16 +562,13 @@ export default function ZonesPanel() {
               </p>
               {isAdmin && (
                 <div className="flex flex-wrap gap-2">
-                  {selected.shape === "polygon" && (
-                    <Button
-                      variant="secondary"
-                      disabled={!editableRing(selected)}
-                      title={editableRing(selected) ? undefined : Z.multiNotEditable}
-                      onClick={() => startEdit(selected)}
-                    >
-                      {Z.editShape}
-                    </Button>
-                  )}
+                  <Button
+                    variant="secondary"
+                    disabled={!editableRing(selected)}
+                    onClick={() => startEdit(selected)}
+                  >
+                    {Z.editShape}
+                  </Button>
                   <Button variant="secondary" onClick={() => startRedraw(selected)}>
                     {Z.redraw}
                   </Button>

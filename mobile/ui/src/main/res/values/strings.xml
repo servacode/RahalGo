@@ -793,6 +793,7 @@
     <string name="err_section_required">اختر القسم</string>
     <string name="err_transfer_reason_required">سبب نقل المتجر بين المندوبين مطلوب</string>
     <string name="err_invalid_zone">بيانات المنطقة غير صالحة</string>
+    <string name="err_zone_has_open_orders">هالمنطقة فيها طلبات شغّالة هلق — وقّفها بدل ما تحذفها، واحذفها بعد ما يخلصوا</string>
     <string name="err_over_settle">المبلغ يتجاوز ما بحوزة السائق</string>
     <string name="err_cash_limit_exceeded">السائق تجاوز سقفه النقدي — يجب تسليم الصندوق أولا</string>
     <string name="close">إغلاق</string>

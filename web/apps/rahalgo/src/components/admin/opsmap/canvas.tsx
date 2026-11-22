@@ -171,6 +171,8 @@ export interface MapHandle {
   lat: number;
   mid?: boolean;
   selected?: boolean;
+  /** **مقبضُ تحريك الشكل كلِّه** (٢٠٢٦-١١-٢٢) — مربّعٌ في الوسط. */
+  move?: boolean;
   label: string;
 }
 
@@ -1016,7 +1018,9 @@ export function OpsMapCanvas({
       }
     }
     for (const h of handles) {
-      const look = h.mid
+      const look = h.move
+        ? "h-5 w-5 rounded-control border-2 border-paper bg-primary shadow-lift"
+        : h.mid
         ? "h-3 w-3 rounded-full border-2 border-accent bg-paper opacity-80 shadow-lift"
         : `${h.selected ? "h-5 w-5 bg-danger" : "h-4 w-4 bg-accent"} rounded-full border-2 border-paper shadow-lift`;
       let mk = handleMarks.current.get(h.id);
