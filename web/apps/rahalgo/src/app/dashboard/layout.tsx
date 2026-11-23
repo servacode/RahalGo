@@ -18,6 +18,7 @@ import {
   IconRoute,
   IconLocation,
   IconPromos,
+  IconCatGifts,
   IconSupport,
   IconSettings,
   IconWallet,
@@ -201,6 +202,9 @@ const ALL_NAV: NavItem[] = [
   // **وبقدرتها لا بقدرة المحتوى** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — قسمٌ للماليّة، ولا
   // تنال معه اللافتاتِ ولا الحملاتِ ولا البثّ.
   { href: "/dashboard/promos", label: m.admin.promos.title, icon: IconPromos,
+    caps: ["offers.manage"] },
+  // **جوائزُ رحّال غو** (قرارُ المالك ٢٠٢٦-١١-٢٣) — سحبٌ شهريٌّ على الدعوات، جارةُ العروض بقدرتها.
+  { href: "/dashboard/prizes", label: m.admin.prizes.title, icon: IconCatGifts,
     caps: ["offers.manage"] },
   // ══════════════════════════════════════════════════════════════════
   // **مراقبةُ التشغيل — «هل النظام يعمل؟»**
