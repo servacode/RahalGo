@@ -116,3 +116,22 @@ func TestDisplayName(t *testing.T) {
 		}
 	}
 }
+
+// TestNextDrawAt_AfterLaunch **قبل الإطلاق يُقال سحبُ شهر الإطلاق لا سحبُ الشهر الجاري** (٢٠٢٦-١١-٢٤).
+func TestNextDrawAt_AfterLaunch(t *testing.T) {
+	dam := time.FixedZone("Damascus", 3*3600)
+	launch := time.Date(2026, 12, 1, 0, 0, 0, 0, dam)
+	cases := []struct {
+		now  time.Time
+		want time.Time
+	}{
+		{time.Date(2026, 11, 24, 10, 0, 0, 0, dam), time.Date(2027, 1, 1, 12, 0, 0, 0, dam)},
+		{time.Date(2026, 12, 15, 10, 0, 0, 0, dam), time.Date(2027, 1, 1, 12, 0, 0, 0, dam)},
+		{time.Date(2027, 1, 20, 10, 0, 0, 0, dam), time.Date(2027, 2, 1, 12, 0, 0, 0, dam)},
+	}
+	for _, c := range cases {
+		if got := NextDrawAt(c.now, launch); !got.Equal(c.want) {
+			t.Fatalf("now=%v: got %v want %v", c.now, got, c.want)
+		}
+	}
+}

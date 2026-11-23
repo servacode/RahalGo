@@ -34,7 +34,7 @@
     "behaviour_settings": 264,
     "order_fields": 150,
     "test_files": 871,
-    "test_funcs": 3306
+    "test_funcs": 3307
   },
   "flows": [
     {
@@ -14142,6 +14142,12 @@
     },
     {
       "name": "TestMonthMath",
+      "file": "internal/prizes/prizes_test.go",
+      "package": "prizes",
+      "orphan": true
+    },
+    {
+      "name": "TestNextDrawAt_AfterLaunch",
       "file": "internal/prizes/prizes_test.go",
       "package": "prizes",
       "orphan": true

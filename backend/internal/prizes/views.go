@@ -46,7 +46,7 @@ type Me struct {
 func (s *Service) MeFor(ctx context.Context, userID string) (*Me, error) {
 	now := s.now()
 	month := MonthStart(now)
-	launchRaw, _ := s.LaunchOn(ctx)
+	launchRaw, launch := s.LaunchOn(ctx)
 	per := s.PerEntry(ctx)
 	invites, err := s.MonthInvites(ctx, userID, month)
 	if err != nil {
@@ -69,7 +69,7 @@ func (s *Service) MeFor(ctx context.Context, userID string) (*Me, error) {
 		InvitesPerEntry: per,
 		Entries:         EntriesFor(invites, per),
 		InvitesToNext:   ToNext(invites, per),
-		DrawAt:          DrawAt(month).UTC(),
+		DrawAt:          NextDrawAt(now, launch).UTC(),
 		Amounts:         amounts,
 		WinnersCount:    len(amounts),
 		PrizeBalance:    bal.Amount,

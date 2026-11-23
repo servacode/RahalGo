@@ -150,6 +150,16 @@ func NextMonth(month time.Time) time.Time { return MonthStart(month).AddDate(0, 
 // DrawAt **موعدُ سحب الشهر** — أوّلُ الشهر التالي الساعةَ ١٢ ظهراً بتوقيت دمشق.
 func DrawAt(month time.Time) time.Time { return NextMonth(month).Add(12 * time.Hour) }
 
+// NextDrawAt **أوّلُ سحبٍ قادمٍ يُقال للزبون** — سحبُ هذا الشهر، **إلّا قبل الإطلاق**: فسحبُ شهر
+// الإطلاق (٢٠٢٦-١١-٢٤: كانت صفحةُ «انتظرونا ١/١٢» تقول «السحب ١/١٢» وأوّلُ سحبٍ ١/١/٢٠٢٧).
+func NextDrawAt(now, launch time.Time) time.Time {
+	month := MonthStart(now)
+	if l := MonthStart(launch); l.After(month) {
+		month = l
+	}
+	return DrawAt(month)
+}
+
 // ExpiryFor **آخرُ ثانيةٍ من الشهر الذي فيه `t`** — انتهاءُ رصيدٍ مُنح فيه.
 func ExpiryFor(t time.Time) time.Time { return NextMonth(t).Add(-time.Second) }
 
