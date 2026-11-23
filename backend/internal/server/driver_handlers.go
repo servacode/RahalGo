@@ -1201,6 +1201,26 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	uid := userIDFrom(r)
 	orderID := chi.URLParam(r, "id")
 
+	// **وطلبٌ صار له أصلاً يُردّ قبولاً لا «سبقك»** (بلاغُ المالك ٢٠٢٦-١١-٢٣: «سبقك شخص آخر
+	// مع أنّ الطلب عند نفس السائق») — أسندته العمليّاتُ إليه والكرتُ ما زال أمامه، أو وصل
+	// قبولُه الأوّل وضاع جوابُه فضغط ثانيةً. **وعند غيره يبقى «سبقك» كما كان.**
+	var mine bool
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT EXISTS (SELECT 1 FROM orders WHERE id::text = $1 AND driver_id = $2::uuid AND closed_at IS NULL)`,
+		orderID, uid).Scan(&mine); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if mine {
+		o, err := s.orders.GetByID(r.Context(), orderID)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		httpx.JSON(w, http.StatusOK, s.driverReplyView(r, o))
+		return
+	}
+
 	var onShift, offeredToMe bool
 	var active int
 	var cashDue int64
