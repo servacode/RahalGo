@@ -39,6 +39,7 @@ import { useCart } from "@/lib/customer/cart";
 import { useCustomer } from "@/lib/customer/context";
 import { statusLabel } from "@/lib/customer/texts";
 import { AddressSheet } from "./AddressSheet";
+import { PrizesButton } from "./PrizesButton";
 import { ThemeToggle } from "./ShopTheme";
 
 const m = getMessages(defaultLocale);
@@ -137,6 +138,8 @@ export function ShopTopBar({
             data-focus="self"
           />
         </form>
+
+        {user && <PrizesButton />}
 
         {user && (
           <>

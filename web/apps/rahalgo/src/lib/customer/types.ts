@@ -211,6 +211,8 @@ export interface Quote {
   sources_fee: number;
   /** **ما أُعفي منه بعرض التوصيل المجانيّ** — و`delivery_fee` بعده (٢٠٢٦-١٠-٢٦). */
   free_waived?: number;
+  /** **ما سيُخصم من رصيد الجوائز** إن حمل الطلبُ صنفَ جوائز. */
+  prize_discount?: number;
   out_of_zone: boolean;
   zone_closed: boolean;
   next_available_at?: string;
@@ -312,6 +314,8 @@ export interface MyOrder {
   subtotal: number;
   delivery_fee: number;
   discount: number;
+  /** **ما خُصم من رصيد الجوائز** — غائبٌ أو صفرٌ لطلبٍ بلا جوائز. */
+  prize_discount?: number;
   total: number;
   payment_method: string;
   /** **شو بيندفع من المحفظة** (٢٠٢٦-١١-٠٩) — `none` كاش · `full` الكل · `delivery` التوصيل والباقي كاش. */
@@ -477,4 +481,48 @@ export interface FreeDelivery {
   amanah: boolean;
   max_fee: number | null;
   ends_at: string | null;
+}
+
+/** **جوائز رحّال غو — حالُ الزبون هذا الشهر** (`/prizes/me`). كلُّ حقلٍ اختياريٌّ احتياطاً من خادمٍ قديم. */
+export interface PrizesMe {
+  enabled?: boolean;
+  launch_on?: string;
+  month?: string;
+  month_invites?: number;
+  invites_per_entry?: number;
+  entries?: number;
+  invites_to_next?: number;
+  draw_at?: string;
+  amounts?: number[];
+  winners_count?: number;
+  prize_balance?: number;
+  prize_expires_at?: string | null;
+  store_id?: string | null;
+}
+
+/** **صنفُ الجوائز** (`/prizes/items`) — يُطلب بالسلّة المعتادة من متجر `store_id`. */
+export interface PrizeItem {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  image_url?: string | null;
+  thumb_url?: string | null;
+  available?: boolean;
+}
+
+export interface PrizeItems {
+  store_id?: string | null;
+  items?: PrizeItem[];
+}
+
+export interface PrizeWinner {
+  rank: number;
+  name: string;
+  amount: number;
+}
+
+export interface PrizeWinners {
+  month?: string | null;
+  winners?: PrizeWinner[];
 }
