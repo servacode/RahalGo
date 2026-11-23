@@ -353,6 +353,8 @@
          **ولفظٌ واحدٌ بكلّ التطبيق: «السائق»** — لا «الكابتن» هون و«السائق» هونيك. -->
     <string name="live_ask_title">السائق في الطريق إليك</string>
     <string name="live_ask_body">شارك موقعك المباشر ليصل سائق رحّال غو إلى باب بيتك</string>
+    <string name="live_ask_title_early">شارك موقعك المباشر</string>
+    <string name="live_ask_body_early">ليصل سائق رحّال غو إلى باب بيتك. تبدأ المشاركة حين يقبل السائق طلبك وتتوقف تلقائياً عند وصوله</string>
     <string name="live_ask_share">شارك موقعي</string>
     <string name="live_ask_no">لا، العنوان صحيح</string>
     <string name="live_note_title">أنت تشارك موقعك مع السائق</string>

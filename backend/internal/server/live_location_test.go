@@ -149,10 +149,15 @@ func TestLiveLocation_RefusedWhenOrderNotActive(t *testing.T) {
 	for _, c := range []struct {
 		status string
 		driver *string
-	}{{"dispatching", nil}, {"preparing", nil}, {"delivered", &d}, {"cancelled", &d}} {
+		code   string
+	}{
+		// **وقبل الإسناد «لم يُسنَد بعد»** (٢٠٢٦-١١-٢٣) — فيُبقي الهاتفُ مشاركتَه.
+		{"dispatching", nil, "live_location_not_yet"}, {"preparing", nil, "live_location_not_yet"},
+		{"delivered", &d, "live_location_inactive"}, {"cancelled", &d, "live_location_inactive"},
+	} {
 		orderID, owner := f.liveOrder(t, c.status, c.driver)
 		w := liveCall(f.srv.handleCustomerLiveLocation, http.MethodPost, orderID, owner, "customer", farFromPin)
-		if w.Code != http.StatusConflict || errCode(t, w) != "live_location_inactive" {
+		if w.Code != http.StatusConflict || errCode(t, w) != c.code {
 			t.Fatalf("%s: قُبل الموقعُ أو رُدّ بغير سببه: %d %s", c.status, w.Code, w.Body.String())
 		}
 		if n := f.liveRows(t, orderID); n != 0 {

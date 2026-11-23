@@ -1267,19 +1267,36 @@ private fun SignedIn(
                 // **والمشاركةُ التلقائيّة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — ما دام تفضيلُ «شارك موقعي
                 // المباشر» مفعّلاً والإذنُ والموقعُ جاهزَين تبدأ بلا سؤال، **والإيقافُ في بطاقة
                 // الطلب والإشعار.** وبلا إذنٍ تُسأل النافذةُ كما كانت.
-                val autoLive = pendingLive != null &&
+                //
+                // **وتبدأ لحظةَ التأكيد وتعود كلّما فُتح التطبيق** (قرارُ المالك ٢٠٢٦-١١-٢٣: «اذا
+                // فاتح او مسكر يظل الموقع المباشر شغال») — **ما لم يوقفها بيده لهذا الطلب.**
+                val liveReady = !guest &&
                     com.rahalgo.customer.live.LiveAuto.load(liveCtx) &&
                     com.rahalgo.map.Here.granted(liveCtx) &&
                     com.rahalgo.ui.locationServiceEnabled(liveCtx)
-                if (autoLive) {
-                    val o = pendingLive!!
-                    LaunchedEffect(o.id, o.liveRequestedAt) {
-                        ordersVm.decideLiveShare(o)
-                        com.rahalgo.customer.live.LiveShare.start(liveCtx, o.id)
+                val autoOrder = if (liveReady) {
+                    com.rahalgo.customer.live.LiveSharePolicy.autoStart(
+                        ordersVm.open,
+                        com.rahalgo.customer.live.LiveStopped.load(liveCtx),
+                        com.rahalgo.customer.live.LiveShare.activeOrderId,
+                    )
+                } else {
+                    null
+                }
+                if (autoOrder != null) {
+                    LaunchedEffect(autoOrder.id, autoOrder.status) {
+                        ordersVm.decideLiveShare(autoOrder)
+                        com.rahalgo.customer.live.LiveShare.start(liveCtx, autoOrder.id)
                     }
+                }
+                val autoLive = pendingLive != null && liveReady
+                if (autoLive && autoOrder == null) {
+                    val o = pendingLive!!
+                    LaunchedEffect(o.id, o.liveRequestedAt) { ordersVm.decideLiveShare(o) }
                 }
                 pendingLive?.takeIf { !autoLive }?.let { o ->
                     com.rahalgo.customer.live.LiveShareDialog(
+                        early = com.rahalgo.customer.live.LiveSharePolicy.early(o),
                         onShare = {
                             ordersVm.decideLiveShare(o)
                             if (com.rahalgo.map.Here.granted(liveCtx)) {

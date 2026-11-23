@@ -67,6 +67,16 @@ var liveKinds = []string{"standard", "custom"}
 var ErrLiveInactive = httpx.NewError(http.StatusConflict,
 	"live_location_inactive", "errors.live_location_inactive")
 
+// liveEarlyStatuses **قبل أن يُسنَد الطلب** — المشاركةُ تبدأ لحظةَ التأكيد (قرارُ المالك
+// ٢٠٢٦-١١-٢٣: «اذا فاتح او مسكر يظل الموقع المباشر شغال») **والتطبيقُ أمام صاحبه**، فتبقى
+// تعمل بالخلفية بإذن «أثناء الاستخدام». **ولا تُكتب نقطتُها**: لا كابتنَ يراها بعد.
+var liveEarlyStatuses = []string{StPending, StAccepted, StPreparing, StDispatching}
+
+// ErrLiveNotYet **الطلبُ لم يُسنَد بعد** — «انتظر» لا «انتهى»: **الهاتفُ يُبقي المشاركةَ
+// قائمةً** ويرسل حين يقبله كابتن. **والنسخُ القديمةُ لا تراه** — تبدأ بالطريق وحدَه.
+var ErrLiveNotYet = httpx.NewError(http.StatusConflict,
+	"live_location_not_yet", "errors.live_location_inactive")
+
 // LivePoint **آخرُ ما أرسله الزبون** — كما يصل السائقَ والمكتب.
 type LivePoint struct {
 	Lat       float64  `json:"lat"`
@@ -156,15 +166,20 @@ func (s *Service) SaveLiveFrom(ctx context.Context, orderID, customerID string,
 // liveRefusal **لماذا لم يُكتب** — **طلبُ غيره لا يُعرَف أنّه موجود** (٤٠٤)،
 // وطلبُه خارجَ طريقه «ليس في طريقه» (٤٠٩).
 func (s *Service) liveRefusal(ctx context.Context, orderID, customerID string) error {
-	var mine bool
+	var mine, early bool
 	err := s.db.QueryRow(ctx,
-		`SELECT customer_id = $2::uuid FROM orders WHERE id = $1::uuid`,
-		orderID, customerID).Scan(&mine)
+		`SELECT customer_id = $2::uuid,
+		        closed_at IS NULL AND status = ANY($3::text[]) AND kind = ANY($4::text[])
+		   FROM orders WHERE id = $1::uuid`,
+		orderID, customerID, liveEarlyStatuses, liveKinds).Scan(&mine, &early)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !mine) {
 		return httpx.ErrNotFound
 	}
 	if err != nil {
 		return err
+	}
+	if early {
+		return ErrLiveNotYet
 	}
 	return ErrLiveInactive
 }

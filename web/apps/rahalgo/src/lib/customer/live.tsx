@@ -8,7 +8,7 @@
  * (مرآةُ `LiveShare.kt` و`LiveSendFilter.kt` و`LiveShareService.kt`.)
  *
  * **دبابيسُ الخريطة في الرقّة كثيراً ما تخطئ** — فيقف الكابتنُ بعيداً.
- * **فحين يصير الطلبُ «بالطريق» يُسأل الزبونُ مرّةً لكلّ طلب**، ومن شارك
+ * **فمن لحظة تأكيد الطلب يُسأل الزبونُ مرّةً لكلّ طلب** (٢٠٢٦-١١-٢٣)، ومن شارك
  * أرسل متصفّحُه موقعَه **بإيقاع التطبيق نفسِه**:
  *
  *   - **الدقيقُ يُرسَل** — دقّتُه دون حدّ اللوحة
@@ -19,8 +19,8 @@
  *     (المتصفّحُ لا يُبلغ عن جهازٍ ساكن، والتطبيقُ يسأل كلَّ عشر).
  *
  * **وتقف وحدَها**: وصل الطلبُ أو انتهى (`live_location_inactive`)، أو مضت
- * خمسٌ وأربعون دقيقة، أو ضغط «وقّف المشاركة». **ولا تعود بلا ضغطةٍ منه** —
- * من أغلق الصفحةَ انتهت مشاركتُه، **والمتصفّحُ لا يشارك إلّا والصفحةُ مفتوحة.**
+ * ثلاثُ ساعات، أو ضغط «وقّف المشاركة». **ومن أغلق الصفحةَ عادت حين يفتحها** ما لم
+ * يوقفها بيده، **والمتصفّحُ لا يشارك إلّا والصفحةُ مفتوحة.**
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -36,12 +36,36 @@ export const FALLBACK_MS = 30_000;
 export const MIN_GAP_MS = 8_000;
 /** **إيقاعُ التطبيق** — يُعاد آخرُ ما قُرئ كلَّ عشر ثوانٍ. */
 export const SEND_EVERY_MS = 10_000;
-/** **سقفُ المشاركة** — خمسٌ وأربعون دقيقة. */
-export const MAX_SHARE_MS = 45 * 60 * 1000;
-/** **متى يُسأل** — «بالطريق» وحدَها. */
-export const ASK_STATUS = "on_the_way";
+/**
+ * **سقفُ المشاركة** — ثلاثُ ساعات: **صارت تبدأ لحظةَ التأكيد** (قرارُ المالك ٢٠٢٦-١١-٢٣:
+ * «اذا فاتح او مسكر يظل الموقع المباشر شغال»، مرآةُ `LiveShareService.MAX_SHARE_MS`).
+ */
+export const MAX_SHARE_MS = 3 * 60 * 60 * 1000;
+/** **قبل أن يقبله كابتن** — تبدأ المشاركةُ فيها ولا تُكتب نقطتُها (مرآةُ `EARLY_STATUSES`). */
+export const EARLY_STATUSES = new Set(["pending", "accepted", "preparing", "dispatching"]);
+/** **من التأكيد إلى الباب** — ما دامت المشاركةُ تعمل. */
+export const RUN_STATUSES = new Set([...EARLY_STATUSES, ...LIVE_STATUSES]);
+
+function liveKind(o: MyOrder): boolean {
+  return !o.kind || o.kind === "standard" || o.kind === "custom";
+}
+
+/** **أمبكّرٌ هو؟** — «السائق في الطريق» كذبٌ قبل أن يُسند. */
+export function isEarly(o: MyOrder): boolean {
+  return EARLY_STATUSES.has(o.status);
+}
+
+/**
+ * **أيُّ طلبٍ تبدأ مشاركتُه تلقائيّاً** — جارٍ ولم يوقفها صاحبُه بيده، **ولو قُرّر من قبل**:
+ * من أغلق الصفحةَ عادت مشاركتُه حين يفتحها (مرآةُ `LiveSharePolicy.autoStart`).
+ */
+export function autoStartOrder(open: MyOrder[], stopped: string[], activeId: string): MyOrder | null {
+  if (activeId) return null;
+  return open.find((o) => RUN_STATUSES.has(o.status) && liveKind(o) && !stopped.includes(o.id)) ?? null;
+}
 
 const DECIDED_KEY = "rahalgo_live_decided";
+const STOPPED_KEY = "rahalgo_live_user_stopped";
 const AUTO_KEY = "rahalgo_live_auto";
 
 /**
@@ -120,7 +144,7 @@ export function requestKey(o: MyOrder): string {
  */
 export function pendingAsk(open: MyOrder[], decided: string[], activeId: string | null = null): MyOrder | null {
   return (
-    open.find((o) => o.status === ASK_STATUS && !decided.includes(o.id)) ??
+    open.find((o) => RUN_STATUSES.has(o.status) && liveKind(o) && !decided.includes(o.id)) ??
     open.find(
       (o) => !!o.live_requested_at && LIVE_STATUSES.has(o.status) && !decided.includes(requestKey(o)) && activeId !== o.id,
     ) ??
@@ -235,6 +259,12 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
       teardown();
       setActiveId("");
       if (reason === "denied") setProblem("denied");
+      /* **إيقافٌ بيده لا يعود تلقائيّاً** لهذا الطلب (٢٠٢٦-١١-٢٣). */
+      if (reason === "user" && id) {
+        const cur = readJSON<string[]>(STOPPED_KEY, []);
+        const list = Array.isArray(cur) ? cur.filter((x) => typeof x === "string" && x !== id) : [];
+        writeJSON(STOPPED_KEY, [...list, id].slice(-MAX_REMEMBERED));
+      }
       /* **ويُمحى موقعُه في المحرّك** فيعود الكابتنُ إلى الدبّوس — **إلّا إن
          قال المحرّكُ إنّ الطلبَ ليس في طريقه**: محاه أصلاً. */
       if (id && reason !== "inactive") {
@@ -261,6 +291,7 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
         })
         .catch((err) => {
           const code = (err as { body?: { code?: string } })?.body?.code;
+          /* **ولم يُسند بعد** (`live_location_not_yet`) — تبقى وتنتظر كابتناً. */
           if (code === "live_location_inactive" || code === "not_found") stop("inactive");
           /* **والشبكةُ تسقط في الشارع** — والنقطةُ التاليةُ تحلّ محلّها. */
         });
@@ -348,10 +379,11 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [arm]);
 
-  /* **والمشاركةُ التلقائيّة** — طلبٌ «بالطريق» لم يُقرَّر فيه والتفضيلُ مفعّل: تبدأ بلا سؤال. */
+  /* **والمشاركةُ التلقائيّة** — من لحظة التأكيد، **وتعود كلّما فُتحت الصفحة** ما لم يوقفها بيده. */
   useEffect(() => {
     if (!decidedReady || activeId || !open || !liveAutoOn()) return;
-    const o = pendingAsk(open, decided);
+    const stopped = readJSON<string[]>(STOPPED_KEY, []);
+    const o = autoStartOrder(open, Array.isArray(stopped) ? stopped : [], activeId);
     if (!o) return;
     decideOrder(decide, o);
     start(o.id);
@@ -361,7 +393,7 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
   useEffect(() => {
     if (!activeId || !open) return;
     const o = open.find((x) => x.id === activeId);
-    if (!o || !LIVE_STATUSES.has(o.status)) stop("ended");
+    if (!o || !RUN_STATUSES.has(o.status)) stop("ended");
   }, [open, activeId, stop]);
 
   useEffect(() => teardown, [teardown]);

@@ -26,10 +26,37 @@ class LiveSharePolicyTest {
     }
 
     @Test
-    fun `does not ask before or after on the way`() {
+    fun `asks from confirmation to the door and never after`() {
+        // **يُسأل لحظةَ التأكيد** (قرارُ المالك ٢٠٢٦-١١-٢٣) — وهو في التطبيق.
         for (st in listOf("pending", "accepted", "preparing", "dispatching", "assigned", "at_pickup", "picked_up", "at_dropoff")) {
+            assertEquals(st, "a", LiveSharePolicy.pending(listOf(o("a", status = st)), emptyList())?.id)
+        }
+        for (st in listOf("delivered", "cancelled", "rejected", "failed")) {
             assertNull(st, LiveSharePolicy.pending(listOf(o("a", status = st)), emptyList()))
         }
+    }
+
+    /**
+     * **تبدأ تلقائيّاً وتعود كلّما فُتح التطبيق** (٢٠٢٦-١١-٢٣: «اذا فاتح او مسكر يظل الموقع
+     * المباشر شغال») — **ولو قُرّر من قبل**، **إلّا ما أوقفه صاحبُه بيده**، ومشاركةٌ واحدة.
+     */
+    @Test
+    fun `auto start resumes after a kill unless the customer stopped it`() {
+        val a = o("a", status = "pending")
+        assertEquals("a", LiveSharePolicy.autoStart(listOf(a), emptyList(), null)?.id)
+        // **قتلُ النظام لا يُنسي** — ما زال يبدأ ولو كان مقرَّراً.
+        assertEquals("a", LiveSharePolicy.autoStart(listOf(a.copy(status = "on_the_way")), emptyList(), null)?.id)
+        assertNull(LiveSharePolicy.autoStart(listOf(a), listOf("a"), null))
+        assertNull(LiveSharePolicy.autoStart(listOf(a), emptyList(), "b"))
+        assertNull(LiveSharePolicy.autoStart(listOf(a.copy(status = "delivered")), emptyList(), null))
+        assertNull(LiveSharePolicy.autoStart(listOf(o("m", kind = "merchant_delivery")), emptyList(), null))
+    }
+
+    @Test
+    fun `sharing keeps running before a captain accepts`() {
+        assertTrue(LiveSharePolicy.keepSharing("a", listOf(o("a", status = "dispatching"))))
+        assertTrue(LiveSharePolicy.early(o("a", status = "preparing")))
+        assertFalse(LiveSharePolicy.early(o("a", status = "on_the_way")))
     }
 
     @Test

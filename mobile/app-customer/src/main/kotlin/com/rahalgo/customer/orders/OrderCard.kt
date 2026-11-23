@@ -314,7 +314,7 @@ fun OrderCard(
                     modifier = Modifier.weight(1f),
                 )
                 RahalTextButton(
-                    onClick = { com.rahalgo.customer.live.LiveShare.stop(liveCtx) },
+                    onClick = { com.rahalgo.customer.live.LiveShare.userStop(liveCtx, order.id) },
                     tone = Tone.Danger,
                 ) { Text(stringResource(R.string.live_stop)) }
             }

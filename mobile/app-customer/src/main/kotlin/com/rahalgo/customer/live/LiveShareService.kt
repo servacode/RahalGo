@@ -67,6 +67,9 @@ class LiveShareService : Service() {
     private var deadline: Job? = null
     private var stopping = false
 
+    /** **ينتظر أن يُسند الطلب** — يبدأ هكذا، **وأوّلُ نقطةٍ تُقبل تُنهيه.** */
+    private var waiting = true
+
     private val callback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             val point = result.lastLocation ?: return
@@ -78,6 +81,8 @@ class LiveShareService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            // **زرُّ الإشعار إيقافٌ بيده** — فلا تعود تلقائيّاً لهذا الطلب (٢٠٢٦-١١-٢٣).
+            orderId?.let { LiveStopped.add(this, it) }
             finish(clearServer = true)
             return START_NOT_STICKY
         }
@@ -93,21 +98,34 @@ class LiveShareService : Service() {
         orderId = id
         stopping = false
         LiveShare.activeOrderId = id
+        waiting = false
         request()
         deadline?.cancel()
         deadline = scope.launch {
             delay(MAX_SHARE_MS)
-            Log.i(TAG, "خمسٌ وأربعون دقيقة — تقف المشاركة")
+            Log.i(TAG, "ثلاثُ ساعات — تقف المشاركة")
             finish(clearServer = true)
         }
-        // **ولا تُعاد إن قتلها النظام** — المشاركةُ بإذنِ ضغطةٍ لا تُستأنف بلاها.
-        return START_NOT_STICKY
+        // **وتُعاد إن قتلها النظام** (قرارُ المالك ٢٠٢٦-١١-٢٣: «اذا فاتح او مسكر يظل
+        // الموقع المباشر شغال») — **حيث يسمح أندرويد**؛ وإن ردّها وقفت بسلام
+        // (`startForegroundSafely`) **وعادت حين يفتح التطبيق** (`LiveSharePolicy.autoStart`).
+        return START_REDELIVER_INTENT
     }
 
+    /**
+     * **قبل الإسناد قراءةٌ أهدأ** — كلَّ ثلاثين ثانيةً بدقّةٍ متوسّطة: لا كابتنَ يراها بعد،
+     * **والبطاريّةُ لا تُستنزف ساعةً والمطعمُ يحضّر.** وأوّلُ نقطةٍ تُقبل تعيدها عشراً.
+     */
     private fun request() {
-        val req = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, SEND_EVERY_MS)
-            .setMinUpdateIntervalMillis(SEND_EVERY_MS / 2)
-            .build()
+        val req = if (waiting) {
+            LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, WAIT_EVERY_MS)
+                .setMinUpdateIntervalMillis(WAIT_EVERY_MS / 2)
+                .build()
+        } else {
+            LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, SEND_EVERY_MS)
+                .setMinUpdateIntervalMillis(SEND_EVERY_MS / 2)
+                .build()
+        }
         try {
             client.removeLocationUpdates(callback)
             client.requestLocationUpdates(req, callback, Looper.getMainLooper())
@@ -125,6 +143,11 @@ class LiveShareService : Service() {
     private fun send(lat: Double, lng: Double, accuracyM: Double?) {
         val id = orderId ?: return
         if (stopping) return
+        // **والانتظارُ يسأل المحرّكَ بالقراءة كما هي** — لا مرشّحَ يحبسها: السؤالُ «أأُسند؟».
+        if (waiting) {
+            scope.launch { probe(id, lat, lng, accuracyM) }
+            return
+        }
         val pick = filter.offer(
             LiveSendFilter.Reading(lat, lng, accuracyM, SystemClock.elapsedRealtime()),
         ) ?: return
@@ -134,6 +157,16 @@ class LiveShareService : Service() {
                 api.shareLive(id, pick.lat, pick.lng, pick.accuracyM)
                     ?.let { filter.maxAccuracyM = it.toDouble() }
             } catch (e: ApiClient.ApiException) {
+                // **ولم يُسند بعد** (أُعيد للتوزيع مثلاً) — **تبقى وتنتظر بهدوء.**
+                if (e.body.code == "live_location_not_yet") {
+                    withContext(Dispatchers.Main) {
+                        if (!stopping && !waiting) {
+                            waiting = true
+                            request()
+                        }
+                    }
+                    return@launch
+                }
                 // **والطلبُ وصل أو انتهى أو ليس له** — تقف بلا محوٍ: المحرّكُ محاه أصلاً.
                 if (e.body.code == "live_location_inactive" || e.body.code == "not_found") {
                     Log.i(TAG, "الطلبُ ليس في طريقه — تقف المشاركة")
@@ -145,6 +178,25 @@ class LiveShareService : Service() {
                 // **والشبكةُ تسقط في الشارع** — والنقطةُ التالية بعد عشر ثوانٍ تحلّ محلّها.
                 Log.d(TAG, "لم تصل نقطةُ الموقع", e)
             }
+        }
+    }
+
+    /** **أأُسند الطلب؟** — نقطةٌ تُقبل تعني نعم فتعود القراءةُ دقيقةً كلَّ عشر ثوانٍ. */
+    private suspend fun probe(id: String, lat: Double, lng: Double, accuracyM: Double?) {
+        try {
+            api.shareLive(id, lat, lng, accuracyM)?.let { filter.maxAccuracyM = it.toDouble() }
+            withContext(Dispatchers.Main) {
+                if (!stopping && waiting) {
+                    waiting = false
+                    request()
+                }
+            }
+        } catch (e: ApiClient.ApiException) {
+            if (e.body.code == "live_location_inactive" || e.body.code == "not_found") finish(clearServer = false)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.d(TAG, "لم يصل سؤالُ الإسناد", e)
         }
     }
 
@@ -230,7 +282,13 @@ class LiveShareService : Service() {
         /** **كلَّ عشر ثوانٍ** — قرارُ المالك. */
         const val SEND_EVERY_MS = 10_000L
 
-        /** **خمسٌ وأربعون دقيقةً ثمّ تقف** — قرارُ المالك. */
-        const val MAX_SHARE_MS = 45 * 60 * 1000L
+        /** **قبل الإسناد: كلَّ ثلاثين ثانية** — لا كابتنَ يراها بعد. */
+        const val WAIT_EVERY_MS = 30_000L
+
+        /**
+         * **ثلاثُ ساعاتٍ ثمّ تقف** — كانت خمساً وأربعين دقيقةً من «بالطريق»، **وصارت تبدأ لحظةَ
+         * التأكيد** (٢٠٢٦-١١-٢٣) والتحضيرُ والتوزيعُ قد يطولان. **والتسليمُ يوقفها قبلها.**
+         */
+        const val MAX_SHARE_MS = 3 * 60 * 60 * 1000L
     }
 }

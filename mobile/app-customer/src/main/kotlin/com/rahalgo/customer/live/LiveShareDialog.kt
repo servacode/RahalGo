@@ -26,17 +26,22 @@ import com.rahalgo.ui.Tone
  */
 @Composable
 fun LiveShareDialog(
+    early: Boolean = false,
     onShare: () -> Unit,
     onDecline: () -> Unit,
 ) {
     com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDecline,
         title = {
-            Text(stringResource(R.string.live_ask_title), fontWeight = FontWeight.Bold)
+            // **وقبل أن يُسند «السائق في الطريق» كذب** (٢٠٢٦-١١-٢٣) — يُسأل لحظةَ التأكيد.
+            Text(
+                stringResource(if (early) R.string.live_ask_title_early else R.string.live_ask_title),
+                fontWeight = FontWeight.Bold,
+            )
         },
         text = {
             Text(
-                text = stringResource(R.string.live_ask_body),
+                text = stringResource(if (early) R.string.live_ask_body_early else R.string.live_ask_body),
                 color = Rahal.colors.ink,
                 style = Rahal.type.body,
             )

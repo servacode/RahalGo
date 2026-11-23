@@ -29,8 +29,12 @@ import com.rahalgo.shared.customer.MyOrder
  */
 object LiveSharePolicy {
 
-    /** **متى يُسأل** — «بالطريق» وحدَها: الكابتنُ استلم وهو آتٍ إليه. */
-    const val ASK_STATUS = "on_the_way"
+    /**
+     * **قبل أن يقبله كابتن** — والمشاركةُ تبدأ فيها (قرارُ المالك ٢٠٢٦-١١-٢٣: «اذا فاتح
+     * او مسكر يظل الموقع المباشر شغال»). **تبدأ والتطبيقُ أمامه لحظةَ التأكيد** فتبقى
+     * تعمل بالخلفية بإذن «أثناء الاستخدام» — **ولا تُرسَل نقطةٌ حتّى يُسند الطلب.**
+     */
+    val EARLY_STATUSES = setOf("pending", "accepted", "preparing", "dispatching")
 
     /**
      * **ما دام الطلبُ في واحدةٍ منها فالمشاركةُ قائمة** — كما يقبلها المحرّك
@@ -38,12 +42,28 @@ object LiveSharePolicy {
      */
     val SHARE_STATUSES = setOf("assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff")
 
+    /** **ما دامت المشاركةُ تعمل** — من التأكيد إلى الباب. */
+    val RUN_STATUSES = EARLY_STATUSES + SHARE_STATUSES
+
+    /** **الطلبُ العاديّ والخاصّ** — كما يقبلها المحرّك (`liveKinds`). */
+    private fun liveKind(o: MyOrder) = o.kind.isEmpty() || o.kind == "standard" || o.kind == "custom"
+
+    /**
+     * **أيُّ طلبٍ تبدأ مشاركتُه تلقائيّاً الآن** — جارٍ، ولم يوقفها صاحبُه بيده، ولا مشاركةَ
+     * قائمة. **ولا يُشترط أنّه لم يُقرَّر**: من قتل النظامُ تطبيقَه عادت مشاركتُه حين يفتحه.
+     */
+    fun autoStart(open: List<MyOrder>, stopped: List<String>, activeId: String?): MyOrder? =
+        if (activeId != null) null
+        else open.firstOrNull { it.status in RUN_STATUSES && liveKind(it) && it.id !in stopped }
+
     /** **كم طلباً يُذكر قرارُه** — والأقدمُ يُنسى، فلا تنمو الذاكرةُ بلا حدّ. */
     const val MAX_REMEMBERED = 50
 
     /** **أوّلُ طلبٍ يُسأل عنه الآن** — بالطريق ولم يُقرَّر فيه. و`null`: لا سؤال. */
     fun pending(open: List<MyOrder>, decided: List<String>): MyOrder? =
-        open.firstOrNull { it.status == ASK_STATUS && it.id !in decided }
+        // **يُسأل لحظةَ التأكيد** (٢٠٢٦-١١-٢٣) — وهو في التطبيق، **لا حين يصير بالطريق**
+        // وقد أغلقه.
+        open.firstOrNull { it.status in RUN_STATUSES && liveKind(it) && it.id !in decided }
             // **وطلبُ السائق يعيد السؤال** (قرارُ المالك ٢٠٢٦-١٠-٢١: «ممكن يرفض اول مرة
             // بالغلط») — كلُّ طلبٍ وقتُه مفتاحٌ جديد، **ومن يشارك الآن لا يُسأل.**
             ?: open.firstOrNull {
@@ -67,7 +87,10 @@ object LiveSharePolicy {
 
     /** **أتبقى المشاركةُ قائمة؟** — طلبُها جارٍ وفي طريقه. */
     fun keepSharing(sharingId: String, open: List<MyOrder>): Boolean =
-        open.any { it.id == sharingId && it.status in SHARE_STATUSES }
+        open.any { it.id == sharingId && it.status in RUN_STATUSES }
+
+    /** **أمبكّرٌ هو؟** — لعنوان النافذة: «السائق في الطريق» كذبٌ قبل أن يُسند. */
+    fun early(o: MyOrder): Boolean = o.status in EARLY_STATUSES
 
     /** **تُحفظ سطراً واحداً بترتيبها** — `StringSet` لا ترتيبَ لها فلا يُعرف الأقدم. */
     fun encode(decided: List<String>): String = decided.joinToString(",")
@@ -98,6 +121,14 @@ object LiveShare {
         runCatching { context.startForegroundService(intent) }
     }
 
+    /**
+     * **«وقّف المشاركة» بيده** — من بطاقة الطلب أو الإشعار، **فلا تعود تلقائيّاً لهذا الطلب.**
+     */
+    fun userStop(context: Context, orderId: String? = activeOrderId) {
+        if (orderId != null) LiveStopped.add(context, orderId)
+        stop(context)
+    }
+
     /** **«وقّف المشاركة»** — تُمحى النقطةُ في المحرّك فيعود الكابتنُ إلى الدبّوس. */
     fun stop(context: Context) {
         if (activeOrderId == null) return
@@ -110,5 +141,29 @@ object LiveShare {
     fun stopLocal(context: Context) {
         activeOrderId = null
         runCatching { context.stopService(Intent(context, LiveShareService::class.java)) }
+    }
+}
+
+/**
+ * **الطلباتُ التي أوقف صاحبُها مشاركتَها بيده** — فلا تبدأ تلقائيّاً ثانيةً (٢٠٢٦-١١-٢٣).
+ *
+ * **يكتبها زرُّ البطاقة وزرُّ الإشعار** (الخدمة) — ومحدودةٌ بـ`MAX_REMEMBERED` كالقرارات.
+ */
+object LiveStopped {
+    private const val FILE = "live_share"
+    private const val KEY = "user_stopped"
+
+    fun load(context: Context): List<String> = runCatching {
+        LiveSharePolicy.decode(
+            context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString(KEY, ""),
+        )
+    }.getOrDefault(emptyList())
+
+    fun add(context: Context, orderId: String) {
+        runCatching {
+            val next = LiveSharePolicy.remember(load(context), orderId)
+            context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+                .edit().putString(KEY, LiveSharePolicy.encode(next)).apply()
+        }
     }
 }

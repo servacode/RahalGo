@@ -18,7 +18,7 @@ import { createPortal } from "react-dom";
 import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import { Alert, Button, IconLocation, usePlatform } from "@rahalgo/ui";
 import { useActiveOrders } from "@/lib/customer/active";
-import { COARSE_ACCURACY_M, decideOrder, isAppleMobile, liveAutoOn, pendingAsk, useLiveShare } from "@/lib/customer/live";
+import { COARSE_ACCURACY_M, decideOrder, isAppleMobile, isEarly, liveAutoOn, pendingAsk, useLiveShare } from "@/lib/customer/live";
 import { quotePending } from "./orderParts";
 
 const m = getMessages(defaultLocale);
@@ -44,9 +44,9 @@ export function LiveAsk() {
         className="w-full surface-modal p-5 sm:max-w-md"
       >
         <h2 id="live-t" className="heading-card mb-2">
-          {L.askTitle}
+          {isEarly(o) ? L.askTitleEarly : L.askTitle}
         </h2>
-        <p className="text-sm">{withPlatform(L.askBody, name)}</p>
+        <p className="text-sm">{withPlatform(isEarly(o) ? L.askBodyEarly : L.askBody, name)}</p>
         <p className="mt-2 text-xs text-ink-muted">{L.browserNote}</p>
         <div className="mt-4 flex flex-col gap-2">
           <button
