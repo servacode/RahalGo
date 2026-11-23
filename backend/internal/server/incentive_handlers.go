@@ -289,7 +289,7 @@ func (s *Server) notifyIncentive(ctx context.Context, x incentives.Request) {
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: x.UserID, Kind: notifications.KindWallet,
 		Title:  title,
-		Body:   strconv.FormatInt(x.Amount, 10) + " " + currencyWord + " — " + x.Note,
+		Body:   fmtMoneyAr(x.Amount) + " — السبب: " + x.Note,
 		Entity: "wallet", Href: "/portal/wallet",
 		Apps: []string{notifications.AppDriver, notifications.AppRep},
 	})

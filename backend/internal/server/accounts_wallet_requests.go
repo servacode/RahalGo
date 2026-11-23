@@ -373,13 +373,10 @@ func (s *Server) decideWalletRequestTx(ctx context.Context, q dbtx.Querier, r *h
 func (s *Server) afterWalletDecision(r *http.Request, wr walletRequestRow, approve bool,
 	note string, debtPaid int64) {
 	if approve {
-		title := notifTitles.walletCredit
-		if wr.Debit {
-			title = notifTitles.walletDebit
-		}
 		s.notify.Notify(r.Context(), notifications.Input{
 			UserID: wr.UserID, Kind: notifications.KindWallet,
-			Title: title, Body: wr.Note, Entity: "wallet", Href: "/portal/wallet",
+			Title: walletDecisionTitle(wr), Body: walletDecisionBody(wr),
+			Entity: "wallet", Href: "/portal/wallet",
 		})
 		if debtPaid > 0 {
 			s.notify.Notify(r.Context(), notifications.Input{
@@ -412,6 +409,27 @@ func (s *Server) afterWalletDecision(r *http.Request, wr walletRequestRow, appro
 		})
 	}
 	s.touch("wallet", "ops")
+}
+
+// walletDecisionTitle وwalletDecisionBody **إشعارُ حركة المحفظة يقول قدّيش وليش** (بلاغُ المالك
+// ٢٠٢٦-١١-٢٣: «خصمت من المحفظة 5000 يقلي خصم 0 … لازم يعطني ليش انخصم وشقد») — كان المتنُ
+// الملاحظةَ وحدَها بلا مبلغ.
+func walletDecisionTitle(wr walletRequestRow) string {
+	if wr.Debit {
+		return notifTitles.walletDebit
+	}
+	return notifTitles.walletCredit
+}
+
+func walletDecisionBody(wr walletRequestRow) string {
+	body := "انضاف " + fmtMoneyAr(wr.Amount) + " لمحفظتك"
+	if wr.Debit {
+		body = "انخصم " + fmtMoneyAr(wr.Amount) + " من محفظتك"
+	}
+	if reason := strings.TrimSpace(wr.Note); reason != "" {
+		body += " — السبب: " + reason
+	}
+	return body
 }
 
 // postWalletRequest **القيدُ بطرفين** — داخلَ معاملة الموافقة.
