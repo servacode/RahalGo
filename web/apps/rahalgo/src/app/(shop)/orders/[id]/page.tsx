@@ -265,6 +265,14 @@ export default function OrderPage() {
                 </span>
               </Row>
             )}
+            {(order.prize_discount ?? 0) > 0 && (
+              <Row label={m.shop.prizes.fromPrize}>
+                <span className="text-success">
+                  {"− "}
+                  <Money value={order.prize_discount ?? 0} />
+                </span>
+              </Row>
+            )}
             <div className="flex justify-between border-t border-line-soft pt-2 font-bold">
               <span>{O.total}</span>
               <Money value={order.total} className="text-accent-text" />

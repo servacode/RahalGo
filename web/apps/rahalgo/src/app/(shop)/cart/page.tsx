@@ -608,6 +608,15 @@ export default function CartPage() {
                     </span>
                   </div>
                 )}
+                {(priced?.prize_discount ?? 0) > 0 && (
+                  <div className="flex justify-between text-success">
+                    <span>{m.shop.prizes.fromPrize}</span>
+                    <span>
+                      {"− "}
+                      <Money value={priced?.prize_discount ?? 0} />
+                    </span>
+                  </div>
+                )}
                 {/* **والإجماليُّ مرّةً واحدة — في الشريط الثابت جنب «أرسل الطلب»** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
               </>
             )}
