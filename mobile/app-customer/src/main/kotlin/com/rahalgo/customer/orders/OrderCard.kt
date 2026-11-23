@@ -371,6 +371,9 @@ fun OrderCard(
             if (order.discount > 0) {
                 KeyValue(stringResource(R.string.ord_discount), "-" + money(order.discount))
             }
+            if (order.prizeDiscount > 0) {
+                KeyValue(stringResource(R.string.ord_prize_discount), "-" + money(order.prizeDiscount))
+            }
             // **والإجماليُّ برقمٍ كبيرٍ تحت خطّ** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — كان سطراً عاديّاً.
             Spacer(Modifier.height(Rahal.space.xs))
             RahalDivider()
@@ -955,6 +958,13 @@ internal fun InvoiceTable(order: MyOrder) {
             com.rahalgo.ui.InvoiceRow(
                 stringResource(R.string.ord_discount),
                 "-" + money(order.discount),
+                amountColor = Rahal.colors.success,
+            )
+        }
+        if (order.prizeDiscount > 0) {
+            com.rahalgo.ui.InvoiceRow(
+                stringResource(R.string.ord_prize_discount),
+                "-" + money(order.prizeDiscount),
                 amountColor = Rahal.colors.success,
             )
         }

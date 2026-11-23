@@ -34,6 +34,8 @@ object CustomerItems {
     const val OFFERS = "Offers"
     const val INVITE = "Invite"
     const val TICKETS = "Tickets"
+    /** **جوائز رحّال غو** (٢٠٢٦-١١-٢٣) — شاشةٌ من القائمة وزرُّ الهديّة في السوق. */
+    const val PRIZES = "Prizes"
     /** **شرحُ التطبيق بالفيديو** — يظهر حين يُنشر رابطُه فقط (٢٠٢٦-١٠-٠٩). */
     const val TUTORIAL = "Tutorial"
 }
@@ -72,6 +74,7 @@ val CUSTOMER_ITEMS: List<DrawerItem> = listOf(
     DrawerItem(CustomerItems.OFFERS, R.string.menu_mine, R.string.menu_offers, R.drawable.ic_offer),
     DrawerItem(CustomerItems.CHATS, R.string.menu_mine, R.string.menu_chats, R.drawable.ic_chat),
     DrawerItem(CustomerItems.INVITE, R.string.menu_mine, R.string.menu_invite, R.drawable.ic_invite),
+    DrawerItem(CustomerItems.PRIZES, R.string.menu_mine, com.rahalgo.customer.R.string.prizes_title, com.rahalgo.customer.R.drawable.ic_gift),
     DrawerItem(CustomerItems.TICKETS, R.string.menu_mine, R.string.menu_tickets, R.drawable.ic_warning),
 )
 

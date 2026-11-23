@@ -83,6 +83,8 @@ import com.rahalgo.map.PickPoint
 import com.rahalgo.map.PickPointViewModel
 import org.maplibre.android.geometry.LatLng
 import com.rahalgo.customer.shop.ShopScreen
+import com.rahalgo.customer.prizes.PrizesScreen
+import com.rahalgo.customer.prizes.PrizesViewModel
 import com.rahalgo.customer.shop.ShopViewModel
 import com.rahalgo.customer.orders.OrdersScreen
 import com.rahalgo.customer.orders.RateDialog
@@ -376,6 +378,9 @@ private fun SignedIn(
     val accountVm: AccountViewModel = viewModel()
     val pickVm: PickPointViewModel = viewModel()
     val shopVm: ShopViewModel = viewModel()
+    // **جوائز رحّال غو** — واحدٌ للتطبيق: شارةُ زرّ الهديّة في السوق وشاشتُها تقرآن حالاً واحدة.
+    val prizesVm: PrizesViewModel = viewModel()
+    LaunchedEffect(guest) { if (guest) prizesVm.reset() else prizesVm.load() }
     val ordersVm: OrdersViewModel = viewModel()
     val customVm: CustomViewModel = viewModel()
     val mineVm: MineViewModel = viewModel()
@@ -998,6 +1003,11 @@ private fun SignedIn(
                             HistoryScreen(ordersVm, onOpenCart = { overlay.clear(); tab = Tab.Cart })
                         }
 
+                    over is Overlay.Menu && over.key == CustomerItems.PRIZES ->
+                        OverlayPage(menuTitle(over.key), onBack = { overlay.clear() }) {
+                            PrizesScreen(prizesVm)
+                        }
+
                     over is Overlay.Menu && over.key == CustomerItems.CHATS -> {
                         androidx.compose.runtime.LaunchedEffect(Unit) { chatsVm.load() }
                         OverlayPage(menuTitle(over.key), onBack = { overlay.clear() }) {
@@ -1124,6 +1134,11 @@ private fun SignedIn(
                         },
                         // **المدنُ الفعّالة** (Batch 3c) — لاستعراضِ سوقِ المدينةِ الرائدة.
                         cities = citiesVm.cities,
+                        // **زرُّ الهديّة** — والضيفُ يُساق إلى الدخول كباقي ما يخصّ الحساب.
+                        prizeBadge = if (guest) null else prizesVm.badge,
+                        onOpenPrizes = {
+                            if (guest) askLogin() else overlay.show(Overlay.Menu(CustomerItems.PRIZES))
+                        },
                     )
 
                     // ══════════════════════════════════════════════
