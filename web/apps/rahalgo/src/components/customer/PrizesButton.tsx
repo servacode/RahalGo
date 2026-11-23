@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * **زرُّ الجوائز في رأس السوق** — هديّةٌ بجانب البحث وشارةُ «٣/٥»، تُخفى قبل الإطلاق.
+ * **زرُّ الجوائز في رأس السوق** — هديّةٌ بجانب البحث وشارةُ «٣/٥».
+ * **والزرُّ يُرى قبل الإطلاق** (قرارُ المالك ٢٠٢٦-١١-٢٣) ليفتح «انتظرونا ١/١٢»؛ والشارةُ وحدَها تُخفى.
  * **والنبضةُ في CSS** (`.shop-prize-badge`) وتُعاد بتبديل `key` الشارة عند تغيّر العدد.
  */
 
@@ -16,21 +17,24 @@ const P = getMessages(defaultLocale).shop.prizes;
 
 export function PrizesButton() {
   const { me } = usePrizesMe();
-  if (!me || !prizesLive(me)) return null;
+  if (!me) return null;
+  const live = prizesLive(me);
   const text = badgeText(me);
   const { done, total } = progressInEntry(me);
   return (
     <Link
       href="/shop/prizes"
       className="shop-iconbtn"
-      aria-label={fill(P.badgeLabel, { n: String(done), t: String(total) })}
+      aria-label={live ? fill(P.badgeLabel, { n: String(done), t: String(total) }) : P.title}
       title={P.title}
       data-testid="prizes-button"
     >
       <IconCatGifts size={20} />
-      <i key={text} className="shop-prize-badge" dir="ltr">
-        {text}
-      </i>
+      {live && (
+        <i key={text} className="shop-prize-badge" dir="ltr">
+          {text}
+        </i>
+      )}
     </Link>
   );
 }

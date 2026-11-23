@@ -577,6 +577,14 @@ fun CartScreen(
                 if (extra > 0) {
                     KeyValue(stringResource(R.string.src_fee_line), money(extra))
                 }
+                // **ورصيدُ الجوائز سطرٌ وحدَه** (٢٠٢٦-١١-٢٣) — والإجماليُّ من المحرّك بعده.
+                if (q.prizeDiscount > 0) {
+                    KeyValue(
+                        stringResource(R.string.ord_prize_discount),
+                        "− " + money(q.prizeDiscount),
+                        valueColor = Rahal.colors.success,
+                    )
+                }
                 if (cut != null && cut.discount > 0) {
                     KeyValue(
                         stringResource(R.string.ord_discount),
