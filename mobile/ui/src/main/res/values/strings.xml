@@ -74,6 +74,7 @@
     <string name="err_not_driver">هذا الحساب ليس حساب سائق</string>
     <string name="err_not_on_shift">ورديتك مغلقة — افتحها أولا</string>
     <string name="err_not_your_order">هذا الطلب ليس لك</string>
+    <string name="acc_settings">الإعدادات</string>
     <string name="err_live_location_inactive">الطلب ليس في الطريق حالياً — لا توجد مشاركة موقع</string>
     <string name="err_live_location_not_yet">لم يقبل السائق طلبك بعد — تبدأ مشاركة موقعك حين يقبله</string>
     <string name="err_prize_mixed">أصناف الجوائز ما بتنخلط مع أصناف متجر تاني بنفس الطلب</string>

@@ -160,6 +160,11 @@ fun AccountScreen(
      * عند الزبون والسائق والمتجر والوكيل»).
      */
     profileHeader: Boolean = true,
+    /**
+     * **إعداداتُ التطبيق نفسِه** — بطاقةٌ قبل الخطر، أو فارغ (قرارُ المالك ٢٠٢٦-١١-٢٤:
+     * «شارك موقعي ننقلو بالاعدادات ونشيلو من العنوان مشان ماحدا يطفي بالغلط»).
+     */
+    settings: (@Composable () -> Unit)? = null,
 ) {
     val s = vm.state
 
@@ -213,6 +218,13 @@ fun AccountScreen(
         //
         // **والبابُ في المحرّك باقٍ** — يُنادى من لوحة الإدارة يومَ
         // يُشكّ في جهاز.
+        if (settings != null) {
+            RahalCard {
+                SectionTitle(stringResource(R.string.acc_settings))
+                settings()
+            }
+            Gap()
+        }
         // **والخطرُ آخرا** — بأمر المالك.
         RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Danger) { DangerSection(vm, s) }
         Spacer(Modifier.height(Rahal.space.xl))

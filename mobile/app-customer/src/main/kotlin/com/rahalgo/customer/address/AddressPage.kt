@@ -22,7 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,7 +38,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rahalgo.customer.R
-import com.rahalgo.customer.live.LiveAuto
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.model.Address
 import com.rahalgo.shared.model.TextLimits
@@ -76,7 +74,6 @@ fun AddressPage(
     var kind by rememberSaveable(existing?.id) { mutableStateOf(existing?.kind ?: "home") }
     var lat by rememberSaveable(existing?.id) { mutableStateOf(existing?.lat) }
     var lng by rememberSaveable(existing?.id) { mutableStateOf(existing?.lng) }
-    LaunchedEffect(Unit) { LiveAuto.load(context) }
 
     BackHandler { onDone() }
 
@@ -124,7 +121,16 @@ fun AddressPage(
             minLines = 2,
         )
 
-        // ── ٢ و٣ · الخريطةُ و«حدّد موقعي بدقة» ──
+        // ── ٢ · النوع ── قبل الخريطة (قرارُ المالك ٢٠٢٦-١١-٢٤: «اول شي العنوان التفصيلي
+        // بعدها يختار منزل او العمل وبعدها الخريطة وبعدا حفظ»).
+        com.rahalgo.ui.SectionHeader(stringResource(com.rahalgo.ui.R.string.addr_kind))
+        Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+            KindChip("home", com.rahalgo.ui.R.drawable.ic_home, kind == "home", Modifier.weight(1f)) { kind = "home" }
+            KindChip("work", com.rahalgo.ui.R.drawable.ic_work, kind == "work", Modifier.weight(1f)) { kind = "work" }
+            KindChip("other", com.rahalgo.ui.R.drawable.ic_star, kind == "other", Modifier.weight(1f)) { kind = "other" }
+        }
+
+        // ── ٣ · الخريطةُ و«حدّد موقعي بدقة» ──
         Spacer(Modifier.height(Rahal.space.lg))
         com.rahalgo.map.PointMapCard(
             lat = lat,
@@ -141,45 +147,8 @@ fun AddressPage(
             dragHint = com.rahalgo.map.R.string.map_drag_to_set_address,
         )
 
-        // ── ٤ · النوع ──
-        com.rahalgo.ui.SectionHeader(stringResource(com.rahalgo.ui.R.string.addr_kind))
-        Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
-            KindChip("home", com.rahalgo.ui.R.drawable.ic_home, kind == "home", Modifier.weight(1f)) { kind = "home" }
-            KindChip("work", com.rahalgo.ui.R.drawable.ic_work, kind == "work", Modifier.weight(1f)) { kind = "work" }
-            KindChip("other", com.rahalgo.ui.R.drawable.ic_star, kind == "other", Modifier.weight(1f)) { kind = "other" }
-        }
-
-        // ── ٥ · المشاركةُ المباشرة ──
-        Spacer(Modifier.height(Rahal.space.lg))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clip(Rahal.shape.md)
-                .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
-                .clickable { LiveAuto.set(context, !LiveAuto.on) }
-                .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                stringResource(R.string.addrp_live),
-                fontWeight = FontWeight.Medium,
-                style = Rahal.type.body,
-                modifier = Modifier.weight(1f),
-            )
-            // **حالُ المفتاح بالكلمة (تدقيق D18)** — المفتاحُ وحدَه لا يقول «شغّال» أم «واقف» لكلّ العيون.
-            Text(
-                stringResource(if (LiveAuto.on) R.string.addrp_live_on else R.string.addrp_live_off),
-                color = if (LiveAuto.on) Rahal.colors.success else Rahal.colors.inkMuted,
-                fontWeight = FontWeight.Bold,
-                style = Rahal.type.label,
-            )
-            Spacer(Modifier.size(Rahal.space.sm))
-            Switch(
-                checked = LiveAuto.on,
-                onCheckedChange = { LiveAuto.set(context, it) },
-            )
-        }
-
+        // **ومفتاحُ «شارك موقعي» انتقل إلى «حسابي ← الإعدادات»** (قرارُ المالك ٢٠٢٦-١١-٢٤) —
+        // كان هنا فيطفئه من يعدّل عنوانَه بالغلط (`live/LiveAutoSetting.kt`).
         Spacer(Modifier.height(Rahal.space.lg))
     }
     // ── ٦ · الحفظ — في الشريط الثابت ──

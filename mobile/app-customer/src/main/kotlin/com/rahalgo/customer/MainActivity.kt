@@ -1170,6 +1170,7 @@ private fun SignedIn(
 
                     tab == Tab.Account -> AccountScreen(
                         vm = accountVm,
+                        settings = { com.rahalgo.customer.live.LiveAutoSetting() },
                         onLoggedOut = onLogout,
                         // **والزبونُ ليس عاملا** — لا دوامَ له، **وسببُ
                         // توثيقِ واتساب عنده أن يُحفظ حسابُه وتصله

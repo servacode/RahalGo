@@ -13,10 +13,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
+import { liveAutoOn, setLiveAuto } from "@/lib/customer/live";
 import {
   Alert,
   Button,
   FormSection,
+  Switch,
   Input,
   LoadingState,
   Money,
@@ -255,6 +257,11 @@ export default function AccountPage() {
               )}
             </button>
           </FormSection>
+
+          {/* **«شارك موقعي» هنا لا في نافذة العنوان** (قرارُ المالك ٢٠٢٦-١١-٢٤) — كي لا يُطفأ بالغلط. */}
+          <FormSection title={A.settings} icon={<IconLocation />}>
+            <LiveAutoSwitch />
+          </FormSection>
         </div>
         <div className="flex min-w-0 flex-col gap-4">
           <Mine />
@@ -276,5 +283,21 @@ export default function AccountPage() {
       </div>
       <AddressSheet open={addr} onClose={() => setAddr(false)} />
     </div>
+  );
+}
+
+/** **مفتاحُ «شارك موقعي المباشر»** — التفضيلُ نفسُه (`liveAutoOn`)، مرآةُ `LiveAutoSetting.kt`. */
+function LiveAutoSwitch() {
+  const [on, setOn] = useState(true);
+  useEffect(() => setOn(liveAutoOn()), []);
+  return (
+    <Switch
+      checked={on}
+      label={m.shop.address.liveAuto}
+      onChange={(v) => {
+        setOn(v);
+        setLiveAuto(v);
+      }}
+    />
   );
 }

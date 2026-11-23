@@ -14,7 +14,7 @@
  * `mapconfig`) — **ومصدرٌ واحدٌ للبلاطات في الويب كلِّه.**
  */
 
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
   Alert,
@@ -25,7 +25,6 @@ import {
   FormActions,
   LoadingState,
   Sheet,
-  Switch,
   Textarea,
   IconLocation,
   IconCheck,
@@ -35,7 +34,6 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCustomer } from "@/lib/customer/context";
-import { liveAutoOn, setLiveAuto } from "@/lib/customer/live";
 import type { Address } from "@/lib/customer/types";
 import { useShopToast } from "./toast";
 
@@ -81,15 +79,12 @@ function AddressForm({
   );
   const [text, setText] = useState(initialText(initial));
   const [kind, setKind] = useState<string>(initial?.kind || "home");
-  const [live, setLive] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   /* **دقّةُ الدبّوس ومن وضعه** (ملاحظةُ المالك ٢٠٢٦-١١-١٤، آيفون) — دبّوسٌ وضعه الجهازُ بدائرةٍ عريضةٍ
      لا يُحفظ بصمت: **يُنبَّه مرّةً، وضغطةُ «احفظ» الثانية تحفظ** (هو أدرى إن كان في بيته). */
   const [pinAcc, setPinAcc] = useState<{ acc: number | null; manual: boolean }>({ acc: null, manual: !!initial });
   const [coarseWarned, setCoarseWarned] = useState(false);
-
-  useEffect(() => setLive(liveAutoOn()), []);
 
   const save = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -138,22 +133,9 @@ function AddressForm({
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
-      <Suspense fallback={<div className="h-64 w-full animate-pulse rounded-card bg-field" />}>
-        <CenterPinMap
-          lat={pin?.lat ?? null}
-          lng={pin?.lng ?? null}
-          autoLocate={!initial}
-          onMove={(la: number, ln: number) => {
-            setPin({ lat: la, lng: ln });
-            setError("");
-          }}
-          onAccuracy={(acc: number | null, manual: boolean) => {
-            setPinAcc({ acc, manual });
-            setCoarseWarned(false);
-          }}
-        />
-      </Suspense>
-      {/* نوعُ العنوان: رقاقاتٌ ≥٤٨px، والمختارةُ بحدٍّ ٢px وحبرِ التمييز الداكن (`accentInk` في التطبيق). */}
+      {/* نوعُ العنوان قبل الخريطة (قرارُ المالك ٢٠٢٦-١١-٢٤: التفصيليّ ← منزل/عمل ← الخريطة ← حفظ).
+          **و«شارك موقعي» انتقل إلى «حسابي»** كي لا يُطفأ بالغلط هنا (`LiveAutoSetting`). */}
+      {/* رقاقاتٌ ≥٤٨px، والمختارةُ بحدٍّ ٢px وحبرِ التمييز الداكن (`accentInk` في التطبيق). */}
       <div role="radiogroup" aria-label={A.pageTitle} className="flex flex-wrap gap-rg-sm">
         {KINDS.map(([k, label]) => {
           const on = kind === k;
@@ -173,14 +155,21 @@ function AddressForm({
           );
         })}
       </div>
-      <Switch
-        checked={live}
-        label={A.liveAuto}
-        onChange={(on) => {
-          setLive(on);
-          setLiveAuto(on);
-        }}
-      />
+      <Suspense fallback={<div className="h-64 w-full animate-pulse rounded-card bg-field" />}>
+        <CenterPinMap
+          lat={pin?.lat ?? null}
+          lng={pin?.lng ?? null}
+          autoLocate={!initial}
+          onMove={(la: number, ln: number) => {
+            setPin({ lat: la, lng: ln });
+            setError("");
+          }}
+          onAccuracy={(acc: number | null, manual: boolean) => {
+            setPinAcc({ acc, manual });
+            setCoarseWarned(false);
+          }}
+        />
+      </Suspense>
       {error && <Alert>{error}</Alert>}
       {/* «احفظ العنوان» شريطٌ لاصقٌ في أسفل الورقة (مرآةُ `AddressPage.kt`). */}
       <div className="sticky bottom-0 z-10 -mx-1 bg-shell px-1 py-rg-md rg-raised-bar">
