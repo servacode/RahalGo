@@ -464,6 +464,19 @@ class CustomerApi(private val api: ApiClient) {
     /** **رمزُ دعوته ورابطُه وما ناله.** */
     suspend fun referral(): Referral = api.call("/api/v1/auth/referral")
 
+    // ══════════════════════════════════════════════════════════════════
+    // **جوائزُ رحّال غو** — حالُه وأصنافُ الجوائز ورابحو الشهر الماضي
+    // ══════════════════════════════════════════════════════════════════
+
+    /** **حالُه في السحب الشهريّ** — دعواتُه وفرصُه ورصيدُ جوائزه. */
+    suspend fun prizesMe(): PrizesMe = api.call("/api/v1/prizes/me")
+
+    /** **أصنافُ الجوائز** — تُطلب من السلّة العاديّة بمعرّف متجرها. */
+    suspend fun prizeItems(): PrizeItems = api.call("/api/v1/prizes/items")
+
+    /** **رابحو الشهر الماضي** — أسماؤهم ومبالغهم. */
+    suspend fun prizeWinners(): PrizeWinners = api.call("/api/v1/prizes/winners")
+
     /**
      * **أسبابُ الشكوى لهذا الطلب** — مصنّفةٌ لا نصٌّ حرّ.
      *
@@ -805,6 +818,8 @@ data class MyOrder(
     /** **ما أسقطه عرضُ التوصيل المجاني** (٢٠٢٦-١٠-٢٦) — و`deliveryFee` بعده. */
     @SerialName("free_waived") val freeWaived: Long = 0,
     val discount: Long = 0,
+    /** **ما غطّاه رصيدُ الجوائز** (جوائز رحّال غو) — و0 حين لا جائزةَ في الطلب. */
+    @SerialName("prize_discount") val prizeDiscount: Long = 0,
     val total: Long = 0,
     @SerialName("payment_method") val paymentMethod: String = "",
     /**

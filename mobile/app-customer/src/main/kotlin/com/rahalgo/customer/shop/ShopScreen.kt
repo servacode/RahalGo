@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import com.rahalgo.customer.prizes.PrizesButton
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.aspectRatio
@@ -114,6 +115,10 @@ fun ShopScreen(
     onNeedAddress: () -> Unit = {},
     /** **المدنُ الفعّالة** (Batch 3c) — منها تُعرَف المدينةُ الرائدةُ لاستعراض سوقها. */
     cities: List<com.rahalgo.shared.model.City> = emptyList(),
+    /** **شارةُ زرّ الهديّة «٣/٥»** — `null` قبل الافتتاح أو للضيف. */
+    prizeBadge: String? = null,
+    /** **يفتح «جوائز رحّال غو»** — والضيفُ يُساق إلى الدخول. */
+    onOpenPrizes: () -> Unit = {},
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val media = { path: String? -> Backend.of(context).media(path) }
@@ -447,7 +452,7 @@ fun ShopScreen(
 
                 ShopBlock.Strip -> FeaturedStrip(vm.featured, media, vm::openStore)
 
-                ShopBlock.Search ->
+                ShopBlock.Search -> Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         value = vm.query,
                         onValueChange = vm::type,
@@ -477,9 +482,12 @@ fun ShopScreen(
                         shape = Rahal.shape.pill,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+                            .weight(1f)
+                            .padding(start = Rahal.space.md, top = Rahal.space.sm, bottom = Rahal.space.sm),
                     )
+                    // **زرُّ الهديّة بعد البحث** (آخرَ الصفّ، أي يسارَه في RTL).
+                    PrizesButton(prizeBadge, onOpenPrizes)
+                }
             }
         }
 

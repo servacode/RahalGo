@@ -442,4 +442,38 @@
     <plurals name="shop_sale_days"><item quantity="zero">⏳ باقي %1$d يوم</item><item quantity="one">⏳ باقي يوم</item><item quantity="two">⏳ باقي يومين</item><item quantity="few">⏳ باقي %1$d أيام</item><item quantity="many">⏳ باقي %1$d يوم</item><item quantity="other">⏳ باقي %1$d يوم</item></plurals>
     <plurals name="shop_sale_hours"><item quantity="zero">⏳ باقي %1$d ساعة</item><item quantity="one">⏳ باقي ساعة</item><item quantity="two">⏳ باقي ساعتين</item><item quantity="few">⏳ باقي %1$d ساعات</item><item quantity="many">⏳ باقي %1$d ساعة</item><item quantity="other">⏳ باقي %1$d ساعة</item></plurals>
     <plurals name="shop_sale_minutes"><item quantity="zero">⏳ باقي %1$d دقيقة</item><item quantity="one">⏳ باقي دقيقة</item><item quantity="two">⏳ باقي دقيقتين</item><item quantity="few">⏳ باقي %1$d دقائق</item><item quantity="many">⏳ باقي %1$d دقيقة</item><item quantity="other">⏳ باقي %1$d دقيقة</item></plurals>
+
+    <!-- **جوائز رحّال غو** (قرارُ المالك ٢٠٢٦-١١-٢٣) — كلّ خمس دعوات فرصة بسحب شهريّ. -->
+    <string name="prizes_title">جوائز رحّال غو</string>
+    <string name="prizes_open">افتح جوائز رحّال غو</string>
+    <string name="prizes_teaser_wait">انتظرونا %1$s</string>
+    <string name="prizes_teaser_how">كل 5 دعوات = فرصة جديدة بسحب شهري</string>
+    <string name="prizes_teaser_winners">5 رابحين كل شهر</string>
+    <string name="prizes_teaser_use">تستخدم جائزتك في صفحة الهدايا</string>
+    <string name="prizes_teaser_free">وتوصيل طلبات الجوائز مجاني</string>
+    <string name="prizes_ladder_title">جوائز السحب</string>
+    <string name="prizes_ladder_row">المركز %1$d — %2$s</string>
+    <string name="prizes_progress_title">دعواتك هذا الشهر</string>
+    <string name="prizes_progress_line">%1$d من %2$d دعوات للفرصة القادمة</string>
+    <string name="prizes_entries">عدد فرصك بالسحب: %1$d</string>
+    <string name="prizes_to_next">باقيلك %1$d لفرصة جديدة</string>
+    <string name="prizes_share">شارك رابط دعوتك</string>
+    <string name="prizes_draw">السحب %1$s</string>
+    <string name="prizes_balance_title">رصيد جوائزك</string>
+    <string name="prizes_balance_expiry">ينتهي بتاريخ %1$s</string>
+    <string name="prizes_items_within">على قدّ جائزتك</string>
+    <string name="prizes_items_over">بتدفع الفرق</string>
+    <string name="prizes_items_showcase">هدايا الجوائز</string>
+    <string name="prizes_diff">بتدفع %1$s</string>
+    <string name="prizes_covered">من رصيدك</string>
+    <string name="prizes_showcase_hint">اربح بالسحب لتطلب من هون</string>
+    <string name="prizes_add">اطلب</string>
+    <string name="prizes_cart_mixed">في سلتك أصناف من متجر ثاني — أرسلها أو احذفها قبل ما تطلب هدية</string>
+    <string name="prizes_no_store">متجر الجوائز غير جاهز بعد</string>
+    <string name="prizes_winners_title">رابحين الشهر الماضي</string>
+    <string name="prizes_winner_row">%1$d. %2$s — %3$s</string>
+    <string name="prizes_items_empty">ما في هدايا بالوقت الحالي</string>
+    <string name="prizes_items_empty_hint">رح تظهر هون فور إضافتها</string>
+    <string name="prizes_load_failed">تعذّر تحميل الجوائز</string>
+    <string name="ord_prize_discount">من رصيد الجوائز</string>
 </resources>
