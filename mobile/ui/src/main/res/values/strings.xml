@@ -181,7 +181,7 @@
     <string name="login_hide_password">إخفاء كلمة المرور</string>
     <string name="login_password">كلمة المرور</string>
     <string name="login_phone">رقم الهاتف</string>
-    <string name="login_phone_hint">09xxxxxxxx</string>
+    <string name="login_phone_hint">اكتب رقم جوالك</string>
     <string name="login_show_password">إظهار كلمة المرور</string>
     <string name="offer_expired">انتهت مهلتك على هذا الطلب</string>
     <string name="offer_left">بقي %1$s</string>

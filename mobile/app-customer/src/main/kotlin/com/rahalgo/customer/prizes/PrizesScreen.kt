@@ -69,14 +69,16 @@ fun PrizesScreen(vm: PrizesViewModel) {
                     onRetry = vm::load,
                 )
             me == null -> LoadState(vm.loading, vm.error) { vm.load() }
-            vm.teaser -> Teaser(me)
+            vm.teaser -> Teaser(vm, me)
             else -> Active(vm, me)
         }
     }
 }
 
 @Composable
-private fun Teaser(me: PrizesMe) {
+private fun Teaser(vm: PrizesViewModel, me: PrizesMe) {
+    val context = LocalContext.current
+    val media = { path: String? -> Backend.of(context).media(path) }
     LazyColumn(
         Modifier.fillMaxWidth(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(Rahal.space.lg),
@@ -104,40 +106,21 @@ private fun Teaser(me: PrizesMe) {
                 )
             }
         }
-        item {
-            RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Warning, modifier = Modifier.fillMaxWidth()) {
-                for (line in listOf(
-                    R.string.prizes_teaser_how,
-                    R.string.prizes_teaser_winners,
-                    R.string.prizes_teaser_use,
-                    R.string.prizes_teaser_free,
-                )) {
-                    Text(
-                        stringResource(line),
-                        color = Rahal.colors.ink,
-                        style = Rahal.type.body,
-                        modifier = Modifier.padding(vertical = Rahal.space.xs),
-                    )
-                }
+        item { Podium(me.amounts) }
+        item { PrizeRules(me.invitesPerEntry, me.winnersCount.takeIf { it > 0 } ?: me.amounts.size) }
+        // **والهدايا تحتها** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤) — عرضٌ فقط قبل الافتتاح.
+        if (vm.items.isNotEmpty()) {
+            item { SectionHeader(stringResource(R.string.prizes_items_showcase)) }
+            item {
+                Text(
+                    stringResource(R.string.prizes_showcase_hint),
+                    color = Rahal.colors.accentInk,
+                    style = Rahal.type.bodyStrong,
+                )
             }
-        }
-        item { Ladder(me.amounts) }
-    }
-}
-
-@Composable
-private fun Ladder(amounts: List<Long>) {
-    if (amounts.isEmpty()) return
-    RahalCard(modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.prizes_ladder_title), color = Rahal.colors.ink, style = Rahal.type.sectionTitle)
-        Spacer(Modifier.height(Rahal.space.sm))
-        for ((rank, amount) in PrizesLogic.ladder(amounts)) {
-            Text(
-                stringResource(R.string.prizes_ladder_row, rank, money(amount)),
-                color = Rahal.colors.ink,
-                style = Rahal.type.body,
-                modifier = Modifier.padding(vertical = Rahal.space.xxs),
-            )
+            items(vm.items, key = { "t-" + it.id }) { p ->
+                PrizeRow(p, 0L, media, enabled = false, covered = false, onAdd = {})
+            }
         }
     }
 }
@@ -194,7 +177,7 @@ private fun Active(vm: PrizesViewModel, me: PrizesMe) {
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(R.string.prizes_share)) }
         }
-        item { Ladder(me.amounts) }
+        item { Podium(me.amounts) }
         if (me.prizeBalance > 0) item { BalanceCard(me) }
 
         when {
@@ -234,6 +217,7 @@ private fun Active(vm: PrizesViewModel, me: PrizesMe) {
             }
         }
 
+        item { PrizeRules(me.invitesPerEntry, me.winnersCount.takeIf { it > 0 } ?: me.amounts.size) }
         // **ورابحو الشهر الماضي — تُخفى إن لم يكن فيها أحد.**
         if (vm.winners.isNotEmpty()) {
             item { SectionHeader(stringResource(R.string.prizes_winners_title)) }

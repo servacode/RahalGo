@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#B8860B"/>
+      <stop offset="0.25" stop-color="#FFE38A"/>
+      <stop offset="0.5" stop-color="#FFC531"/>
+      <stop offset="0.8" stop-color="#E0A000"/>
+      <stop offset="1" stop-color="#9A6B00"/>
+    </linearGradient>
+    <linearGradient id="gv" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE9A0"/>
+      <stop offset="1" stop-color="#C98A00"/>
+    </linearGradient>
+    <linearGradient id="base" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3A2A1A"/>
+      <stop offset="0.5" stop-color="#6B4A2A"/>
+      <stop offset="1" stop-color="#2A1C10"/>
+    </linearGradient>
+    <radialGradient id="sh" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#000" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="128" cy="236" rx="70" ry="10" fill="url(#sh)"/>
+  <!-- المقبضان -->
+  <path d="M70 62 C26 62 26 120 78 128" fill="none" stroke="url(#gv)" stroke-width="14" stroke-linecap="round"/>
+  <path d="M186 62 C230 62 230 120 178 128" fill="none" stroke="url(#gv)" stroke-width="14" stroke-linecap="round"/>
+  <!-- الكأس -->
+  <path d="M62 40 L194 40 C194 110 168 146 128 150 C88 146 62 110 62 40 Z" fill="url(#g)"/>
+  <ellipse cx="128" cy="40" rx="66" ry="12" fill="#FFE9A0"/>
+  <ellipse cx="128" cy="41" rx="56" ry="8" fill="#C98A00"/>
+  <!-- الساق -->
+  <path d="M116 150 L140 150 L136 184 L120 184 Z" fill="url(#g)"/>
+  <path d="M96 184 L160 184 L166 198 L90 198 Z" fill="url(#g)"/>
+  <!-- القاعدة -->
+  <rect x="78" y="198" width="100" height="30" rx="4" fill="url(#base)"/>
+  <rect x="104" y="206" width="48" height="14" rx="2" fill="url(#gv)"/>
+  <!-- نجمة -->
+  <path d="M128 66 L136 86 L157 87 L140 100 L146 121 L128 109 L110 121 L116 100 L99 87 L120 86 Z" fill="#FFF4C2" stroke="#C98A00" stroke-width="2"/>
+  <!-- لمعة -->
+  <path d="M80 52 C80 92 92 120 108 136" fill="none" stroke="#fff" stroke-opacity="0.5" stroke-width="8" stroke-linecap="round"/>
+</svg>

@@ -13,7 +13,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import { liveAutoOn, setLiveAuto } from "@/lib/customer/live";
+import { liveAutoOn, setLiveAuto, useLiveShare } from "@/lib/customer/live";
 import {
   Alert,
   Button,
@@ -289,15 +289,26 @@ export default function AccountPage() {
 /** **مفتاحُ «شارك موقعي المباشر»** — التفضيلُ نفسُه (`liveAutoOn`)، مرآةُ `LiveAutoSetting.kt`. */
 function LiveAutoSwitch() {
   const [on, setOn] = useState(true);
+  const [blocked, setBlocked] = useState(false);
   useEffect(() => setOn(liveAutoOn()), []);
+  const live = useLiveShare();
   return (
-    <Switch
-      checked={on}
-      label={m.shop.address.liveAuto}
-      onChange={(v) => {
-        setOn(v);
-        setLiveAuto(v);
-      }}
-    />
+    <div className="flex flex-col gap-2">
+      <Switch
+        checked={on}
+        label={m.shop.address.liveAuto}
+        onChange={(v) => {
+          /* **ولا إطفاءَ وطلبُه بالطريق** (قرارُ المالك ٢٠٢٦-١١-٢٤) — يُقال له لماذا. */
+          if (!v && live.activeId) {
+            setBlocked(true);
+            return;
+          }
+          setBlocked(false);
+          setOn(v);
+          setLiveAuto(v);
+        }}
+      />
+      {blocked && <Alert tone="warning">{m.shop.live.cantStop}</Alert>}
+    </div>
   );
 }

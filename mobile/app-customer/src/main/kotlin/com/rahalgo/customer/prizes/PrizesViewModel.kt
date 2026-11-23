@@ -73,15 +73,15 @@ class PrizesViewModel(app: Application) : AndroidViewModel(app) {
                 val m = api.prizesMe()
                 me = m
                 storeId = m.storeId
+                // **والهدايا تُعرض قبل الافتتاح أيضاً** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤) — يراها ولا يطلبها.
+                val page = runCatching { api.prizeItems() }.getOrNull()
+                if (page != null) {
+                    items = page.items
+                    if (!page.storeId.isNullOrBlank()) storeId = page.storeId
+                }
                 if (PrizesLogic.isTeaser(m.enabled, m.launchOn, PrizesLogic.today())) {
-                    items = emptyList()
                     winners = emptyList()
                 } else {
-                    val page = runCatching { api.prizeItems() }.getOrNull()
-                    if (page != null) {
-                        items = page.items
-                        if (!page.storeId.isNullOrBlank()) storeId = page.storeId
-                    }
                     val w = runCatching { api.prizeWinners() }.getOrNull()
                     winners = w?.winners.orEmpty()
                     winnersMonth = w?.month

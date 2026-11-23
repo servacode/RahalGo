@@ -299,7 +299,6 @@ fun OrderCard(
         //
         // **لا في الإشعار وحدَه** — من فتح «طلباتي» يرى أنّ موقعَه يُرسَل ويوقفه بضغطة.
         if (com.rahalgo.customer.live.LiveShare.activeOrderId == order.id) {
-            val liveCtx = LocalContext.current
             Spacer(Modifier.height(Rahal.space.md))
             Row(
                 Modifier.fillMaxWidth(),
@@ -313,10 +312,8 @@ fun OrderCard(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                 )
-                RahalTextButton(
-                    onClick = { com.rahalgo.customer.live.LiveShare.userStop(liveCtx, order.id) },
-                    tone = Tone.Danger,
-                ) { Text(stringResource(R.string.live_stop)) }
+                // **ولا «أوقف المشاركة» هنا** (قرارُ المالك ٢٠٢٦-١١-٢٤) — يُوقفها بالغلط من لا يعرفها؛
+                // **والإيقافُ من «حسابي ← الإعدادات»** وحدَه.
             }
         }
 

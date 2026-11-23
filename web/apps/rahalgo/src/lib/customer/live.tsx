@@ -79,6 +79,8 @@ export function liveAutoOn(): boolean {
 
 export function setLiveAuto(on: boolean): void {
   writeJSON(AUTO_KEY, on);
+  /* **وإعادةُ تشغيله تمحو ما أُوقف بيده** — من أعاد «شارك موقعي» أراد عودتَها لطلبه الجاري. */
+  if (on) writeJSON(STOPPED_KEY, []);
 }
 const MAX_REMEMBERED = 50;
 

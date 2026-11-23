@@ -1115,31 +1115,43 @@ private fun SignedIn(
                         onBrowse = { tab = Tab.Shop },
                     )
 
-                    tab == Tab.Shop -> ShopScreen(
-                        vm = shopVm,
-                        // **والإعجابُ يحتاج حساباً** — والضيفُ يُساق
-                        // إلى الدخول لا يُردّ بصمت: **قلبٌ يُضغط فلا
-                        // يقع شيءٌ يُقرأ عطبا.**
-                        onLike = { item ->
-                            if (guest) askLogin() else mineVm.toggleFavorite(item.id)
-                        },
-                        liked = mineVm.liked,
-                        // **وعنوانُ التوصيل تُقرأ عليه الإتاحة** —
-                        // **قبل أن يُملأ شيء** (`PC`).
-                        address = selectedAddress(accountVm.state.addresses),
-                        // **ومن لا عنوانَ له يُسأل** — **ولا يُخترَع
-                        // له عنوان** (`PC-02`).
-                        onNeedAddress = {
-                            if (guest) askLogin() else DeliveryAddress.open()
-                        },
-                        // **المدنُ الفعّالة** (Batch 3c) — لاستعراضِ سوقِ المدينةِ الرائدة.
-                        cities = citiesVm.cities,
-                        // **زرُّ الهديّة** — والضيفُ يُساق إلى الدخول كباقي ما يخصّ الحساب.
-                        prizeBadge = if (guest) null else prizesVm.badge,
-                        onOpenPrizes = {
-                            if (guest) askLogin() else overlay.show(Overlay.Menu(CustomerItems.PRIZES))
-                        },
-                    )
+                    tab == Tab.Shop -> Box(Modifier.fillMaxSize()) {
+                        ShopScreen(
+                            vm = shopVm,
+                            // **والإعجابُ يحتاج حساباً** — والضيفُ يُساق
+                            // إلى الدخول لا يُردّ بصمت: **قلبٌ يُضغط فلا
+                            // يقع شيءٌ يُقرأ عطبا.**
+                            onLike = { item ->
+                                if (guest) askLogin() else mineVm.toggleFavorite(item.id)
+                            },
+                            liked = mineVm.liked,
+                            // **وعنوانُ التوصيل تُقرأ عليه الإتاحة** —
+                            // **قبل أن يُملأ شيء** (`PC`).
+                            address = selectedAddress(accountVm.state.addresses),
+                            // **ومن لا عنوانَ له يُسأل** — **ولا يُخترَع
+                            // له عنوان** (`PC-02`).
+                            onNeedAddress = {
+                                if (guest) askLogin() else DeliveryAddress.open()
+                            },
+                            // **المدنُ الفعّالة** (Batch 3c) — لاستعراضِ سوقِ المدينةِ الرائدة.
+                            cities = citiesVm.cities,
+                            // **زرُّ الهديّة** — والضيفُ يُساق إلى الدخول كباقي ما يخصّ الحساب.
+                                onOpenPrizes = {
+                                if (guest) askLogin() else overlay.show(Overlay.Menu(CustomerItems.PRIZES))
+                            },
+                        )
+                        // **هديّةٌ عائمةٌ ثلاثيّةُ الأبعاد** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤: «ايقونة الهدية
+                        // لازم عائمة ثري دي واضحة») — زاويةُ السوق السفلى، فوق البضاعة.
+                        com.rahalgo.customer.prizes.FloatingGift(
+                            badge = if (guest) null else prizesVm.badge,
+                            onClick = {
+                                if (guest) askLogin() else overlay.show(Overlay.Menu(CustomerItems.PRIZES))
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(Rahal.space.md),
+                        )
+                    }
 
                     // ══════════════════════════════════════════════
                     // **ولوحةُ العنوان تغطّي ما تحتها**
@@ -1310,25 +1322,24 @@ private fun SignedIn(
                     val o = pendingLive!!
                     LaunchedEffect(o.id, o.liveRequestedAt) { ordersVm.decideLiveShare(o) }
                 }
-                pendingLive?.takeIf { !autoLive }?.let { o ->
-                    com.rahalgo.customer.live.LiveShareDialog(
-                        early = com.rahalgo.customer.live.LiveSharePolicy.early(o),
-                        onShare = {
-                            ordersVm.decideLiveShare(o)
-                            if (com.rahalgo.map.Here.granted(liveCtx)) {
-                                startLive(o.id)
-                            } else {
-                                liveAsking = o.id
-                                askLive.launch(
-                                    arrayOf(
-                                        android.Manifest.permission.ACCESS_FINE_LOCATION,
-                                        android.Manifest.permission.ACCESS_COARSE_LOCATION,
-                                    ),
-                                )
-                            }
-                        },
-                        onDecline = { ordersVm.decideLiveShare(o) },
-                    )
+                // **ولا نافذةَ «شارك موقعي»** (قرارُ المالك ٢٠٢٦-١١-٢٤: «نافذة شارك موقعي معد تلزمنا»)
+                // — **يُطلب إذنُ الموقع من النظام مباشرةً** مرّةً لكلّ طلب، أو يُشغَّل الموقعُ المطفأ،
+                // ثمّ تبدأ المشاركة. **ومن أطفأ «شارك موقعي» في الإعدادات لا يُسأل.**
+                pendingLive?.takeIf { !autoLive && com.rahalgo.customer.live.LiveAuto.load(liveCtx) }?.let { o ->
+                    LaunchedEffect(o.id, o.liveRequestedAt) {
+                        ordersVm.decideLiveShare(o)
+                        if (com.rahalgo.map.Here.granted(liveCtx)) {
+                            startLive(o.id)
+                        } else {
+                            liveAsking = o.id
+                            askLive.launch(
+                                arrayOf(
+                                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                    android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                                ),
+                            )
+                        }
+                    }
                 }
                 if (!guest && tab != Tab.Cart && pendingQuote == null && pendingLive == null) {
                     // **السؤالُ التلقائيُّ مرّةً واحدة** — يُثبَّت فلا يعود عند

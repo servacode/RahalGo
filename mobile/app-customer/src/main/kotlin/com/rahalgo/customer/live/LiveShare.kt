@@ -159,6 +159,14 @@ object LiveStopped {
         )
     }.getOrDefault(emptyList())
 
+    /** **وإعادةُ تشغيل التفضيل تمحوها** — من أعاد «شارك موقعي» أراد عودتَها لطلبه الجاري. */
+    fun clear(context: Context) {
+        runCatching {
+            context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+                .edit().remove(KEY).apply()
+        }
+    }
+
     fun add(context: Context, orderId: String) {
         runCatching {
             val next = LiveSharePolicy.remember(load(context), orderId)

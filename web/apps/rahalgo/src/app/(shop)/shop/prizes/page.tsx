@@ -51,19 +51,61 @@ function asItem(p: PrizeItem, storeId: string): Item {
   };
 }
 
-function Ladder({ amounts }: { amounts: number[] }) {
+/** **من اليمين**: الرابع، الثاني، الأوّل، الثالث، الخامس — والثاني جنبَ الأوّل حيث تبدأ العين. */
+const PODIUM_ORDER = [4, 2, 1, 3, 5];
+const PLACES = [P.place1, P.place2, P.place3, P.place4, P.place5];
+
+/**
+ * **منصّةُ التتويج** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤: «٥ مربعات، الأول مرتفع بوسطهن… وفيه كاس») —
+ * مرآةُ `PrizesPodium.kt`.
+ */
+function Podium({ amounts }: { amounts: number[] }) {
   if (amounts.length === 0) return null;
+  const ranks = PODIUM_ORDER.filter((r) => r <= amounts.length);
+  return (
+    <section className={`${OUTLINE_CARD} flex flex-col gap-3`}>
+      <h2 className="text-section-title text-center">{P.ladderTitle}</h2>
+      <div className="flex items-end gap-1">
+        {ranks.map((r) => (
+          <div key={r} className={`flex min-w-0 flex-col items-center gap-1 ${r === 1 ? "flex-[1.25]" : "flex-1"}`}>
+            {r === 1 && <img src="/prizes/trophy.svg" alt="" width={64} height={64} />}
+            <Money value={amounts[r - 1] ?? 0} className={`font-bold ${r === 1 ? "text-section-title" : "text-sm"}`} />
+            <div className={`prize-step prize-step-${r} flex w-full flex-col items-center pt-2 text-center`}>
+              <span className={`font-black ${r === 1 ? "text-3xl" : "text-xl"}`}>{fmtNum(r)}</span>
+              <span className="px-0.5 text-[11px] leading-tight">{PLACES[r - 1]}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** **شروطُ المسابقة** — بنودٌ مرقّمةٌ بدوائر، وأرقامُها من المحرّك (مرآةُ `PrizeRules`). */
+function Rules({ per, winners }: { per: number; winners: number }) {
+  const rules = [
+    fill(P.ruleInvite, { per: fmtNum(per) }),
+    fill(P.ruleMore, { per: fmtNum(per) }),
+    P.ruleNew,
+    P.ruleDraw,
+    fill(P.ruleWinners, { n: fmtNum(winners) }),
+    P.ruleUse,
+    P.ruleDiff,
+    P.ruleExpire,
+  ];
   return (
     <section className={`${OUTLINE_CARD} flex flex-col gap-2`}>
-      <h2 className="text-section-title">{P.ladderTitle}</h2>
-      <ul className="flex flex-col divide-y divide-line-soft text-sm">
-        {amounts.map((a, i) => (
-          <li key={i} className="flex items-center justify-between gap-2 py-2">
-            <span>{fill(P.rank, { n: fmtNum(i + 1) })}</span>
-            <Money value={a} className="font-bold text-accent-text" />
+      <h2 className="text-section-title">{P.rulesTitle}</h2>
+      <ol className="flex flex-col gap-2">
+        {rules.map((t, i) => (
+          <li key={i} className="flex items-start gap-2 text-sm">
+            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent text-xs font-bold text-on-bright">
+              {fmtNum(i + 1)}
+            </span>
+            <span className="min-w-0 flex-1">{t}</span>
           </li>
         ))}
-      </ul>
+      </ol>
     </section>
   );
 }
@@ -229,7 +271,10 @@ export default function PrizesPage() {
           {date && <p className="text-price-lg font-bold text-accent-text">{fill(P.teaserSoon, { date })}</p>}
           <p className="text-sm text-ink-muted">{fill(P.teaserBody, { per: fmtNum(me.invites_per_entry ?? 5) })}</p>
         </section>
-        <Ladder amounts={amounts} />
+        <Podium amounts={amounts} />
+        <Rules per={me.invites_per_entry ?? 5} winners={me.winners_count ?? amounts.length} />
+        {/* **والهدايا تحتها** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤) — عرضٌ فقط قبل الافتتاح. */}
+        <Items me={{ ...me, prize_balance: 0 }} />
       </div>
     );
   }
@@ -265,7 +310,7 @@ export default function PrizesPage() {
       </section>
 
       <Share />
-      <Ladder amounts={amounts} />
+      <Podium amounts={amounts} />
 
       {balance > 0 && (
         <section className={`${OUTLINE_CARD} flex flex-col gap-1`}>
@@ -280,6 +325,7 @@ export default function PrizesPage() {
 
       <Items me={me} />
       <Winners />
+      <Rules per={me.invites_per_entry ?? 5} winners={me.winners_count ?? amounts.length} />
     </div>
   );
 }

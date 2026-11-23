@@ -69,7 +69,7 @@ export function LiveAsk() {
   );
 }
 
-/** **لافتةُ «عم تشارك موقعك»** — تُرى ما دامت المشاركة، ومعها زرُّ الإيقاف. */
+/** **لافتةُ «عم تشارك موقعك»** — تُرى ما دامت المشاركة، بلا زرّ إيقاف (٢٠٢٦-١١-٢٤). */
 export function LiveBanner() {
   const live = useLiveShare();
   if (live.problem && !live.activeId) {
@@ -93,9 +93,7 @@ export function LiveBanner() {
             {L.autoStop} · {L.keepOpen}
           </p>
         </div>
-        <Button variant="danger" onClick={() => live.stop("user")}>
-          {L.stop}
-        </Button>
+        {/* **ولا «أوقف المشاركة» هنا** (قرارُ المالك ٢٠٢٦-١١-٢٤) — يُوقفها بالغلط من لا يعرفها؛ والإيقافُ من «حسابي». */}
       </div>
       {coarse && (
         <div role="status" className="space-y-1 rounded-control border border-warning bg-warning-tint px-3 py-2">

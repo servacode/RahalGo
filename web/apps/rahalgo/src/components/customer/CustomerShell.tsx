@@ -37,7 +37,7 @@ import { OrderingBanner, ServiceBlockBanner, FreeDeliveryBanner } from "./Servic
 import PwaHints from "./PwaHints";
 import QuoteWatcher from "./QuoteWatcher";
 import WebPushCard from "@/components/WebPushCard";
-import { LiveAsk, LiveBanner } from "./LiveShare";
+import { LiveBanner } from "./LiveShare";
 import { RatingWatcher } from "./feedback";
 import { ShopFloat, ShopTabBar, ShopTopBar } from "./ShopChrome";
 import { useShopTheme } from "./ShopTheme";
@@ -145,7 +145,7 @@ function Shell({ children }: { children: ReactNode }) {
         <>
           <MerchantHome />
           <QuoteWatcher />
-          <LiveAsk />
+          {/* **ولا نافذةَ «شارك موقعي»** (قرارُ المالك ٢٠٢٦-١١-٢٤) — تبدأ وحدَها، والمتصفّحُ يسأل الإذنَ بنفسه. */}
           <RatingWatcher />
           <Chats />
         </>

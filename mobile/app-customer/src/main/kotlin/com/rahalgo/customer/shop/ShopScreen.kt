@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import com.rahalgo.customer.prizes.PrizesButton
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.aspectRatio
@@ -485,8 +484,7 @@ fun ShopScreen(
                             .weight(1f)
                             .padding(start = Rahal.space.md, top = Rahal.space.sm, bottom = Rahal.space.sm),
                     )
-                    // **زرُّ الهديّة بعد البحث** (آخرَ الصفّ، أي يسارَه في RTL).
-                    PrizesButton(prizeBadge, onOpenPrizes)
+                    // **وزرُّ الهديّة صار عائماً فوق السوق** (`FloatingGift`، ٢٠٢٦-١١-٢٤) — لا في صفّ البحث.
                 }
             }
         }

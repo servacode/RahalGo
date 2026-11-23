@@ -238,22 +238,18 @@ class LiveShareService : Service() {
         val manager = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL, getString(R.string.live_channel), NotificationManager.IMPORTANCE_LOW),
+                NotificationChannel(CHANNEL, getString(R.string.live_channel), NotificationManager.IMPORTANCE_MIN),
             )
         }
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
         )
-        val stop = PendingIntent.getService(
-            this, 1, Intent(this, LiveShareService::class.java).setAction(ACTION_STOP),
-            PendingIntent.FLAG_IMMUTABLE,
-        )
+        runCatching { manager.deleteNotificationChannel("rahalgo_live_share") }
         val note: Notification = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(com.rahalgo.ui.R.drawable.ic_notification)
             .setContentTitle(getString(R.string.live_note_title))
             .setContentText(getString(R.string.live_note_text))
             .setContentIntent(open)
-            .addAction(0, getString(R.string.live_stop), stop)
             .setOngoing(true)
             .build()
         return try {
@@ -274,7 +270,12 @@ class LiveShareService : Service() {
 
     companion object {
         private const val TAG = "RahalGo/live"
-        private const val CHANNEL = "rahalgo_live_share"
+        /**
+         * **قناةٌ صامتةٌ مطويّة** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤: «اذا نقدر نخفيها لسا احسن») — `IMPORTANCE_MIN`
+         * لا رمزَ لها في الشريط وتُطوى أسفلَ الإشعارات. **ولا يُخفى إشعارُ خدمةِ موقعٍ كلّيّاً** — شرطُ أندرويد.
+         * **واسمٌ جديد** لأنّ أهمّيّةَ قناةٍ أُنشئت لا تتبدّل عند من ثبّت قبل.
+         */
+        private const val CHANNEL = "rahalgo_live_share_min"
         private const val NOTE_ID = 2001
         const val EXTRA_ORDER = "order_id"
         const val ACTION_STOP = "com.rahalgo.customer.live.STOP"

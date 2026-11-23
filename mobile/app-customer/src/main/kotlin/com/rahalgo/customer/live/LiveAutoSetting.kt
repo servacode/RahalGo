@@ -32,7 +32,7 @@ fun LiveAutoSetting() {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable { LiveAuto.set(context, !LiveAuto.on) }
+            .clickable { toggle(context, !LiveAuto.on) }
             .padding(vertical = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -50,6 +50,18 @@ fun LiveAutoSetting() {
             style = Rahal.type.label,
         )
         Spacer(Modifier.size(Rahal.space.sm))
-        Switch(checked = LiveAuto.on, onCheckedChange = { LiveAuto.set(context, it) })
+        Switch(checked = LiveAuto.on, onCheckedChange = { toggle(context, it) })
     }
+}
+
+/** **والإطفاءُ يُوقف ما يجري الآن** — لا يبقى موقعُه يُرسَل وقد قال «لا». */
+private fun toggle(context: android.content.Context, on: Boolean) {
+    // **ولا إطفاءَ وطلبُه بالطريق** (قرارُ المالك ٢٠٢٦-١١-٢٤: «نخلي الشخص مايقدر يوقف المشاركة ليستلم
+    // الطلب») — يُقال له لماذا، ويُطفئها بعد التسليم إن شاء.
+    if (!on && LiveShare.activeOrderId != null) {
+        com.rahalgo.ui.Flash.fail(context.getString(R.string.live_cant_stop))
+        return
+    }
+    LiveAuto.set(context, on)
+    if (!on) LiveShare.userStop(context) else LiveStopped.clear(context)
 }

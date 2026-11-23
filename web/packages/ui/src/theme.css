@@ -6379,3 +6379,46 @@ html[data-console-theme="dark"] .console-root .seg-item[aria-pressed="true"] {
     pointer-events: none;
   }
 }
+
+/* ══ جوائز رحّال غو — الهديّةُ العائمة ومنصّةُ التتويج (ملاحظاتُ المالك ٢٠٢٦-١١-٢٤) ══ */
+.prize-fab {
+  position: fixed;
+  inset-inline-end: max(16px, env(safe-area-inset-left, 0px));
+  inset-block-end: calc(84px + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  display: grid;
+  width: 68px;
+  height: 68px;
+  place-items: center;
+  border-radius: 9999px;
+  background-color: var(--color-surface);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.22);
+  animation: prize-hop 0.52s ease-in-out 3;
+}
+.prize-fab img {
+  width: 54px;
+  height: 54px;
+}
+.prize-fab .shop-prize-badge {
+  inset-block-start: -4px;
+  inset-inline-start: -4px;
+  inset-inline-end: auto;
+}
+@keyframes prize-hop {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px) scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prize-fab { animation: none; }
+}
+.prize-step {
+  border-start-start-radius: 10px;
+  border-start-end-radius: 10px;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.18);
+  color: #fff;
+}
+.prize-step-1 { height: 118px; background: linear-gradient(#ffc531, #d98c00); }
+.prize-step-2 { height: 94px; background: linear-gradient(#c9d1db, #8a95a3); }
+.prize-step-3 { height: 80px; background: linear-gradient(#e3a06a, #a9622b); }
+.prize-step-4 { height: 64px; background: linear-gradient(#7fb8e6, #3f7fb5); }
+.prize-step-5 { height: 56px; background: linear-gradient(#9fd3b0, #4e9a6c); }
