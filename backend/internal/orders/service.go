@@ -70,6 +70,8 @@ type Service struct {
 	router RouteReader
 	// referrals مكافأةُ من دعا الزبونَ — **تُصرف عند أوّل طلبٍ يُسلَّم له.**
 	referrals ReferralSettler
+	// prizes **رصيدُ الجوائز** (قرارُ المالك ٢٠٢٦-١١-٢٣) — `prize_order.go`.
+	prizes PrizeLedger
 	// targets **مكافأةُ هدف الشهر** — تُدفع آليّاً عند بلوغه.
 	//
 	// **وواجهةٌ ضيّقةٌ لا حزمة**: محرّكُ الطلبات لا يعرف الحوافزَ ولا يحتاج،
@@ -346,6 +348,10 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		// تمنع.** والخادمُ يعرف، **وهو الموضعُ الذي لا يُلتفّ عليه.**
 		//
 		// **وبمنفّذ الوحدة** — `XG-46`: **وبوّابةُ نسخة السائق تُقرأ هنا أيضاً.**
+		// **وخلطُ الجوائز بغيرها يُقال باسمه قبل السقف** — `prize_order.go`.
+		if _, err := isPrizeCart(ctx, tx, sources.IDs); err != nil {
+			return nil, nil, err
+		}
 		if len(sources.IDs) > unit.maxSources(ctx, tx) {
 			return nil, nil, ErrTooManySources
 		}
@@ -369,6 +375,17 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		case !sourceHas(sources.IDs, in.MerchantID):
 			return nil, nil, ErrBadMerchant
 		}
+	}
+	// **وطلبُ الجوائز يُعرف من أصنافه** — `prize_order.go`.
+	prizeOrder := false
+	if sources != nil {
+		var err error
+		if prizeOrder, err = isPrizeCart(ctx, tx, sources.IDs); err != nil {
+			return nil, nil, err
+		}
+	}
+	if prizeOrder && strings.TrimSpace(in.PromoCode) != "" {
+		return nil, nil, ErrPrizeNoPromo
 	}
 	// **وكلُّ نقصٍ يُسمّى باسمه** — انظر `models.go`.
 	if len(in.Items) == 0 {
@@ -461,8 +478,12 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	// البداية، **ولا يفحصها إلّا العرض.** وحارسٌ في الشاشة وحدَها ليس حارساً:
 	// كلُّ من يعرف النقطةَ يتجاوزه، **وكلُّ صفحةٍ قديمةٍ تتجاوزه بلا قصد.**
 	var openNow bool
+	openSQL := OpenNowSQL
+	if prizeOrder {
+		openSQL = PrizeOpenNowSQL
+	}
 	err := tx.QueryRow(ctx,
-		`SELECT `+OpenNowSQL+` FROM merchants m WHERE m.id = $1`,
+		`SELECT `+openSQL+` FROM merchants m WHERE m.id = $1`,
 		in.MerchantID).Scan(&openNow)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil, httpx.ErrNotFound
@@ -703,12 +724,41 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	}
 	// **والتوصيلُ المجانيّ بعرضه** (قرارُ المالك ٢٠٢٦-١٠-٢٣) — بعد الكود، على ما بقي
 	// من الأجرة. والسائقُ أخذ أجرَه أعلاه (`driverFee`)، والخزينةُ تتحمّل المعفى.
-	free, err := s.freeDeliveryOffer(ctx, tx, FreeKindStandard, customerClaimant(ctx, tx, customerID), deliveryFee, true)
-	if err != nil {
-		return nil, nil, err
+	// **وطلبُ الجوائز لا يستهلك حقَّ العرض** — توصيلُه على المنصّة أصلاً.
+	var free freeOffer
+	if !prizeOrder {
+		free, err = s.freeDeliveryOffer(ctx, tx, FreeKindStandard, customerClaimant(ctx, tx, customerID), deliveryFee, true)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	deliveryFee -= free.waive
 	deliveryWaived += free.waive
+
+	// ══════════════════════════════════════════════════════════════
+	// **وطلبُ الجوائز: التوصيلُ على المنصّة والرصيدُ أوّلاً** — `prize_order.go`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **والكابتنُ بأجره كاملاً** — `driverFee` أُخذ أعلاه قبل كلّ إعفاء، **والمعفى في
+	// `promo_delivery_waived`** كعرض التوصيل المجانيّ. **والرصيدُ يُقرأ مقفولاً** تحت قفل
+	// `customer-admit:` — ويُصرف بعد إدراج الطلب في المعاملة نفسِها.
+	var prizeDiscount int64
+	if prizeOrder {
+		deliveryWaived += deliveryFee
+		deliveryFee = 0
+		if s.prizes == nil {
+			return nil, nil, ErrPrizeNoBalance
+		}
+		bal, err := s.prizes.LockedBalanceTx(ctx, tx, customerID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if bal <= 0 {
+			return nil, nil, ErrPrizeNoBalance
+		}
+		prizeDiscount = min64(bal, subtotal-discount)
+		discount += prizeDiscount
+	}
 
 	total := subtotal - discount + deliveryFee
 	if total < 0 {
@@ -757,10 +807,10 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 			snap_merchant_commission_percent, snap_rep_commission_percent,
 			snap_commission_source, snap_activation_orders, driver_fee,
 			promo_delivery_waived, snap_platform_delivery_percent, snap_platform_delivery_fixed,
-			sources_fee, stops, money_model, wallet_scope)
+			sources_fee, stops, money_model, wallet_scope, prize_discount, prize_order)
 		VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($5,$4),4326)::geography, $6,
 			$7, $8, $9, $10, $11, $12, $13, NULLIF($14,''), $15, $16,
-			$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
+			$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
 		RETURNING id`,
 		customerID, in.MerchantID, in.AddressText, in.Lat, in.Lng, zoneID,
 		in.PaymentMethod, subtotal, deliveryFee, discount, total, walletPaid, cashDue,
@@ -768,12 +818,17 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		snap.MerchantCommission, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, driverFee,
 		deliveryWaived, platformPct, platformFixed, sourcesFee, stops,
-		moneyModel, in.WalletScope).Scan(&orderID)
+		moneyModel, in.WalletScope, prizeDiscount, prizeOrder).Scan(&orderID)
 	if err != nil {
 		return nil, nil, err
 	}
 	if err := free.claim(ctx, tx, orderID, FreeKindStandard); err != nil {
 		return nil, nil, err
+	}
+	if prizeDiscount > 0 {
+		if err := s.prizes.SpendTx(ctx, tx, customerID, orderID, prizeDiscount); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	// ══════════════════════════════════════════════════════════════

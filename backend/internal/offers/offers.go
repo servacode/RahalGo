@@ -362,8 +362,10 @@ func (s *Service) List(ctx context.Context, liveOnly bool, marginOf PriceFn) ([]
 	if liveOnly {
 		// **والخصمُ على صنفٍ غائبٍ أو غيرِ متاحٍ لا يُعرض** — يفتحه الزبونُ
 		// فلا يجده، **ووعدٌ لا يُوفى أسوأُ من صمت.**
+		// **وصنفُ متجر الجوائز لا يُعرض عرضاً** — صفحتُه صفحةُ الجوائز وحدَها (هجرة ٠٥٥٧).
 		q += ` WHERE ` + LiveCond + `
-			AND mi.id IS NOT NULL AND mi.available`
+			AND mi.id IS NOT NULL AND mi.available
+			AND (mr.id IS NULL OR mr.status <> 'prize')`
 	}
 	q += ` ORDER BY o.created_at DESC`
 	rows, err := s.db.Query(ctx, q)

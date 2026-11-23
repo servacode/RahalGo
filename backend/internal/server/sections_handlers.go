@@ -145,13 +145,22 @@ const itemFrom = `
 const itemSelect = itemFrom + `
 	WHERE m.status = 'active' AND ps.active`
 
+// itemDetailSelect **نافذةُ الصنف بمعرّفه** — كالتصفّح، **ويُفتح فيها صنفُ متجر الجوائز**
+// (قرارُ المالك ٢٠٢٦-١١-٢٣): صفحةُ الجوائز تفتح الصنفَ بالنافذة نفسِها. **ولا يظهر في قائمةٍ
+// ولا بحثٍ أبداً** — هذا البابُ بالمعرّف وحدَه، وحارسُه `TestPRZ08_PrizeStoreHiddenEverywhere`.
+var itemDetailSelect = strings.ReplaceAll(strings.ReplaceAll(itemFrom,
+	"(i.available AND m.status = 'active' AND ps.active)",
+	"(i.available AND m.status IN ('active', 'prize') AND ps.active)"),
+	orders.OpenNowSQL, orders.OrderableNowSQL) + `
+	WHERE m.status IN ('active', 'prize') AND ps.active`
+
 // favoritesSelect أصنافُ صاحبِ الشاشة المحفوظة — **بالأعمدة نفسِها.**
 //
 // **والموقوفُ يبقى ويُقال عنه**: الصنفُ الذي رفعه المتجرُ من قائمته يسقط من
 // الجدول نفسِه (`ON DELETE CASCADE`)، **والذي أوقفه مؤقّتاً يعود.**
 const favoritesSelect = itemFrom + `
 	JOIN user_favorites f ON f.menu_item_id = i.id
-	WHERE f.user_id = $1
+	WHERE f.user_id = $1 AND m.status <> 'prize'
 	ORDER BY f.created_at DESC`
 
 // markDown يُلبس الصنفَ خصمَه — **وموضعٌ واحدٌ لكلّ شاشةٍ يقرأها الزبون.**
@@ -515,7 +524,7 @@ func (s *Server) handlePublicItem(w http.ResponseWriter, r *http.Request) {
 	var pct *int
 	var amt *int64
 	var usdCents *int64
-	if err := s.pg.QueryRow(r.Context(), itemSelect+` AND i.id = $1`,
+	if err := s.pg.QueryRow(r.Context(), itemDetailSelect+` AND i.id = $1`,
 		chi.URLParam(r, "id")).
 		Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,

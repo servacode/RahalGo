@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 736,
+    "routes": 741,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 149,
+    "notify_sites": 151,
     "notify_targeted": 78,
     "publish_rooms": [
       "customer",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 301,
-    "behaviour_settings": 255,
-    "order_fields": 149,
-    "test_files": 869,
-    "test_funcs": 3293
+    "setting_defs": 310,
+    "behaviour_settings": 264,
+    "order_fields": 150,
+    "test_files": 871,
+    "test_funcs": 3306
   },
   "flows": [
     {
@@ -7171,6 +7171,168 @@
       "status": "REGRESSION_TEST_PRESENT"
     },
     {
+      "key": "prizes.amount_1",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.amount_2",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.amount_3",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.amount_4",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.amount_5",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.enabled",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.invites_per_entry",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.launch_on",
+      "group": "platform",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.winners",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "referral.reward_1",
       "group": "platform",
       "kind": "money",
@@ -13958,6 +14120,36 @@
       "name": "TestAmount_RoundsToNearestLira",
       "file": "internal/pricing/rounding_test.go",
       "package": "pricing_test",
+      "orphan": true
+    },
+    {
+      "name": "TestAmountsByRank",
+      "file": "internal/prizes/prizes_test.go",
+      "package": "prizes",
+      "orphan": true
+    },
+    {
+      "name": "TestDisplayName",
+      "file": "internal/prizes/prizes_test.go",
+      "package": "prizes",
+      "orphan": true
+    },
+    {
+      "name": "TestEntriesMath",
+      "file": "internal/prizes/prizes_test.go",
+      "package": "prizes",
+      "orphan": true
+    },
+    {
+      "name": "TestMonthMath",
+      "file": "internal/prizes/prizes_test.go",
+      "package": "prizes",
+      "orphan": true
+    },
+    {
+      "name": "TestPickWinnersWeightedOncePerPerson",
+      "file": "internal/prizes/prizes_test.go",
+      "package": "prizes",
       "orphan": true
     },
     {
@@ -25171,6 +25363,54 @@
         "SECURITY"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestPRZ01_PrizeOrderMoney",
+      "file": "internal/qa/prizes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPRZ02_Rejections",
+      "file": "internal/qa/prizes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPRZ03_CancelRefunds",
+      "file": "internal/qa/prizes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPRZ04_ConcurrentSpend",
+      "file": "internal/qa/prizes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPRZ05_RecomputeKeepsPrize",
+      "file": "internal/qa/prizes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPRZ06_DrawOnceWeightedRanks",
+      "file": "internal/qa/prizes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPRZ07_RemindOnceThenExpire",
+      "file": "internal/qa/prizes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPRZ08_PrizeStoreHiddenEverywhere",
+      "file": "internal/qa/prizes_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestPR01_PR02_PR04_PromoLossIsNamedAndTotalsAreCurrent",

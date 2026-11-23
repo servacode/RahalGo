@@ -226,14 +226,15 @@ var OrderPrivacy = map[string]FieldRule{
 	// **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — كطريقة الدفع: للزبون والكابتن والمكتب.
 	"wallet_scope": {Ref: "wallet_scope.go · كطريقة الدفع", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	// **شفافيّةُ تسوية المتجر** — قرارُ المالك ٢٠٢٦-٠٨-٢٦ و٢٠٢٦-٠٩-٠٩.
-	"subtotal":     {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — ما بِيع من عنده · وRQ-7 يجيزه للمندوب", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisAllowed, VisAllowed)},
-	"delivery_fee": {Ref: "merchant_privacy.go:49 · وأجرُ السائق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
-	"free_waived":  {Ref: "models.go · إعفاءُ التوصيل المجانيّ — كأجرة التوصيل", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
-	"discount":     {Ref: "merchant_privacy.go:49 · والسائقُ يرى الفاتورةَ كاملةً (قرارُ المالك ٢٠٢٦-١٠-٣٠)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"total":        {Ref: "merchant_privacy.go:49 · وRQ-7", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
-	"wallet_paid":  {Ref: "merchant_privacy.go:50", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
-	"cash_due":     {Ref: "merchant_privacy.go:50 · والسائقُ يقبضه", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"promo_code":   {Ref: "merchant_privacy.go:52", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"subtotal":       {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — ما بِيع من عنده · وRQ-7 يجيزه للمندوب", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisAllowed, VisAllowed)},
+	"delivery_fee":   {Ref: "merchant_privacy.go:49 · وأجرُ السائق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
+	"free_waived":    {Ref: "models.go · إعفاءُ التوصيل المجانيّ — كأجرة التوصيل", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
+	"discount":       {Ref: "merchant_privacy.go:49 · والسائقُ يرى الفاتورةَ كاملةً (قرارُ المالك ٢٠٢٦-١٠-٣٠)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"prize_discount": {Ref: "models.go · ما دُفع من رصيد الجوائز — للزبون والمكتب (قرارُ المالك ٢٠٢٦-١١-٢٣)", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"total":          {Ref: "merchant_privacy.go:49 · وRQ-7", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
+	"wallet_paid":    {Ref: "merchant_privacy.go:50", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"cash_due":       {Ref: "merchant_privacy.go:50 · والسائقُ يقبضه", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"promo_code":     {Ref: "merchant_privacy.go:52", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	// **`RQ-7`**: «المندوبُ يرى استحقاقَه لا ربحَ المنصّة الداخليّ».
 	//
 	// **والمتجرُ يرى اقتطاعَه هو** (قرارُ المالك ٢٠٢٦-٠٩-٠٩): **ما

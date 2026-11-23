@@ -375,6 +375,9 @@ func run(logger *slog.Logger) error {
 			// **ومتجرُ المندوب يُحسب حين تكتمل شروطُه** — rep_qualify.go (قرارُ المالك ٢٠٢٦-١٠-١٣).
 			go srv.RunRepQualify(ctx, 2*time.Minute)
 			go srv.RunFreeDeliveryNotify(ctx, time.Minute)
+			// **و«جوائز رحّال غو»** — انتهاءُ الرصيد آخرَ الشهر، والسحبُ أوّلَه ١٢ ظهراً، وتذكيرُ
+			// «قبل ٣ أيام». **وكلُّها لا تتكرّر** (prize_draws بصفٍّ للشهر · ختمُ التذكير).
+			go srv.RunPrizes(ctx, 5*time.Minute)
 			// **وسائقٌ في الدوام انقطع موقعُه يُوقَظ تطبيقُه** — driver_location_watch.go (٢٠٢٦-١٠-١٣).
 			go srv.RunDriverLocationWatch(ctx, time.Minute)
 			// **و«لم تكتمل المعالم الـ٥ الخاصة بك بعد» وملخّصُ المالك كلَّ صبح** — landmark_remind.go

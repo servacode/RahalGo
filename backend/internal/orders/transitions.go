@@ -1070,6 +1070,15 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	// **وعمودٌ يُملأ غداً بسهوٍ يجعل مالاً يتحرّك بلا قرار.** والصمتُ في المال
 	// أخطرُ منه في غيره.
 
+	// (0-أ) **ورصيدُ الجوائز يعود بنهايةٍ إلى غير التسليم** — `prize_order.go` (قرارُ المالك
+	// ٢٠٢٦-١١-٢٣): ملغى أو مرفوضٌ أو متعذّرٌ قبل التسليم يردّ ما صُرف بانتهاء شهره، **والردُّ
+	// من الدفتر فلا يتكرّر.** وطلبٌ بلا جوائز لا يجد ما يردّه.
+	if refundOnEnter(in.to) && in.from != StDelivered && s.prizes != nil && !in.custom && !in.merchantDelivery {
+		if _, err := s.prizes.RefundOrderTx(ctx, q, in.orderID, 0); err != nil {
+			return err
+		}
+	}
+
 	// (0-ب) **والتوصيلةُ مسارٌ ثالثٌ لا يمرّ بالعامّ** — انظر `settleMerchantDelivery`.
 	if in.merchantDelivery {
 		return s.settleMerchantDelivery(ctx, q, in, out)

@@ -782,8 +782,10 @@ func (s *Service) updateMerchant(ctx context.Context, actorID, id string, in Mer
 	// `suspended` تُقبل هنا للأدمن، ولها نقطتُها الخاصّة (merchant_violations.go)
 	// التي تُسجّل السبب. **وقبولُها هنا يمنع حالةً لا تُرفع إلا بجراحةٍ في
 	// القاعدة** لو أُغفلت.
+	// **و`prize` متجرُ «جوائز رحّال غو»** (قرارُ المالك ٢٠٢٦-١١-٢٣) — مخفيٌّ عن السوق كلِّه،
+	// وأصنافُه في صفحة الجوائز وحدَها. **وواحدٌ لا غير** (`merchants_one_prize_store`).
 	if in.Status != nil && *in.Status != "active" && *in.Status != "inactive" &&
-		*in.Status != "suspended" {
+		*in.Status != "suspended" && *in.Status != "prize" {
 		return nil, ErrNameRequired
 	}
 	// ══════════════════════════════════════════════════════════════════

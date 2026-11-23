@@ -121,7 +121,23 @@ func (s *Server) handleQuote(w http.ResponseWriter, r *http.Request) {
 	// رمزٌ واحدٌ لا يقول أيَّها.**
 	// **والتوصيلُ المجانيّ يُرى في السلّة** (قرارُ المالك ٢٠٢٦-١٠-٢٣) — بحساب الإنشاء نفسِه،
 	// فالسلّةُ تقول ما سيُدفع. **ونسخةُ التطبيق الحاليّة تقرأ `delivery_fee` فتراه صفراً.**
-	if w := s.orders.FreeDeliveryPreview(r.Context(), s.optionalUser(r), orders.FreeKindStandard, q.DeliveryFee); w > 0 {
+	// **وسلّةُ الجوائز: التوصيلُ على المنصّة والرصيدُ أوّلاً** — كما يحسبها الإنشاء
+	// (`orders/prize_order.go`)، فلا ترى السلّةُ مجموعاً ويُحاسَب الزبونُ بغيره.
+	if prize, perr := s.orders.IsPrizeCart(r.Context(), req.Items); perr != nil {
+		s.respondErr(w, perr)
+		return
+	} else if prize {
+		q.PrizeOrder = true
+		q.FreeWaived = q.DeliveryFee
+		q.Total -= q.DeliveryFee
+		q.DeliveryFee = 0
+		if uid := s.optionalUser(r); uid != "" {
+			if bal, berr := s.prizes.BalanceOf(r.Context(), s.pg, uid); berr == nil {
+				q.PrizeDiscount = min(bal.Amount, q.Subtotal)
+				q.Total -= q.PrizeDiscount
+			}
+		}
+	} else if w := s.orders.FreeDeliveryPreview(r.Context(), s.optionalUser(r), orders.FreeKindStandard, q.DeliveryFee); w > 0 {
 		q.DeliveryFee -= w
 		q.Total -= w
 		q.FreeWaived = w

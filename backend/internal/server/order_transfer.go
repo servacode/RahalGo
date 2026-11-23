@@ -103,6 +103,17 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errTransferDeliveryKind)
 		return
 	}
+	// **وطلبُ الجوائز لا يُحوَّل** — رصيدُ الجوائز لا يُصرف إلّا في متجرها (قرارُ المالك ٢٠٢٦-١١-٢٣).
+	var prize bool
+	if err := tx.QueryRow(r.Context(), `SELECT prize_order FROM orders WHERE id = $1`, orderID).
+		Scan(&prize); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if prize {
+		s.respondErr(w, orders.ErrPrizeOrderLocked)
+		return
+	}
 	// **والطلبُ من أكثر من متجر يُحوَّل قسماً قسماً** (§7.3) — نقلُ بنوده كلِّها لمتجرٍ واحدٍ يدمج
 	// المتجرين. بابُه `/parts/{storeID}/transfer` (`admin_parts.go`).
 	if s.orders.StopsOf(r.Context(), orderID) > 1 {

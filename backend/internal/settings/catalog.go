@@ -1100,6 +1100,29 @@ var Catalog = []Def{
 	{Key: "referral.reward_rest", Group: GroupPlatform, Kind: KindMoney,
 		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 
+	// ══════════════════════════════════════════════════════════════════
+	// **«جوائز رحّال غو»** — سحبٌ شهريٌّ على الدعوات (قرارُ المالك ٢٠٢٦-١١-٢٣، `internal/prizes`)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **مطفأٌ افتراضاً**، والدعواتُ تُعدّ من `prizes.launch_on`. والجوائزُ بالليرة الجديدة.
+	{Key: "prizes.enabled", Group: GroupPlatform, Kind: KindBool, Default: false},
+	{Key: "prizes.launch_on", Group: GroupPlatform, Kind: KindText, Max: 10, Default: "2026-12-01"},
+	{Key: "prizes.invites_per_entry", Group: GroupPlatform, Kind: KindInt,
+		Min: 1, Max: 100, Unit: "invites", Default: 5},
+	{Key: "prizes.winners", Group: GroupPlatform, Kind: KindInt,
+		Min: 1, Max: 50, Unit: "winners", Default: 5},
+	{Key: "prizes.amount_1", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 1500, Sensitive: true},
+	{Key: "prizes.amount_2", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 1000, Sensitive: true},
+	{Key: "prizes.amount_3", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 750, Sensitive: true},
+	{Key: "prizes.amount_4", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 500, Sensitive: true},
+	// **وما بعد الخامس كالخامس.**
+	{Key: "prizes.amount_5", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 500, Sensitive: true},
+
 	// ── السائقون ──────────────────────────────────────────────────────────
 
 	// **كيف يصل الطلبُ إلى سائق: بالتساوي أم للأسرع؟**

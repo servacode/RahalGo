@@ -141,6 +141,12 @@ func (s *Service) ConvertToExternalStore(ctx context.Context, actorID, orderID, 
 	if kind != KindStandard {
 		return nil, ch, ErrExtStoreNotStandard
 	}
+	// **وطلبُ الجوائز لا يصير مشترياتٍ من متجرٍ آخر** — رصيدُه لمتجره وحدَه.
+	if prize, err := prizeOrderOf(ctx, tx, orderID); err != nil {
+		return nil, ch, err
+	} else if prize {
+		return nil, ch, ErrPrizeOrderLocked
+	}
 	if !extStoreStatuses[status] {
 		return nil, ch, ErrExtStoreBadStatus
 	}

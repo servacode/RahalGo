@@ -87,6 +87,12 @@ var FinancialSettings = []string{
 	"referral.reward_4",
 	"referral.reward_rest",
 	"referral.reward_on",
+	// **جوائزُ السحب الشهريّ** (prizes/prizes.go) — رصيدٌ يُصرف خصماً على المنصّة (٢٠٢٦-١١-٢٣).
+	"prizes.amount_1",
+	"prizes.amount_2",
+	"prizes.amount_3",
+	"prizes.amount_4",
+	"prizes.amount_5",
 	"drivers.target_reward",
 	"drivers.reward_2",
 	"drivers.reward_3",

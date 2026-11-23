@@ -34,6 +34,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/opsmap"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/platform"
+	"github.com/servacode/rahalgo/backend/internal/prizes"
 	"github.com/servacode/rahalgo/backend/internal/push"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/referrals"
@@ -73,6 +74,7 @@ type Server struct {
 	offers     *offers.Service
 	campaigns  *campaigns.Service
 	referrals  *referrals.Service
+	prizes     *prizes.Service
 	media      *media.Service
 	hub        *realtime.Hub
 	geo        *geo.Service
@@ -363,6 +365,9 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **ومكافأةُ من دعا** — تُصرف عند أوّل طلبٍ يُسلَّم للمدعوّ.
 	srv.referrals = referrals.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID, notify, logger)
 	ordersSvc.SetReferrals(srv.referrals)
+	// **و«جوائز رحّال غو»** (قرارُ المالك ٢٠٢٦-١١-٢٣) — رصيدُ الجوائز يُصرف ويُردّ في معاملة الطلب.
+	srv.prizes = prizes.New(pg, settingsStore, notify, logger)
+	ordersSvc.SetPrizes(srv.prizes)
 	// **وكودُ التسليم يصل بالواتساب** — البوتُ يُحقن لاحقاً، فيُسأل عند كلّ نداء.
 	ordersSvc.SetWhatsApp(whatsAppText{srv})
 	// **وعينُ الأمان على باب الدخول** (مراقبةُ المنصّة — الدفعةُ الثانية) — الهويّةُ
@@ -884,6 +889,10 @@ func (s *Server) Router() http.Handler {
 			r.Get("/my/wallet", s.handleMyWallet)
 			// **أله توصيلةٌ مجانيّةٌ الآن؟** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — لتقول الشاشةُ «مجانيّة» قبل الطلب.
 			r.Get("/my/free-delivery", s.handleMyFreeDelivery)
+			// **«جوائز رحّال غو»** (قرارُ المالك ٢٠٢٦-١١-٢٣) — حالي وأصنافُ المتجر والرابحون.
+			r.Get("/prizes/me", s.handlePrizesMe)
+			r.Get("/prizes/items", s.handlePrizeItems)
+			r.Get("/prizes/winners", s.handlePrizeWinners)
 			// **بابُ الشكوى عند الطلب لا في رقم هاتف.**
 			//
 			// كانت التذاكرُ تُفتح من لوحة الإدارة وحدَها: يتّصل الزبونُ فيفتح
@@ -1560,6 +1569,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/promo-approvals/{id}/approve", s.handleDecidePromoApproval(true))
 			r.Post("/promo-approvals/{id}/reject", s.handleDecidePromoApproval(false))
 			r.Get("/referrals", s.handleAdminReferrals)
+			r.Get("/prizes/entries", s.handleAdminPrizeEntries)
+			r.Get("/prizes/draws", s.handleAdminPrizeDraws)
 			r.Get("/banners", s.handleListBanners)
 			r.Get("/settings", s.handleListSettings)
 			// **مثالٌ ماليٌّ حيٌّ بجانب مفاتيح المال** — يحسبه المحرّكُ لا الشاشة (٢٠٢٦-١٠-٠٤).

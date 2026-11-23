@@ -582,6 +582,12 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 			}
 		}
 	}
+	// **وحصّةُ الجوائز تبقى بقدر البضاعة الجديدة** — والفرقُ يعود لرصيده (`prizeRefit`).
+	if keep, err := s.prizeRefit(ctx, tx, orderID, subtotal-discount); err != nil {
+		return nil, res, err
+	} else {
+		discount += keep
+	}
 	if fw, err := s.freeDeliveryReapply(ctx, tx, orderID, deliveryFee); err != nil {
 		return nil, res, err
 	} else if fw > 0 {

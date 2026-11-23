@@ -267,7 +267,7 @@ func (s *Service) enforceViolationsOf(ctx context.Context, merchantID string) {
 	}
 	// **suspended لا inactive**: الثانيةُ يملكها المتجرُ فيرفع الحظرَ عن نفسه.
 	if _, err := s.db.Exec(ctx,
-		`UPDATE merchants SET status = 'suspended' WHERE id = $1 AND status <> 'suspended'`,
+		`UPDATE merchants SET status = 'suspended' WHERE id = $1 AND status NOT IN ('suspended', 'prize')`,
 		merchantID); err != nil {
 		s.logger.Error("المخالفات: تعذّر الحظر", "merchant", merchantID, "error", err)
 		return

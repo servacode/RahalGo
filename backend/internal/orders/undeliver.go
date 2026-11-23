@@ -256,6 +256,13 @@ func (s *Service) undeliverTx(ctx context.Context, q wallet.Querier,
 		}
 	}
 
+	// **ورصيدُ الجوائز يعود** كما في كلّ إلغاءٍ قبل التسليم (`prize_order.go`).
+	if s.prizes != nil {
+		if _, err := s.prizes.RefundOrderTx(ctx, q, orderID, 0); err != nil {
+			return res, err
+		}
+	}
+
 	// (٧) **الزبون** — ما دفعه من محفظته يُردّ (§1). والنقدُ لم يدفعه.
 	if walletPaid > 0 && customerID != "" {
 		if _, err := s.wallet.ApplyTx(ctx, q, customerID, walletPaid, "refund", orderID,

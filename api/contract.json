@@ -5700,6 +5700,46 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/prizes/draws",
+      "handler": "handleAdminPrizeDraws",
+      "auth": true,
+      "capability": "offers.manage",
+      "response": [
+        {
+          "name": "draws",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/prizes/entries",
+      "handler": "handleAdminPrizeEntries",
+      "auth": true,
+      "capability": "offers.manage",
+      "response": [
+        {
+          "name": "entrants",
+          "type": "unknown"
+        },
+        {
+          "name": "invites_per_entry",
+          "type": "unknown"
+        },
+        {
+          "name": "month",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/profits",
       "handler": "handleProfits",
       "auth": true,
@@ -12410,6 +12450,59 @@
           "name": "expected_total",
           "type": "int64"
         }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/prizes/items",
+      "handler": "handlePrizeItems",
+      "auth": true,
+      "response": [
+        {
+          "name": "items",
+          "type": "unknown"
+        },
+        {
+          "name": "store_id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/prizes/me",
+      "handler": "handlePrizesMe",
+      "auth": true,
+      "response": [
+        {
+          "name": "@me",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/prizes/winners",
+      "handler": "handlePrizeWinners",
+      "auth": true,
+      "response": [
+        {
+          "name": "month",
+          "type": "unknown"
+        },
+        {
+          "name": "winners",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
       ]
     },
     {

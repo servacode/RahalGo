@@ -266,6 +266,12 @@ func (s *Service) feeEditStandardTx(ctx context.Context, tx pgx.Tx, actorID, ord
 			if req.Fee > deliveryFee {
 				waived = req.Fee - deliveryFee
 			}
+			// **وحصّةُ الجوائز فوق الكود لا مكانه** — البضاعةُ لم تتبدّل هنا.
+			if keep, err := s.prizeRefit(ctx, tx, orderID, o.subtotal-discount); err != nil {
+				return err
+			} else {
+				discount += keep
+			}
 		}
 	}
 	if fw, err := s.freeDeliveryReapply(ctx, tx, orderID, deliveryFee); err != nil {

@@ -172,7 +172,8 @@
         "FI-17.d",
         "FI-17.e",
         "FI-17.f",
-        "FI-17.g"
+        "FI-17.g",
+        "FI-17.h"
       ]
     }
   ],
@@ -1299,7 +1300,7 @@
     {
       "id": "FI-17.c",
       "family": "FI-17",
-      "name": "المحفظةُ تدفع التوصيلَ وحدَه في النموذج ٢",
+      "name": "المحفظةُ في النموذج ٢ تدفع التوصيلَ وحدَه — إلّا «الكل من المحفظة»",
       "status": "PROVABLE_NOW",
       "ops": true,
       "flows": [
@@ -1354,6 +1355,17 @@
       "ops": true,
       "flows": [
         "F-12"
+      ]
+    },
+    {
+      "id": "FI-17.h",
+      "family": "FI-17",
+      "name": "«الكل من المحفظة» المسلَّم له دينُ طلبٍ للكابتن بقدّ ما دفعه للمتجر",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-01",
+        "F-14"
       ]
     }
   ],
@@ -1750,8 +1762,8 @@
   ],
   "counts": {
     "families": 16,
-    "checks": 95,
-    "provable_now": 89,
+    "checks": 96,
+    "provable_now": 90,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,
@@ -1789,6 +1801,11 @@
     "referral.reward_4",
     "referral.reward_rest",
     "referral.reward_on",
+    "prizes.amount_1",
+    "prizes.amount_2",
+    "prizes.amount_3",
+    "prizes.amount_4",
+    "prizes.amount_5",
     "drivers.target_reward",
     "drivers.reward_2",
     "drivers.reward_3",

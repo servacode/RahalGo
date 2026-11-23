@@ -128,6 +128,12 @@ func (s *Service) recomputeAfterRemovalTx(ctx context.Context, tx pgx.Tx, orderI
 			}
 		}
 	}
+	// **وحصّةُ الجوائز تبقى بقدر البضاعة الباقية** — والفرقُ يعود لرصيده (`prizeRefit`).
+	if keep, err := s.prizeRefit(ctx, tx, orderID, subtotal-discount); err != nil {
+		return res, err
+	} else {
+		discount += keep
+	}
 	// **والتوصيلُ المجانيّ يبقى وعداً** — يُعاد على الأجرة الجديدة بسقف عرضه.
 	if fw, err := s.freeDeliveryReapply(ctx, tx, orderID, deliveryFee); err != nil {
 		return res, err

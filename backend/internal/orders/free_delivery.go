@@ -139,6 +139,15 @@ func (o freeOffer) claim(ctx context.Context, q wallet.Querier, orderID, kind st
 // الأجرة الجديدة بسقف عرضه نفسِه، **ولو انتهى العرضُ بعد الطلب** (وعدٌ قُطع يومَه).
 // يردّ صفراً إن لم يكن للطلب حقّ.
 func (s *Service) freeDeliveryReapply(ctx context.Context, q wallet.Querier, orderID string, fee int64) (int64, error) {
+	// **وطلبُ الجوائز توصيلُه على المنصّة كلُّه** — على أيّ أجرةٍ صارت (`prize_order.go`).
+	if prize, err := prizeOrderOf(ctx, q, orderID); err != nil {
+		return 0, err
+	} else if prize {
+		if fee < 0 {
+			return 0, nil
+		}
+		return fee, nil
+	}
 	var maxFee *int64
 	err := q.QueryRow(ctx, `
 		SELECT f.max_fee FROM free_delivery_claims c

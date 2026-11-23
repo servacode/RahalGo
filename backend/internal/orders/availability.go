@@ -351,7 +351,7 @@ func (s *Service) closedSource(ctx context.Context, q dbtx.Querier,
 	var name string
 	err = q.QueryRow(ctx, `
 		SELECT m.name FROM merchants m
-		WHERE m.id = ANY($1::uuid[]) AND NOT `+OpenNowSQL+`
+		WHERE m.id = ANY($1::uuid[]) AND NOT `+OrderableNowSQL+`
 		LIMIT 1`, src.IDs).Scan(&name)
 	if err != nil {
 		return false, "", nil
@@ -385,7 +385,8 @@ func (s *Service) merchantGates(ctx context.Context, q dbtx.Querier,
 			id).Scan(&emergency, &status); err != nil {
 			continue
 		}
-		if emergency || status != "active" {
+		// **ومتجرُ الجوائز يُطلب منه بدوامه** (`PrizeOpenNowSQL`).
+		if emergency || (status != "active" && status != "prize") {
 			// **قيدٌ لا يُفتح** — جدولٌ سارٍ بلا فترةٍ واحدة.
 			out = append(out, platform.Gate{Enforced: true, Sch: platform.Schedule{}})
 			continue
