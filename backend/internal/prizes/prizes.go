@@ -1,19 +1,40 @@
-// Package prizes **«جوائز رحّال غو»** — سحبٌ شهريٌّ على دعوات الزبائن ورصيدُ جوائز
-// (قرارُ المالك ٢٠٢٦-١١-٢٣).
+// Package prizes **«جوائز رحّال غو»** — مسابقةُ نقاطٍ شهريّةٌ ورصيدُ جوائز.
 //
-// # الأسئلةُ الخمسة
+// كانت سحباً عشوائيّاً على الدعوات (قرارُ المالك ٢٠٢٦-١١-٢٣)، **وصارت لوحةَ نقاطٍ بلا حظّ**
+// (قرارُ المالك ٢٠٢٦-١١-٢٥: «صاحب أكثر تفاعل يستاهل»).
 //
-//	متى تُعدّ الدعوة؟  ←  لحظةَ إنشاء حساب المدعوّ (`referrals.created_at`)
-//	كم فرصة؟         ←  كلُّ `prizes.invites_per_entry` دعوةً في الشهر فرصة
-//	متى السحب؟        ←  أوّلَ الشهر ١٢ ظهراً بتوقيت دمشق، على الشهر الماضي
-//	كم يربح؟         ←  بالمرتبة: `prizes.amount_1..5` (وما بعد الخامس كالخامس)
-//	أين يُصرف؟        ←  متجرُ الجوائز وحدَه، **وينتهي آخرَ الشهر الذي مُنح فيه**
+// # النقاط (كلُّ قيمةٍ من الإعدادات `prizes.points_*`)
+//
+//	حضورٌ يوميّ «سجّل حضوري»            ←  مرّةً باليوم (يومُ دمشق)
+//	طلبٌ مُسلَّمٌ للزبون نفسِه           ←  لكلّ طلب (عاديّ/خاصّ/أمانة)، ويسقط إن أُلغي التسليم
+//	صديقٌ يفتح حساباً برابط دعوته         ←  لحظةَ إنشاء الحساب (`referrals.created_at`)
+//	أوّلُ طلبٍ مُسلَّمٍ لذلك الصديق        ←  للداعي
+//	متابعةُ فيسبوك / إنستغرام            ←  مرّةً في عمر الحساب، تُحسب في شهر الضغط
+//
+// **النقاطُ تُحسب من مصادرها في كلّ قراءة** (`points.go`) لا من عدّادٍ يُزاد — فإلغاءُ تسليمٍ
+// (`delivered_at` يُمحى) يُسقط نقاطَه وحدَه بلا قيدٍ عكسيّ.
+//
+// # الشهرُ والحسم والإعلان (بتوقيت دمشق)
+//
+//	يومُ الحسم   = min(29, آخرُ يومٍ − 1) الساعةَ ١٢:٠٠  (فبراير ٢٨ يوماً ⇒ ٢٧، وإلّا ٢٩)
+//	الإعلان      = آخرُ يومٍ في الشهر الساعةَ ١٢:٠٠
+//	نافذةُ الشهر = من حسم الشهر الماضي إلى حسم هذا الشهر — فما بعد الحسم يُحسب للشهر التالي
+//
+// فالشهرُ الأوّلُ يبدأ فعليّاً أوّلَه ٠٠:٠٠ (يومُ الإطلاق `prizes.launch_on`)، **وكلُّ نشاطٍ بين
+// الحسم وآخر الشهر يُعدّ للشهر الجاي.**
+//
+// # الفوز
+//
+// الأعلى نقاطاً أوّلاً، **والتعادلُ لمن وصل مجموعَه أبكر** (كلُّ النقاط موجبة، فلحظةُ الوصول
+// = آخرُ حدثٍ عُدّ له). **ولا يفوز إلّا من بلغ `prizes.min_points`**، ورابحو الشهر الماضي
+// خارجَ ترتيب هذا الشهر وحدَه. وأوّلُ `prizes.winners` بالجوائز `prizes.amount_1..5`.
 //
 // # والمال
 //
 // **المنحُ والانتهاءُ استحقاقٌ لا حركةُ مال** — لا قيدَ خزينةٍ ولا دفتر. **والصرفُ وحدَه
 // مال**: يُكتب على الطلب خصماً تتحمّله المنصّة (`orders.prize_discount` داخلَ `discount`)
-// كخصم الكود تماماً، فحسابُ الخزينة الفرقيُّ يقرؤه بلا قيدٍ جديد.
+// كخصم الكود تماماً، فحسابُ الخزينة الفرقيُّ يقرؤه بلا قيدٍ جديد. **والرصيدُ ينتهي آخرَ الشهر
+// الذي يلي يومَ الإعلان** (الإعلانُ آخرَ يومٍ في الشهر، فلا يُمنح رصيدٌ لساعات).
 package prizes
 
 import (
@@ -69,27 +90,66 @@ func (s *Service) SetClock(now func() time.Time) {
 
 // مفاتيحُ الإعدادات — في `settings/catalog.go`.
 const (
-	KeyEnabled        = "prizes.enabled"
-	KeyLaunchOn       = "prizes.launch_on"
-	KeyInvitesPerEntr = "prizes.invites_per_entry"
-	KeyWinners        = "prizes.winners"
-	// DefaultLaunchOn **أوّلُ يومٍ تُعدّ فيه الدعوات** — وما قبله لا يُعدّ أبداً.
+	KeyEnabled   = "prizes.enabled"
+	KeyLaunchOn  = "prizes.launch_on"
+	KeyWinners   = "prizes.winners"
+	KeyMinPoints = "prizes.min_points"
+	// نقاطُ كلّ فعل.
+	KeyPtsCheckin          = "prizes.points_checkin"
+	KeyPtsOrder            = "prizes.points_order"
+	KeyPtsInviteSignup     = "prizes.points_invite_signup"
+	KeyPtsInviteFirstOrder = "prizes.points_invite_first_order"
+	KeyPtsFollowFacebook   = "prizes.points_follow_facebook"
+	KeyPtsFollowInstagram  = "prizes.points_follow_instagram"
+	// **روابطُ الصفحتين من إعدادات «تواصل معنا» القائمة** — لا مفتاحَ ثانٍ لمعنًى واحد.
+	KeyFacebookURL  = "platform.facebook"
+	KeyInstagramURL = "platform.instagram"
+	// DefaultLaunchOn **أوّلُ يومٍ تُعدّ فيه النقاط** — وما قبله لا يُعدّ أبداً.
 	DefaultLaunchOn = "2026-12-01"
 )
 
-// Enabled **المفتاحُ الرئيسيّ.**
-func (s *Service) Enabled(ctx context.Context) bool { return s.settings.GetBool(ctx, KeyEnabled) }
+// PointValues **نقاطُ كلّ فعل** كما في الإعدادات — ولا سالبَ.
+type PointValues struct {
+	Checkin          int `json:"checkin"`
+	Order            int `json:"order"`
+	InviteSignup     int `json:"invite_signup"`
+	InviteFirstOrder int `json:"invite_first_order"`
+	FollowFacebook   int `json:"follow_facebook"`
+	FollowInstagram  int `json:"follow_instagram"`
+}
 
-// PerEntry **كم دعوةً للفرصة الواحدة** — ولا يقلّ عن واحد.
-func (s *Service) PerEntry(ctx context.Context) int {
-	n := int(s.settings.GetInt(ctx, KeyInvitesPerEntr))
-	if n < 1 {
-		n = 1
+// Points **نقاطُ الأفعال الآن.**
+func (s *Service) Points(ctx context.Context) PointValues {
+	get := func(k string) int {
+		n := int(s.settings.GetInt(ctx, k))
+		if n < 0 {
+			n = 0
+		}
+		return n
+	}
+	return PointValues{
+		Checkin:          get(KeyPtsCheckin),
+		Order:            get(KeyPtsOrder),
+		InviteSignup:     get(KeyPtsInviteSignup),
+		InviteFirstOrder: get(KeyPtsInviteFirstOrder),
+		FollowFacebook:   get(KeyPtsFollowFacebook),
+		FollowInstagram:  get(KeyPtsFollowInstagram),
+	}
+}
+
+// MinPoints **أقلُّ مجموعٍ للتأهّل** — ولا سالب.
+func (s *Service) MinPoints(ctx context.Context) int {
+	n := int(s.settings.GetInt(ctx, KeyMinPoints))
+	if n < 0 {
+		n = 0
 	}
 	return n
 }
 
-// WinnersCount **كم رابحاً في السحب** — ولا يقلّ عن واحد.
+// Enabled **المفتاحُ الرئيسيّ.**
+func (s *Service) Enabled(ctx context.Context) bool { return s.settings.GetBool(ctx, KeyEnabled) }
+
+// WinnersCount **كم رابحاً في الشهر** — ولا يقلّ عن واحد.
 func (s *Service) WinnersCount(ctx context.Context) int {
 	n := int(s.settings.GetInt(ctx, KeyWinners))
 	if n < 1 {
@@ -125,7 +185,7 @@ func amountsFor(base []int64, n int) []int64 {
 	return out
 }
 
-// LaunchOn **أوّلُ لحظةٍ تُعدّ فيها الدعوات** — منتصفُ ليل اليوم بتوقيت دمشق.
+// LaunchOn **أوّلُ لحظةٍ تُعدّ فيها النقاط** — منتصفُ ليل اليوم بتوقيت دمشق.
 func (s *Service) LaunchOn(ctx context.Context) (string, time.Time) {
 	raw := strings.TrimSpace(s.settings.GetString(ctx, KeyLaunchOn))
 	t, err := time.ParseInLocation("2006-01-02", raw, offers.Damascus)
@@ -147,21 +207,57 @@ func MonthStart(t time.Time) time.Time {
 // NextMonth **أوّلُ الشهر التالي.**
 func NextMonth(month time.Time) time.Time { return MonthStart(month).AddDate(0, 1, 0) }
 
-// DrawAt **موعدُ سحب الشهر** — أوّلُ الشهر التالي الساعةَ ١٢ ظهراً بتوقيت دمشق.
-func DrawAt(month time.Time) time.Time { return NextMonth(month).Add(12 * time.Hour) }
+// LastDay **آخرُ يومٍ في شهر `month`** (٢٨..٣١).
+func LastDay(month time.Time) int { return NextMonth(month).AddDate(0, 0, -1).Day() }
 
-// NextDrawAt **أوّلُ سحبٍ قادمٍ يُقال للزبون** — سحبُ هذا الشهر، **إلّا قبل الإطلاق**: فسحبُ شهر
-// الإطلاق (٢٠٢٦-١١-٢٤: كانت صفحةُ «انتظرونا ١/١٢» تقول «السحب ١/١٢» وأوّلُ سحبٍ ١/١/٢٠٢٧).
-func NextDrawAt(now, launch time.Time) time.Time {
-	month := MonthStart(now)
-	if l := MonthStart(launch); l.After(month) {
-		month = l
+// CutoffDay **يومُ الحسم** = min(29, آخرُ يومٍ − 1): ٢٩ عادةً، و٢٧ في فبراير ٢٨ يوماً،
+// و٢٨ في فبراير الكبيس — فبين الحسم والإعلان يومٌ على الأقلّ.
+func CutoffDay(month time.Time) int {
+	d := LastDay(month) - 1
+	if d > 29 {
+		d = 29
 	}
-	return DrawAt(month)
+	return d
 }
 
-// ExpiryFor **آخرُ ثانيةٍ من الشهر الذي فيه `t`** — انتهاءُ رصيدٍ مُنح فيه.
+// CutoffAt **حسمُ الشهر** — يومُ الحسم الساعةَ ١٢ ظهراً بتوقيت دمشق. **ما قبله لهذا الشهر،
+// وما بعده للشهر التالي.**
+func CutoffAt(month time.Time) time.Time {
+	m := MonthStart(month)
+	return time.Date(m.Year(), m.Month(), CutoffDay(m), 12, 0, 0, 0, offers.Damascus)
+}
+
+// AnnounceAt **إعلانُ الشهر** — آخرُ يومٍ فيه الساعةَ ١٢ ظهراً بتوقيت دمشق.
+func AnnounceAt(month time.Time) time.Time {
+	m := MonthStart(month)
+	return time.Date(m.Year(), m.Month(), LastDay(m), 12, 0, 0, 0, offers.Damascus)
+}
+
+// CompetitionMonth **أيُّ مسابقةٍ تُحسب لها لحظةُ `t`** — شهرُها، إلّا بعد حسمه فالتالي.
+func CompetitionMonth(t time.Time) time.Time {
+	m := MonthStart(t)
+	if !t.Before(CutoffAt(m)) {
+		return NextMonth(m)
+	}
+	return m
+}
+
+// CurrentMonth **المسابقةُ التي يراها الزبون** — الجاريةُ الآن، **وقبل الإطلاق مسابقةُ شهر
+// الإطلاق** (فلا يُقال حسمُ شهرٍ لن يُعدّ).
+func CurrentMonth(now, launch time.Time) time.Time {
+	m := CompetitionMonth(now)
+	if l := CompetitionMonth(launch); l.After(m) {
+		m = l
+	}
+	return m
+}
+
+// ExpiryFor **آخرُ ثانيةٍ من الشهر الذي فيه `t`**.
 func ExpiryFor(t time.Time) time.Time { return NextMonth(t).Add(-time.Second) }
+
+// AwardExpiry **انتهاءُ جائزةٍ مُنحت في `t`** — آخرُ الشهر التالي: الإعلانُ آخرَ يومٍ في الشهر،
+// **فلو انتهت آخرَ شهرها لعاشت ساعات.**
+func AwardExpiry(t time.Time) time.Time { return ExpiryFor(NextMonth(t)) }
 
 // MonthKey `YYYY-MM`.
 func MonthKey(month time.Time) string { return month.In(offers.Damascus).Format("2006-01") }
@@ -175,10 +271,11 @@ func ParseMonth(s string) (time.Time, bool) {
 	return t, true
 }
 
-// countWindow **نافذةُ عدّ الشهر** — من أوّله أو من يوم الإطلاق أيّهما أبعد، إلى أوّل التالي.
-// `ok=false` إن كان الشهرُ كلُّه قبل الإطلاق.
+// countWindow **نافذةُ نقاط الشهر** — من حسم الشهر الماضي (أو يوم الإطلاق، أيّهما أبعد) إلى
+// حسم هذا الشهر. `ok=false` إن كانت النافذةُ كلُّها قبل الإطلاق.
 func countWindow(month, launch time.Time) (from, to time.Time, ok bool) {
-	from, to = MonthStart(month), NextMonth(month)
+	m := MonthStart(month)
+	from, to = CutoffAt(m.AddDate(0, -1, 0)), CutoffAt(m)
 	if !launch.Before(to) {
 		return from, to, false
 	}
@@ -186,39 +283,4 @@ func countWindow(month, launch time.Time) (from, to time.Time, ok bool) {
 		from = launch
 	}
 	return from, to, true
-}
-
-// EntriesFor **فرصُ عددٍ من الدعوات** — ٥←١، ١٠←٢، ١٥←٣.
-func EntriesFor(invites, perEntry int) int {
-	if perEntry < 1 {
-		perEntry = 1
-	}
-	if invites < 0 {
-		return 0
-	}
-	return invites / perEntry
-}
-
-// ToNext **كم دعوةً بقيت للفرصة التالية.**
-func ToNext(invites, perEntry int) int {
-	if perEntry < 1 {
-		perEntry = 1
-	}
-	if invites < 0 {
-		invites = 0
-	}
-	return perEntry - invites%perEntry
-}
-
-// DisplayName **الاسمُ الأوّلُ وأوّلُ حرفٍ من الأخير ونقطة** — «أحمد م.». ولا رقمَ أبداً.
-func DisplayName(full string) string {
-	parts := strings.Fields(full)
-	switch len(parts) {
-	case 0:
-		return "زبون"
-	case 1:
-		return parts[0]
-	}
-	last := []rune(parts[len(parts)-1])
-	return parts[0] + " " + string(last[0]) + "."
 }

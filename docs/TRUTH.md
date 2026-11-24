@@ -783,7 +783,13 @@ kosom` |
 | `referral.reward_rest` | المنصة | money | `0` |
 | `prizes.enabled` | المنصة | bool | `false` |
 | `prizes.launch_on` | المنصة | text | `2026-12-01` |
-| `prizes.invites_per_entry` | المنصة | int | `5` |
+| `prizes.min_points` | المنصة | int | `80` |
+| `prizes.points_checkin` | المنصة | int | `1` |
+| `prizes.points_order` | المنصة | int | `10` |
+| `prizes.points_invite_signup` | المنصة | int | `5` |
+| `prizes.points_invite_first_order` | المنصة | int | `10` |
+| `prizes.points_follow_facebook` | المنصة | int | `5` |
+| `prizes.points_follow_instagram` | المنصة | int | `5` |
 | `prizes.winners` | المنصة | int | `5` |
 | `prizes.amount_1` | المنصة | money | `1500` |
 | `prizes.amount_2` | المنصة | money | `1250` |

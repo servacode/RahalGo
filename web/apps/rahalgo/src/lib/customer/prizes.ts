@@ -3,8 +3,8 @@
  * **جوائز رحّال غو — منطقٌ صافٍ بلا شبكةٍ ولا واجهة**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (قرارُ المالك: كلُّ ٥ دعواتٍ في الشهر = فرصةٌ بسحبٍ شهريّ، وللرابحين «رصيدُ جوائز» لا يُصرف إلّا
- * على أصناف الجوائز.) **والخادمُ يقرّر كلَّ شيء** — هنا تنسيقٌ وتقسيمٌ للعرض وحدَه، وكلُّ حقلٍ اختياريّ.
+ * (قرارُ المالك ٢٠٢٦-١١-٢٥: مسابقةُ نقاطٍ شهريّة، والأعلى نقاطاً ممّن بلغوا الحدّ يربحون «رصيدَ جوائز» لا
+ * يُصرف إلّا على أصناف الجوائز.) **والخادمُ يقرّر كلَّ شيء** — هنا تنسيقٌ للعرض وحدَه، وكلُّ حقلٍ اختياريّ.
  */
 
 import type { PrizeItem, PrizesMe } from "./types";
@@ -14,18 +14,23 @@ export function prizesLive(me: PrizesMe | null | undefined): boolean {
   return !!me && me.enabled === true;
 }
 
-/** **كم دعوةً بعد آخر فرصة** — «٣ من ٥»: تتصفّر عند كلّ فرصةٍ جديدة. */
-export function progressInEntry(me: PrizesMe): { done: number; total: number } {
-  const total = Math.max(1, me.invites_per_entry ?? 5);
-  const left = me.invites_to_next ?? total;
-  const done = Math.min(total, Math.max(0, total - left));
-  return { done: left <= 0 ? 0 : done, total };
+/** **تقدّمُه نحو حدّ التأهّل** — من صفرٍ إلى واحد؛ والمتأهّلُ واحد. */
+export function qualifyProgress(me: PrizesMe): number {
+  const min = Math.max(0, me.min_points ?? 0);
+  if (min === 0) return 1;
+  return Math.min(1, Math.max(0, (me.points ?? 0) / min));
 }
 
-/** **شارةُ الرأس «٣/٥»** بأرقامٍ لاتينيّة. */
+/** **شارةُ الزرّ العائم** — نقاطُه هذا الشهر بأرقامٍ لاتينيّة. */
 export function badgeText(me: PrizesMe): string {
-  const { done, total } = progressInEntry(me);
-  return `${done}/${total}`;
+  return String(Math.max(0, me.points ?? 0));
+}
+
+/** **رابطُ صفحةٍ يُفتح** — بلا بروتوكولٍ يُضاف `https://`؛ والفارغُ فارغ. */
+export function pageUrl(raw: string | undefined): string {
+  const v = (raw ?? "").trim();
+  if (!v) return "";
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
 }
 
 /** **«١/١٢/٢٠٢٦»** من `2026-12-01` — ترتيبُ اليوم/الشهر/السنة بلا منطقةٍ زمنيّةٍ تقلب اليوم. */

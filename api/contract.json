@@ -5716,21 +5716,33 @@
     },
     {
       "method": "GET",
-      "path": "/api/v1/admin/prizes/entries",
-      "handler": "handleAdminPrizeEntries",
+      "path": "/api/v1/admin/prizes/leaderboard",
+      "handler": "handleAdminPrizeLeaderboard",
       "auth": true,
       "capability": "offers.manage",
       "response": [
         {
-          "name": "entrants",
+          "name": "announce_at",
           "type": "unknown"
         },
         {
-          "name": "invites_per_entry",
+          "name": "cutoff_at",
+          "type": "unknown"
+        },
+        {
+          "name": "min_points",
           "type": "unknown"
         },
         {
           "name": "month",
+          "type": "unknown"
+        },
+        {
+          "name": "standings",
+          "type": "unknown"
+        },
+        {
+          "name": "winners",
           "type": "unknown"
         }
       ],
@@ -12558,6 +12570,24 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/prizes/checkin",
+      "handler": "handlePrizeCheckIn",
+      "auth": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/prizes/follow",
+      "handler": "handlePrizeFollow",
+      "auth": true,
+      "request": [
+        {
+          "name": "network",
+          "type": "string"
+        }
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/prizes/items",
       "handler": "handlePrizeItems",
@@ -12584,25 +12614,6 @@
       "response": [
         {
           "name": "@me",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/prizes/winners",
-      "handler": "handlePrizeWinners",
-      "auth": true,
-      "response": [
-        {
-          "name": "month",
-          "type": "unknown"
-        },
-        {
-          "name": "winners",
           "type": "unknown"
         }
       ],

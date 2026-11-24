@@ -82,30 +82,55 @@ func SetStore(ctx context.Context, q dbtx.Querier, merchantID string) error {
 	return nil
 }
 
-// Me **حالُ الزبون في الجوائز** — `GET /prizes/me`.
+// Me **حالُ الزبون في المسابقة** — `GET /prizes/me`.
+//
+// **نقاطُه وترتيبُه هو وحدَه** (قرارُ المالك ٢٠٢٦-١١-٢٥): لا اسمَ ولا نقاطَ لزبونٍ آخر في هذا
+// الردّ ولا في غيره من أبواب الزبون — الترتيبُ الكاملُ باللوحة وحدَها.
 type Me struct {
-	Enabled         bool       `json:"enabled"`
-	LaunchOn        string     `json:"launch_on"`
-	Month           string     `json:"month"`
-	MonthInvites    int        `json:"month_invites"`
-	InvitesPerEntry int        `json:"invites_per_entry"`
-	Entries         int        `json:"entries"`
-	InvitesToNext   int        `json:"invites_to_next"`
-	DrawAt          time.Time  `json:"draw_at"`
-	Amounts         []int64    `json:"amounts"`
-	WinnersCount    int        `json:"winners_count"`
-	PrizeBalance    int64      `json:"prize_balance"`
-	PrizeExpiresAt  *time.Time `json:"prize_expires_at"`
-	StoreID         *string    `json:"store_id"`
+	Enabled  bool   `json:"enabled"`
+	LaunchOn string `json:"launch_on"`
+	// Started **بدأت المسابقة** — مفعّلةٌ وبلغنا يومَ الإطلاق؛ قبلها لا حضورَ ولا متابعة.
+	Started bool   `json:"started"`
+	Month   string `json:"month"`
+	// CutoffAt **حسمُ هذه المسابقة** — بعده يُحسب كلُّ شيءٍ للشهر التالي.
+	CutoffAt   time.Time `json:"cutoff_at"`
+	AnnounceAt time.Time `json:"announce_at"`
+	Points     int       `json:"points"`
+	// Rank **ترتيبُه** — وصفرٌ إن لم تكن له نقطةٌ بعد أو كان مستثنًى.
+	Rank      int  `json:"rank"`
+	MinPoints int  `json:"min_points"`
+	ToQualify int  `json:"to_qualify"`
+	Qualified bool `json:"qualified"`
+	// Excluded **ربح الشهر الماضي** — فهذا الشهرُ استراحة.
+	Excluded          bool        `json:"excluded"`
+	CheckedInToday    bool        `json:"checked_in_today"`
+	FollowedFacebook  bool        `json:"followed_facebook"`
+	FollowedInstagram bool        `json:"followed_instagram"`
+	FacebookURL       string      `json:"facebook_url"`
+	InstagramURL      string      `json:"instagram_url"`
+	PointValues       PointValues `json:"point_values"`
+	Amounts           []int64     `json:"amounts"`
+	WinnersCount      int         `json:"winners_count"`
+	// LastMonth/LastRank/LastAmount **نتيجتُه هو في آخر إعلان** — لا أسماءُ الرابحين.
+	LastMonth      *string    `json:"last_month"`
+	LastRank       int        `json:"last_rank"`
+	LastAmount     int64      `json:"last_amount"`
+	PrizeBalance   int64      `json:"prize_balance"`
+	PrizeExpiresAt *time.Time `json:"prize_expires_at"`
+	StoreID        *string    `json:"store_id"`
 }
 
 // MeFor يبني حالَ الزبون.
 func (s *Service) MeFor(ctx context.Context, userID string) (*Me, error) {
 	now := s.now()
-	month := MonthStart(now)
 	launchRaw, launch := s.LaunchOn(ctx)
-	per := s.PerEntry(ctx)
-	invites, err := s.MonthInvites(ctx, userID, month)
+	month := CurrentMonth(now, launch)
+	minPts := s.MinPoints(ctx)
+	standings, err := s.Standings(ctx, s.db, month)
+	if err != nil {
+		return nil, err
+	}
+	excluded, err := s.excludedFor(ctx, s.db, month)
 	if err != nil {
 		return nil, err
 	}
@@ -119,18 +144,48 @@ func (s *Service) MeFor(ctx context.Context, userID string) (*Me, error) {
 	}
 	amounts := s.Amounts(ctx)
 	out := &Me{
-		Enabled:         s.Enabled(ctx),
-		LaunchOn:        launchRaw,
-		Month:           MonthKey(month),
-		MonthInvites:    invites,
-		InvitesPerEntry: per,
-		Entries:         EntriesFor(invites, per),
-		InvitesToNext:   ToNext(invites, per),
-		DrawAt:          NextDrawAt(now, launch).UTC(),
-		Amounts:         amounts,
-		WinnersCount:    len(amounts),
-		PrizeBalance:    bal.Amount,
-		StoreID:         store,
+		Enabled:      s.Enabled(ctx),
+		LaunchOn:     launchRaw,
+		Started:      s.started(ctx),
+		Month:        MonthKey(month),
+		CutoffAt:     CutoffAt(month).UTC(),
+		AnnounceAt:   AnnounceAt(month).UTC(),
+		MinPoints:    minPts,
+		Excluded:     excluded[userID],
+		FacebookURL:  s.settings.GetString(ctx, KeyFacebookURL),
+		InstagramURL: s.settings.GetString(ctx, KeyInstagramURL),
+		PointValues:  s.Points(ctx),
+		Amounts:      amounts,
+		WinnersCount: len(amounts),
+		PrizeBalance: bal.Amount,
+		StoreID:      store,
+	}
+	for _, st := range standings {
+		if st.UserID == userID {
+			out.Points, out.Rank, out.Qualified = st.Points, st.Rank, st.Qualified
+			break
+		}
+	}
+	if !out.Excluded && out.Points < minPts {
+		out.ToQualify = minPts - out.Points
+	}
+	if err := s.db.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM prize_checkins WHERE user_id = $1 AND day = $2::date),
+		       EXISTS (SELECT 1 FROM prize_follows WHERE user_id = $1 AND network = 'facebook'),
+		       EXISTS (SELECT 1 FROM prize_follows WHERE user_id = $1 AND network = 'instagram')`,
+		userID, DamascusDay(now)).Scan(&out.CheckedInToday, &out.FollowedFacebook, &out.FollowedInstagram); err != nil {
+		return nil, err
+	}
+	var last time.Time
+	err = s.db.QueryRow(ctx, `SELECT month FROM prize_draws ORDER BY month DESC LIMIT 1`).Scan(&last)
+	if err == nil {
+		k := last.Format("2006-01")
+		out.LastMonth = &k
+		err = s.db.QueryRow(ctx, `SELECT rank, amount FROM prize_winners WHERE month = $1 AND user_id = $2`,
+			last, userID).Scan(&out.LastRank, &out.LastAmount)
+	}
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
 	}
 	if bal.Amount > 0 && bal.ExpiresAt != nil {
 		t := bal.ExpiresAt.UTC()
@@ -200,66 +255,34 @@ func sortItems(items []Item) {
 	}
 }
 
-// PublicWinner **رابحٌ كما يُعرض للزبائن** — بلا رقمٍ أبداً.
-type PublicWinner struct {
-	Rank   int    `json:"rank"`
-	Name   string `json:"name"`
-	Amount int64  `json:"amount"`
+// AdminStanding **مشتركٌ كما تراه اللوحة** — باسمه ورقمه ونقاطه ومصادرها.
+type AdminStanding struct {
+	Rank      int            `json:"rank"`
+	UserID    string         `json:"user_id"`
+	Name      string         `json:"name"`
+	Phone     string         `json:"phone"`
+	Points    int            `json:"points"`
+	ReachedAt time.Time      `json:"reached_at"`
+	Excluded  bool           `json:"excluded"`
+	Qualified bool           `json:"qualified"`
+	Breakdown map[string]int `json:"breakdown"`
 }
 
-// LastWinners **رابحو آخر سحبٍ وقع.**
-func (s *Service) LastWinners(ctx context.Context) (*string, []PublicWinner, error) {
-	var month time.Time
-	err := s.db.QueryRow(ctx, `SELECT month FROM prize_draws ORDER BY month DESC LIMIT 1`).Scan(&month)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, []PublicWinner{}, nil
-	}
-	if err != nil {
-		return nil, nil, err
-	}
-	key := month.Format("2006-01")
-	rows, err := s.db.Query(ctx, `
-		SELECT w.rank, COALESCE(u.full_name, ''), w.amount
-		  FROM prize_winners w JOIN users u ON u.id = w.user_id
-		 WHERE w.month = $1 ORDER BY w.rank`, month)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer rows.Close()
-	out := []PublicWinner{}
-	for rows.Next() {
-		var w PublicWinner
-		var full string
-		if err := rows.Scan(&w.Rank, &full, &w.Amount); err != nil {
-			return nil, nil, err
-		}
-		w.Name = DisplayName(full)
-		out = append(out, w)
-	}
-	return &key, out, rows.Err()
-}
-
-// AdminEntrant **مشتركٌ كما تراه اللوحة.**
-type AdminEntrant struct {
-	UserID  string `json:"user_id"`
-	Name    string `json:"name"`
-	Phone   string `json:"phone"`
-	Invites int    `json:"invites"`
-	Entries int    `json:"entries"`
-}
-
-// AdminEntries **مشتركو شهرٍ** — بأسمائهم وأرقامهم، الأكثرُ فرصاً أوّلاً.
-func (s *Service) AdminEntries(ctx context.Context, month time.Time) ([]AdminEntrant, error) {
-	es, err := s.Entrants(ctx, month)
+// AdminLeaderboard **ترتيبُ شهرٍ كاملاً بالأسماء الحقيقيّة** — للموظّفين وحدَهم.
+func (s *Service) AdminLeaderboard(ctx context.Context, month time.Time) ([]AdminStanding, error) {
+	list, err := s.Standings(ctx, s.db, month)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]AdminEntrant, 0, len(es))
-	for _, e := range es {
-		a := AdminEntrant{UserID: e.UserID, Invites: e.Invites, Entries: e.Entries}
+	out := make([]AdminStanding, 0, len(list))
+	for _, st := range list {
+		a := AdminStanding{
+			Rank: st.Rank, UserID: st.UserID, Points: st.Points, ReachedAt: st.ReachedAt,
+			Excluded: st.Excluded, Qualified: st.Qualified, Breakdown: st.Breakdown,
+		}
 		if err := s.db.QueryRow(ctx, `
 			SELECT COALESCE(full_name, ''), COALESCE(phone::text, '') FROM users WHERE id = $1`,
-			e.UserID).Scan(&a.Name, &a.Phone); err != nil {
+			st.UserID).Scan(&a.Name, &a.Phone); err != nil {
 			return nil, err
 		}
 		out = append(out, a)
@@ -273,30 +296,33 @@ type AdminWinner struct {
 	UserID  string `json:"user_id"`
 	Name    string `json:"name"`
 	Phone   string `json:"phone"`
+	Points  int    `json:"points"`
 	Amount  int64  `json:"amount"`
 	Spent   int64  `json:"spent"`
 	Expired int64  `json:"expired"`
 }
 
-// AdminDraw **سحبٌ وقع** — وكلفتُه: ما مُنح وما صُرف فعلاً (الكلفة) وما انتهى.
+// AdminDraw **إعلانٌ وقع** — وكلفتُه: ما مُنح وما صُرف فعلاً (الكلفة) وما انتهى.
 type AdminDraw struct {
-	Month        string        `json:"month"`
-	DrawnAt      time.Time     `json:"drawn_at"`
-	Entrants     int           `json:"entrants"`
-	TotalEntries int           `json:"total_entries"`
-	Awarded      int64         `json:"awarded"`
-	Spent        int64         `json:"spent"`
-	Expired      int64         `json:"expired"`
-	Winners      []AdminWinner `json:"winners"`
+	Month     string        `json:"month"`
+	DrawnAt   time.Time     `json:"drawn_at"`
+	CutoffAt  *time.Time    `json:"cutoff_at"`
+	MinPoints int           `json:"min_points"`
+	Entrants  int           `json:"entrants"`
+	Qualified int           `json:"qualified"`
+	Awarded   int64         `json:"awarded"`
+	Spent     int64         `json:"spent"`
+	Expired   int64         `json:"expired"`
+	Winners   []AdminWinner `json:"winners"`
 }
 
-// AdminDraws **السحوباتُ السابقة** — الأحدثُ أوّلاً.
+// AdminDraws **النتائجُ السابقة** — الأحدثُ أوّلاً.
 //
 // **والصرفُ والانتهاءُ يُنسبان إلى رصيدٍ مُنح في شهر السحب** — بانتهائه (`expires_at`)،
 // فرصيدُ كلّ سحبٍ ينتهي في شهرٍ غيرِ شهر غيره.
 func (s *Service) AdminDraws(ctx context.Context) ([]AdminDraw, error) {
 	rows, err := s.db.Query(ctx, `
-		SELECT d.month, d.drawn_at, d.entrants, d.total_entries
+		SELECT d.month, d.drawn_at, d.cutoff_at, d.min_points, d.entrants, d.qualified
 		  FROM prize_draws d ORDER BY d.month DESC LIMIT 36`)
 	if err != nil {
 		return nil, err
@@ -306,7 +332,7 @@ func (s *Service) AdminDraws(ctx context.Context) ([]AdminDraw, error) {
 	for rows.Next() {
 		var d AdminDraw
 		var m time.Time
-		if err := rows.Scan(&m, &d.DrawnAt, &d.Entrants, &d.TotalEntries); err != nil {
+		if err := rows.Scan(&m, &d.DrawnAt, &d.CutoffAt, &d.MinPoints, &d.Entrants, &d.Qualified); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -322,7 +348,7 @@ func (s *Service) AdminDraws(ctx context.Context) ([]AdminDraw, error) {
 	for i := range draws {
 		wr, err := s.db.Query(ctx, `
 			SELECT w.rank, w.user_id::text, COALESCE(u.full_name, ''), COALESCE(u.phone::text, ''),
-			       w.amount,
+			       w.points, w.amount,
 			       COALESCE((SELECT -sum(e.amount) FROM prize_entries e
 			                  WHERE e.user_id = w.user_id AND e.kind IN ('spend', 'refund')
 			                    AND e.expires_at = a.expires_at), 0),
@@ -340,7 +366,7 @@ func (s *Service) AdminDraws(ctx context.Context) ([]AdminDraw, error) {
 		}
 		for wr.Next() {
 			var w AdminWinner
-			if err := wr.Scan(&w.Rank, &w.UserID, &w.Name, &w.Phone, &w.Amount, &w.Spent, &w.Expired); err != nil {
+			if err := wr.Scan(&w.Rank, &w.UserID, &w.Name, &w.Phone, &w.Points, &w.Amount, &w.Spent, &w.Expired); err != nil {
 				wr.Close()
 				return nil, err
 			}

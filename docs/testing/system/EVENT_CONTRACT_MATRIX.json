@@ -220,7 +220,7 @@
     },
     {
       "file": "internal/orders/live_nudge.go",
-      "line": 96,
+      "line": 97,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": false
@@ -531,7 +531,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 869,
+      "line": 870,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -540,7 +540,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 936,
+      "line": 937,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -549,7 +549,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 1024,
+      "line": 1148,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -557,15 +557,15 @@
       "has_entity_id": true
     },
     {
-      "file": "internal/prizes/draw.go",
-      "line": 182,
+      "file": "internal/prizes/announce.go",
+      "line": 96,
       "call": "NotifyWallet",
       "has_app_targeting": false,
       "has_entity_id": false
     },
     {
-      "file": "internal/prizes/draw.go",
-      "line": 224,
+      "file": "internal/prizes/announce.go",
+      "line": 138,
       "call": "NotifyWallet",
       "has_app_targeting": false,
       "has_entity_id": false
@@ -838,7 +838,7 @@
     },
     {
       "file": "internal/server/driver_handlers.go",
-      "line": 1797,
+      "line": 1802,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -1203,14 +1203,14 @@
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 594,
+      "line": 598,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": true
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 766,
+      "line": 770,
       "call": "Notify",
       "kind": "Account",
       "entity": "user",
@@ -1801,7 +1801,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 1030,
+      "line": 1154,
       "room": "driver:*"
     },
     {
@@ -1875,7 +1875,7 @@
     },
     {
       "file": "internal/orders/live_nudge.go",
-      "line": 96,
+      "line": 97,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": false
@@ -1899,15 +1899,15 @@
       "has_entity_id": true
     },
     {
-      "file": "internal/prizes/draw.go",
-      "line": 182,
+      "file": "internal/prizes/announce.go",
+      "line": 96,
       "call": "NotifyWallet",
       "has_app_targeting": false,
       "has_entity_id": false
     },
     {
-      "file": "internal/prizes/draw.go",
-      "line": 224,
+      "file": "internal/prizes/announce.go",
+      "line": 138,
       "call": "NotifyWallet",
       "has_app_targeting": false,
       "has_entity_id": false
@@ -2156,14 +2156,14 @@
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 594,
+      "line": 598,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": true
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 766,
+      "line": 770,
       "call": "Notify",
       "kind": "Account",
       "entity": "user",

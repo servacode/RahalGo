@@ -1101,14 +1101,29 @@ var Catalog = []Def{
 		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 
 	// ══════════════════════════════════════════════════════════════════
-	// **«جوائز رحّال غو»** — سحبٌ شهريٌّ على الدعوات (قرارُ المالك ٢٠٢٦-١١-٢٣، `internal/prizes`)
+	// **«جوائز رحّال غو»** — مسابقةُ نقاطٍ شهريّة (قرارا المالك ٢٠٢٦-١١-٢٣ و٢٠٢٦-١١-٢٥، `internal/prizes`)
 	// ══════════════════════════════════════════════════════════════════
 	//
-	// **مطفأٌ افتراضاً**، والدعواتُ تُعدّ من `prizes.launch_on`. والجوائزُ بالليرة الجديدة.
+	// **مطفأٌ افتراضاً**، والنقاطُ تُعدّ من `prizes.launch_on`. والجوائزُ بالليرة الجديدة.
+	// الحسمُ يومَ min(29, آخرُ يومٍ − 1) ١٢:٠٠ والإعلانُ آخرَ يومٍ ١٢:٠٠ بتوقيت دمشق — ثابتان لا إعداد.
 	{Key: "prizes.enabled", Group: GroupPlatform, Kind: KindBool, Default: false},
 	{Key: "prizes.launch_on", Group: GroupPlatform, Kind: KindText, Max: 10, Default: "2026-12-01"},
-	{Key: "prizes.invites_per_entry", Group: GroupPlatform, Kind: KindInt,
-		Min: 1, Max: 100, Unit: "invites", Default: 5},
+	// **أقلُّ نقاطٍ بالشهر ليتأهّل الزبون للفوز.**
+	{Key: "prizes.min_points", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 100_000, Unit: "points", Default: 80},
+	// **نقاطُ كلّ فعل** — الحضورُ مرّةً باليوم، والمتابعةُ مرّةً في العمر.
+	{Key: "prizes.points_checkin", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 1000, Unit: "points", Default: 1},
+	{Key: "prizes.points_order", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 1000, Unit: "points", Default: 10},
+	{Key: "prizes.points_invite_signup", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 1000, Unit: "points", Default: 5},
+	{Key: "prizes.points_invite_first_order", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 1000, Unit: "points", Default: 10},
+	{Key: "prizes.points_follow_facebook", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 1000, Unit: "points", Default: 5},
+	{Key: "prizes.points_follow_instagram", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 1000, Unit: "points", Default: 5},
 	{Key: "prizes.winners", Group: GroupPlatform, Kind: KindInt,
 		Min: 1, Max: 50, Unit: "winners", Default: 5},
 	{Key: "prizes.amount_1", Group: GroupPlatform, Kind: KindMoney,

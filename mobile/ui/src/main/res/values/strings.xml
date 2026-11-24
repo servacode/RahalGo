@@ -82,6 +82,7 @@
     <string name="err_prize_no_balance">ما عندك رصيد جوائز لتطلب من صفحة الجوائز</string>
     <string name="err_prize_no_promo">ما بينفع كود خصم مع طلب الجوائز</string>
     <string name="err_prize_order_locked">طلب الجوائز ما بيتحوّل لمتجر تاني</string>
+    <string name="err_prizes_not_started">مسابقة الجوائز لسا ما بلشت</string>
     <string name="err_prize_balance_insufficient">رصيد الجوائز ما بيكفي</string>
     <string name="err_offer_not_yours">هذا العرض لم يعد لك</string>
     <string name="err_order_not_closed">الطلب لم يغلق بعد — البلاغ بعد انتهائه</string>

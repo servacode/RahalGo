@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 745,
+    "routes": 746,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 310,
-    "behaviour_settings": 264,
+    "setting_defs": 316,
+    "behaviour_settings": 270,
     "order_fields": 150,
     "test_files": 871,
-    "test_funcs": 3309
+    "test_funcs": 3312
   },
   "flows": [
     {
@@ -7279,7 +7279,25 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
-      "key": "prizes.invites_per_entry",
+      "key": "prizes.launch_on",
+      "group": "platform",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.min_points",
       "group": "platform",
       "kind": "int",
       "sensitive": false,
@@ -7297,9 +7315,99 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
-      "key": "prizes.launch_on",
+      "key": "prizes.points_checkin",
       "group": "platform",
-      "kind": "text",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.points_follow_facebook",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.points_follow_instagram",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.points_invite_first_order",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.points_invite_signup",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.points_order",
+      "group": "platform",
+      "kind": "int",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -14129,31 +14237,37 @@
       "orphan": true
     },
     {
-      "name": "TestDisplayName",
+      "name": "TestAwardExpiry",
       "file": "internal/prizes/prizes_test.go",
       "package": "prizes",
       "orphan": true
     },
     {
-      "name": "TestEntriesMath",
+      "name": "TestCompetitionMonth",
       "file": "internal/prizes/prizes_test.go",
       "package": "prizes",
       "orphan": true
     },
     {
-      "name": "TestMonthMath",
+      "name": "TestCountWindow",
       "file": "internal/prizes/prizes_test.go",
       "package": "prizes",
       "orphan": true
     },
     {
-      "name": "TestNextDrawAt_AfterLaunch",
+      "name": "TestCurrentMonthBeforeLaunch",
       "file": "internal/prizes/prizes_test.go",
       "package": "prizes",
       "orphan": true
     },
     {
-      "name": "TestPickWinnersWeightedOncePerPerson",
+      "name": "TestCutoffAndAnnounce",
+      "file": "internal/prizes/prizes_test.go",
+      "package": "prizes",
+      "orphan": true
+    },
+    {
+      "name": "TestRankTieThresholdExclusion",
       "file": "internal/prizes/prizes_test.go",
       "package": "prizes",
       "orphan": true
@@ -25401,7 +25515,7 @@
       "orphan": true
     },
     {
-      "name": "TestPRZ06_DrawOnceWeightedRanks",
+      "name": "TestPRZ06_PointsCountAndCancel",
       "file": "internal/qa/prizes_test.go",
       "package": "qa",
       "orphan": true
@@ -25414,6 +25528,18 @@
     },
     {
       "name": "TestPRZ08_PrizeStoreHiddenEverywhere",
+      "file": "internal/qa/prizes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPRZ09_AnnounceOnceTieThresholdExclusion",
+      "file": "internal/qa/prizes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPRZ10_NotStartedRejects",
       "file": "internal/qa/prizes_test.go",
       "package": "qa",
       "orphan": true
