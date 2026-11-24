@@ -464,15 +464,16 @@
     <string name="prizes_out_title">لست ضمن المسابقة بعد</string>
     <string name="prizes_out_before">المسابقة بتبلش %1$s — من وقتها كل دعوة بتنحسبلك</string>
     <string name="prizes_out_body">باقيلك %1$d دعوات لتدخل سحب هالشهر</string>
+    <string name="prizes_hero_starts">المسابقة بتبلش</string>
+    <string name="prizes_hero_next">السحب الجاي</string>
+    <string name="prizes_hero_days">باقي %1$d يوم</string>
+    <string name="prizes_hero_today">اليوم</string>
+    <string name="prizes_gifts_title">الهدايا</string>
     <string name="prizes_rules_title">شروط المسابقة</string>
-    <string name="prizes_rule_invite">ادعُ أصحابك برابط دعوتك — كل %1$d أصدقاء بيعملو حساب جديد = فرصة بالسحب</string>
-    <string name="prizes_rule_more">كل %1$d أصدقاء زيادة بيعطوك فرصة زيادة — كل ما دعيت أكتر فرصتك بتكبر</string>
-    <string name="prizes_rule_new">الصديق لازم يكون رقم جديد ما عندو حساب قبل برحّال غو</string>
-    <string name="prizes_rule_draw">السحب تلقائي يوم ١ من كل شهر الساعة ١٢ الضهر، على دعوات الشهر يلي قبلو</string>
-    <string name="prizes_rule_winners">%1$d رابحين كل شهر، وما حدا بيربح مرتين بنفس السحب</string>
-    <string name="prizes_rule_use">الجائزة رصيد بينصرف بس على هدايا هالصفحة، والتوصيل مجاني</string>
-    <string name="prizes_rule_diff">إذا الهدية أغلى من جائزتك بتدفع الفرق كاش أو من محفظتك</string>
-    <string name="prizes_rule_expire">رصيد الجائزة صالح لآخر الشهر يلي ربحت فيه، وبعدها بيخلص</string>
+    <string name="prizes_rule_invite">كل %1$d أصدقاء جدد بيعملو حساب = فرصة بالسحب</string>
+    <string name="prizes_rule_draw">السحب يوم ١ بكل شهر، و%1$d رابحين</string>
+    <string name="prizes_rule_use">الجائزة رصيد للهدايا هون، والتوصيل مجاني</string>
+    <string name="prizes_rule_expire">الرصيد لآخر الشهر، والفرق بتدفعه كاش أو محفظة</string>
     <string name="prizes_progress_title">دعواتك هذا الشهر</string>
     <string name="prizes_progress_line">%1$d من %2$d دعوات للفرصة القادمة</string>
     <string name="prizes_entries">عدد فرصك بالسحب: %1$d</string>

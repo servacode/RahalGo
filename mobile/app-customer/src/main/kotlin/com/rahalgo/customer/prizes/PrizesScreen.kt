@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,11 +39,9 @@ import com.rahalgo.ui.CardVariant
 import com.rahalgo.ui.EmptyState
 import com.rahalgo.ui.ErrorState
 import com.rahalgo.ui.Flash
-import com.rahalgo.ui.IconBox
 import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalCard
-import com.rahalgo.ui.RahalSmallButton
 import com.rahalgo.ui.Refreshable
 import com.rahalgo.ui.RemoteImage
 import com.rahalgo.ui.SectionHeader
@@ -90,35 +87,22 @@ private fun Teaser(vm: PrizesViewModel, me: PrizesMe) {
         contentPadding = androidx.compose.foundation.layout.PaddingValues(Rahal.space.lg),
         verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
     ) {
+        // **رأسٌ واحد**: متى تبلش وكم يوم باقي، و«لست ضمن المسابقة بعد» (ملاحظةُ المالك ٢٠٢٦-١١-٢٤).
         item {
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                IconBox(R.drawable.ic_gift, Rahal.colors.accent, size = Rahal.size.avatarLg)
-                Spacer(Modifier.height(Rahal.space.md))
-                Text(
-                    stringResource(R.string.prizes_title),
-                    color = Rahal.colors.ink,
-                    style = Rahal.type.headline,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.height(Rahal.space.xs))
-                Text(
-                    stringResource(
-                        R.string.prizes_teaser_wait,
-                        PrizesLogic.launchLabel(me.launchOn.ifBlank { "2026-12-01" }),
-                    ),
-                    color = Rahal.colors.accentInk,
-                    style = Rahal.type.sectionTitle,
-                    textAlign = TextAlign.Center,
-                )
-            }
+            val launch = me.launchOn.ifBlank { "2026-12-01" }
+            PrizeHero(
+                label = stringResource(R.string.prizes_hero_starts),
+                date = PrizesLogic.launchLabel(launch),
+                days = PrizesLogic.daysUntilDate(launch),
+                inside = false,
+                statusTitle = stringResource(R.string.prizes_out_title),
+                statusBody = stringResource(R.string.prizes_out_before, PrizesLogic.launchLabel(launch)),
+            )
         }
-        // **«لست ضمن المسابقة بعد» قبل الافتتاح كمان** (٢٠٢٦-١١-٢٤) — ومتى تبلش.
-        item { EntryStatus(me, PrizesLogic.launchLabel(me.launchOn.ifBlank { "2026-12-01" })) }
         item { Podium(me.amounts) }
-        item { PrizeRules(me.invitesPerEntry, me.winnersCount.takeIf { it > 0 } ?: me.amounts.size) }
         // **والهدايا تحتها** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤) — عرضٌ فقط قبل الافتتاح.
         if (vm.items.isNotEmpty()) {
-            item { SectionHeader(stringResource(R.string.prizes_items_showcase)) }
+            item { SectionHeader(stringResource(R.string.prizes_gifts_title)) }
             item {
                 Text(
                     stringResource(R.string.prizes_showcase_hint),
@@ -130,6 +114,7 @@ private fun Teaser(vm: PrizesViewModel, me: PrizesMe) {
                 PrizeRow(p, 0L, media, enabled = false, covered = false, onAdd = {})
             }
         }
+        item { PrizeRules(me.invitesPerEntry, me.winnersCount.takeIf { it > 0 } ?: me.amounts.size) }
     }
 }
 
@@ -176,15 +161,32 @@ private fun Active(vm: PrizesViewModel, me: PrizesMe) {
                 com.rahalgo.ui.Note(vm.error, Rahal.colors.danger)
             }
         }
-        item { EntryStatus(me) }
-        item { ProgressCard(me, progress) }
+        // **رأسٌ واحد**: السحبُ الجاي وكم يوم، «ضمن المسابقة» أو لا، وتقدّمُه وزرُّ الدعوة (٢٠٢٦-١١-٢٤).
         item {
+            val inside = me.entries > 0
             val r = InviteNudge.referral
-            RahalButton(
-                onClick = { if (r != null) InviteNudge.share(context, r) },
-                enabled = r != null && r.code.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.prizes_share)) }
+            PrizeHero(
+                label = stringResource(R.string.prizes_hero_next),
+                date = PrizesLogic.drawLabel(me.drawAt).substringBefore(' '),
+                days = PrizesLogic.daysUntilInstant(me.drawAt),
+                inside = inside,
+                statusTitle = stringResource(if (inside) R.string.prizes_in_title else R.string.prizes_out_title),
+                statusBody = if (inside) {
+                    stringResource(R.string.prizes_in_body, me.entries)
+                } else {
+                    stringResource(R.string.prizes_out_body, progress.toNext.coerceAtLeast(1))
+                },
+                progress = progress.current.toFloat() / progress.perEntry,
+                progressLine = stringResource(R.string.prizes_progress_line, progress.current, progress.perEntry),
+                action = {
+                    RahalButton(
+                        onClick = { if (r != null) InviteNudge.share(context, r) },
+                        enabled = r != null && r.code.isNotBlank(),
+                        tone = Tone.Accent,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.prizes_share)) }
+                },
+            )
         }
         item { Podium(me.amounts) }
         if (me.prizeBalance > 0) item { BalanceCard(me) }
@@ -198,7 +200,7 @@ private fun Active(vm: PrizesViewModel, me: PrizesMe) {
                 )
             }
             split.showcase -> {
-                item { SectionHeader(stringResource(R.string.prizes_items_showcase)) }
+                item { SectionHeader(stringResource(R.string.prizes_gifts_title)) }
                 item {
                     Text(
                         stringResource(R.string.prizes_showcase_hint),
@@ -242,76 +244,6 @@ private fun Active(vm: PrizesViewModel, me: PrizesMe) {
                     }
                 }
             }
-        }
-    }
-}
-
-/**
- * **«إنت ضمن المسابقة» أو «لست ضمن المسابقة»** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤) — جوابٌ واحدٌ واضح فوق
- * التفاصيل: **فرصةٌ وحدة على الأقلّ = داخل سحب هالشهر**، وإلّا كم دعوة باقية ليدخل.
- */
-@Composable
-private fun EntryStatus(me: PrizesMe, startsOn: String? = null) {
-    val inside = startsOn == null && me.entries > 0
-    RahalCard(
-        variant = CardVariant.Tinted,
-        tone = if (inside) StatusTone.Success else StatusTone.Warning,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            stringResource(if (inside) R.string.prizes_in_title else R.string.prizes_out_title),
-            color = Rahal.colors.ink,
-            style = Rahal.type.sectionTitle,
-        )
-        Text(
-            if (inside) {
-                stringResource(R.string.prizes_in_body, me.entries)
-            } else if (startsOn != null) {
-                stringResource(R.string.prizes_out_before, startsOn)
-            } else {
-                stringResource(R.string.prizes_out_body, me.invitesToNext.coerceAtLeast(1))
-            },
-            color = Rahal.colors.ink,
-            style = Rahal.type.body,
-        )
-    }
-}
-
-@Composable
-private fun ProgressCard(me: PrizesMe, p: PrizesLogic.Progress) {
-    RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Warning, modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.prizes_progress_title), color = Rahal.colors.ink, style = Rahal.type.sectionTitle)
-        Spacer(Modifier.height(Rahal.space.sm))
-        LinearProgressIndicator(
-            progress = { p.current.toFloat() / p.perEntry },
-            color = Rahal.colors.accent,
-            trackColor = Rahal.colors.line,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(Rahal.space.sm))
-        Text(
-            stringResource(R.string.prizes_progress_line, p.current, p.perEntry),
-            color = Rahal.colors.ink,
-            style = Rahal.type.body,
-        )
-        Text(
-            stringResource(R.string.prizes_entries, me.entries),
-            color = Rahal.colors.inkMuted,
-            style = Rahal.type.caption,
-        )
-        Text(
-            stringResource(R.string.prizes_to_next, p.toNext),
-            color = Rahal.colors.accentInk,
-            style = Rahal.type.bodyStrong,
-        )
-        val draw = PrizesLogic.drawLabel(me.drawAt)
-        if (draw.isNotEmpty()) {
-            Spacer(Modifier.height(Rahal.space.xs))
-            Text(
-                stringResource(R.string.prizes_draw, draw),
-                color = Rahal.colors.inkMuted,
-                style = Rahal.type.caption,
-            )
         }
     }
 }

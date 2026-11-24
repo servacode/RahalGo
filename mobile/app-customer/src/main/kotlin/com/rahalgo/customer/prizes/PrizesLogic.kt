@@ -2,7 +2,9 @@ package com.rahalgo.customer.prizes
 
 import com.rahalgo.shared.customer.PrizeItem
 import com.rahalgo.shared.customer.PrizesMe
+import java.time.LocalDate
 import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -96,4 +98,15 @@ object PrizesLogic {
 
     /** **سلّمُ الجوائز بمراتبه** — (1 ← مبلغ) (2 ← مبلغ) … */
     fun ladder(amounts: List<Long>): List<Pair<Int, Long>> = amounts.mapIndexed { i, a -> (i + 1) to a }
+
+    /** **كم يوم باقي ليومٍ `yyyy-MM-dd`** بتوقيت دمشق — صفرٌ اليومَ وما فات، و`null` إن لم يُقرأ. */
+    fun daysUntilDate(iso: String): Long? = runCatching {
+        ChronoUnit.DAYS.between(LocalDate.now(damascus), LocalDate.parse(iso)).coerceAtLeast(0)
+    }.getOrNull()
+
+    /** **كم يوم باقي لموعدٍ كامل** (السحب) — بيومه في دمشق. */
+    fun daysUntilInstant(at: String): Long? = runCatching {
+        val day = OffsetDateTime.parse(at).atZoneSameInstant(damascus).toLocalDate()
+        ChronoUnit.DAYS.between(LocalDate.now(damascus), day).coerceAtLeast(0)
+    }.getOrNull()
 }

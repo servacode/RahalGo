@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -115,14 +116,11 @@ private fun Step(rank: Int, amount: Long, modifier: Modifier) {
  */
 @Composable
 fun PrizeRules(perEntry: Int, winners: Int) {
+    // **أربعةُ سطورٍ قصار** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤: «مختصرة مشان ما ينزل كثير لتحت»).
     val rules = listOf(
         stringResource(R.string.prizes_rule_invite, perEntry),
-        stringResource(R.string.prizes_rule_more, perEntry),
-        stringResource(R.string.prizes_rule_new),
-        stringResource(R.string.prizes_rule_draw),
-        stringResource(R.string.prizes_rule_winners, winners),
+        stringResource(R.string.prizes_rule_draw, winners),
         stringResource(R.string.prizes_rule_use),
-        stringResource(R.string.prizes_rule_diff),
         stringResource(R.string.prizes_rule_expire),
     )
     RahalCard(modifier = Modifier.fillMaxWidth()) {
@@ -164,3 +162,107 @@ private val STEP_COLORS = listOf(
     Color(0xFF7FB8E6) to Color(0xFF3F7FB5),
     Color(0xFF9FD3B0) to Color(0xFF4E9A6C),
 )
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **رأسُ صفحة الجوائز** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤: «مافي داعي لهي جوائز رحال غو ولوغو الهدية
+ * وانتظرونا… نعيد ترتيبها بشكل احترافي»)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **كرتٌ واحدٌ يجاوب على السؤالين**: متى (التاريخ وكم يوم باقي) **ووين أنا** (ضمن المسابقة أو لا،
+ * وتقدّمُه) — بدل عنوانٍ وأيقونةٍ ولافتةٍ ومربّعين. **ولونُه من ألوان العلامة** ثابتٌ بالوضعين.
+ */
+@Composable
+fun PrizeHero(
+    label: String,
+    date: String,
+    days: Long?,
+    inside: Boolean,
+    statusTitle: String,
+    statusBody: String,
+    progress: Float? = null,
+    progressLine: String? = null,
+    action: (@Composable () -> Unit)? = null,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, Rahal.shape.lg)
+            .clip(Rahal.shape.lg)
+            .background(Brush.linearGradient(listOf(HERO_TOP, HERO_BOTTOM)))
+            .padding(Rahal.space.lg),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(label, color = Color.White.copy(alpha = 0.8f), style = Rahal.type.label)
+                Text(date, color = Color.White, style = Rahal.type.headline, fontWeight = FontWeight.Black, maxLines = 1)
+                if (days != null) {
+                    Spacer(Modifier.height(Rahal.space.xs))
+                    Text(
+                        if (days == 0L) stringResource(R.string.prizes_hero_today)
+                        else stringResource(R.string.prizes_hero_days, days.toInt()),
+                        color = Color.White,
+                        style = Rahal.type.badge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .clip(Rahal.shape.pill)
+                            .background(HERO_ACCENT)
+                            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
+                    )
+                }
+            }
+            Image(
+                painter = painterResource(R.drawable.trophy_3d),
+                contentDescription = null,
+                modifier = Modifier.size(84.dp),
+            )
+        }
+        Spacer(Modifier.height(Rahal.space.md))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(Color.White.copy(alpha = 0.25f)),
+        )
+        Spacer(Modifier.height(Rahal.space.md))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(if (inside) HERO_OK else Color.White.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(if (inside) "✓" else "!", color = Color.White, fontWeight = FontWeight.Black)
+            }
+            Spacer(Modifier.width(Rahal.space.sm))
+            Column(Modifier.weight(1f)) {
+                Text(statusTitle, color = Color.White, style = Rahal.type.bodyStrong, fontWeight = FontWeight.Bold)
+                Text(statusBody, color = Color.White.copy(alpha = 0.85f), style = Rahal.type.caption)
+            }
+        }
+        if (progress != null) {
+            Spacer(Modifier.height(Rahal.space.md))
+            LinearProgressIndicator(
+                progress = { progress.coerceIn(0f, 1f) },
+                color = HERO_ACCENT,
+                trackColor = Color.White.copy(alpha = 0.25f),
+                modifier = Modifier.fillMaxWidth().height(6.dp).clip(Rahal.shape.pill),
+            )
+            if (progressLine != null) {
+                Spacer(Modifier.height(Rahal.space.xs))
+                Text(progressLine, color = Color.White.copy(alpha = 0.85f), style = Rahal.type.caption)
+            }
+        }
+        if (action != null) {
+            Spacer(Modifier.height(Rahal.space.md))
+            action()
+        }
+    }
+}
+
+/** **ألوانُ العلامة للرأس** — أزرقُ رحّال غو وبرتقاليُّه، وأخضرُ «ضمن المسابقة». */
+private val HERO_TOP = Color(0xFF1378B3)
+private val HERO_BOTTOM = Color(0xFF0A3F61)
+private val HERO_ACCENT = Color(0xFFF39200)
+private val HERO_OK = Color(0xFF2EAD6B)

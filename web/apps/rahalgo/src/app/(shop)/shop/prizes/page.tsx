@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtDate, fmtMoney, fmtNum, withPlatform } from "@rahalgo/i18n";
-import { Button, IconCopy, IconShare, LoadingState, Money, ReloadState, usePlatform } from "@rahalgo/ui";
+import { Button, IconCheck, IconCopy, IconShare, LoadingState, Money, ReloadState, usePlatform } from "@rahalgo/ui";
 import { ItemSheet } from "@/components/customer/items";
 import { useReferral } from "@/components/customer/InviteNudge";
 import { NeedLogin } from "@/components/customer/NeedLogin";
@@ -82,13 +82,10 @@ function Podium({ amounts }: { amounts: number[] }) {
 /** **شروطُ المسابقة** — بنودٌ مرقّمةٌ بدوائر، وأرقامُها من المحرّك (مرآةُ `PrizeRules`). */
 function Rules({ per, winners }: { per: number; winners: number }) {
   const rules = [
+    /* **أربعةُ سطورٍ قصار** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤، مرآةُ `PrizeRules`). */
     fill(P.ruleInvite, { per: fmtNum(per) }),
-    fill(P.ruleMore, { per: fmtNum(per) }),
-    P.ruleNew,
-    P.ruleDraw,
-    fill(P.ruleWinners, { n: fmtNum(winners) }),
+    fill(P.ruleDraw, { n: fmtNum(winners) }),
     P.ruleUse,
-    P.ruleDiff,
     P.ruleExpire,
   ];
   return (
@@ -104,6 +101,75 @@ function Rules({ per, winners }: { per: number; winners: number }) {
           </li>
         ))}
       </ol>
+    </section>
+  );
+}
+
+/** **كم يوم باقي** لتاريخٍ — صفرٌ اليومَ وما فات، و`null` إن لم يُقرأ. */
+function daysUntil(at?: string | null): number | null {
+  if (!at) return null;
+  const t = Date.parse(at.length === 10 ? `${at}T00:00:00+03:00` : at);
+  if (!Number.isFinite(t)) return null;
+  return Math.max(0, Math.ceil((t - Date.now()) / 86_400_000));
+}
+
+/**
+ * **رأسُ صفحة الجوائز** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤، مرآةُ `PrizeHero`) — كرتٌ واحد: متى وكم يوم باقي،
+ * و«ضمن المسابقة» أو لا، وتقدّمُه. بدل العنوان والأيقونة و«انتظرونا» والمربّعات.
+ */
+function Hero({
+  label,
+  date,
+  days,
+  inside,
+  title,
+  body,
+  progress,
+  progressLine,
+}: {
+  label: string;
+  date: string;
+  days: number | null;
+  inside: boolean;
+  title: string;
+  body: string;
+  progress?: number;
+  progressLine?: string;
+}) {
+  return (
+    <section className="prize-hero flex flex-col gap-4 rounded-rg-lg p-rg-lg" data-testid="prize-entry-status">
+      <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="text-sm opacity-80">{label}</span>
+          <span className="text-3xl font-black">{date}</span>
+          {days != null && (
+            <span className="prize-hero-chip w-fit rounded-full px-3 py-0.5 text-xs font-bold">
+              {days === 0 ? P.heroToday : fill(P.heroDays, { n: fmtNum(days) })}
+            </span>
+          )}
+        </div>
+        <img src="/prizes/trophy.svg" alt="" width={84} height={84} />
+      </div>
+      <div className="prize-hero-line h-px w-full" />
+      <div className="flex items-center gap-3">
+        <span
+          className={`grid size-8 shrink-0 place-items-center rounded-full font-black ${inside ? "prize-hero-ok" : "prize-hero-soft"}`}
+        >
+          {inside ? <IconCheck size={16} /> : "!"}
+        </span>
+        <div className="flex min-w-0 flex-col">
+          <span className="font-bold">{title}</span>
+          <span className="text-caption opacity-85">{body}</span>
+        </div>
+      </div>
+      {progress != null && (
+        <div className="flex flex-col gap-1">
+          <div className="prize-hero-line h-1.5 overflow-hidden rounded-full">
+            <div className="prize-hero-bar h-full" style={{ width: `${Math.min(100, Math.max(0, progress * 100))}%` }} />
+          </div>
+          {progressLine && <span className="text-caption opacity-85">{progressLine}</span>}
+        </div>
+      )}
     </section>
   );
 }
@@ -267,19 +333,18 @@ export default function PrizesPage() {
     return (
       <div className="mx-auto flex w-full max-w-none flex-col gap-4">
         <ShopPageHeader title={P.title} href="/shop" />
-        <section className={`${OUTLINE_CARD} flex flex-col gap-2 text-center`}>
-          {date && <p className="text-price-lg font-bold text-accent-text">{fill(P.teaserSoon, { date })}</p>}
-          <p className="text-sm text-ink-muted">{fill(P.teaserBody, { per: fmtNum(me.invites_per_entry ?? 5) })}</p>
-        </section>
-        {/* **«لست ضمن المسابقة بعد» قبل الافتتاح كمان** (٢٠٢٦-١١-٢٤، مرآةُ `EntryStatus`). */}
-        <section className="flex flex-col gap-1 rounded-card bg-warning-tint p-4" data-testid="prize-entry-status">
-          <h2 className="text-section-title">{P.outTitle}</h2>
-          {date && <p className="text-sm">{fill(P.outBefore, { date })}</p>}
-        </section>
+        <Hero
+          label={P.heroStarts}
+          date={date}
+          days={daysUntil(me.launch_on)}
+          inside={false}
+          title={P.outTitle}
+          body={fill(P.outBefore, { date })}
+        />
         <Podium amounts={amounts} />
-        <Rules per={me.invites_per_entry ?? 5} winners={me.winners_count ?? amounts.length} />
         {/* **والهدايا تحتها** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤) — عرضٌ فقط قبل الافتتاح. */}
         <Items me={{ ...me, prize_balance: 0 }} />
+        <Rules per={me.invites_per_entry ?? 5} winners={me.winners_count ?? amounts.length} />
       </div>
     );
   }
@@ -292,40 +357,20 @@ export default function PrizesPage() {
     <div className="mx-auto flex w-full max-w-none flex-col gap-4">
       <ShopPageHeader title={P.title} href="/shop" />
 
-      {/* **«إنت ضمن المسابقة» أو «لست ضمن المسابقة»** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤، مرآةُ `EntryStatus`). */}
-      <section
-        className={`flex flex-col gap-1 rounded-card p-4 ${(me.entries ?? 0) > 0 ? "bg-success-tint" : "bg-warning-tint"}`}
-        data-testid="prize-entry-status"
-      >
-        <h2 className="text-section-title">{(me.entries ?? 0) > 0 ? P.inTitle : P.outTitle}</h2>
-        <p className="text-sm">
-          {(me.entries ?? 0) > 0
+      <Hero
+        label={P.heroNext}
+        date={me.draw_at ? fmtDate(me.draw_at) : "—"}
+        days={daysUntil(me.draw_at)}
+        inside={(me.entries ?? 0) > 0}
+        title={(me.entries ?? 0) > 0 ? P.inTitle : P.outTitle}
+        body={
+          (me.entries ?? 0) > 0
             ? fill(P.inBody, { n: fmtNum(me.entries ?? 0) })
-            : fill(P.outBody, { n: fmtNum(Math.max(1, left)) })}
-        </p>
-      </section>
-
-      <section className={`${OUTLINE_CARD} flex flex-col gap-2`}>
-        <h2 className="text-section-title">{P.progressTitle}</h2>
-        <div
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={total}
-          aria-valuenow={done}
-          className="h-2 overflow-hidden rounded-full bg-field"
-        >
-          <div className="h-full bg-accent" style={{ width: `${(done / total) * 100}%` }} />
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span>{fill(P.invitesOf, { n: fmtNum(done), t: fmtNum(total) })}</span>
-          <span className="font-bold">{fill(P.entries, { n: fmtNum(me.entries ?? 0) })}</span>
-        </div>
-        <p className="text-sm text-accent-text">
-          {(me.month_invites ?? 0) === 0 ? P.noInvitesYet : fill(P.toNext, { n: fmtNum(left) })}
-        </p>
-        {me.draw_at && <p className="text-caption text-ink-muted">{fill(P.drawAt, { date: fmtDate(me.draw_at) })}</p>}
-        <p className="text-caption text-ink-muted">{fill(P.drawNote, { n: fmtNum(me.winners_count ?? amounts.length) })}</p>
-      </section>
+            : fill(P.outBody, { n: fmtNum(Math.max(1, left)) })
+        }
+        progress={total > 0 ? done / total : 0}
+        progressLine={fill(P.invitesOf, { n: fmtNum(done), t: fmtNum(total) })}
+      />
 
       <Share />
       <Podium amounts={amounts} />

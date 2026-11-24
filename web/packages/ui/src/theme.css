@@ -6410,6 +6410,13 @@ html[data-console-theme="dark"] .console-root .seg-item[aria-pressed="true"] {
 @media (prefers-reduced-motion: reduce) {
   .prize-fab { animation: none; }
 }
+/* **رأسُ صفحة الجوائز** (٢٠٢٦-١١-٢٤) — ألوانُ العلامة ثابتةٌ بالوضعين، مرآةُ `PrizeHero`. */
+.prize-hero { color: #fff; background: linear-gradient(135deg, #1378b3, #0a3f61); box-shadow: 0 6px 18px rgb(10 63 97 / 0.25); }
+.prize-hero-chip { background-color: #f39200; color: #fff; }
+.prize-hero-ok { background-color: #2ead6b; color: #fff; }
+.prize-hero-bar { background-color: #f39200; }
+.prize-hero-line { background-color: rgb(255 255 255 / 0.25); }
+.prize-hero-soft { background-color: rgb(255 255 255 / 0.2); }
 .prize-step {
   border-start-start-radius: 10px;
   border-start-end-radius: 10px;
