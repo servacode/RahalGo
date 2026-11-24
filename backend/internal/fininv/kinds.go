@@ -44,10 +44,13 @@ type KindContract struct {
 var Kinds = map[string]KindContract{
 	"topup": {
 		Kind: "topup", Sign: "+", RefRequired: false,
-		Creators:   []string{"internal/server/accounts_wallet_requests.go"},
-		Path:       "POST /admin/wallet-requests/{id}/approve",
-		Semantics:  "شحنٌ نقديٌّ لمحفظةٍ بموافقة الماليّة — **ويقابله سطرٌ داخلٌ في صندوق المكتب.**",
-		Invariants: []string{"FI-02.a"},
+		Creators: []string{"internal/server/accounts_wallet_requests.go",
+			"internal/server/shamcash_topup_handlers.go"},
+		Path: "POST /admin/wallet-requests/{id}/approve",
+		Semantics: "شحنٌ نقديٌّ لمحفظةٍ بموافقة الماليّة — **ويقابله سطرٌ داخلٌ في صندوق المكتب.** " +
+			"**أو شحنٌ بتحويل شام كاش** (٢٠٢٦-١١-٢٥، `POST /admin/shamcash-topups/{id}/approve`): مرجعُه " +
+			"طلبُ الشحن، ويقابله حركةٌ داخلةٌ بسجلّ شام كاش لا سطرٌ بالصندوق.",
+		Invariants: []string{"FI-02.a", "FI-05.l"},
 		Reachable:  true,
 	},
 	"order_payment": {

@@ -403,8 +403,11 @@ type Order struct {
 	// WalletScope **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩، هجرة ٠٥٢٦):
 	// `none` كاش · `full` الكل · `delivery` التوصيل من المحفظة والباقي كاش.
 	WalletScope string `json:"wallet_scope"`
-	Subtotal    int64  `json:"subtotal"`
-	DeliveryFee int64  `json:"delivery_fee"`
+	// PayShamcash **الزبون رح يدفع الباقي (`cash_due`) بشام كاش عند الاستلام** (قرار المالك ٢٠٢٦-١١-٢٥،
+	// هجرة ٠٥٦٢) — نيّة وبس: المال متل الكاش تماماً، والكابتن بيأكّد «الزبون دفع شام كاش» بالسجلّ.
+	PayShamcash bool  `json:"pay_shamcash"`
+	Subtotal    int64 `json:"subtotal"`
+	DeliveryFee int64 `json:"delivery_fee"`
 	// FreeWaived **ما أُعفي منه الزبونُ بعرض التوصيل المجانيّ** (`promo_delivery_waived`) — و`DeliveryFee`
 	// بعده. **يُعرض ليُقال «توصيلٌ مجانيّ»** (قرارُ المالك ٢٠٢٦-١٠-٢٦) لا رقمٌ نازلٌ بلا سبب.
 	FreeWaived int64 `json:"free_waived"`
@@ -736,6 +739,8 @@ type CreateInput struct {
 	PaymentMethod string      `json:"payment_method"` // cash | wallet
 	// WalletScope **full | delivery | none** — فارغٌ مع `wallet` يعني `full` (التطبيقُ القديم).
 	WalletScope string `json:"wallet_scope"`
+	// PayShamcash **«شام كاش عند الاستلام»** — مع `none` أو `delivery` بس، وبمفتاح `shamcash.pay_on_delivery_enabled`.
+	PayShamcash bool   `json:"pay_shamcash"`
 	PromoCode   string `json:"promo_code"`
 	Notes       string `json:"notes"`
 }

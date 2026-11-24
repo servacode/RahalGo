@@ -6596,6 +6596,68 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/shamcash-topups",
+      "handler": "handleListShamcashTopups",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "@body",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/shamcash-topups/{id}/approve",
+      "handler": "handleApproveShamcashTopup",
+      "auth": true,
+      "capability": "finance.manage",
+      "response": [
+        {
+          "name": "already",
+          "type": "unknown"
+        },
+        {
+          "name": "request",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/shamcash-topups/{id}/reject",
+      "handler": "handleRejectShamcashTopup",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "already",
+          "type": "unknown"
+        },
+        {
+          "name": "request",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/shamcash/movements",
       "handler": "handleShamcashAdd",
@@ -12138,6 +12200,78 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/my/shamcash",
+      "handler": "handleMyShamcash",
+      "auth": true,
+      "response": [
+        {
+          "name": "info",
+          "type": "unknown"
+        },
+        {
+          "name": "requests",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/my/shamcash/receipt",
+      "handler": "handleMyShamcashReceipt",
+      "auth": true,
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "thumb_url",
+          "type": "unknown"
+        },
+        {
+          "name": "url",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/my/shamcash/topups",
+      "handler": "handleCreateShamcashTopup",
+      "auth": true,
+      "idempotent": true,
+      "request": [
+        {
+          "name": "amount",
+          "type": "?float64"
+        },
+        {
+          "name": "txn_ref",
+          "type": "string"
+        },
+        {
+          "name": "receipt_id",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "request",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/my/tickets",
       "handler": "handleMyTickets",
       "auth": true,
@@ -12554,6 +12688,10 @@
         {
           "name": "expected_total",
           "type": "int64"
+        },
+        {
+          "name": "pay_shamcash",
+          "type": "?bool"
         }
       ]
     },

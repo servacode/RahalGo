@@ -337,6 +337,8 @@ func (s *Server) handleChangeWalletScope(w http.ResponseWriter, r *http.Request)
 		// WalletScope **none | full | delivery**.
 		WalletScope   string `json:"wallet_scope"`
 		ExpectedTotal int64  `json:"expected_total"`
+		// PayShamcash **«شام كاش عند الاستلام»** (٢٠٢٦-١١-٢٥) — غيابُه = متل ما هو.
+		PayShamcash *bool `json:"pay_shamcash"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -346,7 +348,7 @@ func (s *Server) handleChangeWalletScope(w http.ResponseWriter, r *http.Request)
 	limit := s.orders.DriverCashLimit(r.Context())
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
 		o, after, err := s.orders.ChangeWalletScopeTx(ctx, q, chi.URLParam(r, "id"), userIDFrom(r),
-			req.WalletScope, req.ExpectedTotal, limit)
+			req.WalletScope, req.PayShamcash, req.ExpectedTotal, limit)
 		if err != nil {
 			return IdempotentBody{}, err
 		}

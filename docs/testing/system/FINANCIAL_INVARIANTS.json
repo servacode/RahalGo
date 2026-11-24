@@ -54,6 +54,7 @@
         "FI-05.g",
         "FI-05.h",
         "FI-05.i",
+        "FI-05.l",
         "FI-05.j"
       ]
     },
@@ -580,6 +581,16 @@
       ],
       "kinds": [
         "payout_reversal"
+      ]
+    },
+    {
+      "id": "FI-05.l",
+      "family": "FI-05",
+      "name": "شحن شام كاش المقبول: قيد واحد بالمحفظة وحركة وحدة بالسجلّ",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "topup"
       ]
     },
     {
@@ -1729,15 +1740,17 @@
     },
     {
       "kind": "topup",
-      "semantics": "شحنٌ نقديٌّ لمحفظةٍ بموافقة الماليّة — **ويقابله سطرٌ داخلٌ في صندوق المكتب.**",
+      "semantics": "شحنٌ نقديٌّ لمحفظةٍ بموافقة الماليّة — **ويقابله سطرٌ داخلٌ في صندوق المكتب.** **أو شحنٌ بتحويل شام كاش** (٢٠٢٦-١١-٢٥، `POST /admin/shamcash-topups/{id}/approve`): مرجعُه طلبُ الشحن، ويقابله حركةٌ داخلةٌ بسجلّ شام كاش لا سطرٌ بالصندوق.",
       "sign": "+",
       "ref_required": false,
       "path": "POST /admin/wallet-requests/{id}/approve",
       "creators": [
-        "internal/server/accounts_wallet_requests.go"
+        "internal/server/accounts_wallet_requests.go",
+        "internal/server/shamcash_topup_handlers.go"
       ],
       "invariants": [
-        "FI-02.a"
+        "FI-02.a",
+        "FI-05.l"
       ],
       "reachable": true
     },
@@ -1762,8 +1775,8 @@
   ],
   "counts": {
     "families": 16,
-    "checks": 96,
-    "provable_now": 90,
+    "checks": 97,
+    "provable_now": 91,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,

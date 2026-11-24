@@ -2594,6 +2594,16 @@ var Catalog = []Def{
 	// طلبٍ جديدٍ بنموذج المال ٢ (`orders.money_model`)، **والقائمُ يبقى ١.** **وافتراضُه إطفاء**:
 	// يُشغَّل بعد أن تكتمل دفعاتُ القاعدة الجديدة كلُّها، ولا شيءَ يقرأ ٢ قبلها.
 	{Key: "finance.goods_outside", Group: GroupPlatform, Kind: KindBool, Default: false, Sensitive: true},
+	// **شام كاش للزبون** (قرار المالك ٢٠٢٦-١١-٢٥): شحن المحفظة بتحويل (بالليرة الجديدة بس، والمالية
+	// بتوافق)، و«شام كاش عند الاستلام» بدل الكاش. **الاتنين طافيين افتراضاً.** والاسم والرقم والباركود
+	// بينعرضوا للزبون — ما بينكتبوا بالكود أبداً.
+	{Key: "shamcash.topup_enabled", Group: GroupPlatform, Kind: KindBool, Default: false, Sensitive: true},
+	{Key: "shamcash.pay_on_delivery_enabled", Group: GroupPlatform, Kind: KindBool, Default: false, Sensitive: true},
+	{Key: "shamcash.min_topup", Group: GroupPlatform, Kind: KindMoney,
+		Min: 1, Max: 1_000_000, Unit: "currency", Default: 500, Sensitive: true},
+	{Key: "shamcash.account_name", Group: GroupPlatform, Kind: KindText, Max: 80, Default: ""},
+	{Key: "shamcash.account_number", Group: GroupPlatform, Kind: KindText, Max: 64, Default: ""},
+	{Key: "shamcash.qr", Group: GroupPlatform, Kind: KindMedia, Default: ""},
 	// **سقفُ المصروف التشغيليّ الذي يحتاج موافقةً ثانية** (قرارُ المالك ٢٠٢٦-١٠-٠٤):
 	// ما فوقه اقتراحٌ يوافق عليه شخصٌ آخر وصورةُ إيصاله إلزاميّة، وما دونه يُقيَّد
 	// مباشرة. وصفرُه: كلُّ مصروفٍ بموافقةٍ ثانية.

@@ -11,7 +11,7 @@
 //
 // # الرصيد
 //
-//	رصيد البداية + تحويلات السائقين (غير «ما وصل») + إيداعات المالك − سحوباته
+//	رصيد البداية + تحويلات السائقين (غير «ما وصل») + شحن الزبائن + إيداعات المالك − سحوباته
 //
 // لكلّ عملة لحالها (الليرة والدولار ما بينجمعوا)، والملغى ما بينحسب، **وما صار قبل تاريخ رصيد
 // البداية داخل فيه** فما بينعدّ مرّتين.
@@ -87,6 +87,9 @@ type Movement struct {
 	DueAtEntry      *int64 `json:"due_at_entry"`
 	BeforeOpening   bool   `json:"before_opening"`
 	CountsInBalance bool   `json:"counts_in_balance"`
+	// TopupID وCustomerName **حركة «شحن زبون»** (٢٠٢٦-١١-٢٥) — طلب الشحن وصاحبه.
+	TopupID      *string `json:"topup_id"`
+	CustomerName *string `json:"customer_name"`
 }
 
 // RecordTransfer **السائق قال «انقبض شام كاش» عند التسليم** — جوّا معاملة الانتقال نفسها.
@@ -158,7 +161,8 @@ const movementCols = `
 	m.currency, m.amount, m.occurred_at, m.note, m.status,
 	m.not_arrived_at, na.full_name, m.compensated_at, cp.full_name, m.voided_at, vd.full_name, m.void_reason,
 	cb.full_name, m.created_at,
-	(op.as_of IS NOT NULL AND m.occurred_at < op.as_of), m.exceeds_due, m.due_at_entry`
+	(op.as_of IS NOT NULL AND m.occurred_at < op.as_of), m.exceeds_due, m.due_at_entry,
+	m.topup_id::text, NULLIF(COALESCE(NULLIF(tu.full_name, ''), tu.phone, ''), '')`
 
 const movementFrom = `
 	FROM shamcash_movements m
@@ -168,14 +172,17 @@ const movementFrom = `
 	LEFT JOIN users cp ON cp.id = m.compensated_by
 	LEFT JOIN users vd ON vd.id = m.voided_by
 	LEFT JOIN users cb ON cb.id = m.created_by
-	LEFT JOIN shamcash_opening op ON op.currency = m.currency`
+	LEFT JOIN shamcash_opening op ON op.currency = m.currency
+	LEFT JOIN shamcash_topups stp ON stp.id = m.topup_id
+	LEFT JOIN users tu ON tu.id = stp.user_id`
 
 func scanMovement(row pgx.Row) (Movement, error) {
 	var m Movement
 	err := row.Scan(&m.ID, &m.Kind, &m.OrderID, &m.OrderNumber, &m.DriverID, &m.DriverName,
 		&m.Currency, &m.Amount, &m.OccurredAt, &m.Note, &m.Status,
 		&m.NotArrivedAt, &m.NotArrivedBy, &m.CompensatedAt, &m.CompensatedBy, &m.VoidedAt, &m.VoidedBy,
-		&m.VoidReason, &m.CreatedByName, &m.CreatedAt, &m.BeforeOpening, &m.ExceedsDue, &m.DueAtEntry)
+		&m.VoidReason, &m.CreatedByName, &m.CreatedAt, &m.BeforeOpening, &m.ExceedsDue, &m.DueAtEntry,
+		&m.TopupID, &m.CustomerName)
 	m.CountsInBalance = m.VoidedAt == nil && m.Status == StatusClaimed && !m.BeforeOpening
 	return m, err
 }
@@ -222,9 +229,11 @@ type Balance struct {
 	Opening     int64      `json:"opening"`
 	OpeningAsOf *time.Time `json:"opening_as_of"`
 	Transfers   int64      `json:"transfers"`
-	Deposits    int64      `json:"deposits"`
-	Withdrawals int64      `json:"withdrawals"`
-	Balance     int64      `json:"balance"`
+	// Topups **شحن محافظ الزبائن** المقبول (٢٠٢٦-١١-٢٥).
+	Topups      int64 `json:"topups"`
+	Deposits    int64 `json:"deposits"`
+	Withdrawals int64 `json:"withdrawals"`
+	Balance     int64 `json:"balance"`
 	// NotArrived **تحويلات قال السائق إنها صارت وما وصلت** — برّا الرصيد، للعلم.
 	NotArrived int64 `json:"not_arrived"`
 	// OwedToDrivers **«ما سلّمته للسائقين لسّا»** — تحويلات وصلت وما عطيت السائق بدالها.
@@ -256,6 +265,7 @@ func GetSummary(ctx context.Context, q dbtx.Querier) (Summary, error) {
 	rows, err := q.Query(ctx, `
 		SELECT c.cur, COALESCE(op.amount, 0), op.as_of,
 		       COALESCE(sum(m.amount) FILTER (WHERE m.kind = 'driver_transfer' AND m.status = 'claimed' AND in_range), 0),
+		       COALESCE(sum(m.amount) FILTER (WHERE m.kind = 'customer_topup' AND in_range), 0),
 		       COALESCE(sum(m.amount) FILTER (WHERE m.kind = 'deposit' AND in_range), 0),
 		       COALESCE(sum(m.amount) FILTER (WHERE m.kind = 'withdrawal' AND in_range), 0),
 		       COALESCE(sum(m.amount) FILTER (WHERE m.kind = 'driver_transfer' AND m.status = 'not_arrived'), 0),
@@ -273,12 +283,12 @@ func GetSummary(ctx context.Context, q dbtx.Querier) (Summary, error) {
 	}
 	for rows.Next() {
 		var b Balance
-		if err := rows.Scan(&b.Currency, &b.Opening, &b.OpeningAsOf, &b.Transfers, &b.Deposits,
+		if err := rows.Scan(&b.Currency, &b.Opening, &b.OpeningAsOf, &b.Transfers, &b.Topups, &b.Deposits,
 			&b.Withdrawals, &b.NotArrived, &b.OwedToDrivers); err != nil {
 			rows.Close()
 			return out, err
 		}
-		b.Balance = b.Opening + b.Transfers + b.Deposits - b.Withdrawals
+		b.Balance = b.Opening + b.Transfers + b.Topups + b.Deposits - b.Withdrawals
 		out.Balances = append(out.Balances, b)
 	}
 	rows.Close()
@@ -348,7 +358,8 @@ func Void(ctx context.Context, q dbtx.Querier, id, reason, actor string) error {
 	if err != nil {
 		return err
 	}
-	if kind == KindDriverTransfer || voided {
+	// **وشحن الزبون كمان ما بينلغى** — قيده بالمحفظة صار (٢٠٢٦-١١-٢٥).
+	if kind == KindDriverTransfer || kind == KindCustomerTopup || voided {
 		return ErrState
 	}
 	_, err = q.Exec(ctx, `

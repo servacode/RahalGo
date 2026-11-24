@@ -37,6 +37,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -63,6 +64,26 @@ var (
 	ErrWalletFullRemoved = httpx.NewError(http.StatusBadRequest,
 		"wallet_full_removed", "errors.wallet_full_removed")
 )
+
+// ErrShamcashDisabled **«شام كاش عند الاستلام» مطفي** من الإعدادات (`shamcash.pay_on_delivery_enabled`).
+var ErrShamcashDisabled = httpx.NewError(http.StatusConflict,
+	"shamcash_disabled", "errors.shamcash_disabled")
+
+// checkPayShamcash **«شام كاش عند الاستلام»** (قرار المالك ٢٠٢٦-١١-٢٥) — بيندفع فيه الباقي النقديّ
+// (`cash_due`) بس، فما إله معنى مع «الكل من المحفظة». **والمال متل الكاش تماماً**: نفس `cash_due`
+// ونفس الحرّاس، والكابتن بيأكّد «الزبون دفع شام كاش» بالسجلّ الجانبيّ متل قبل.
+func (s *Service) checkPayShamcash(ctx context.Context, st *settings.Store, scope string, want bool) error {
+	if !want {
+		return nil
+	}
+	if scope == ScopeFull {
+		return ErrBadPayment
+	}
+	if st == nil || !st.GetBool(ctx, "shamcash.pay_on_delivery_enabled") {
+		return ErrShamcashDisabled
+	}
+	return nil
+}
 
 // WalletPortion **قدّيش بيندفع من المحفظة** — الدالّةُ الواحدةُ لكلّ مسار.
 //
@@ -211,7 +232,7 @@ func (s *Service) ChangeWalletScope(ctx context.Context, orderID, customerID, sc
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	o, after, err := s.ChangeWalletScopeTx(ctx, tx, orderID, customerID, scope, expectedTotal, limit)
+	o, after, err := s.ChangeWalletScopeTx(ctx, tx, orderID, customerID, scope, nil, expectedTotal, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -233,15 +254,14 @@ func (s *Service) DriverCashLimit(ctx context.Context) int64 {
 // ChangeWalletScopeTx **التبديلُ داخل معاملة المستدعي** — بابُ الخادم يلفّه بـ`WithIdempotentTx`
 // فتُثبَّت علامةُ منع التكرار مع المال في معاملةٍ واحدة (`XG-33`). **و`after` يُنادى بعد الإيداع**:
 // نشرُ الطلب وإخبارُ الكابتن.
+//
+// **و`payShamcash`** «شام كاش عند الاستلام» (قرار المالك ٢٠٢٦-١١-٢٥): `nil` = متل ما هو. والنطاقُ
+// الفارغ مع `payShamcash` = النطاقُ الحاليّ (تبديل طريقة دفع الباقي بس). **وما بيحرّك مال.**
 func (s *Service) ChangeWalletScopeTx(ctx context.Context, tx dbtx.Querier, orderID, customerID, scope string,
-	expectedTotal, cashLimit int64) (*Order, func(), error) {
+	payShamcash *bool, expectedTotal, cashLimit int64) (*Order, func(), error) {
 	noop := func() {}
-	if scope == "" {
+	if scope == "" && payShamcash == nil {
 		return nil, noop, ErrBadPayment
-	}
-	method, scope, err := normalizePayment("", scope)
-	if err != nil {
-		return nil, noop, err
 	}
 
 	var o struct {
@@ -249,13 +269,14 @@ func (s *Service) ChangeWalletScopeTx(ctx context.Context, tx dbtx.Querier, orde
 		total, deliveryFee, walletPaid, cashDue         int64
 		driverID                                        *string
 		moneyModel                                      int16
+		payShamcash                                     bool
 	}
-	err = tx.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, `
 		SELECT kind, status, COALESCE(customer_id::text, ''), origin, wallet_scope, payment_method,
-		       total, delivery_fee, wallet_paid, cash_due, driver_id::text, money_model
+		       total, delivery_fee, wallet_paid, cash_due, driver_id::text, money_model, pay_shamcash
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&o.kind, &o.status, &o.customerID, &o.origin, &o.scope, &o.method,
-			&o.total, &o.deliveryFee, &o.walletPaid, &o.cashDue, &o.driverID, &o.moneyModel)
+			&o.total, &o.deliveryFee, &o.walletPaid, &o.cashDue, &o.driverID, &o.moneyModel, &o.payShamcash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, noop, httpx.ErrNotFound
 	}
@@ -274,9 +295,54 @@ func (s *Service) ChangeWalletScopeTx(ctx context.Context, tx dbtx.Querier, orde
 	if expectedTotal != o.total {
 		return nil, noop, ErrOrderChanged
 	}
+	if scope == "" {
+		scope = o.scope
+	}
+	method, scope, err := normalizePayment("", scope)
+	if err != nil {
+		return nil, noop, err
+	}
+	newPay := o.payShamcash
+	if payShamcash != nil {
+		newPay = *payShamcash
+	} else if scope == ScopeFull {
+		newPay = false // «الكل من المحفظة» ما بيضل فيه باقي يندفع شام كاش
+	}
+	if newPay && scope == ScopeFull {
+		return nil, noop, ErrBadPayment
+	}
+	if newPay && !o.payShamcash {
+		var st *settings.Store
+		if s.settings != nil {
+			st = s.settings.On(tx)
+		}
+		if err := s.checkPayShamcash(ctx, st, scope, true); err != nil {
+			return nil, noop, err
+		}
+	}
 	if o.scope == scope {
-		same, err := s.getByID(ctx, tx, orderID)
-		return same, noop, err
+		if newPay == o.payShamcash {
+			same, err := s.getByID(ctx, tx, orderID)
+			return same, noop, err
+		}
+		// **تبديل طريقة دفع الباقي بس** (كاش ⇄ شام كاش) — ولا قرش بيتحرّك.
+		if _, err := tx.Exec(ctx, `UPDATE orders SET pay_shamcash = $2, updated_at = now() WHERE id = $1`,
+			orderID, newPay); err != nil {
+			return nil, noop, err
+		}
+		if err := s.auditQuoteTx(ctx, tx, &customerID, "order.pay_shamcash_changed", orderID, map[string]any{
+			"pay_shamcash": newPay, "status": o.status, "actor_role": "customer",
+		}); err != nil {
+			return nil, noop, err
+		}
+		out, err := s.getByID(ctx, tx, orderID)
+		if err != nil {
+			return nil, noop, err
+		}
+		return out, func() {
+			s.publishOrder(out)
+			s.notifyWalletScopeDriver(ctx, out)
+		}, nil
 	}
 
 	var newCash, charged, refunded int64
@@ -345,8 +411,13 @@ func (s *Service) ChangeWalletScopeTx(ctx context.Context, tx dbtx.Querier, orde
 		}
 	}
 
+	if newPay != o.payShamcash {
+		if _, err := tx.Exec(ctx, `UPDATE orders SET pay_shamcash = $2 WHERE id = $1`, orderID, newPay); err != nil {
+			return nil, noop, err
+		}
+	}
 	if err := s.auditQuoteTx(ctx, tx, &customerID, "order.wallet_scope_changed", orderID, map[string]any{
-		"old_scope": o.scope, "new_scope": scope, "status": o.status,
+		"old_scope": o.scope, "new_scope": scope, "status": o.status, "pay_shamcash": newPay,
 		"old_cash_due": o.cashDue, "new_cash_due": newCash,
 		"charged": charged, "refunded": refunded, "actor_role": "customer",
 	}); err != nil {
@@ -380,7 +451,7 @@ func (s *Service) notifyWalletScopeDriver(ctx context.Context, o *Order) {
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: *o.DriverID, Kind: notifications.KindOrder,
 		Title:  t.walletScopeDriver,
-		Body:   fmt.Sprintf("#%d — اقبض %s ل.س", o.Number, groupDigits(o.CashDue)),
+		Body:   walletScopeDriverBody(o),
 		Entity: "order", EntityID: o.ID, Href: "/portal",
 		Apps: []string{notifications.AppDriver},
 	})
@@ -400,4 +471,12 @@ func (s *Service) notifyWalletMapped(ctx context.Context, o *Order) {
 		Entity: "order", EntityID: o.ID, Href: "/orders",
 		Apps: []string{notifications.AppCustomer},
 	})
+}
+
+// walletScopeDriverBody **شو بيقبض الكابتن** — وإذا الزبون اختار شام كاش بينقال صراحةً.
+func walletScopeDriverBody(o *Order) string {
+	if o.PayShamcash && o.CashDue > 0 {
+		return fmt.Sprintf("#%d — الزبون رح يدفع %s ل.س شام كاش", o.Number, groupDigits(o.CashDue))
+	}
+	return fmt.Sprintf("#%d — اقبض %s ل.س", o.Number, groupDigits(o.CashDue))
 }

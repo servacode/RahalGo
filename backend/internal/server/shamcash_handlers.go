@@ -61,7 +61,7 @@ func (s *Server) handleShamcashList(w http.ResponseWriter, r *http.Request) {
 		Voided: q.Get("voided") == "1" || q.Get("voided") == "true",
 	}
 	switch f.Kind {
-	case "", shamcash.KindDriverTransfer, shamcash.KindDeposit, shamcash.KindWithdrawal:
+	case "", shamcash.KindDriverTransfer, shamcash.KindDeposit, shamcash.KindWithdrawal, shamcash.KindCustomerTopup:
 	default:
 		s.respondErr(w, errValidation)
 		return

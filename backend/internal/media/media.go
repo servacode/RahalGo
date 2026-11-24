@@ -135,7 +135,10 @@ var validKinds = map[string]bool{"merchant_logo": true, "menu_item": true, "menu
 	"custom_photo": true,
 	// **و`chat_photo` و`chat_audio` صورةُ حديث الطلب ورسالتُه الصوتيّة** — صنفان محميّان (هجرة ٠٥٤٧،
 	// قرارُ المالك ٢٠٢٦-١١-١٢): يراهما طرفا الحديث والمكتب برابطٍ موقَّع.
-	"chat_photo": true, "chat_audio": true}
+	"chat_photo": true, "chat_audio": true,
+	// **و`shamcash_receipt` إيصال تحويل شام كاش** — محميّ (هجرة ٠٥٦٢): صاحبه والمالية برابط موقَّع.
+	// **و`shamcash_qr` باركود حساب المنصة** — عامّ: كل زبون بيشوفه ليحوّل (قرار المالك ٢٠٢٦-١١-٢٥).
+	"shamcash_receipt": true, "shamcash_qr": true}
 
 type Media struct {
 	ID       string `json:"id"`

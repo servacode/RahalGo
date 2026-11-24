@@ -107,6 +107,8 @@ var placeRules = []placeRule{
 	{prefix: "prizes.", topic: TopicMoney, section: "money.customer"},
 	// **ومفاتيحُ أقسام المال الأخرى تسكن هنا بأنفسها** — المصاريف والصندوق
 	// والتسويات والالتزامات والخسائر والحوافز.
+	// **شام كاش للزبون** (٢٠٢٦-١١-٢٥) — صندوقه لحاله: المفتاحين والحدّ الأدنى والاسم والرقم والباركود.
+	{prefix: "shamcash.", topic: TopicMoney, section: "money.shamcash"},
 	{prefix: "finance.", topic: TopicMoney, section: "money.treasury"},
 	{prefix: "treasury.", topic: TopicMoney, section: "money.treasury"},
 	{prefix: "cash.", topic: TopicMoney, section: "money.treasury"},

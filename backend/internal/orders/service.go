@@ -427,6 +427,10 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 			scope, walletMapped = ScopeDelivery, true
 		}
 		in.PaymentMethod, in.WalletScope = method, scope
+		// **«شام كاش عند الاستلام»** (قرار المالك ٢٠٢٦-١١-٢٥) — بيمشي متل الكاش تماماً.
+		if err := s.checkPayShamcash(ctx, unit.settings, scope, in.PayShamcash); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	// الزبون: معرف مباشر أو رقم هاتف (طلب هاتفي — يُنشأ الحساب إن لزم)
@@ -821,6 +825,11 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		moneyModel, in.WalletScope, prizeDiscount, prizeOrder).Scan(&orderID)
 	if err != nil {
 		return nil, nil, err
+	}
+	if in.PayShamcash {
+		if _, err := tx.Exec(ctx, `UPDATE orders SET pay_shamcash = true WHERE id = $1`, orderID); err != nil {
+			return nil, nil, err
+		}
 	}
 	if err := free.claim(ctx, tx, orderID, FreeKindStandard); err != nil {
 		return nil, nil, err

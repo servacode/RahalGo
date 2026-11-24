@@ -487,6 +487,34 @@ var All = []Check{
 			WHERE e.kind = 'order_collection' AND e.ref <> ''
 			GROUP BY e.ref HAVING count(*) > 1`,
 	},
+	{
+		ID: "FI-05.l", Family: FI05, Status: ProvableNow, Ops: true,
+		Name: "شحن شام كاش المقبول: قيد واحد بالمحفظة وحركة وحدة بالسجلّ",
+		Why: "شحن انقبل بلا قيد أو بقيدين، أو بلا حركة داخلة بسجلّ شام كاش، أو طلب مو مقبول إلو أثر — " +
+			"**مال بمحفظة زبون ما دخل حساب المنصة، أو دخل ومحفظته ما زادت** (قرار المالك ٢٠٢٦-١١-٢٥).",
+		Kinds: []string{"topup"},
+		SQL: `
+			SELECT t.id::text, t.status, t.amount,
+			       (SELECT count(*) FROM wallet_transactions w
+			         WHERE w.kind = 'topup' AND w.ref = t.id::text)::bigint AS القيود,
+			       (SELECT count(*) FROM shamcash_movements m
+			         WHERE m.kind = 'customer_topup' AND m.topup_id = t.id)::bigint AS الحركات
+			FROM shamcash_topups t
+			WHERE (t.status = 'approved' AND (
+			         (SELECT count(*) FROM wallet_transactions w
+			           WHERE w.kind = 'topup' AND w.ref = t.id::text) <> 1
+			      OR NOT EXISTS (SELECT 1 FROM wallet_transactions w
+			           WHERE w.kind = 'topup' AND w.ref = t.id::text
+			             AND w.amount = t.amount AND w.user_id = t.user_id)
+			      OR (SELECT count(*) FROM shamcash_movements m
+			           WHERE m.kind = 'customer_topup' AND m.topup_id = t.id) <> 1
+			      OR NOT EXISTS (SELECT 1 FROM shamcash_movements m
+			           WHERE m.kind = 'customer_topup' AND m.topup_id = t.id
+			             AND m.amount = t.amount AND m.currency = 'SYP' AND m.voided_at IS NULL)))
+			   OR (t.status <> 'approved' AND (
+			         EXISTS (SELECT 1 FROM wallet_transactions w WHERE w.kind = 'topup' AND w.ref = t.id::text)
+			      OR EXISTS (SELECT 1 FROM shamcash_movements m WHERE m.topup_id = t.id)))`,
+	},
 
 	// ═══════════════════════════════════════════════════════════════════
 	// FI-06 — حفظُ اقتصاد الطلب

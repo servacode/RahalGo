@@ -453,6 +453,9 @@ type driverOrder struct {
 	// CustomerElsewhere **الزبونُ مو بعنوان التوصيل** (قرارُ المالك ٢٠٢٦-١١-٢٤) — جاوب «لا» على
 	// «إنت هلق بعنوان التوصيل؟»: **عم يطلب لشخص تاني، فامشِ عالدبّوس لا على موقعه.**
 	CustomerElsewhere bool `json:"customer_elsewhere,omitempty"`
+	// PayShamcash **«الزبون رح يدفع شام كاش»** (قرار المالك ٢٠٢٦-١١-٢٥) — الكابتن بيلاقي «الزبون دفع
+	// شام كاش» مختار سلفاً عند التسليم. **والقديم بيتجاهله** وبيسأل متل العادة.
+	PayShamcash bool `json:"pay_shamcash,omitempty"`
 	// **ولا رقمَ للزبون هنا — ولا في أيّ حمولةٍ تبلغ سائقاً.**
 	//
 	// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «لازم الاثنان لا يقدران يوصلان لبعض إلّا
@@ -786,7 +789,7 @@ const driverOrderSelect = `
 	       -- **وأصلُ الطلب** — «طلب واتساب» على البطاقة (قرارُ المالك ٢٠٢٦-١١-٠٥).
 	       o.origin, o.wa_amanah,
 	       CASE WHEN o.kind = 'custom' AND o.custom_mode = 'amanah' THEN o.amanah_direction ELSE '' END,
-	       o.customer_elsewhere
+	       o.customer_elsewhere, o.pay_shamcash
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -833,7 +836,7 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
 			&o.AmountCurrency, &o.EntranceLat, &o.EntranceLng,
 			&o.Subtotal, &o.Discount, &o.HolderName, &o.HolderPhone, &o.Origin, &o.WAAmanah, &o.AmanahDirection,
-			&o.CustomerElsewhere); err != nil {
+			&o.CustomerElsewhere, &o.PayShamcash); err != nil {
 			return nil, err
 		}
 		// **والاسمُ الأوّلُ للزبون وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥) — كما في

@@ -41,6 +41,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/roadmatch"
 	"github.com/servacode/rahalgo/backend/internal/routing"
 	"github.com/servacode/rahalgo/backend/internal/settings"
+	"github.com/servacode/rahalgo/backend/internal/shamcash"
 	"github.com/servacode/rahalgo/backend/internal/support"
 	"github.com/servacode/rahalgo/backend/internal/textguard"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
@@ -138,6 +139,8 @@ type Server struct {
 	// alertOut **من يكتب للمالك في محادثته مع نفسه** — البوت. **وفارغٌ في
 	// التطوير** فتذهب التنبيهاتُ إلى إشعارات اللوحة وحدَها.
 	alertOut AlertSender
+	// scVerifier **متحقّق تحويلات شام كاش** — فاضي = يدويّ (`shamcash_topup_handlers.go`).
+	scVerifier shamcash.Verifier
 
 	// driveFails **دواماتٌ تعثّر قياسُها** — تُنحّى عن رأس الكانس عشرَ دقائق (`drive_sweeper.go`).
 	driveFails driveFailures
@@ -888,6 +891,10 @@ func (s *Server) Router() http.Handler {
 			r.Get("/my/orders", s.handleMyOrders)
 			r.Get("/my/orders/{id}", s.handleMyOrder)
 			r.Get("/my/wallet", s.handleMyWallet)
+			// **شحن المحفظة بشام كاش** (قرار المالك ٢٠٢٦-١١-٢٥، `shamcash_topup_handlers.go`).
+			r.Get("/my/shamcash", s.handleMyShamcash)
+			r.Post("/my/shamcash/receipt", s.handleMyShamcashReceipt)
+			r.Post("/my/shamcash/topups", s.idempotent(s.handleCreateShamcashTopup))
 			// **أله توصيلةٌ مجانيّةٌ الآن؟** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — لتقول الشاشةُ «مجانيّة» قبل الطلب.
 			r.Get("/my/free-delivery", s.handleMyFreeDelivery)
 			// **«جوائز رحّال غو»** (قرارُ المالك ٢٠٢٦-١١-٢٣) — حالي وأصنافُ المتجر والرابحون.
@@ -2037,6 +2044,10 @@ func (s *Server) Router() http.Handler {
 			r.Post("/shamcash/{id}/not-arrived", s.handleShamcashNotArrived)
 			r.Post("/shamcash/{id}/arrived", s.handleShamcashArrived)
 			r.Post("/shamcash/{id}/void", s.handleShamcashVoid)
+			// **طلبات شحن المحفظة بشام كاش** (قرار المالك ٢٠٢٦-١١-٢٥) — الموافقة بتحرّك الدفتر.
+			r.Get("/shamcash-topups", s.handleListShamcashTopups)
+			r.Post("/shamcash-topups/{id}/approve", s.handleApproveShamcashTopup)
+			r.Post("/shamcash-topups/{id}/reject", s.handleRejectShamcashTopup)
 			r.Get("/approvals", s.handleApprovals)
 			// ══════════════════════════════════════════════════════════
 			// **ومصروفاتُ التشغيل** — (قرارُ المالك ٢٠٢٦-٠٨-١٦)

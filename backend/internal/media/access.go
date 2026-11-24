@@ -56,6 +56,8 @@ var protectedKinds = map[string]bool{
 	// صورةُ حديث الطلب ورسالتُه الصوتيّة — لطرفَي الحديث والمكتب وحدهم (هجرة ٠٥٤٧).
 	"chat_photo": true,
 	"chat_audio": true,
+	// إيصالُ تحويل شام كاش — ورقةٌ ماليّةٌ لصاحبها والماليّة (هجرة ٠٥٦٢).
+	"shamcash_receipt": true,
 }
 
 // signTTL عمرُ الرابط الموقَّع.

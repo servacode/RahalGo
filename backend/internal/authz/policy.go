@@ -364,6 +364,10 @@ var adminPolicy = []Rule{
 	{"POST", "/shamcash/{id}/not-arrived", FinanceManage},
 	{"POST", "/shamcash/{id}/arrived", FinanceManage},
 	{"POST", "/shamcash/{id}/void", FinanceManage},
+	// **طلبات شحن المحفظة بشام كاش** (قرارُ المالك ٢٠٢٦-١١-٢٥) — الموافقةُ قيدٌ بالمحفظة وحركةٌ بالسجلّ.
+	{"GET", "/shamcash-topups", FinanceRead},
+	{"POST", "/shamcash-topups/{id}/approve", FinanceManage},
+	{"POST", "/shamcash-topups/{id}/reject", FinanceManage},
 	{"GET", "/approvals", FinanceRead},
 
 	// ── الدعمُ والنزاعاتُ والطوارئ ───────────────────────────────
