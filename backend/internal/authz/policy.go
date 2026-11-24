@@ -123,6 +123,7 @@ var adminPolicy = []Rule{
 	{"POST", "/whatsapp-orders/{id}/cancel", OrdersWhatsApp},
 	// **و«اطلب الموقع» من رقم المستلِم وتصحيحُ عنوانه** (ملحقُ المالك ٢٠٢٦-١١-٠٥، أ ود).
 	{"POST", "/whatsapp-orders/{id}/address", OrdersWhatsApp},
+	{"PATCH", "/whatsapp-orders/{id}", OrdersWhatsApp},
 	{"POST", "/whatsapp-orders/location-requests", OrdersWhatsApp},
 	{"GET", "/whatsapp-orders/location-requests/{id}", OrdersWhatsApp},
 
@@ -420,6 +421,7 @@ var adminPolicy = []Rule{
 	// **«جوائز رحّال غو»** (قرارُ المالك ٢٠٢٦-١١-٢٣) — مشتركو الشهر والسحوباتُ السابقة.
 	{"GET", "/prizes/entries", OffersManage},
 	{"GET", "/prizes/draws", OffersManage},
+	{"", "/prizes/store", OffersManage},
 	// **موافقاتُ الماليّة على العروض فوق حدّ المحتوى** — على عقد الموافقات.
 	{"GET", "/promo-approvals", FinanceRead},
 	{"POST", "/promo-approvals/{id}/approve", FinanceManage},

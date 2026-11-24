@@ -5743,6 +5743,7 @@
       "path": "/api/v1/admin/prizes/store",
       "handler": "handleAdminPrizeStore",
       "auth": true,
+      "capability": "offers.manage",
       "response": [
         {
           "name": "store",
@@ -5758,6 +5759,7 @@
       "path": "/api/v1/admin/prizes/store",
       "handler": "handleSetPrizeStore",
       "auth": true,
+      "capability": "offers.manage",
       "request": [
         {
           "name": "merchant_id",
@@ -8067,6 +8069,52 @@
       "response": [
         {
           "name": "stores",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/whatsapp-orders/{id}",
+      "handler": "handleWhatsAppOrderEdit",
+      "auth": true,
+      "capability": "orders.whatsapp",
+      "request": [
+        {
+          "name": "details",
+          "type": "?string"
+        },
+        {
+          "name": "recipient_name",
+          "type": "?string"
+        },
+        {
+          "name": "address_text",
+          "type": "?string"
+        },
+        {
+          "name": "driver_note",
+          "type": "?string"
+        },
+        {
+          "name": "store_name",
+          "type": "?string"
+        },
+        {
+          "name": "store_phone",
+          "type": "?string"
+        },
+        {
+          "name": "store_address",
+          "type": "?string"
+        }
+      ],
+      "response": [
+        {
+          "name": "order",
           "type": "unknown"
         }
       ],

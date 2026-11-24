@@ -702,3 +702,68 @@ func (s *Server) handleWhatsAppOrderAddress(w http.ResponseWriter, r *http.Reque
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"order": view})
 }
+
+// handleWhatsAppOrderEdit `PATCH /admin/whatsapp-orders/{id}` — «تعديل الطلب» (طلبُ المالك ٢٠٢٦-١١-٢٤):
+// التفاصيل واسمُ المستلم والعنوانُ المكتوب وملاحظةُ الكابتن واسمُ المحلّ ورقمُه، **فوراً بلا موافقة**،
+// ويُنبَّه الكابتن ويُكتب بالسجلّ. والحقلُ الغائبُ ما بيتغيّر.
+func (s *Server) handleWhatsAppOrderEdit(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Details       *string `json:"details"`
+		RecipientName *string `json:"recipient_name"`
+		AddressText   *string `json:"address_text"`
+		DriverNote    *string `json:"driver_note"`
+		StoreName     *string `json:"store_name"`
+		StorePhone    *string `json:"store_phone"`
+		StoreAddress  *string `json:"store_address"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	empty := ""
+	or := func(p *string) *string {
+		if p == nil {
+			return &empty
+		}
+		return p
+	}
+	// **والنصوصُ تمرّ بالحارس نفسِه** كالإنشاء — الغائبُ يُفحص فارغاً.
+	if _, err := s.guardText(r.Context(),
+		tf("store_name", or(req.StoreName), maxStoreName, textguard.Name),
+		tf("store_address", or(req.StoreAddress), maxAddressText, textguard.Address),
+		tf("details", or(req.Details), orders.MaxWhatsAppDetails, textguard.Notes),
+		tf("recipient_name", or(req.RecipientName), maxPersonName, textguard.Name),
+		tf("address_text", or(req.AddressText), maxAddressText, textguard.Address),
+		tf("driver_note", or(req.DriverNote), maxOrderNotes, textguard.Notes),
+	); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if req.StorePhone != nil {
+		p, ok := waStorePhone(*req.StorePhone)
+		if !ok {
+			s.respondErr(w, identity.ErrInvalidPhone)
+			return
+		}
+		req.StorePhone = &p
+	}
+	orderID := chi.URLParam(r, "id")
+	o, err := s.orders.UpdateWhatsAppOrder(r.Context(), orderID, orders.WhatsAppEdit{
+		Details: req.Details, RecipientName: req.RecipientName, AddressText: req.AddressText,
+		DriverNote: req.DriverNote, StoreName: req.StoreName, StorePhone: req.StorePhone,
+		StoreAddress: req.StoreAddress,
+	}, func(ctx context.Context, q dbtx.Querier, old map[string]string) error {
+		return s.auditTx(ctx, q, r, "ops.whatsapp_order_edit", "order", orderID, map[string]any{"old": old})
+	})
+	if err != nil {
+		s.respondErr(w, waReply(err))
+		return
+	}
+	s.touch("order", "ops")
+	view, err := orderView(orders.AudienceOps, o)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"order": view})
+}

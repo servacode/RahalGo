@@ -389,3 +389,40 @@ func TestWAORD026_OfficeEditsAddress(t *testing.T) {
 		t.Fatalf("**عُدّل عنوانُ «لدي توصيلة» من باب الواتساب**: %d / %s", r.Code, r.Err())
 	}
 }
+
+// TestWAOrderEditFromCard **«تعديل الطلب» من الكرت** (طلبُ المالك ٢٠٢٦-١١-٢٤) — التفاصيلُ واسمُ المستلم
+// وملاحظةُ الكابتن تُكتب فوراً بتدقيقٍ فيه القديم، **ويُنبَّه الكابتنُ المُسنَد**، والماليّةُ لا.
+func TestWAOrderEditFromCard(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ WA-EDIT")
+	ops := h.NewUser("operations")
+	c := waEngineCreate(t, h, w.md.admin.ID, w.typed())
+	drv := h.driverOf(c.ID)
+
+	fin := h.NewUser("finance")
+	if r := h.PATCH(waURL+"/"+c.ID, fin.Token, map[string]any{"details": "x"}); r.Code != http.StatusForbidden {
+		t.Fatalf("**الماليّةُ عدّلت الطلب**: %d", r.Code)
+	}
+	r := h.PATCH(waURL+"/"+c.ID, ops.Token, map[string]any{
+		"details": "كيلو بندورة وربطة خبز", "recipient_name": "أبو أحمد", "driver_note": "اتصل قبل ما توصل",
+	})
+	if r.Code != http.StatusOK {
+		t.Fatalf("**التعديلُ رُدّ**: %d / %s", r.Code, r.Err())
+	}
+	var parcel, name, note string
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT COALESCE(parcel_note,''), recipient_name, COALESCE(notes,'')
+		FROM orders WHERE id = $1`, c.ID).Scan(&parcel, &name, &note)
+	if parcel != "كيلو بندورة وربطة خبز" || name != "أبو أحمد" || note != "اتصل قبل ما توصل" {
+		t.Fatalf("**التعديلُ لم يُكتب**: %q %q %q", parcel, name, note)
+	}
+	var n int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM audit_log
+		WHERE action = 'ops.whatsapp_order_edit' AND entity_id = $1 AND actor_user_id = $2::uuid`,
+		c.ID, ops.ID).Scan(&n)
+	if n != 1 {
+		t.Fatalf("**التعديلُ بلا سجلّ**: %d", n)
+	}
+	if bodies := waNotes(t, h, drv.ID, c.ID, "تعدّل الطلب — شوف التفاصيل"); len(bodies) != 1 {
+		t.Fatalf("**الكابتنُ لم يُنبَّه**: %v", bodies)
+	}
+}

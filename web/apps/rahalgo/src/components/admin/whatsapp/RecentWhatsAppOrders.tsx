@@ -34,6 +34,7 @@ import {
   Button,
   FormActions,
   IconWhatsApp,
+  Input,
   Modal,
   Row,
   RowList,
@@ -80,6 +81,10 @@ interface WaRow {
   pickup_lat?: number | null;
   pickup_lng?: number | null;
   pickup_address?: string;
+  /** **للتعديل** (٢٠٢٦-١١-٢٤) — التفاصيلُ وملاحظةُ الكابتن، ومتجرُنا اسمُه من ملفّه فلا يُعدَّل. */
+  parcel_note?: string;
+  notes?: string;
+  pickup_merchant_id?: string;
   lat?: number | null;
   lng?: number | null;
 }
@@ -111,6 +116,53 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
   const canCall = useCanCall();
   const canFee = canCall(...FEE_EDIT_ROUTE);
   const canGoods = canCall(...GOODS_EDIT_ROUTE);
+  const canEdit = canCall("PATCH", "/whatsapp-orders/{id}");
+  /** **«تعديل الطلب» من الكرت مباشرةً** (طلبُ المالك ٢٠٢٦-١١-٢٤) — المكتوبُ كلُّه بنافذةٍ وحدة. */
+  const [editFor, setEditFor] = useState<WaRow | null>(null);
+  const [form, setForm] = useState<Record<string, string>>({});
+  const setF = (k: string) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  function openEdit(o: WaRow) {
+    setEditFor(o);
+    setForm({
+      details: o.parcel_note ?? "",
+      recipient_name: o.customer_name ?? "",
+      address_text: o.address_text ?? "",
+      driver_note: o.notes ?? "",
+      store_name: o.merchant_name ?? "",
+      store_phone: o.merchant_phone ?? "",
+      store_address: o.pickup_address ?? "",
+    });
+    setErr("");
+    setDone("");
+  }
+
+  async function saveEdit() {
+    if (!editFor || busy) return;
+    const body: Record<string, string> = {
+      details: form.details ?? "",
+      recipient_name: form.recipient_name ?? "",
+      address_text: form.address_text ?? "",
+      driver_note: form.driver_note ?? "",
+    };
+    if (!editFor.pickup_merchant_id) {
+      body.store_name = form.store_name ?? "";
+      body.store_phone = form.store_phone ?? "";
+      body.store_address = form.store_address ?? "";
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      await api(`/api/v1/admin/whatsapp-orders/${editFor.id}`, { method: "PATCH", body: JSON.stringify(body) });
+      setDone(fill(W.editSaved, { n: editFor.number }));
+      setEditFor(null);
+      void load();
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -284,6 +336,11 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
               trailing={
                 <span className="flex flex-col items-end gap-1">
                   <span className="font-bold">{fmtMoney(o.delivery_fee)}</span>
+                  {canEdit && ADDRESS_EDITABLE.has(o.status) && (
+                    <Button size="sm" onClick={() => openEdit(o)}>
+                      {W.editOrder}
+                    </Button>
+                  )}
                   {ADDRESS_EDITABLE.has(o.status) && (
                     <Button
                       size="sm"
@@ -427,6 +484,75 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
           }}
         />
       )}
+
+      <Modal
+        open={editFor !== null}
+        onClose={() => setEditFor(null)}
+        title={editFor ? fill(W.editOrderTitle, { n: editFor.number }) : W.editOrder}
+      >
+        <div className="space-y-3">
+          {editFor && !editFor.pickup_merchant_id && (
+            <>
+              <Input
+                label={editFor.wa_amanah ? W.senderName : W.storeName}
+                value={form.store_name ?? ""}
+                maxLength={120}
+                onChange={(e) => setF("store_name")(e.target.value)}
+              />
+              <Input
+                label={editFor.wa_amanah ? W.senderPhone : W.editStorePhone}
+                value={form.store_phone ?? ""}
+                dir="ltr"
+                inputMode="tel"
+                onChange={(e) => setF("store_phone")(e.target.value)}
+              />
+              <Input
+                label={W.editStoreAddress}
+                value={form.store_address ?? ""}
+                maxLength={300}
+                onChange={(e) => setF("store_address")(e.target.value)}
+              />
+            </>
+          )}
+          {editFor && !editFor.wa_amanah && (
+            <Textarea
+              label={W.editDetails}
+              value={form.details ?? ""}
+              maxLength={1000}
+              autoGrow
+              onChange={(e) => setF("details")(e.target.value)}
+            />
+          )}
+          <Input
+            label={W.editRecipientName}
+            value={form.recipient_name ?? ""}
+            maxLength={120}
+            onChange={(e) => setF("recipient_name")(e.target.value)}
+          />
+          <Textarea
+            label={W.address}
+            value={form.address_text ?? ""}
+            maxLength={300}
+            autoGrow
+            onChange={(e) => setF("address_text")(e.target.value)}
+          />
+          <Textarea
+            label={W.note}
+            value={form.driver_note ?? ""}
+            maxLength={500}
+            autoGrow
+            onChange={(e) => setF("driver_note")(e.target.value)}
+          />
+          <p className="text-xs text-ink-muted">{W.editHint}</p>
+          {err && <Alert tone="error">{err}</Alert>}
+          <FormActions
+            onSave={() => void saveEdit()}
+            onCancel={() => setEditFor(null)}
+            busy={busy}
+            saveLabel={W.editSave}
+          />
+        </div>
+      </Modal>
 
       <Modal
         open={addrTarget !== null}

@@ -805,6 +805,7 @@ func (s *Service) CancelWhatsAppOrder(ctx context.Context, actorID, orderID, rea
 const (
 	waLocationArrivedTitle = "وصل موقع المستلم — صار على الخريطة"
 	waAddressChangedTitle  = "تغيّر عنوان المستلم"
+	waOrderEditedTitle     = "تعدّل الطلب — شوف التفاصيل"
 	waLocationOutsideTitle = "موقع مستلم طلب واتساب برّا التغطية"
 )
 
@@ -1004,6 +1005,129 @@ func (s *Service) UpdateWhatsAppAddress(ctx context.Context, orderID, address st
 		return nil, err
 	}
 	s.afterWhatsAppRecipientChange(ctx, orderID, driverID, number, waAddressChangedTitle, address)
+	return s.GetByID(ctx, orderID)
+}
+
+// WhatsAppEdit **«تعديل الطلب» من كرت طلب الواتساب** (طلبُ المالك ٢٠٢٦-١١-٢٤: «زر تعديل الطلب… مباشر»).
+//
+// **المكتوبُ وحدَه بهالخطوة** — التفاصيل واسمُ المستلم والعنوانُ المكتوب وملاحظةُ الكابتن، **واسمُ
+// المحلّ ورقمُه وعنوانُه لمحلٍّ مو من متاجرنا** (متجرُنا اسمُه من ملفّه). **والأجرةُ والمواقعُ والثمنُ
+// ما بتنمسّ هون**: الثمنُ له زرُّه، والموقعُ يعيد حسابَ الأجرة. و`nil` = ما تغيّر.
+type WhatsAppEdit struct {
+	Details       *string
+	RecipientName *string
+	AddressText   *string
+	DriverNote    *string
+	StoreName     *string
+	StorePhone    *string
+	StoreAddress  *string
+}
+
+// UpdateWhatsAppOrder **يطبّق التعديل فوراً** لحدّ التسليم — ويُنبَّه الكابتنُ المُسنَد. ويردّ القديمَ للتدقيق.
+func (s *Service) UpdateWhatsAppOrder(ctx context.Context, orderID string, e WhatsAppEdit,
+	hook func(context.Context, dbtx.Querier, map[string]string) error) (*Order, error) {
+	if _, err := uuid.Parse(orderID); err != nil {
+		return nil, httpx.ErrNotFound
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var origin string
+	var number int64
+	var driverID, merchantID *string
+	var ended bool
+	old := map[string]string{}
+	var details, rname, addr, note, pname, pphone, paddr string
+	if err := tx.QueryRow(ctx, `
+		SELECT origin, number, driver_id::text, pickup_merchant_id::text,
+		       delivered_at IS NOT NULL OR closed_at IS NOT NULL,
+		       COALESCE(parcel_note, ''), COALESCE(recipient_name, ''), COALESCE(address_text, ''),
+		       COALESCE(notes, ''), COALESCE(pickup_name, ''), COALESCE(pickup_phone, ''),
+		       COALESCE(pickup_address, '')
+		  FROM orders WHERE id = $1 FOR UPDATE`, orderID).
+		Scan(&origin, &number, &driverID, &merchantID, &ended,
+			&details, &rname, &addr, &note, &pname, &pphone, &paddr); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, httpx.ErrNotFound
+		}
+		return nil, err
+	}
+	if origin != OriginWhatsApp {
+		return nil, ErrWANotWhatsApp
+	}
+	if ended {
+		return nil, ErrWAAddressClosed
+	}
+	trim := func(p *string) *string {
+		if p == nil {
+			return nil
+		}
+		v := strings.TrimSpace(*p)
+		return &v
+	}
+	e.Details, e.RecipientName, e.AddressText, e.DriverNote = trim(e.Details), trim(e.RecipientName),
+		trim(e.AddressText), trim(e.DriverNote)
+	e.StoreName, e.StorePhone, e.StoreAddress = trim(e.StoreName), trim(e.StorePhone), trim(e.StoreAddress)
+	if e.Details != nil && len([]rune(*e.Details)) > MaxWhatsAppDetails {
+		v := string([]rune(*e.Details)[:MaxWhatsAppDetails])
+		e.Details = &v
+	}
+	if e.RecipientName != nil && *e.RecipientName == "" {
+		v := WhatsAppRecipientName
+		e.RecipientName = &v
+	}
+	// **ومتجرٌ من متاجرنا اسمُه من ملفّه** — لا يُكتب فوقه.
+	if merchantID != nil && *merchantID != "" {
+		e.StoreName, e.StorePhone, e.StoreAddress = nil, nil, nil
+	}
+	if e.StoreName != nil && *e.StoreName == "" {
+		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+	}
+	type col struct {
+		name, oldV string
+		v          *string
+	}
+	cols := []col{
+		{"parcel_note", details, e.Details}, {"recipient_name", rname, e.RecipientName},
+		{"address_text", addr, e.AddressText}, {"notes", note, e.DriverNote},
+		{"pickup_name", pname, e.StoreName}, {"pickup_phone", pphone, e.StorePhone},
+		{"pickup_address", paddr, e.StoreAddress},
+	}
+	changed := []string{}
+	for _, c := range cols {
+		if c.v == nil || *c.v == c.oldV {
+			continue
+		}
+		// **وأسماءُ الأعمدة ثابتةٌ هون لا من المدخل** — فلا حقنَ في الجملة.
+		val := "$2"
+		if c.name == "pickup_phone" || c.name == "pickup_address" {
+			val = "NULLIF($2, '')"
+		}
+		if _, err := tx.Exec(ctx, `UPDATE orders SET `+c.name+` = `+val+`, updated_at = now() WHERE id = $1`,
+			orderID, *c.v); err != nil {
+			return nil, err
+		}
+		old[c.name] = c.oldV
+		changed = append(changed, c.name)
+	}
+	if len(changed) == 0 {
+		if err := tx.Commit(ctx); err != nil {
+			return nil, err
+		}
+		return s.GetByID(ctx, orderID)
+	}
+	if hook != nil {
+		if err := hook(ctx, tx, old); err != nil {
+			return nil, err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	s.afterWhatsAppRecipientChange(ctx, orderID, driverID, number, waOrderEditedTitle, "")
 	return s.GetByID(ctx, orderID)
 }
 

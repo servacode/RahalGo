@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 744,
+    "routes": 745,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -34,7 +34,7 @@
     "behaviour_settings": 264,
     "order_fields": 150,
     "test_files": 871,
-    "test_funcs": 3307
+    "test_funcs": 3309
   },
   "flows": [
     {
@@ -25419,6 +25419,12 @@
       "orphan": true
     },
     {
+      "name": "TestPRZ_StorePicker",
+      "file": "internal/qa/prizes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestPR01_PR02_PR04_PromoLossIsNamedAndTotalsAreCurrent",
       "file": "internal/qa/promo_change_test.go",
       "package": "qa",
@@ -30275,6 +30281,12 @@
     },
     {
       "name": "TestWAORD026_OfficeEditsAddress",
+      "file": "internal/qa/whatsapp_location_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAOrderEditFromCard",
       "file": "internal/qa/whatsapp_location_test.go",
       "package": "qa",
       "orphan": true

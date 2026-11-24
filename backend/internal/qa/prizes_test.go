@@ -566,3 +566,40 @@ func TestPRZ08_PrizeStoreHiddenEverywhere(t *testing.T) {
 		t.Fatalf("حالي لا يقول متجرَ الجوائز: %s", r)
 	}
 }
+
+// TestPRZ_StorePicker **«خلّيه متجر الجوائز» من اللوحة** (٢٠٢٦-١١-٢٤) — يُختار متجرٌ فيختفي من السوق،
+// **والثاني يُردّ بـ`prize_store_taken`**، والإرجاعُ يطفئه. والزبونُ لا يختار (والماليّةُ تختار: العروضُ قسمُها).
+func TestPRZ_StorePicker(t *testing.T) {
+	h := New(t)
+	f := h.Factory()
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE merchants SET status = 'inactive' WHERE status = 'prize'`); err != nil {
+		t.Fatal(err)
+	}
+	a, b := f.Merchant(), f.Merchant()
+	h.NewItemFor(a, 1000)
+	admin := h.NewUser("admin")
+	const url = "/api/v1/admin/prizes/store"
+	if r := h.GET(url, admin.Token); r.Code != http.StatusOK || r.JSON()["store"] != nil {
+		t.Fatalf("قبل الاختيار: %s", r)
+	}
+	if r := h.Call("PUT", url, h.NewUser("customer").Token, map[string]any{"merchant_id": a.ID}, nil); r.Code != http.StatusForbidden {
+		t.Fatalf("**زبونٌ اختار**: %d", r.Code)
+	}
+	r := h.Call("PUT", url, admin.Token, map[string]any{"merchant_id": a.ID}, nil)
+	st, _ := r.JSON()["store"].(map[string]any)
+	if r.Code != http.StatusOK || st == nil || st["id"] != a.ID || st["items"] != float64(1) {
+		t.Fatalf("الاختيار: %s", r)
+	}
+	if r := h.Call("PUT", url, admin.Token, map[string]any{"merchant_id": b.ID}, nil); r.Code != http.StatusConflict ||
+		!strings.Contains(string(r.Body), "prize_store_taken") {
+		t.Fatalf("**متجرٌ ثانٍ قُبل**: %s", r)
+	}
+	if r := h.Call("PUT", url, admin.Token, map[string]any{"merchant_id": ""}, nil); r.Code != http.StatusOK || r.JSON()["store"] != nil {
+		t.Fatalf("الإرجاع: %s", r)
+	}
+	var status string
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT status FROM merchants WHERE id = $1::uuid`, a.ID).Scan(&status)
+	if status != "inactive" {
+		t.Fatalf("**بعد الإرجاع**: %s", status)
+	}
+}

@@ -1758,6 +1758,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/whatsapp-orders/{id}/cancel", s.handleCancelWhatsAppOrder)
 			// **و«اطلب الموقع» وتصحيحُ العنوان** (ملحقُ المالك ٢٠٢٦-١١-٠٥، أ ود).
 			r.Post("/whatsapp-orders/{id}/address", s.handleWhatsAppOrderAddress)
+			// **«تعديل الطلب» من الكرت مباشرةً** (طلبُ المالك ٢٠٢٦-١١-٢٤).
+			r.Patch("/whatsapp-orders/{id}", s.handleWhatsAppOrderEdit)
 			r.Post("/whatsapp-orders/location-requests", s.handleWhatsAppRequestLocation)
 			r.Get("/whatsapp-orders/location-requests/{id}", s.handleWhatsAppLocationRequest)
 
