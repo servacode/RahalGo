@@ -216,6 +216,7 @@
     <string name="trip_s_delivered">سلّمت</string>
     <string name="trip_due_from">إجمالي المبلغ المطلوب من %1$s</string>
     <string name="trip_prepaid_note">مدفوع مسبقاً — لا تقبض شيئاً</string>
+    <string name="trip_tip_line">إكرامية %1$s</string>
     <string name="trip_collect_from">اقبض من %1$s</string>
     <string name="deliver_confirm_due_title">هل قبضت المبلغ؟</string>
     <string name="deliver_confirm_due_body">المبلغ المطلوب من %1$s</string>

@@ -990,6 +990,17 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		}
 	}
 
+	// **إكراميةُ الكابتن** (`tip.go`) — بعد خصم الحصّة، فالمتاحُ يُسأل عن الاتنين معاً.
+	// **والزبونُ بنفسه وحدَه** — الطلبُ الهاتفيُّ من المكتب ما بيحطّ إكرامية عن حدا.
+	if in.Tip != 0 {
+		if actorID != customerID {
+			return nil, nil, ErrTipNotAllowed
+		}
+		if err := s.setTipTx(ctx, tx, orderID, customerID, in.Tip); err != nil {
+			return nil, nil, err
+		}
+	}
+
 	// **ويُقرأ بالمعاملة** — **وطلبٌ أُنشئ فيها لا يراه المَسبَح.**
 	created, err := unit.getByID(ctx, tx, orderID)
 	if err != nil {

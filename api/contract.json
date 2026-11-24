@@ -12408,6 +12408,10 @@
         {
           "name": "expected_quote_version",
           "type": "int64"
+        },
+        {
+          "name": "tip",
+          "type": "?int64"
         }
       ],
       "response": [
@@ -12610,6 +12614,10 @@
         {
           "name": "expected_total",
           "type": "int64"
+        },
+        {
+          "name": "tip",
+          "type": "?int64"
         }
       ]
     },
@@ -13244,6 +13252,10 @@
         {
           "name": "support_phone",
           "type": "unknown"
+        },
+        {
+          "name": "tips",
+          "type": "object"
         }
       ],
       "statuses": [

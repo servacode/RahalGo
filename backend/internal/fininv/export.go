@@ -93,6 +93,9 @@ var FinancialSettings = []string{
 	"prizes.amount_3",
 	"prizes.amount_4",
 	"prizes.amount_5",
+	// **إكراميةُ الكابتن** (orders/tip.go) — حصّةُ المنصّة منها (٢٠٢٦-١١-٢٥).
+	"tips.enabled",
+	"tips.platform_percent",
 	"drivers.target_reward",
 	"drivers.reward_2",
 	"drivers.reward_3",

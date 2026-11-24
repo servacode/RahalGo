@@ -745,7 +745,7 @@ func (s *Service) autoAgreeFixedFee(ctx context.Context, orderID, customerID, dr
 	if pay != "wallet" {
 		pay, scope = "cash", ""
 	}
-	if _, err := s.confirmQuote(ctx, orderID, customerID, pay, scope, o.Total, o.QuoteVersion, true); err != nil {
+	if _, err := s.confirmQuote(ctx, orderID, customerID, pay, scope, nil, o.Total, o.QuoteVersion, true); err != nil {
 		s.logger.Warn("أجرة المنصّة: التأكيدُ التلقائيُّ رُدّ — يؤكّدها الزبون بيده", "order", orderID, "error", err)
 		fee := int64(0)
 		if o.CustomFee != nil {

@@ -475,6 +475,8 @@ type driverOrder struct {
 	// (قرارُ المالك ٢٠٢٦-١٠-٣٠: «المجموع / التوصيل / الخصم / الإجمالي»).
 	Subtotal int64 `json:"subtotal"`
 	Discount int64 `json:"discount"`
+	// TipDriver **إكراميةُ الزبون له** (قرارُ المالك ٢٠٢٦-١١-٢٥) — حصّتُه بعد نسبة المنصّة، صفرٌ = بلا.
+	TipDriver int64 `json:"tip_driver"`
 	// Items **ما يستلمه من المتجر باسمه وكميّته** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «بالبطاقة
 	// لازم يكون واضح ع السائق شو هو الطلب… هيك السائق اصلا مايعرف شو الطلب»). كان
 	// `items_count` وحدَه يصل — **فيقف عند المتجر لا يعرف أيَّ كيسٍ له.** **ومنذ ٢٠٢٦-١٠-٣٠
@@ -777,6 +779,9 @@ const driverOrderSelect = `
 	         ORDER BY a.entrance_set_at DESC LIMIT 1),
 	       -- **ومجموعُ الأصناف والخصم** — لكتلة الفاتورة (قرارُ المالك ٢٠٢٦-١٠-٣٠).
 	       o.subtotal, o.discount,
+	       -- **«إكرامية 10 ل.س»** (قرارُ المالك ٢٠٢٦-١١-٢٥) — حصّتُه: المقيّدةُ أو المتوقّعةُ باللقطة.
+	       o.tip_amount - CASE WHEN o.tip_paid_at IS NOT NULL THEN o.tip_platform_cut
+	                           ELSE o.tip_amount * o.tip_platform_percent / 100 END,
 	       -- **وصاحبُ الأمانة ورقمُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — للأمانة وحدَها.
 	       -- **وللسائق المُسنَد وحدَه** — لا لمن يرى الطلبَ في الطابور ($1 السائلُ نفسُه).
 	       CASE WHEN o.kind = 'custom' AND o.custom_mode = 'amanah' AND o.driver_id = $1::uuid
@@ -832,7 +837,7 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.DeliveryMode, &o.CollectAmount,
 			&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
 			&o.AmountCurrency, &o.EntranceLat, &o.EntranceLng,
-			&o.Subtotal, &o.Discount, &o.HolderName, &o.HolderPhone, &o.Origin, &o.WAAmanah, &o.AmanahDirection,
+			&o.Subtotal, &o.Discount, &o.TipDriver, &o.HolderName, &o.HolderPhone, &o.Origin, &o.WAAmanah, &o.AmanahDirection,
 			&o.CustomerElsewhere); err != nil {
 			return nil, err
 		}

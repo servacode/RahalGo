@@ -391,8 +391,9 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// +9: prizes.* («جوائز رحّال غو» — قرارُ المالك ٢٠٢٦-١١-٢٣).
 	// +6: prizes.min_points و prizes.points_* ستّة، ناقصَ prizes.invites_per_entry (مسابقةُ النقاط ٢٠٢٦-١١-٢٥).
 	// +2: cart_reminder.* («سلّتك ناطرتك» — قرارُ المالك ٢٠٢٦-١١-٢٥).
-	if d.BehaviourSettings != 272 {
-		t.Errorf("إعداداتُ السلوك = %d لا 272 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// +2: tips.* (إكراميةُ الكابتن — قرارُ المالك ٢٠٢٦-١١-٢٥).
+	if d.BehaviourSettings != 274 {
+		t.Errorf("إعداداتُ السلوك = %d لا 274 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

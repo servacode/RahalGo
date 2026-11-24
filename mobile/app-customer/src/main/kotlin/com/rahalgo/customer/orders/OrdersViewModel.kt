@@ -356,7 +356,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * **تبديلُ شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — لحد ما يوصل الكابتن للباب.
      * **ويُرسَل المجموعُ الذي رآه** — فإن تغيّر ردّ المحرّكُ `order_changed` ويُعاد الجلب.
      */
-    fun changeWalletScope(order: MyOrder, scope: String) {
+    fun changeWalletScope(order: MyOrder, scope: String, tip: Long? = null) {
         if (acting) return
         acting = true
         actionError = ""
@@ -364,7 +364,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         val key = Attempt.key(slot)
         viewModelScope.launch {
             try {
-                api.changeWalletScope(order.id, scope, order.total, key)
+                api.changeWalletScope(order.id, scope, order.total, key, tip)
                 Attempt.clear(slot)
                 Flash.ok(getApplication<Application>().getString(R.string.ord_pay_changed))
             } catch (e: Exception) {
@@ -517,7 +517,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     //
     // **و`method` واحدٌ من ثلاثة** (قرارُ المالك ٢٠٢٦-١١-٢٠): `cash` · `delivery` «التوصيل من المحفظة
     // والباقي كاش» · `full` «الكل من المحفظة». (و`wallet` القديمُ بلا نطاقٍ = «التوصيل».)
-    fun confirmQuote(order: MyOrder, method: String) {
+    fun confirmQuote(order: MyOrder, method: String, tip: Long = 0L) {
         if (acting) return
         acting = true
         actionError = ""
@@ -531,7 +531,10 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         val payment = if (scope == "none") "cash" else "wallet"
         viewModelScope.launch {
             try {
-                api.confirmQuote(order.id, payment, order.total, order.quoteVersion, key, scope)
+                api.confirmQuote(
+                    order.id, payment, order.total, order.quoteVersion, key, scope,
+                    tip.takeIf { it > 0 && scope != "none" },
+                )
                 Attempt.clear(slot)
                 Flash.ok(
                     getApplication<Application>().getString(

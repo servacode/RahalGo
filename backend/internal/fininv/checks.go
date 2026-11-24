@@ -55,11 +55,11 @@ var All = []Check{
 		Why: "قيدٌ مرجعُه فارغٌ أو يشير إلى طلبٍ لا وجودَ له — " +
 			"**فلا يُعرَف من أين جاء المال ولا كيف يُعكَس.**",
 		Flows: []string{"F-14", "F-15"},
-		Kinds: []string{"order_payment", "refund", "merchant_earning", "driver_earning", "commission"},
+		Kinds: []string{"order_payment", "refund", "merchant_earning", "driver_earning", "commission", "tip"},
 		SQL: `
 			SELECT t.id, t.kind, t.ref, t.amount
 			FROM wallet_transactions t
-			WHERE t.kind IN ('order_payment','refund','merchant_earning','driver_earning','commission')
+			WHERE t.kind IN ('order_payment','refund','merchant_earning','driver_earning','commission','tip')
 			  AND (t.ref = '' OR NOT EXISTS (
 					SELECT 1 FROM orders o WHERE o.id::text = t.ref))`,
 	},
@@ -1444,7 +1444,8 @@ var All = []Check{
 		// **مصدران للحجز يُجمعان**: طلباتُ السحب المعلَّقة، وحجوزُ الطلبات
 		// المخصَّصة (`custom_reserved_amount`). **وكلُّ حجزٍ منسوبٌ لطلبه**،
 		// فيُصالَح المجموعُ صفّاً بصفّ.
-		SQL: `SELECT w.user_id::text, w.reserved, COALESCE(a.total, 0) + COALESCE(c.total, 0)
+		// **وإكراميةُ الكابتن المحجوزة مصدرٌ تالت** (`tip_reserved`، ٢٠٢٦-١١-٢٥).
+		SQL: `SELECT w.user_id::text, w.reserved, COALESCE(a.total, 0) + COALESCE(c.total, 0) + COALESCE(tp.total, 0)
 		        FROM wallets w
 		        LEFT JOIN (SELECT user_id, sum(amount) AS total
 		                     FROM payout_requests
@@ -1454,8 +1455,12 @@ var All = []Check{
 		                     FROM orders
 		                    WHERE kind = 'custom' AND custom_reserved_amount > 0
 		                    GROUP BY customer_id) c ON c.user_id = w.user_id
+		        LEFT JOIN (SELECT customer_id AS user_id, sum(tip_reserved) AS total
+		                     FROM orders
+		                    WHERE tip_reserved > 0
+		                    GROUP BY customer_id) tp ON tp.user_id = w.user_id
 		       WHERE NOT w.is_treasury
-		         AND w.reserved <> COALESCE(a.total, 0) + COALESCE(c.total, 0)`,
+		         AND w.reserved <> COALESCE(a.total, 0) + COALESCE(c.total, 0) + COALESCE(tp.total, 0)`,
 	},
 	{
 		ID: "FI-11.f", Family: FI11, Status: ProvableNow, Ops: true,
@@ -1929,5 +1934,82 @@ var All = []Check{
 			WHERE o.money_model = 2 AND o.wallet_scope = 'full' AND o.status = 'delivered'
 			  AND o.driver_id IS NOT NULL
 			  AND COALESCE(d.amount, 0) <> GREATEST(x.paid - x.collected, 0)`,
+	},
+	// ══════════════════════════════════════════════════════════════
+	// **إكراميةُ الكابتن** — قرارُ المالك ٢٠٢٦-١١-٢٥ (`orders/tip.go`)
+	// ══════════════════════════════════════════════════════════════
+	{
+		ID: "FI-03.f", Family: FI03, Status: ProvableNow, Ops: true,
+		Name: "سطورُ إكراميةِ الطلب مجموعُها صفر",
+		Why: "**الإكراميةُ مالٌ بيعبر من الزبون للكابتن والمنصّة** — مجموعٌ موجبٌ مالٌ انخلق، " +
+			"وسالبٌ مالٌ انخصم من الزبون وما وصل لحدا.",
+		Flows: []string{"F-14"},
+		Kinds: []string{"tip"},
+		SQL: `
+			SELECT t.ref, sum(t.amount)::bigint AS المجموع
+			FROM wallet_transactions t
+			WHERE t.kind = 'tip'
+			GROUP BY t.ref
+			HAVING sum(t.amount) <> 0`,
+	},
+	{
+		ID: "FI-04.g", Family: FI04, Status: ProvableNow, Ops: true,
+		Name: "إكراميةُ طلبٍ مسلَّمٍ انقيّدت كاملةً لكابتنه — وإكراميةُ طلبٍ ما انسلّم رجعت",
+		Why: "**المسلَّمُ**: الزبونُ انخصم منه `tip_amount` مرّة، والكابتنُ اللي سلّم أخد حصّتَه " +
+			"(`tip_amount − tip_platform_cut`) — غيابُها إكراميةٌ ضاعت. **والملغى**: صافي الزبون صفر " +
+			"وما في حجز — وإلّا مالُه انخصم عن طلبٍ ما وصله.",
+		Flows: []string{"F-14", "F-15"},
+		Kinds: []string{"tip"},
+		SQL: `
+			SELECT o.number, o.status, o.tip_amount, o.tip_reserved,
+			       COALESCE(c.amt, 0)::bigint AS على_الزبون, COALESCE(d.amt, 0)::bigint AS للكابتن
+			FROM orders o
+			LEFT JOIN LATERAL (
+				SELECT sum(t.amount) AS amt FROM wallet_transactions t
+				WHERE t.ref = o.id::text AND t.kind = 'tip' AND t.user_id = o.customer_id
+			) c ON true
+			LEFT JOIN LATERAL (
+				SELECT sum(t.amount) AS amt FROM wallet_transactions t
+				WHERE t.ref = o.id::text AND t.kind = 'tip' AND t.user_id = o.driver_id
+			) d ON true
+			WHERE (o.status IN ('delivered', 'refunded') AND o.tip_amount > 0
+			       AND (o.tip_paid_at IS NULL OR o.tip_reserved <> 0
+			            OR COALESCE(c.amt, 0) <> -o.tip_amount
+			            OR COALESCE(d.amt, 0) <> o.tip_amount - o.tip_platform_cut))
+			   OR (o.status IN ('cancelled', 'rejected', 'failed')
+			       AND (o.tip_reserved <> 0 OR COALESCE(c.amt, 0) <> 0))`,
+	},
+	{
+		ID: "FI-05.l", Family: FI05, Status: ProvableNow, Ops: true,
+		Name: "الإكراميةُ تنقيّد مرّة وحدة",
+		Why: "**تسليمٌ مكرّر أو سباقُ انتقالين** — خصمان من الزبون أو قيدان للكابتن بنفس الطلب " +
+			"إكراميةٌ مدفوعةٌ مرّتين. (يحرسه قفلُ الصفّ و`tip_paid_at`، **والثابتُ يقيس النتيجة.**)",
+		Flows: []string{"F-14"},
+		Kinds: []string{"tip"},
+		SQL: `
+			SELECT t.ref, t.user_id::text,
+			       count(*) FILTER (WHERE t.amount < 0) AS خصم,
+			       count(*) FILTER (WHERE t.amount > 0) AS قيد
+			FROM wallet_transactions t
+			WHERE t.kind = 'tip'
+			GROUP BY t.ref, t.user_id
+			HAVING count(*) FILTER (WHERE t.amount < 0) > 1
+			    OR count(*) FILTER (WHERE t.amount > 0) > 1`,
+	},
+	{
+		ID: "FI-11.n", Family: FI11, Status: ProvableNow, Ops: true,
+		Name: "حجزُ الإكرامية لطلبِ محفظةٍ حيٍّ بس",
+		Why: "**الحجزُ بيتسوّى بالتسليم وبينفكّ بأيّ نهاية تانية** — وحجزٌ باقي لطلبٍ انتهى أو " +
+			"لطلبٍ كاش مالٌ مجمَّدٌ بمحفظة الزبون بلا سبب.",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12"},
+		Kinds:     []string{"tip"},
+		SQL: `
+			SELECT id::text, status, payment_method, wallet_scope, tip_amount, tip_reserved
+			FROM orders
+			WHERE tip_reserved > 0
+			  AND (status IN ('delivered', 'refunded', 'cancelled', 'rejected', 'failed')
+			    OR payment_method <> 'wallet' OR wallet_scope NOT IN ('full', 'delivery')
+			    OR tip_paid_at IS NOT NULL)`,
 	},
 }

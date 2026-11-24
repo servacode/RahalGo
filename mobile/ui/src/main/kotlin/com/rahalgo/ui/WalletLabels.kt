@@ -35,6 +35,7 @@ object WalletLabels {
         "operating_expense" -> R.string.wal_k_operating_expense
         "custom_goods_return" -> R.string.wal_k_custom_goods_return
         "advance" -> R.string.wal_k_advance
+        "tip" -> R.string.wal_k_tip
         else -> null
     }
 

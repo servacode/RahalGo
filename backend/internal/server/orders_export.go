@@ -351,6 +351,7 @@ var ledgerKinds = map[string]string{
 	"payout_reversal":       "إرجاع سحب",
 	"treasury_withdrawal":   "سحب الأدمن من رصيد الخزينة",
 	"advance":               "سلفة",
+	"tip":                   "إكرامية",
 }
 
 // ledgerKindAr نوعُ القيد بالعربيّة — والمجهولُ يبقى كما هو لا فراغاً.

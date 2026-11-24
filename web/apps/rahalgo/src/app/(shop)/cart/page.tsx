@@ -56,6 +56,7 @@ import { DrinkThumb } from "@/components/customer/DrinkThumb";
 import { AvailabilityNotice, useOrderingState } from "@/components/customer/ServiceNotices";
 import { useShopToast } from "@/components/customer/toast";
 import { OUTLINE_CARD, StickyActionBar } from "@/components/customer/kit";
+import { TipChooser, tipOffered } from "@/components/customer/TipChooser";
 
 const m = getMessages(defaultLocale);
 const C = m.shop.cart;
@@ -103,6 +104,8 @@ export default function CartPage() {
   const [promoBusy, setPromoBusy] = useState(false);
   // **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩): كاش · الكل · التوصيل والباقي كاش.
   const [scope, setScope] = useState<"none" | "full" | "delivery">("none");
+  /** إكرامية الكابتن — تُصفَّر مع الكاش ولا تُرسَل إلا مع المحفظة. */
+  const [tip, setTip] = useState(0);
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -185,6 +188,10 @@ export default function CartPage() {
     if (scope === "delivery" && !deliveryOk) setScope("none");
     if (scope === "full" && !fullOk) setScope("none");
   }, [scope, deliveryOk, fullOk]);
+  useEffect(() => {
+    if (scope === "none" && tip !== 0) setTip(0);
+  }, [scope, tip]);
+  const tipOn = tipOffered(platform, scope);
 
   const fp = useMemo(() => fingerprint(quote, linesKey, point, cut?.discount ?? 0), [quote, linesKey, point, cut]);
   const canSubmit = changes.length === 0 || acked === fp;
@@ -237,6 +244,7 @@ export default function CartPage() {
           lng: address.lng,
           payment_method: scope === "none" ? "cash" : "wallet",
           wallet_scope: scope,
+          ...(tipOn && tip > 0 ? { tip } : {}),
           promo_code: cut ? promo.trim() : "",
           notes: notes.trim(),
         }),
@@ -523,6 +531,11 @@ export default function CartPage() {
                   </div>
                 )}
               </div>
+              {tipOn && (
+                <div className={OUTLINE_CARD}>
+                  <TipChooser value={tip} onChange={setTip} disabled={busy} />
+                </div>
+              )}
               <div className={OUTLINE_CARD}>
                 <Textarea
                   id="notes"

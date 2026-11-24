@@ -18,6 +18,8 @@ import { createPortal } from "react-dom";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtRef, fmtSpan, fmtUsd } from "@rahalgo/i18n";
 import { Alert, Button, Confirm, InvoiceLines, Money } from "@rahalgo/ui";
 import { OUTLINE_CARD, RadioCard } from "./kit";
+import { TipChooser, tipOffered } from "./TipChooser";
+import { useCustomer } from "@/lib/customer/context";
 import { api } from "@/lib/api";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { fill, stageLabel } from "@/lib/customer/texts";
@@ -279,11 +281,14 @@ export function QuotePanel({
   const fullOk = order.total > 0 && available + ownReserved >= order.total;
   const walletOk = deliveryOk || fullOk;
   const [method, setMethod] = useState<"cash" | "full" | "delivery">("cash");
+  const [tip, setTip] = useState(0);
+  const { platform } = useCustomer();
   const [busy, setBusy] = useState(false);
   const [askReject, setAskReject] = useState(false);
   const [error, setError] = useState("");
   const amanah = order.custom_mode === "amanah";
   const pay = (method === "delivery" && !deliveryOk) || (method === "full" && !fullOk) ? "cash" : method;
+  const tipOn = tipOffered(platform, pay === "cash" ? "none" : pay);
 
   const confirm = async () => {
     const slot = "confirm_" + order.id;
@@ -296,6 +301,7 @@ export function QuotePanel({
         body: JSON.stringify({
           payment_method: pay === "cash" ? "cash" : "wallet",
           wallet_scope: pay === "cash" ? "none" : pay,
+          ...(tipOn ? { tip } : {}),
           expected_total: order.total,
           expected_quote_version: order.quote_version,
         }),
@@ -358,6 +364,7 @@ export function QuotePanel({
       ) : (
         <p className="text-sm">{O.payCashOnly}</p>
       )}
+      {tipOn && <TipChooser value={tip} onChange={setTip} disabled={busy} />}
       {/* **بضاعةٌ بالدولار والمحفظةُ مختارة**: تدفع الأجرةَ وحدَها، والدولارُ كاشٌ للكابتن. */}
       {order.custom_goods_usd != null && pay === "delivery" && (
         <p className="text-xs text-ink-muted">{O.walletDeliveryOnly}</p>
@@ -491,6 +498,11 @@ export function OrderInvoice({ order, totals = false }: { order: MyOrder; totals
           <Line label={O.total} className="text-base font-bold">
             <Money value={order.total} className="text-accent-text" />
           </Line>
+          {(order.tip ?? 0) > 0 && (
+            <Line label={m.shop.tip.line} className="text-ink-muted">
+              <Money value={order.tip ?? 0} />
+            </Line>
+          )}
         </div>
       )}
     </div>
@@ -527,6 +539,8 @@ export function PayScope({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [tip, setTip] = useState(order.tip ?? 0);
+  const { platform } = useCustomer();
   const scope = order.wallet_scope ?? (order.payment_method === "wallet" ? "full" : "none");
   const custom = order.kind === "custom";
   const confirmed = order.quote_confirmed_version != null && order.quote_confirmed_version === order.quote_version;
@@ -554,7 +568,7 @@ export function PayScope({
       await api(`/api/v1/orders/${order.id}/wallet-scope`, {
         method: "POST",
         headers: { "Idempotency-Key": attemptKey(slot) },
-        body: JSON.stringify({ wallet_scope: next, expected_total: order.total }),
+        body: JSON.stringify({ wallet_scope: next, expected_total: order.total, ...(tipOffered(platform, next) ? { tip } : {}) }),
       });
       clearAttempt(slot);
       onMessage(O.payChanged);
@@ -572,6 +586,7 @@ export function PayScope({
     <div className={`${OUTLINE_CARD} flex flex-col gap-rg-sm`}>
       <p className="text-card-title">{O.changePay}</p>
       <p className="text-caption text-ink-muted">{O.changePayHint}</p>
+      {platform?.tips?.enabled === true && <TipChooser value={tip} onChange={setTip} disabled={busy} />}
       <div role="radiogroup" aria-label={O.changePay} className="flex flex-col gap-rg-sm">
         {items.map((it) => (
           <RadioCard key={it.id} selected={scope === it.id} onSelect={() => void change(it.id)} title={it.label} disabled={busy} />

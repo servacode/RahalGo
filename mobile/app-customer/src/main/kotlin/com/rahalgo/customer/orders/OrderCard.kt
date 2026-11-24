@@ -86,7 +86,7 @@ fun OrderCard(
      */
     walletBalance: Long = 0,
     /** **يؤكّد عرضَ الطلب المخصَّص بالطريقة المختارة** — و`null` لا تأكيدَ هنا. */
-    onConfirmQuote: ((String) -> Unit)? = null,
+    onConfirmQuote: ((String, Long) -> Unit)? = null,
     /** **جارٍ تأكيدُ عرضٍ الآن** — يُعطّل الزرَّ ويُظهر دوّارة. */
     confirming: Boolean = false,
     /** **يرفض السعرَ الجديد** بعد الاستلام — و`null` لا رفضَ هنا. */
@@ -100,7 +100,7 @@ fun OrderCard(
      * **يبدّل شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — `none` · `full` · `delivery`، لحد ما
      * يوصل الكابتن للباب. و`null` لا تبديلَ هنا (السجلّ).
      */
-    onChangeWalletScope: ((String) -> Unit)? = null,
+    onChangeWalletScope: ((String, Long?) -> Unit)? = null,
     /** **«اطلب مرة تانية»** (قرارُ المالك ٢٠٢٦-١١-١١) — للمُسلَّم العاديّ وحدَه، و`null` لا زرّ. */
     onReorder: (() -> Unit)? = null,
 ) {
@@ -411,6 +411,9 @@ fun OrderCard(
                 },
             ),
         )
+        if (order.tip > 0) {
+            KeyValue(stringResource(R.string.tip_order_line), money(order.tip))
+        }
         if (onChangeWalletScope != null) {
             PayScopeRow(order, walletBalance, confirming, onChangeWalletScope)
         }
@@ -497,7 +500,7 @@ fun OrderCard(
 private fun CustomQuoteSection(
     order: MyOrder,
     walletBalance: Long,
-    onConfirmQuote: ((String) -> Unit)?,
+    onConfirmQuote: ((String, Long) -> Unit)?,
     confirming: Boolean,
     onRejectQuote: (() -> Unit)? = null,
 ) {
@@ -668,7 +671,7 @@ private fun QuoteAmounts(order: MyOrder) {
 private fun QuoteConfirmPanel(
     order: MyOrder,
     walletBalance: Long,
-    onConfirmQuote: (String) -> Unit,
+    onConfirmQuote: (String, Long) -> Unit,
     confirming: Boolean,
     onRejectQuote: (() -> Unit)?,
 ) {
@@ -707,6 +710,8 @@ private fun QuoteConfirmPanel(
     var method by rememberSaveable(order.id, order.quoteVersion) { mutableStateOf("cash") }
     // (J) المحفظةُ لا تبقى مختارةً إن لم تعُد كافية قبل التأكيد.
     if ((method == "delivery" && !deliveryOk) || (method == "full" && !fullOk)) method = "cash"
+    // **إكرامية الكابتن** — مع المحفظة وحدَها، وتُرسَل مع التأكيد.
+    var tip by rememberSaveable(order.id, order.quoteVersion) { mutableStateOf(0L) }
 
     Spacer(Modifier.height(Rahal.space.md))
     RahalDivider()
@@ -760,10 +765,14 @@ private fun QuoteConfirmPanel(
             style = Rahal.type.caption,
         )
     }
+    if (method != "cash") {
+        Spacer(Modifier.height(Rahal.space.md))
+        com.rahalgo.customer.cart.TipChooser(tip = tip, onTip = { tip = it })
+    }
     Spacer(Modifier.height(Rahal.space.md))
     // **والقبولُ أخضرُ ممتلئ** (طلبُ المالك ٢٠٢٦-١٠-١٨) — كان أزرقَ يُقرأ «متابعة».
     RahalButton(
-        onClick = { onConfirmQuote(method) },
+        onClick = { onConfirmQuote(method, if (method == "cash") 0L else tip) },
         enabled = !confirming,
         tone = com.rahalgo.ui.PriceConfirm.Accept,
         modifier = Modifier.fillMaxWidth(),
@@ -827,7 +836,7 @@ fun QuoteConfirmDialog(
     order: MyOrder,
     walletBalance: Long,
     confirming: Boolean,
-    onConfirmQuote: (String) -> Unit,
+    onConfirmQuote: (String, Long) -> Unit,
     onRejectQuote: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -992,7 +1001,44 @@ internal fun MyOrderLine.toInvoiceLine(): com.rahalgo.ui.InvoiceLine = com.rahal
  * تأكيد سعره وحدَه. مرآةُ `PayScope` في موقع الزبون.
  */
 @Composable
-private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onChange: (String) -> Unit) {
+private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onChange: (String, Long?) -> Unit) {
+    // **التحويلُ إلى المحفظة يسأل عن الإكرامية** (إن فُعّلت) قبل الإرسال.
+    androidx.compose.runtime.LaunchedEffect(Unit) { com.rahalgo.customer.cart.TipConfig.ensure() }
+    var pendingScope by rememberSaveable(order.id) { mutableStateOf<String?>(null) }
+    var pendingTip by rememberSaveable(order.id) { mutableStateOf(0L) }
+    val toWallet = { target: String ->
+        if (com.rahalgo.customer.cart.TipConfig.tips?.enabled == true) {
+            pendingTip = 0L
+            pendingScope = target
+        } else {
+            onChange(target, null)
+        }
+    }
+    pendingScope?.let { target ->
+        com.rahalgo.ui.RahalDialog(
+            onDismissRequest = { pendingScope = null },
+            title = { Text(stringResource(R.string.ord_change_pay), fontWeight = FontWeight.Bold) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    com.rahalgo.customer.cart.TipChooser(tip = pendingTip, onTip = { pendingTip = it })
+                }
+            },
+            confirmButton = {
+                com.rahalgo.ui.RahalButton(
+                    onClick = {
+                        pendingScope = null
+                        onChange(target, pendingTip.takeIf { it > 0 })
+                    },
+                    enabled = !busy,
+                ) { Text(stringResource(R.string.tip_confirm)) }
+            },
+            dismissButton = {
+                RahalTextButton(onClick = { pendingScope = null }) {
+                    Text(stringResource(R.string.tip_cancel))
+                }
+            },
+        )
+    }
     val custom = order.kind == "custom"
     val confirmed = order.quoteConfirmedVersion != null && order.quoteConfirmedVersion == order.quoteVersion
     val ended = order.status in setOf("delivered", "cancelled", "rejected", "failed", "refunded")
@@ -1024,20 +1070,20 @@ private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onCh
             text = stringResource(R.string.ord_pay_cash),
             on = scope == "none",
             modifier = Modifier.fillMaxWidth(),
-        ) { if (!busy && scope != "none") onChange("none") }
+        ) { if (!busy && scope != "none") onChange("none", null) }
         if (showFull) {
             com.rahalgo.customer.cart.PayChoice(
                 text = stringResource(R.string.cart_wallet_full),
                 on = scope == "full",
                 modifier = Modifier.fillMaxWidth(),
-            ) { if (!busy && scope != "full") onChange("full") }
+            ) { if (!busy && scope != "full") toWallet("full") }
         }
         if (showDelivery) {
             com.rahalgo.customer.cart.PayChoice(
                 text = stringResource(R.string.cart_wallet_delivery),
                 on = scope == "delivery",
                 modifier = Modifier.fillMaxWidth(),
-            ) { if (!busy && scope != "delivery") onChange("delivery") }
+            ) { if (!busy && scope != "delivery") toWallet("delivery") }
         }
     }
 }
