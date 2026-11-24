@@ -411,6 +411,7 @@
     <string name="card_fee_free">مجانية للزبون · أجرتك كاملة</string>
     <string name="card_fee_paid">يدفعها الزبون</string>
     <string name="card_payment">الدفع</string>
+    <string name="shamcash_customer_will_pay">الزبون رح يدفع شام كاش</string>
     <string name="card_cash">عند التسليم</string>
     <string name="card_wallet">مدفوع</string>
     <string name="card_customer">الزبون</string>

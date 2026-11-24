@@ -100,7 +100,7 @@ fun OrderCard(
      * **يبدّل شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — `none` · `full` · `delivery`، لحد ما
      * يوصل الكابتن للباب. و`null` لا تبديلَ هنا (السجلّ).
      */
-    onChangeWalletScope: ((String) -> Unit)? = null,
+    onChangeWalletScope: ((String, Boolean?) -> Unit)? = null,
     /** **«اطلب مرة تانية»** (قرارُ المالك ٢٠٢٦-١١-١١) — للمُسلَّم العاديّ وحدَه، و`null` لا زرّ. */
     onReorder: (() -> Unit)? = null,
 ) {
@@ -407,12 +407,16 @@ fun OrderCard(
                 when (order.effectiveWalletScope) {
                     "delivery" -> R.string.ord_pay_wallet_delivery
                     "full" -> R.string.ord_pay_wallet_full
-                    else -> R.string.cart_cash
+                    else -> if (order.payShamcash) R.string.sham_pay_option else R.string.cart_cash
                 },
             ),
         )
         if (onChangeWalletScope != null) {
             PayScopeRow(order, walletBalance, confirming, onChangeWalletScope)
+        }
+        // **الكابتن عند الباب والزبون اختار شام كاش** — الباركودُ والحسابُ والمبلغ.
+        if (order.payShamcash && order.status == "at_dropoff" && order.cashDue > 0) {
+            com.rahalgo.ui.ShamcashDoorCard(order.cashDue)
         }
         order.addressText.takeIf { it.isNotEmpty() }?.let {
             KeyValue(stringResource(R.string.ord_address), it)
@@ -992,7 +996,8 @@ internal fun MyOrderLine.toInvoiceLine(): com.rahalgo.ui.InvoiceLine = com.rahal
  * تأكيد سعره وحدَه. مرآةُ `PayScope` في موقع الزبون.
  */
 @Composable
-private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onChange: (String) -> Unit) {
+private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onChange: (String, Boolean?) -> Unit) {
+    val shamOn = com.rahalgo.ui.rememberShamcashInfo()?.payOnDeliveryEnabled == true
     val custom = order.kind == "custom"
     val confirmed = order.quoteConfirmedVersion != null && order.quoteConfirmedVersion == order.quoteVersion
     val ended = order.status in setOf("delivered", "cancelled", "rejected", "failed", "refunded")
@@ -1005,7 +1010,7 @@ private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onCh
     // **«الكل من المحفظة» يظهر حين يغطّي الرصيدُ المجموعَ كلَّه** (قرارُ المالك ٢٠٢٦-١١-٢٠) — أو الطلبُ عليه أصلاً.
     val showFull = (order.total > 0 && budget >= order.total) || scope == "full"
     val showDelivery = (deliveryPart > 0 && budget >= deliveryPart) || scope == "delivery"
-    if (!showFull && !showDelivery) return
+    if (!showFull && !showDelivery && !shamOn && !order.payShamcash) return
     Spacer(Modifier.height(Rahal.space.sm))
     Text(
         stringResource(R.string.ord_change_pay),
@@ -1022,22 +1027,29 @@ private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onCh
     Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
         com.rahalgo.customer.cart.PayChoice(
             text = stringResource(R.string.ord_pay_cash),
-            on = scope == "none",
+            on = scope == "none" && !order.payShamcash,
             modifier = Modifier.fillMaxWidth(),
-        ) { if (!busy && scope != "none") onChange("none") }
+        ) { if (!busy && (scope != "none" || order.payShamcash)) onChange("none", if (order.payShamcash) false else null) }
+        if (shamOn || order.payShamcash) {
+            com.rahalgo.customer.cart.PayChoice(
+                text = stringResource(R.string.sham_pay_option),
+                on = scope == "none" && order.payShamcash,
+                modifier = Modifier.fillMaxWidth(),
+            ) { if (!busy && !(scope == "none" && order.payShamcash)) onChange("none", true) }
+        }
         if (showFull) {
             com.rahalgo.customer.cart.PayChoice(
                 text = stringResource(R.string.cart_wallet_full),
                 on = scope == "full",
                 modifier = Modifier.fillMaxWidth(),
-            ) { if (!busy && scope != "full") onChange("full") }
+            ) { if (!busy && scope != "full") onChange("full", if (order.payShamcash) false else null) }
         }
         if (showDelivery) {
             com.rahalgo.customer.cart.PayChoice(
                 text = stringResource(R.string.cart_wallet_delivery),
                 on = scope == "delivery",
                 modifier = Modifier.fillMaxWidth(),
-            ) { if (!busy && scope != "delivery") onChange("delivery") }
+            ) { if (!busy && scope != "delivery") onChange("delivery", if (order.payShamcash) false else null) }
         }
     }
 }

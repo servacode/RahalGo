@@ -218,6 +218,8 @@ data class DriverOrder(
      * كاش (`cashDue`) · `full` الكل · `none` كاش. **وفارغٌ من خادمٍ قديم.**
      */
     @SerialName("wallet_scope") val walletScope: String = "",
+    /** **الزبونُ سيدفع `cashDue` بشام كاش عند الباب.** */
+    @SerialName("pay_shamcash") val payShamcash: Boolean = false,
     /**
      * **ما يدفعه للمتاجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — من سلفة المكتب.
      * **وصفرٌ: لا يدفع شيئاً** (المتجرُ «محفظة»، أو الطلبُ ليس عاديّاً).

@@ -1728,6 +1728,7 @@ private fun TripCard(
                 due = due,
                 amount = money(order.cashDue),
                 dueAmount = order.cashDue,
+                payShamcash = order.payShamcash,
                 who = customerShownName(order.customerName) ?: stringResource(R.string.detail_customer),
                 needCode = order.deliveryCodeRequired,
                 codeAsk = deliverCodeAskRes(order),
@@ -2054,6 +2055,15 @@ private fun TripCard(
                                         amount = money(order.cashDue),
                                         tint = CollectTint(),
                                     )
+                                    // **الزبون اختار يدفع بشام كاش عند الباب** — يعرفه قبل أن يمشي.
+                                    if (order.payShamcash) {
+                                        InfoBox(
+                                            icon = R.drawable.ic_wallet,
+                                            text = stringResource(R.string.shamcash_customer_will_pay),
+                                            tint = Rahal.colors.accent,
+                                            bold = true,
+                                        )
+                                    }
                                 } else {
                                     InfoBox(
                                         icon = R.drawable.ic_check_circle,
@@ -2948,6 +2958,8 @@ private fun DeliverConfirmDialog(
     amount: String,
     /** **المطلوب من الزبون بالليرة** — شام كاش بأكبر منه بيسأل «متأكد؟». */
     dueAmount: Long,
+    /** **الزبون اختار شام كاش** — يبدأ الاختيارُ على «شام كاش» بمبلغ المطلوب، ويقدر الكابتن يغيّره. */
+    payShamcash: Boolean = false,
     who: String,
     needCode: Boolean,
     /** **من يُملي الكود** — الزبونُ، أو المتجرُ في «إحضار» (٢٠٢٦-١٠-١٦). */
@@ -2958,9 +2970,9 @@ private fun DeliverConfirmDialog(
 ) {
     var code by remember { mutableStateOf("") }
     // **كيف قبض؟** (قرار المالك 2026-11-10) — نقدٌ افتراضاً، أو شام كاش بمبلغٍ قد يكون جزءاً.
-    var sham by remember { mutableStateOf(false) }
+    var sham by remember { mutableStateOf(payShamcash && due) }
     var shamUsd by remember { mutableStateOf(false) }
-    var shamText by remember { mutableStateOf("") }
+    var shamText by remember { mutableStateOf(if (payShamcash && due && dueAmount > 0) dueAmount.toString() else "") }
     val payment = shamcashPayload(sham && due, shamUsd, shamText)
     // **مبلغ شام كاش أكبر من المطلوب** (قرار المالك ٢٠٢٦-١١-١٠) — تحذير ويكمّل إذا أكّد؛ والخادم بيقبله ويعلّمه.
     var overAsk by remember { mutableStateOf(false) }
@@ -2987,6 +2999,15 @@ private fun DeliverConfirmDialog(
                     Text(
                         stringResource(R.string.trip_prepaid_note),
                         color = Rahal.colors.success,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                if (due && payShamcash) {
+                    Spacer(Modifier.height(Rahal.space.sm))
+                    Text(
+                        stringResource(R.string.shamcash_customer_will_pay),
+                        color = Rahal.colors.accent,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                     )

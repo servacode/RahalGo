@@ -8,6 +8,8 @@
     <!-- **المايك للرسائل الصوتيّة بحديث الطلب** (قرار المالك ٢٠٢٦-١١-١٢) — يُطلب عند أوّل لمسةٍ لزرّ المايك وحدَها، لا عند فتح التطبيق. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- حفظ صورة باركود شام كاش بالمعرض على أندرويد ٩ وما دون فقط -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
     <!-- ══════════════════════════════════════════════════════════════
          **إذنُ الإشعارات — وبلاه تُبتلع كلُّها بصمت**

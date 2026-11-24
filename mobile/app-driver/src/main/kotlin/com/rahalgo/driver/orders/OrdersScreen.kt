@@ -644,6 +644,7 @@ private fun OrderCard(
                         "merchant_cash" -> stringResource(R.string.card_pay_store)
                         else -> stringResource(R.string.card_pay_store_wallet)
                     }
+                    cash && order.payShamcash -> stringResource(R.string.shamcash_customer_will_pay)
                     cash -> stringResource(R.string.card_cash)
                     else -> stringResource(R.string.card_wallet)
                 },

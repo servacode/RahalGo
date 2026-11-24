@@ -275,6 +275,22 @@ class CustomerApi(private val api: ApiClient) {
     suspend fun createCustom(input: NewCustom, attemptKey: String): OrderRef =
         api.call("/api/v1/orders/custom", HttpMethod.Post, input, idempotencyKey = attemptKey)
 
+    /** **معلوماتُ حساب شام كاش وطلباتُ شحني الأخيرة.** */
+    suspend fun shamcash(): ShamcashOverview = api.call("/api/v1/my/shamcash")
+
+    /** **يرفع إيصالَ تحويل شام كاش** — يردّ معرّفَه ليُرسَل مع الطلب. */
+    suspend fun uploadShamcashReceipt(fileName: String, bytes: ByteArray): CustomPhoto =
+        photoJson.decodeFromString(CustomPhoto.serializer(), api.upload("/api/v1/my/shamcash/receipt", fileName, bytes))
+
+    /** **طلبُ شحنٍ بشام كاش** — بمفتاح محاولةٍ كأبواب المال. */
+    suspend fun requestShamcashTopup(amount: Long, txnRef: String, receiptId: String?, attemptKey: String): ShamcashTopupReply =
+        api.call(
+            "/api/v1/my/shamcash/topups",
+            HttpMethod.Post,
+            ShamcashTopupInput(amount, txnRef, receiptId),
+            idempotencyKey = attemptKey,
+        )
+
     /**
      * **يرفع صورةَ قائمة المشتريات أو الغرض** (قرارُ المالك ٢٠٢٦-١١-١١) — قبل الطلب، ويُرسَل معرّفُها
      * مع `createCustom` في `photoIds`. **والرفعُ نفسُه نقطةُ الصور الشخصيّة** (`POST /me/custom-photo`).
@@ -329,11 +345,12 @@ class CustomerApi(private val api: ApiClient) {
         walletScope: String,
         expectedTotal: Long,
         attemptKey: String,
+        payShamcash: Boolean? = null,
     ): MyOrder =
         api.call(
             "/api/v1/orders/$orderId/wallet-scope",
             HttpMethod.Post,
-            WalletScopeInput(walletScope, expectedTotal),
+            WalletScopeInput(walletScope, expectedTotal, payShamcash),
             idempotencyKey = attemptKey,
         )
 
@@ -587,6 +604,8 @@ data class NewOrder(
     @SerialName("wallet_scope") val walletScope: String = "",
     @SerialName("promo_code") val promoCode: String = "",
     val notes: String = "",
+    /** **الدفعُ بشام كاش عند الباب** — مع `none`/`delivery` فقط، ولا يُرسَل إلا إن كان صحيحاً. */
+    @SerialName("pay_shamcash") val payShamcash: Boolean? = null,
 )
 
 private val photoJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
@@ -656,6 +675,7 @@ private data class ConfirmQuoteInput(
 private data class WalletScopeInput(
     @SerialName("wallet_scope") val walletScope: String,
     @SerialName("expected_total") val expectedTotal: Long,
+    @SerialName("pay_shamcash") val payShamcash: Boolean? = null,
 )
 
 @Serializable
@@ -910,6 +930,8 @@ data class MyOrder(
     val items: List<MyOrderLine>? = null,
     @SerialName("wallet_paid") val walletPaid: Long = 0,
     @SerialName("cash_due") val cashDue: Long = 0,
+    /** **الزبونُ اختار دفعَ `cashDue` بشام كاش عند الباب.** */
+    @SerialName("pay_shamcash") val payShamcash: Boolean = false,
     /**
      * **مدّةُ التوصيل المتوقّعة بالدقائق** (`orders.delivery_estimate_min`) — وصفرٌ لا تقدير.
      * **حقلٌ مضافٌ بافتراضٍ آمن** (٢٠٢٦-١٠-٢٧) — خادمٌ لا يرسله لا يكسر شيئاً.
@@ -1074,3 +1096,40 @@ data class FreeDelivery(
     fun waiveFor(mode: String, fee: Long): Long =
         if (customOn(mode)) minOf(fee, maxFee ?: fee).coerceAtLeast(0) else 0L
 }
+
+
+@Serializable
+data class ShamcashInfo(
+    @SerialName("topup_enabled") val topupEnabled: Boolean = false,
+    @SerialName("pay_on_delivery_enabled") val payOnDeliveryEnabled: Boolean = false,
+    @SerialName("min_topup") val minTopup: Long = 0,
+    @SerialName("account_name") val accountName: String = "",
+    @SerialName("account_number") val accountNumber: String = "",
+    @SerialName("qr_url") val qrUrl: String? = null,
+)
+
+@Serializable
+data class ShamcashRequest(
+    val id: String = "",
+    val amount: Long = 0,
+    @SerialName("txn_ref") val txnRef: String = "",
+    val status: String = "",
+    @SerialName("reject_reason") val rejectReason: String? = null,
+    @SerialName("created_at") val createdAt: String = "",
+)
+
+@Serializable
+data class ShamcashOverview(
+    val info: ShamcashInfo = ShamcashInfo(),
+    val requests: List<ShamcashRequest> = emptyList(),
+)
+
+@Serializable
+data class ShamcashTopupReply(val request: ShamcashRequest = ShamcashRequest())
+
+@Serializable
+private data class ShamcashTopupInput(
+    val amount: Long,
+    @SerialName("txn_ref") val txnRef: String,
+    @SerialName("receipt_id") val receiptId: String? = null,
+)

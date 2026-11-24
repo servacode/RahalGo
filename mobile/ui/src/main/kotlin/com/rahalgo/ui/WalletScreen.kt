@@ -86,6 +86,13 @@ data class WalletState(
     val busy: Boolean = false,
     val error: String = "",
     val done: String = "",
+    /** **شام كاش** (للزبون وحدَه): معلوماتُ الحساب وآخرُ طلبات الشحن. */
+    val sham: com.rahalgo.shared.customer.ShamcashOverview? = null,
+    val shamBusy: Boolean = false,
+    val shamError: String = "",
+    val shamDone: Boolean = false,
+    val receiptId: String? = null,
+    val receiptBusy: Boolean = false,
 )
 
 class WalletViewModel(app: Application) : AndroidViewModel(app) {
@@ -165,6 +172,51 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
                 )
             } catch (e: Exception) {
                 state.copy(busy = false, error = describe(e))
+            }
+        }
+    }
+
+    private val customerApi by lazy { com.rahalgo.shared.customer.CustomerApi(backend.api) }
+
+    /** **يجلب معلومات شام كاش وطلباتي** — للزبون وحدَه، وفشلُه صامتٌ (الزرُّ يغيب). */
+    fun loadShamcash() {
+        viewModelScope.launch {
+            runCatching { customerApi.shamcash() }.getOrNull()?.let { state = state.copy(sham = it) }
+        }
+    }
+
+    /** **يفتح نموذجاً نظيفاً** للشحن بشام كاش. */
+    fun resetShamcashForm() {
+        state = state.copy(shamError = "", shamDone = false, receiptId = null)
+    }
+
+    /** **يرفع صورةَ الإيصال أوّلاً** — ومعرّفُها يُرسَل مع الطلب. */
+    fun uploadShamcashReceipt(bytes: ByteArray) {
+        if (state.receiptBusy) return
+        state = state.copy(receiptBusy = true, shamError = "")
+        viewModelScope.launch {
+            state = try {
+                val r = customerApi.uploadShamcashReceipt("receipt_" + System.currentTimeMillis() + ".jpg", bytes)
+                state.copy(receiptBusy = false, receiptId = r.id)
+            } catch (e: Exception) {
+                state.copy(receiptBusy = false, shamError = describe(e))
+            }
+        }
+    }
+
+    /** **يرسل طلبَ الشحن** — بمفتاحِ محاولةٍ يُولَّد مرّةً لكلّ ضغطة (كالسحب). */
+    fun submitShamcashTopup(amount: Long, txn: String) {
+        if (state.shamBusy || amount <= 0 || txn.isEmpty()) return
+        state = state.copy(shamBusy = true, shamError = "")
+        val key = java.util.UUID.randomUUID().toString()
+        val receipt = state.receiptId
+        viewModelScope.launch {
+            state = try {
+                customerApi.requestShamcashTopup(amount, txn, receipt, key)
+                val fresh = runCatching { customerApi.shamcash() }.getOrNull() ?: state.sham
+                state.copy(shamBusy = false, shamDone = true, sham = fresh, receiptId = null)
+            } catch (e: Exception) {
+                state.copy(shamBusy = false, shamError = describe(e))
             }
         }
     }
@@ -251,6 +303,14 @@ fun WalletScreen(
 
     var asking by rememberSaveable { mutableStateOf(false) }
     var statement by rememberSaveable { mutableStateOf(false) }
+    var shamOpen by rememberSaveable { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(topUpInfo) { if (topUpInfo) vm.loadShamcash() }
+    val shamInfo = s.sham?.info?.takeIf { topUpInfo && it.topupEnabled }
+
+    if (shamOpen && shamInfo != null) {
+        ShamcashTopupScreen(vm, shamInfo, onBack = { shamOpen = false; vm.loadShamcash() })
+        return
+    }
 
     if (statement) {
         StatementView(vm, st, onBack = { statement = false })
@@ -366,6 +426,15 @@ fun WalletScreen(
                 }
             }
         }
+
+        if (shamInfo != null) {
+            Spacer(Modifier.height(Rahal.space.md))
+            RahalButton(
+                onClick = { vm.resetShamcashForm(); shamOpen = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.sham_topup_btn)) }
+        }
+        if (topUpInfo) s.sham?.requests?.let { ShamcashRequestsList(it) }
 
         if (topUpInfo) {
             Spacer(Modifier.height(Rahal.space.lg))

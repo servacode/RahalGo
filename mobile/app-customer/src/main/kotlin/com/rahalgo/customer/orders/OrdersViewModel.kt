@@ -356,7 +356,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * **تبديلُ شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — لحد ما يوصل الكابتن للباب.
      * **ويُرسَل المجموعُ الذي رآه** — فإن تغيّر ردّ المحرّكُ `order_changed` ويُعاد الجلب.
      */
-    fun changeWalletScope(order: MyOrder, scope: String) {
+    fun changeWalletScope(order: MyOrder, scope: String, payShamcash: Boolean? = null) {
         if (acting) return
         acting = true
         actionError = ""
@@ -364,7 +364,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         val key = Attempt.key(slot)
         viewModelScope.launch {
             try {
-                api.changeWalletScope(order.id, scope, order.total, key)
+                api.changeWalletScope(order.id, scope, order.total, key, payShamcash)
                 Attempt.clear(slot)
                 Flash.ok(getApplication<Application>().getString(R.string.ord_pay_changed))
             } catch (e: Exception) {

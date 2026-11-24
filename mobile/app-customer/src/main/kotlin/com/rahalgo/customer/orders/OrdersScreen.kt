@@ -314,7 +314,7 @@ private fun OrdersList(
                 confirming = vm.acting,
                 // **وتبديلُ الدفع من المحفظة لحد ما يوصل الكابتن** (قرارُ المالك ٢٠٢٦-١١-٠٩).
                 onChangeWalletScope = if (!history) {
-                    { scope -> vm.changeWalletScope(o, scope) }
+                    { scope, sham -> vm.changeWalletScope(o, scope, sham) }
                 } else {
                     null
                 },

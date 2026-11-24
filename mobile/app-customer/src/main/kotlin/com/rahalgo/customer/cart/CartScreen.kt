@@ -497,9 +497,14 @@ fun CartScreen(
             }
         }
         // **سطرُ الدفع بطاقةٌ تحت عنوانها (تدقيق D13)** — كان سطراً عارياً يضيع بين الحقول.
+        // **شام كاش عند الاستلام** — يظهر حين يفعّله المالك (`pay_on_delivery_enabled`).
+        val shamOn = com.rahalgo.ui.rememberShamcashInfo()?.payOnDeliveryEnabled == true
+        LaunchedEffect(shamOn, fullOk) {
+            if (!shamOn || vm.walletScope == "full") vm.payShamcash = false
+        }
         com.rahalgo.ui.SectionHeader(stringResource(R.string.ord_payment))
         com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined) {
-        if (walletBlocked) {
+        if (walletBlocked && !shamOn) {
             // **سطرٌ واحدٌ لا خيارٌ مطفأٌ ولا «رصيدك لا يكفي»** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
             Text(
                 stringResource(R.string.ord_pay_cash_only),
@@ -510,22 +515,29 @@ fun CartScreen(
             Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                 PayChoice(
                     text = stringResource(R.string.cart_cash),
-                    on = vm.walletScope == "none",
+                    on = vm.walletScope == "none" && !vm.payShamcash,
                     modifier = Modifier.fillMaxWidth(),
-                ) { vm.walletScope = "none" }
+                ) { vm.walletScope = "none"; vm.payShamcash = false }
+                if (shamOn) {
+                    PayChoice(
+                        text = stringResource(R.string.sham_pay_option),
+                        on = vm.walletScope == "none" && vm.payShamcash,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { vm.walletScope = "none"; vm.payShamcash = true }
+                }
                 if (fullOk) {
                     PayChoice(
                         text = stringResource(R.string.cart_wallet_full),
                         on = vm.walletScope == "full",
                         modifier = Modifier.fillMaxWidth(),
-                    ) { vm.walletScope = "full" }
+                    ) { vm.walletScope = "full"; vm.payShamcash = false }
                 }
                 if (deliveryOk && payableTotal != null) {
                     PayChoice(
                         text = stringResource(R.string.cart_wallet_delivery),
                         on = vm.walletScope == "delivery",
                         modifier = Modifier.fillMaxWidth(),
-                    ) { vm.walletScope = "delivery" }
+                    ) { vm.walletScope = "delivery"; vm.payShamcash = false }
                     if (vm.walletScope == "delivery") {
                         Text(
                             stringResource(
@@ -1207,6 +1219,9 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
     /** **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٢٠): `none` كاش · `delivery` التوصيل · `full` الكل. */
     var walletScope by mutableStateOf("none")
 
+    /** **يدفع عند الباب بشام كاش** (مع `none` وحدَه) — يُرسَل `pay_shamcash` للمحرّك. */
+    var payShamcash by mutableStateOf(false)
+
     var priced by mutableStateOf<Quote?>(null)
         private set
 
@@ -1455,6 +1470,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                         walletScope = walletScope,
                         promoCode = code,
                         notes = notes.trim(),
+                        payShamcash = if (payShamcash && walletScope != "full") true else null,
                     ),
                     attemptKey = key,
                 )
