@@ -36,11 +36,7 @@ export const FALLBACK_MS = 30_000;
 export const MIN_GAP_MS = 8_000;
 /** **إيقاعُ التطبيق** — يُعاد آخرُ ما قُرئ كلَّ عشر ثوانٍ. */
 export const SEND_EVERY_MS = 10_000;
-/**
- * **سقفُ المشاركة** — ثلاثُ ساعات: **صارت تبدأ لحظةَ التأكيد** (قرارُ المالك ٢٠٢٦-١١-٢٣:
- * «اذا فاتح او مسكر يظل الموقع المباشر شغال»، مرآةُ `LiveShareService.MAX_SHARE_MS`).
- */
-export const MAX_SHARE_MS = 3 * 60 * 60 * 1000;
+/* **ولا سقفَ زمنيّاً** (قرارُ المالك ٢٠٢٦-١١-٢٤): **تقف بانتهاء الطلب أو بإيقاف الزبون** — مرآةُ التطبيق. */
 /** **قبل أن يقبله كابتن** — تبدأ المشاركةُ فيها ولا تُكتب نقطتُها (مرآةُ `EARLY_STATUSES`). */
 export const EARLY_STATUSES = new Set(["pending", "accepted", "preparing", "dispatching"]);
 /** **من التأكيد إلى الباب** — ما دامت المشاركةُ تعمل. */
@@ -227,7 +223,6 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
   const watchId = useRef<number | null>(null);
   const last = useRef<Reading | null>(null);
   const tick = useRef<ReturnType<typeof setInterval> | null>(null);
-  const deadline = useRef<ReturnType<typeof setTimeout> | null>(null);
   const current = useRef("");
 
   useEffect(() => {
@@ -258,8 +253,6 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
     setAccuracyM(null);
     if (tick.current) clearInterval(tick.current);
     tick.current = null;
-    if (deadline.current) clearTimeout(deadline.current);
-    deadline.current = null;
     last.current = null;
     filter.current.reset();
   }, []);
@@ -371,7 +364,6 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
         const r = last.current;
         if (r) send({ ...r, atMs: performance.now() });
       }, SEND_EVERY_MS);
-      deadline.current = setTimeout(() => stop("timeout"), MAX_SHARE_MS);
       return true;
     },
     [send, stop, teardown, arm],

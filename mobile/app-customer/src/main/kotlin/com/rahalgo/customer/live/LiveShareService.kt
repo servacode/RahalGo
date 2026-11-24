@@ -26,10 +26,8 @@ import com.rahalgo.ui.AppCore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -64,7 +62,6 @@ class LiveShareService : Service() {
 
     /** **الدقيقُ وحدَه يُرسَل، وأحسنُ ما وُجد بعد ثلاثين ثانية** (قرارُ المالك ٢٠٢٦-١٠-١٦). */
     private val filter = LiveSendFilter()
-    private var deadline: Job? = null
     private var stopping = false
 
     /** **ينتظر أن يُسند الطلب** — يبدأ هكذا، **وأوّلُ نقطةٍ تُقبل تُنهيه.** */
@@ -100,12 +97,6 @@ class LiveShareService : Service() {
         LiveShare.activeOrderId = id
         waiting = false
         request()
-        deadline?.cancel()
-        deadline = scope.launch {
-            delay(MAX_SHARE_MS)
-            Log.i(TAG, "ثلاثُ ساعات — تقف المشاركة")
-            finish(clearServer = true)
-        }
         // **وتُعاد إن قتلها النظام** (قرارُ المالك ٢٠٢٦-١١-٢٣: «اذا فاتح او مسكر يظل
         // الموقع المباشر شغال») — **حيث يسمح أندرويد**؛ وإن ردّها وقفت بسلام
         // (`startForegroundSafely`) **وعادت حين يفتح التطبيق** (`LiveSharePolicy.autoStart`).
@@ -217,7 +208,6 @@ class LiveShareService : Service() {
         stopping = true
         val id = orderId
         runCatching { client.removeLocationUpdates(callback) }
-        deadline?.cancel()
         scope.launch {
             if (clearServer && id != null) {
                 try {
@@ -297,10 +287,7 @@ class LiveShareService : Service() {
         /** **قبل الإسناد: كلَّ ثلاثين ثانية** — لا كابتنَ يراها بعد. */
         const val WAIT_EVERY_MS = 30_000L
 
-        /**
-         * **ثلاثُ ساعاتٍ ثمّ تقف** — كانت خمساً وأربعين دقيقةً من «بالطريق»، **وصارت تبدأ لحظةَ
-         * التأكيد** (٢٠٢٦-١١-٢٣) والتحضيرُ والتوزيعُ قد يطولان. **والتسليمُ يوقفها قبلها.**
-         */
-        const val MAX_SHARE_MS = 3 * 60 * 60 * 1000L
+        // **ولا سقفَ زمنيّاً** (قرارُ المالك ٢٠٢٦-١١-٢٤: «ما بدي يوقف لحاله ليخلص الطلب»):
+        // **تقف بانتهاء الطلب** (`live_location_inactive`) **أو بإيقاف الزبون** وحدهما.
     }
 }
