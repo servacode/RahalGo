@@ -34,8 +34,8 @@ const (
 	FallbackAudio = "🎤 رسالة صوتية"
 )
 
-// MaxAttachments **سقفُ المرفقات لكلّ مرسِلٍ في الطلب الواحد.**
-const MaxAttachments = 20
+// MaxAttachments **سقفُ المرفقات (صور وصوت) لكلّ مرسِلٍ في الطلب الواحد** — رُفع من ٢٠ إلى ٥٠ (طلبُ المالك ٢٠٢٦-١١-٢٤).
+const MaxAttachments = 50
 
 // MaxAudioMs **أطولُ رسالةٍ صوتيّة** — دقيقة.
 const MaxAudioMs = 60_000
