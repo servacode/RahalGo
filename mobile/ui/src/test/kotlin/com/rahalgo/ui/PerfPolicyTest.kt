@@ -288,8 +288,9 @@ class PerfPolicyTest {
     fun `خدمةُ الموقع تقف مع الورديّة ومع الخروج`() {
         val vm = read("app-driver/src/main/kotlin/com/rahalgo/driver/home/HomeViewModel.kt")
         assertTrue(
+            // **وبرّا الدوام تضلّ تبعت بفترةٍ أطول** (قرارُ المالك ٢٠٢٦-١١-٢٢، d4ab86bc) — **والخروجُ وحدَه يوقفها.**
             "**لا تتبع الخدمةُ حالَ الورديّة**",
-            vm.contains("if (me.onShift && LocationPermission.granted(app))"),
+            vm.contains("off -> me.locationPingOffSec") && vm.contains("offShift = off"),
         )
         assertTrue("**لا تقف عند إغلاقها**", vm.contains("LocationService.stop(app)"))
         // **والخروجُ يمرّ بـ`finishLogout`** (منذ ورقة العدّاد ٢٠٢٦-١١-٠٥) — بعد الصورة أو بلاها.
@@ -315,11 +316,11 @@ class PerfPolicyTest {
     fun `معدّلُ الورديّة غيرُ معدّل الملاحة`() {
         val svc = read("app-driver/src/main/kotlin/com/rahalgo/driver/location/LocationService.kt")
         assertTrue("**ذهب معدّلُ الورديّة**", svc.contains("DEFAULT_PING_SEC = 20L"))
-        assertTrue("**ذهب حدُّ الحركة**", svc.contains("MIN_MOVE_M = 20f"))
+        assertTrue("**ذهب حدُّ الحركة أثناء التوصيل**", svc.contains("LIVE_MIN_MOVE_M = 5f"))
         assertTrue(
-            "**رُفع التجميعُ من الورديّة** — **فيُوقَظ الجهازُ لكلّ قراءة**",
-            // **وأثناء التوصيل بلا تجميع** (٢٠٢٦-١٠-١٩) — والورديّةُ تجمّع كما كانت.
-            svc.contains("setMaxUpdateDelayMillis(if (live) 0L else ms * 2)"),
+            "**رجع التجميع** — **نقطةٌ مجمّعةٌ تصل متأخّرةً ونقطتان بدفعةٍ نداءان**",
+            // **ولا دفعات** (٢٠٢٦-١١-١٨) — لا بالتوصيل ولا بالورديّة.
+            svc.contains("setMaxUpdateDelayMillis(0L)"),
         )
         assertTrue(
             "**رُفع حدُّ الإرسال** — **فنداءٌ لكلّ نقطة**",
