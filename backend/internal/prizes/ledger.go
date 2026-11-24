@@ -94,7 +94,7 @@ func (s *Service) LockedBalanceTx(ctx context.Context, q dbtx.Querier, userID st
 	return b.Amount, nil
 }
 
-// AwardTx **يمنح جائزةً** — تنتهي آخرَ الشهر الذي مُنحت فيه.
+// AwardTx **يمنح جائزةً** — تنتهي آخرَ الشهر الذي يلي المنح (`AwardExpiry`).
 func (s *Service) AwardTx(ctx context.Context, q dbtx.Querier, userID string, amount int64, drawMonth time.Time) error {
 	if amount <= 0 {
 		return nil
@@ -102,7 +102,7 @@ func (s *Service) AwardTx(ctx context.Context, q dbtx.Querier, userID string, am
 	if _, err := s.lockRow(ctx, q, userID); err != nil {
 		return err
 	}
-	exp := ExpiryFor(s.now())
+	exp := AwardExpiry(s.now())
 	if _, err := q.Exec(ctx, `
 		UPDATE prize_balances SET balance = balance + $2, expires_at = $3, updated_at = now()
 		 WHERE user_id = $1`, userID, amount, exp); err != nil {

@@ -457,6 +457,7 @@ private val CODES: Map<String, Int> = mapOf(
     "prize_no_promo" to R.string.err_prize_no_promo,
     "prize_order_locked" to R.string.err_prize_order_locked,
     "prize_balance_insufficient" to R.string.err_prize_balance_insufficient,
+    "prizes_not_started" to R.string.err_prizes_not_started,
     "delivery_proof_required" to R.string.err_proof_required,
     "proof_not_at_door" to R.string.err_proof_not_at_door,
     "bad_fail_reason" to R.string.err_bad_fail_reason,

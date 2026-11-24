@@ -418,8 +418,9 @@ var adminPolicy = []Rule{
 	{"", "/offers", OffersManage},
 	// **«ادعُ صديقاً»** — تبويبٌ في صفحة العروض (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 	{"GET", "/referrals", OffersManage},
-	// **«جوائز رحّال غو»** (قرارُ المالك ٢٠٢٦-١١-٢٣) — مشتركو الشهر والسحوباتُ السابقة.
-	{"GET", "/prizes/entries", OffersManage},
+	// **«جوائز رحّال غو»** (قرارا المالك ٢٠٢٦-١١-٢٣ و٢٠٢٦-١١-٢٥) — ترتيبُ نقاط الشهر بالأسماء
+	// والنتائجُ السابقة.
+	{"GET", "/prizes/leaderboard", OffersManage},
 	{"GET", "/prizes/draws", OffersManage},
 	{"", "/prizes/store", OffersManage},
 	// **موافقاتُ الماليّة على العروض فوق حدّ المحتوى** — على عقد الموافقات.

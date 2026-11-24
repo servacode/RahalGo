@@ -389,8 +389,9 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// +3: orders.live_nudge_* (تذكيرُ الزبون بالموقع المباشر — قرارُ المالك ٢٠٢٦-١١-١٨).
 	// +1: drivers.location_ping_off_sec (موقعُ الكابتن ودوامُه مسكّر — قرارُ المالك ٢٠٢٦-١١-٢٢).
 	// +9: prizes.* («جوائز رحّال غو» — قرارُ المالك ٢٠٢٦-١١-٢٣).
-	if d.BehaviourSettings != 264 {
-		t.Errorf("إعداداتُ السلوك = %d لا 264 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// +6: prizes.min_points و prizes.points_* ستّة، ناقصَ prizes.invites_per_entry (مسابقةُ النقاط ٢٠٢٦-١١-٢٥).
+	if d.BehaviourSettings != 270 {
+		t.Errorf("إعداداتُ السلوك = %d لا 270 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

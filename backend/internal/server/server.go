@@ -893,7 +893,10 @@ func (s *Server) Router() http.Handler {
 			// **«جوائز رحّال غو»** (قرارُ المالك ٢٠٢٦-١١-٢٣) — حالي وأصنافُ المتجر والرابحون.
 			r.Get("/prizes/me", s.handlePrizesMe)
 			r.Get("/prizes/items", s.handlePrizeItems)
-			r.Get("/prizes/winners", s.handlePrizeWinners)
+			// **ومسابقةُ النقاط** (قرارُ المالك ٢٠٢٦-١١-٢٥): حضورٌ يوميّ ومتابعةُ الصفحتين.
+			// **ولا بابَ للزبون يردّ أسماءَ غيره أو نقاطَهم** — الترتيبُ الكاملُ للّوحة وحدَها.
+			r.Post("/prizes/checkin", s.handlePrizeCheckIn)
+			r.Post("/prizes/follow", s.handlePrizeFollow)
 			// **بابُ الشكوى عند الطلب لا في رقم هاتف.**
 			//
 			// كانت التذاكرُ تُفتح من لوحة الإدارة وحدَها: يتّصل الزبونُ فيفتح
@@ -1570,7 +1573,7 @@ func (s *Server) Router() http.Handler {
 			r.Post("/promo-approvals/{id}/approve", s.handleDecidePromoApproval(true))
 			r.Post("/promo-approvals/{id}/reject", s.handleDecidePromoApproval(false))
 			r.Get("/referrals", s.handleAdminReferrals)
-			r.Get("/prizes/entries", s.handleAdminPrizeEntries)
+			r.Get("/prizes/leaderboard", s.handleAdminPrizeLeaderboard)
 			r.Get("/prizes/draws", s.handleAdminPrizeDraws)
 			r.Get("/prizes/store", s.handleAdminPrizeStore)
 			r.Get("/banners", s.handleListBanners)

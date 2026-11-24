@@ -473,17 +473,21 @@ class CustomerApi(private val api: ApiClient) {
     suspend fun referral(): Referral = api.call("/api/v1/auth/referral")
 
     // ══════════════════════════════════════════════════════════════════
-    // **جوائزُ رحّال غو** — حالُه وأصنافُ الجوائز ورابحو الشهر الماضي
+    // **جوائزُ رحّال غو** — مسابقةُ النقاط وأصنافُ الجوائز
     // ══════════════════════════════════════════════════════════════════
 
-    /** **حالُه في السحب الشهريّ** — دعواتُه وفرصُه ورصيدُ جوائزه. */
+    /** **حالُه في مسابقة النقاط** — نقاطُه وترتيبُه وشروطُه ورصيدُ جوائزه، ولا شيءَ عن غيره. */
     suspend fun prizesMe(): PrizesMe = api.call("/api/v1/prizes/me")
 
     /** **أصنافُ الجوائز** — تُطلب من السلّة العاديّة بمعرّف متجرها. */
     suspend fun prizeItems(): PrizeItems = api.call("/api/v1/prizes/items")
 
-    /** **رابحو الشهر الماضي** — أسماؤهم ومبالغهم. */
-    suspend fun prizeWinners(): PrizeWinners = api.call("/api/v1/prizes/winners")
+    /** **«سجّل حضوري»** — مرّةً باليوم؛ ويردّ الحالَ بعده. */
+    suspend fun prizeCheckIn(): PrizesMe = api.call("/api/v1/prizes/checkin", HttpMethod.Post)
+
+    /** **«تابعنا»** بالأمانة — مرّةً في العمر لكلّ صفحة؛ ويردّ الحالَ بعده. */
+    suspend fun prizeFollow(network: String): PrizesMe =
+        api.call("/api/v1/prizes/follow", HttpMethod.Post, PrizeFollowInput(network))
 
     /**
      * **أسبابُ الشكوى لهذا الطلب** — مصنّفةٌ لا نصٌّ حرّ.

@@ -54,8 +54,9 @@ import com.rahalgo.ui.money
  * **جوائز رحّال غو** (قرارُ المالك ٢٠٢٦-١١-٢٣)
  * ══════════════════════════════════════════════════════════════════════
  *
- * **قبل الافتتاح لافتةٌ** («انتظرونا ١/١٢/٢٠٢٦») تشرح الفكرة. **وبعده** تقدّمُه ودعوتُه
- * وسلّمُ الجوائز ورصيدُه وأصنافُ الجوائز: **«على قدّ جائزتك» ثمّ «بتدفع الفرق»**، **وبلا رصيدٍ
+ * **مسابقةُ نقاطٍ شهريّة** (قرارُ المالك ٢٠٢٦-١١-٢٥). **قبل الافتتاح لافتةٌ** («المسابقة بتبلش ١/١٢»).
+ * **وبعده** نقاطُه وترتيبُه وما بقي له وشروطُه وزرُّ «سجّل حضوري» — **ولا شيءَ عن زبونٍ آخر** —
+ * ثمّ سلّمُ الجوائز ورصيدُه وأصنافُ الجوائز: **«على قدّ جائزتك» ثمّ «بتدفع الفرق»**، **وبلا رصيدٍ
  * تُعرض الأصنافُ فقط** ولا إضافة. **والطلبُ من السلّة العاديّة بمعرّف متجر الجوائز** — والمحرّكُ
  * يطبّق الرصيدَ والتوصيلَ المجانيّ.
  */
@@ -117,7 +118,8 @@ private fun Teaser(vm: PrizesViewModel, me: PrizesMe) {
                 PrizeRow(p, 0L, media, enabled = false, covered = false, onAdd = {})
             }
         }
-        item { PrizeRules(me.invitesPerEntry, me.winnersCount.takeIf { it > 0 } ?: me.amounts.size) }
+        item { PointsTable(me) }
+        item { PrizeTerms(me) }
     }
 }
 
@@ -128,7 +130,6 @@ private fun Active(vm: PrizesViewModel, me: PrizesMe) {
     // **رمزُ الدعوة نفسُه المستعمَل في «ادعُ صديقاً»** — يُجلب إن لم يكن قد جاء.
     LaunchedEffect(Unit) { if (InviteNudge.referral == null) InviteNudge.refresh(scope) }
 
-    val progress = PrizesLogic.progress(me)
     val split = PrizesLogic.split(vm.items, me.prizeBalance)
     val media = { path: String? -> Backend.of(context).media(path) }
     val storeId = vm.storeId
@@ -167,23 +168,29 @@ private fun Active(vm: PrizesViewModel, me: PrizesMe) {
                 com.rahalgo.ui.Note(vm.error, Rahal.colors.danger)
             }
         }
-        // **رأسٌ واحد**: السحبُ الجاي وكم يوم، «ضمن المسابقة» أو لا، وتقدّمُه وزرُّ الدعوة (٢٠٢٦-١١-٢٤).
+        // **رأسٌ واحد**: آخرُ يومٍ لجمع النقاط وكم يوم، متأهّلٌ أو كم باقي، ونقاطُه وترتيبُه، وزرُّ الدعوة.
         item {
-            val inside = me.entries > 0
             val r = InviteNudge.referral
+            val rank = if (me.rank > 0) me.rank.toString() else "—"
             PrizeHero(
-                label = stringResource(R.string.prizes_hero_next),
-                date = PrizesLogic.drawLabel(me.drawAt).substringBefore(' '),
-                days = PrizesLogic.daysUntilInstant(me.drawAt),
-                inside = inside,
-                statusTitle = stringResource(if (inside) R.string.prizes_in_title else R.string.prizes_out_title),
-                statusBody = if (inside) {
-                    stringResource(R.string.prizes_in_body, me.entries)
-                } else {
-                    stringResource(R.string.prizes_out_body, progress.toNext.coerceAtLeast(1))
+                label = stringResource(R.string.prizes_hero_cutoff),
+                date = PrizesLogic.dayLabel(me.cutoffAt),
+                days = PrizesLogic.daysUntilInstant(me.cutoffAt),
+                inside = me.qualified,
+                statusTitle = stringResource(
+                    when {
+                        me.excluded -> R.string.prizes_excluded_title
+                        me.qualified -> R.string.prizes_qualified_title
+                        else -> R.string.prizes_out_title
+                    },
+                ),
+                statusBody = when {
+                    me.excluded -> stringResource(R.string.prizes_excluded_body)
+                    me.qualified -> stringResource(R.string.prizes_qualified_body)
+                    else -> stringResource(R.string.prizes_to_qualify, me.toQualify.coerceAtLeast(1))
                 },
-                progress = progress.current.toFloat() / progress.perEntry,
-                progressLine = stringResource(R.string.prizes_progress_line, progress.current, progress.perEntry),
+                progress = if (me.excluded) null else PrizesLogic.qualifyProgress(me),
+                progressLine = stringResource(R.string.prizes_points_line, me.points.toString(), rank),
                 action = {
                     RahalButton(
                         onClick = { if (r != null) InviteNudge.share(context, r) },
@@ -193,6 +200,29 @@ private fun Active(vm: PrizesViewModel, me: PrizesMe) {
                     ) { Text(stringResource(R.string.prizes_share)) }
                 },
             )
+        }
+        if (me.lastRank > 0) {
+            item { com.rahalgo.ui.Note(stringResource(R.string.prizes_last_won, me.lastRank, money(me.lastAmount)), Rahal.colors.success) }
+        }
+        if (!me.excluded) {
+            item {
+                PrizeConditions(
+                    me = me,
+                    busy = vm.busy,
+                    onCheckIn = vm::checkIn,
+                    onFollow = { network ->
+                        val url = PrizesLogic.pageUrl(if (network == "facebook") me.facebookUrl else me.instagramUrl)
+                        if (url.isNotEmpty()) {
+                            runCatching {
+                                context.startActivity(
+                                    android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)),
+                                )
+                            }
+                        }
+                        vm.follow(network)
+                    },
+                )
+            }
         }
         item { Podium(me.amounts) }
         if (me.prizeBalance > 0) item { BalanceCard(me) }
@@ -234,23 +264,8 @@ private fun Active(vm: PrizesViewModel, me: PrizesMe) {
             }
         }
 
-        item { PrizeRules(me.invitesPerEntry, me.winnersCount.takeIf { it > 0 } ?: me.amounts.size) }
-        // **ورابحو الشهر الماضي — تُخفى إن لم يكن فيها أحد.**
-        if (vm.winners.isNotEmpty()) {
-            item { SectionHeader(stringResource(R.string.prizes_winners_title)) }
-            item {
-                RahalCard(modifier = Modifier.fillMaxWidth()) {
-                    for (w in vm.winners.sortedBy { it.rank }) {
-                        Text(
-                            stringResource(R.string.prizes_winner_row, w.rank, w.name, money(w.amount)),
-                            color = Rahal.colors.ink,
-                            style = Rahal.type.body,
-                            modifier = Modifier.padding(vertical = Rahal.space.xxs),
-                        )
-                    }
-                }
-            }
-        }
+        item { PointsTable(me) }
+        item { PrizeTerms(me) }
     }
 }
 

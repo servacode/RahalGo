@@ -7,20 +7,8 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/offers"
 )
 
-// TestEntriesMath **كلُّ خمسٍ فرصة** — ٥←١، ١٠←٢، ١٥←٣، وما دونها صفر.
-func TestEntriesMath(t *testing.T) {
-	cases := []struct{ invites, per, entries, toNext int }{
-		{0, 5, 0, 5}, {4, 5, 0, 1}, {5, 5, 1, 5}, {9, 5, 1, 1},
-		{10, 5, 2, 5}, {15, 5, 3, 5}, {7, 3, 2, 2}, {3, 0, 3, 1},
-	}
-	for _, c := range cases {
-		if got := EntriesFor(c.invites, c.per); got != c.entries {
-			t.Errorf("EntriesFor(%d, %d) = %d — والمنتظَر %d", c.invites, c.per, got, c.entries)
-		}
-		if got := ToNext(c.invites, c.per); got != c.toNext {
-			t.Errorf("ToNext(%d, %d) = %d — والمنتظَر %d", c.invites, c.per, got, c.toNext)
-		}
-	}
+func dam(y int, m time.Month, d, h, min int) time.Time {
+	return time.Date(y, m, d, h, min, 0, 0, offers.Damascus)
 }
 
 // TestAmountsByRank **جائزةُ كلّ مرتبة — وما بعد الخامسة كالخامسة.**
@@ -38,100 +26,129 @@ func TestAmountsByRank(t *testing.T) {
 	}
 }
 
-// TestPickWinnersWeightedOncePerPerson **سحبٌ مرجَّحٌ بلا إعادة.**
+// TestCutoffAndAnnounce **الحسمُ يومَ min(29, آخرُ يومٍ − 1) ١٢:٠٠ والإعلانُ آخرَ يومٍ ١٢:٠٠.**
 //
-// بعشوائيّةٍ مثبَّتة: الأوّلُ ٣ فرص والثاني ١ والثالث ٢ — `rnd` يردّ صفراً دائماً فيُختار
-// أوّلُ من بقي، **ولا يُختار أحدٌ مرّتين ولو طُلب أكثر من المشتركين.**
-func TestPickWinnersWeightedOncePerPerson(t *testing.T) {
-	pool := []Entrant{{UserID: "a", Entries: 3}, {UserID: "b", Entries: 1}, {UserID: "c", Entries: 2}, {UserID: "z", Entries: 0}}
-	got := PickWinners(pool, 5, func(int64) int64 { return 0 })
-	if len(got) != 3 {
-		t.Fatalf("الرابحون %d — والمنتظَر 3 (لا يُختار ذو صفرٍ ولا أحدٌ مرّتين)", len(got))
-	}
-	seen := map[string]bool{}
-	for _, w := range got {
-		if seen[w.UserID] {
-			t.Fatalf("**ربح %s مرّتين**", w.UserID)
-		}
-		seen[w.UserID] = true
-	}
-	// **والترجيح**: r=3 يقع على الثاني (فرصُ الأوّل ٠..٢).
-	got = PickWinners(pool, 1, func(int64) int64 { return 3 })
-	if got[0].UserID != "b" {
-		t.Fatalf("r=3 اختار %s — والمنتظَر b", got[0].UserID)
-	}
-	got = PickWinners(pool, 1, func(int64) int64 { return 5 })
-	if got[0].UserID != "c" {
-		t.Fatalf("r=5 اختار %s — والمنتظَر c", got[0].UserID)
-	}
-
-	// **وبالعشوائيّة الحقيقيّة**: صاحبُ ٩٠ فرصةً يربح الأولى أكثرَ بكثير من صاحب ١٠.
-	heavy := 0
-	for i := 0; i < 2000; i++ {
-		w := PickWinners([]Entrant{{UserID: "h", Entries: 90}, {UserID: "l", Entries: 10}}, 1, cryptoRand)
-		if w[0].UserID == "h" {
-			heavy++
-		}
-	}
-	if heavy < 1600 || heavy > 1950 {
-		t.Fatalf("صاحبُ ٩٠٪ ربح %d من 2000 — والترجيحُ معطوب", heavy)
-	}
-}
-
-// TestMonthMath **الشهرُ بتوقيت دمشق** — السحبُ أوّلَ التالي ١٢ ظهراً، والانتهاءُ آخرُ ثانية.
-func TestMonthMath(t *testing.T) {
-	// ٢٣:٣٠ بتوقيت غرينتش آخرَ نوفمبر = ٠٢:٣٠ دمشق أوّلَ ديسمبر.
-	at := time.Date(2026, 11, 30, 23, 30, 0, 0, time.UTC)
-	if got := MonthKey(MonthStart(at)); got != "2026-12" {
-		t.Fatalf("الشهر %s — والمنتظَر 2026-12 بتوقيت دمشق", got)
-	}
-	nov := time.Date(2026, 11, 1, 0, 0, 0, 0, offers.Damascus)
-	if got := DrawAt(nov); !got.Equal(time.Date(2026, 12, 1, 12, 0, 0, 0, offers.Damascus)) {
-		t.Fatalf("موعدُ السحب %v", got)
-	}
-	if got := ExpiryFor(time.Date(2026, 12, 1, 12, 0, 0, 0, offers.Damascus)); !got.Equal(time.Date(2026, 12, 31, 23, 59, 59, 0, offers.Damascus)) {
-		t.Fatalf("الانتهاء %v", got)
-	}
-	launch := time.Date(2026, 12, 1, 0, 0, 0, 0, offers.Damascus)
-	if _, _, ok := countWindow(nov, launch); ok {
-		t.Fatal("**شهرٌ قبل الإطلاق يُعدّ**")
-	}
-	from, _, ok := countWindow(time.Date(2026, 12, 1, 0, 0, 0, 0, offers.Damascus), time.Date(2026, 12, 10, 0, 0, 0, 0, offers.Damascus))
-	if !ok || from.Day() != 10 {
-		t.Fatalf("نافذةُ شهر الإطلاق تبدأ %v — والمنتظَر يومُ الإطلاق", from)
-	}
-}
-
-// TestDisplayName **الاسمُ الأوّلُ وحرفٌ ونقطة — ولا رقم.**
-func TestDisplayName(t *testing.T) {
-	cases := map[string]string{
-		"أحمد محمد العلي": "أحمد ا.",
-		"سارة خالد":       "سارة خ.",
-		"علي":             "علي",
-		"  ":              "زبون",
-	}
-	for in, want := range cases {
-		if got := DisplayName(in); got != want {
-			t.Errorf("DisplayName(%q) = %q — والمنتظَر %q", in, got, want)
-		}
-	}
-}
-
-// TestNextDrawAt_AfterLaunch **قبل الإطلاق يُقال سحبُ شهر الإطلاق لا سحبُ الشهر الجاري** (٢٠٢٦-١١-٢٤).
-func TestNextDrawAt_AfterLaunch(t *testing.T) {
-	dam := time.FixedZone("Damascus", 3*3600)
-	launch := time.Date(2026, 12, 1, 0, 0, 0, 0, dam)
+// فبراير ٢٨ يوماً ⇒ حسمٌ ٢٧ وإعلانٌ ٢٨ (قرارُ المالك)؛ والكبيس ٢٨/٢٩؛ وما سواهما ٢٩.
+func TestCutoffAndAnnounce(t *testing.T) {
 	cases := []struct {
-		now  time.Time
-		want time.Time
+		month          time.Time
+		cutoff, annDay int
 	}{
-		{time.Date(2026, 11, 24, 10, 0, 0, 0, dam), time.Date(2027, 1, 1, 12, 0, 0, 0, dam)},
-		{time.Date(2026, 12, 15, 10, 0, 0, 0, dam), time.Date(2027, 1, 1, 12, 0, 0, 0, dam)},
-		{time.Date(2027, 1, 20, 10, 0, 0, 0, dam), time.Date(2027, 2, 1, 12, 0, 0, 0, dam)},
+		{dam(2027, 2, 1, 0, 0), 27, 28},
+		{dam(2028, 2, 1, 0, 0), 28, 29},
+		{dam(2026, 12, 1, 0, 0), 29, 31},
+		{dam(2027, 4, 1, 0, 0), 29, 30},
+		{dam(2027, 1, 1, 0, 0), 29, 31},
 	}
 	for _, c := range cases {
-		if got := NextDrawAt(c.now, launch); !got.Equal(c.want) {
-			t.Fatalf("now=%v: got %v want %v", c.now, got, c.want)
+		cut, ann := CutoffAt(c.month), AnnounceAt(c.month)
+		if !cut.Equal(dam(c.month.Year(), c.month.Month(), c.cutoff, 12, 0)) {
+			t.Errorf("%s: الحسم %v — والمنتظَر يوم %d ١٢:٠٠", MonthKey(c.month), cut, c.cutoff)
 		}
+		if !ann.Equal(dam(c.month.Year(), c.month.Month(), c.annDay, 12, 0)) {
+			t.Errorf("%s: الإعلان %v — والمنتظَر يوم %d ١٢:٠٠", MonthKey(c.month), ann, c.annDay)
+		}
+	}
+}
+
+// TestCompetitionMonth **ما بعد الحسم للشهر التالي** — والحسمُ بتوقيت دمشق.
+func TestCompetitionMonth(t *testing.T) {
+	cases := []struct {
+		at   time.Time
+		want string
+	}{
+		{dam(2026, 12, 29, 11, 59), "2026-12"},
+		{dam(2026, 12, 29, 12, 0), "2027-01"},
+		{dam(2026, 12, 31, 23, 0), "2027-01"},
+		{dam(2027, 2, 27, 11, 59), "2027-02"},
+		{dam(2027, 2, 27, 12, 0), "2027-03"},
+		// ٢٣:٣٠ غرينتش آخرَ نوفمبر = ٠٢:٣٠ دمشق أوّلَ ديسمبر.
+		{time.Date(2026, 11, 30, 23, 30, 0, 0, time.UTC), "2026-12"},
+	}
+	for _, c := range cases {
+		if got := MonthKey(CompetitionMonth(c.at)); got != c.want {
+			t.Errorf("CompetitionMonth(%v) = %s — والمنتظَر %s", c.at, got, c.want)
+		}
+	}
+}
+
+// TestCountWindow **نافذةُ الشهر من حسم الماضي إلى حسمه** — ويومُ الإطلاق يقصّها من أوّلها.
+func TestCountWindow(t *testing.T) {
+	launch := dam(2026, 12, 1, 0, 0)
+	if _, _, ok := countWindow(dam(2026, 11, 1, 0, 0), launch); ok {
+		t.Fatal("**شهرٌ قبل الإطلاق يُعدّ**")
+	}
+	from, to, ok := countWindow(dam(2026, 12, 1, 0, 0), launch)
+	if !ok || !from.Equal(launch) || !to.Equal(dam(2026, 12, 29, 12, 0)) {
+		t.Fatalf("نافذةُ شهر الإطلاق %v..%v — والمنتظَر ١/١٢ ٠٠:٠٠ .. ٢٩/١٢ ١٢:٠٠", from, to)
+	}
+	from, to, _ = countWindow(dam(2027, 3, 1, 0, 0), launch)
+	if !from.Equal(dam(2027, 2, 27, 12, 0)) || !to.Equal(dam(2027, 3, 29, 12, 0)) {
+		t.Fatalf("نافذةُ آذار %v..%v — والمنتظَر من حسم شباط ٢٧ إلى ٢٩ آذار", from, to)
+	}
+}
+
+// TestCurrentMonthBeforeLaunch **قبل الإطلاق يُقال حسمُ شهر الإطلاق.**
+func TestCurrentMonthBeforeLaunch(t *testing.T) {
+	launch := dam(2026, 12, 1, 0, 0)
+	if got := MonthKey(CurrentMonth(dam(2026, 11, 25, 10, 0), launch)); got != "2026-12" {
+		t.Fatalf("قبل الإطلاق: %s — والمنتظَر 2026-12", got)
+	}
+	if got := MonthKey(CurrentMonth(dam(2027, 1, 30, 10, 0), launch)); got != "2027-02" {
+		t.Fatalf("بعد حسم يناير: %s — والمنتظَر 2027-02", got)
+	}
+}
+
+// TestAwardExpiry **الجائزةُ تنتهي آخرَ الشهر الذي يلي الإعلان** — لا بعد ساعات.
+func TestAwardExpiry(t *testing.T) {
+	if got := AwardExpiry(dam(2026, 12, 31, 12, 0)); !got.Equal(time.Date(2027, 1, 31, 23, 59, 59, 0, offers.Damascus)) {
+		t.Fatalf("الانتهاء %v", got)
+	}
+	if got := AwardExpiry(dam(2027, 1, 31, 12, 0)); !got.Equal(time.Date(2027, 2, 28, 23, 59, 59, 0, offers.Damascus)) {
+		t.Fatalf("الانتهاء %v", got)
+	}
+}
+
+// TestRankTieThresholdExclusion **الترتيبُ بالنقاط، والتعادلُ للأبكر، والحدُّ، واستثناءُ رابح الماضي.**
+func TestRankTieThresholdExclusion(t *testing.T) {
+	t0 := dam(2026, 12, 10, 10, 0)
+	in := []Standing{
+		{UserID: "late", Points: 90, ReachedAt: t0.Add(2 * time.Hour)},
+		{UserID: "early", Points: 90, ReachedAt: t0},
+		{UserID: "top", Points: 120, ReachedAt: t0.Add(5 * time.Hour)},
+		{UserID: "prev", Points: 200, ReachedAt: t0},
+		{UserID: "low", Points: 79, ReachedAt: t0},
+		{UserID: "edge", Points: 80, ReachedAt: t0.Add(time.Hour)},
+	}
+	got := RankStandings(in, map[string]bool{"prev": true}, 80)
+	order := []string{}
+	for _, s := range got {
+		order = append(order, s.UserID)
+	}
+	wantOrder := []string{"prev", "top", "early", "late", "edge", "low"}
+	for i := range wantOrder {
+		if order[i] != wantOrder[i] {
+			t.Fatalf("الترتيب %v — والمنتظَر %v", order, wantOrder)
+		}
+	}
+	byID := map[string]Standing{}
+	for _, s := range got {
+		byID[s.UserID] = s
+	}
+	if p := byID["prev"]; !p.Excluded || p.Rank != 0 || p.Qualified {
+		t.Fatalf("**رابحُ الماضي يُرتَّب**: %+v", p)
+	}
+	if byID["top"].Rank != 1 || byID["early"].Rank != 2 || byID["late"].Rank != 3 {
+		t.Fatalf("المراتب: top %d early %d late %d", byID["top"].Rank, byID["early"].Rank, byID["late"].Rank)
+	}
+	if !byID["edge"].Qualified || byID["low"].Qualified {
+		t.Fatal("**الحدّ**: ٨٠ يتأهّل و٧٩ لا")
+	}
+	w := PickWinners(got, 5)
+	if len(w) != 4 || w[0].UserID != "top" || w[1].UserID != "early" || w[3].UserID != "edge" {
+		t.Fatalf("الرابحون %v — والمنتظَر top early late edge (لا prev ولا low)", w)
+	}
+	if w := PickWinners(got, 2); len(w) != 2 || w[1].UserID != "early" {
+		t.Fatalf("رابحان: %v", w)
 	}
 }

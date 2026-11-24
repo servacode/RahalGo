@@ -9,8 +9,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * **جوائزُ رحّال غو — القرارُ الخالص** (قرارُ المالك ٢٠٢٦-١١-٢٣): متى اللافتة، وكيف تُقسم
- * الأصنافُ على الرصيد، وما الفرقُ الذي يدفعه، وما تقوله الشارة.
+ * **جوائزُ رحّال غو — القرارُ الخالص** (قرارا المالك ٢٠٢٦-١١-٢٣ و٢٠٢٦-١١-٢٥): متى اللافتة، وكيف
+ * تُقسم الأصنافُ على الرصيد، وما الفرقُ الذي يدفعه، وما تقوله الشارة، وتقدّمُه نحو الحدّ.
  */
 class PrizesLogicTest {
 
@@ -57,35 +57,34 @@ class PrizesLogicTest {
     }
 
     @Test
-    fun `progress counts invites toward the next entry`() {
-        val p = PrizesLogic.progress(PrizesMe(monthInvites = 8, invitesPerEntry = 5, invitesToNext = 2))
-        assertEquals(3, p.current)
-        assertEquals(5, p.perEntry)
-        assertEquals(2, p.toNext)
+    fun `qualify progress is points over the threshold and full without one`() {
+        assertEquals(0.5f, PrizesLogic.qualifyProgress(PrizesMe(points = 40, minPoints = 80)), 0.0001f)
+        assertEquals(1f, PrizesLogic.qualifyProgress(PrizesMe(points = 120, minPoints = 80)), 0.0001f)
+        assertEquals(1f, PrizesLogic.qualifyProgress(PrizesMe(points = 0, minPoints = 0)), 0.0001f)
+        assertEquals(0f, PrizesLogic.qualifyProgress(PrizesMe(points = -3, minPoints = 80)), 0.0001f)
     }
 
     @Test
-    fun `progress computes the remainder when the engine omits it and survives a zero rate`() {
-        val p = PrizesLogic.progress(PrizesMe(monthInvites = 1, invitesPerEntry = 0))
-        assertEquals(1, p.current)
-        assertEquals(5, p.perEntry)
-        assertEquals(4, p.toNext)
-    }
-
-    @Test
-    fun `badge reads current over rate and hides before launch`() {
-        val me = PrizesMe(enabled = true, monthInvites = 3, invitesPerEntry = 5)
-        assertEquals("3/5", PrizesLogic.badge(me, teaser = false))
+    fun `badge shows my points and hides before launch`() {
+        val me = PrizesMe(enabled = true, points = 65)
+        assertEquals("65", PrizesLogic.badge(me, teaser = false))
         assertNull(PrizesLogic.badge(me, teaser = true))
         assertNull(PrizesLogic.badge(null, teaser = false))
     }
 
     @Test
+    fun `page url gets a scheme when missing and stays empty when blank`() {
+        assertEquals("https://facebook.com/rahalgo", PrizesLogic.pageUrl("facebook.com/rahalgo"))
+        assertEquals("http://x.y", PrizesLogic.pageUrl(" http://x.y "))
+        assertEquals("", PrizesLogic.pageUrl("  "))
+    }
+
+    @Test
     fun `pulse only when the counter really changes`() {
-        assertFalse(PrizesLogic.shouldPulse(null, "3/5"))
-        assertFalse(PrizesLogic.shouldPulse("3/5", "3/5"))
-        assertTrue(PrizesLogic.shouldPulse("3/5", "4/5"))
-        assertFalse(PrizesLogic.shouldPulse("3/5", null))
+        assertFalse(PrizesLogic.shouldPulse(null, "3"))
+        assertFalse(PrizesLogic.shouldPulse("3", "3"))
+        assertTrue(PrizesLogic.shouldPulse("3", "4"))
+        assertFalse(PrizesLogic.shouldPulse("3", null))
     }
 
     @Test
@@ -96,6 +95,9 @@ class PrizesLogicTest {
         assertEquals("1/12/2026 12:00", PrizesLogic.drawLabel("2026-12-01T09:00:00Z"))
         assertEquals("", PrizesLogic.drawLabel("not a date"))
         assertEquals("30/11/2026", PrizesLogic.expiryLabel("2026-11-30T09:00:00Z"))
+        // حسمُ كانون الأوّل ٢٩ ١٢:٠٠ دمشق.
+        assertEquals("29/12", PrizesLogic.dayLabel("2026-12-29T09:00:00Z"))
+        assertEquals("", PrizesLogic.dayLabel("x"))
     }
 
     @Test
