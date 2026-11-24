@@ -11950,6 +11950,50 @@
       ]
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/my/cart-state",
+      "handler": "handleCartStateClear",
+      "auth": true,
+      "response": [
+        {
+          "name": "ok",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/my/cart-state",
+      "handler": "handleCartState",
+      "auth": true,
+      "request": [
+        {
+          "name": "merchant_id",
+          "type": "string"
+        },
+        {
+          "name": "items_count",
+          "type": "int"
+        },
+        {
+          "name": "signature",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "ok",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/my/chats",
       "handler": "handleMyChats",

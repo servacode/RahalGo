@@ -392,6 +392,19 @@ class CustomerApi(private val api: ApiClient) {
         api.call<Ack>("/api/v1/orders/$orderId/elsewhere", HttpMethod.Put, ElsewhereInput(elsewhere))
     }
 
+    /**
+     * **«سلّتك ناطرتك»** (قرارُ المالك ٢٠٢٦-١١-٢٥) — يُبلغ الخادمَ حالَ السلّة (متجرُها وعددُ قطعها وبصمةُ
+     * محتواها) ليرسل تذكيراً واحداً إن بقيت ساعةً بلا طلب. **والسلّةُ عندنا فقط**، فهذا بابُ علم الخادم بها.
+     */
+    suspend fun reportCartState(merchantId: String, itemsCount: Int, signature: String) {
+        api.call<Ack>("/api/v1/my/cart-state", HttpMethod.Put, CartStateInput(merchantId, itemsCount, signature))
+    }
+
+    /** **سلّةٌ فُرّغت أو صارت طلباً** — يُلغى التذكير. */
+    suspend fun clearCartState() {
+        api.call<Ack>("/api/v1/my/cart-state", HttpMethod.Delete, mapOf<String, String>())
+    }
+
     /** **«وقّف المشاركة»** — تُمحى النقطةُ فيعود الكابتنُ إلى الدبّوس. */
     suspend fun stopLive(orderId: String) {
         api.call<Ack>("/api/v1/orders/$orderId/live-location", HttpMethod.Delete, null)
@@ -1078,3 +1091,11 @@ data class FreeDelivery(
     fun waiveFor(mode: String, fee: Long): Long =
         if (customOn(mode)) minOf(fee, maxFee ?: fee).coerceAtLeast(0) else 0L
 }
+
+/** **حالُ السلّة للتذكير** — انظر `reportCartState`. */
+@Serializable
+data class CartStateInput(
+    @SerialName("merchant_id") val merchantId: String,
+    @SerialName("items_count") val itemsCount: Int,
+    val signature: String,
+)

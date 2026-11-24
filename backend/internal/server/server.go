@@ -19,6 +19,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/campaigns"
+	"github.com/servacode/rahalgo/backend/internal/cartreminder"
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/comms"
@@ -69,15 +70,16 @@ type Server struct {
 	support *support.Service
 	// textguard **حارسُ النصوص** — كلُّ ما يكتبه إنسانٌ يمرّ به (`text_limits.go`).
 	// **و`nil` صالح** — يعمل بالقائمة المدمجة.
-	textguard  *textguard.Guard
-	incentives *incentives.Service
-	offers     *offers.Service
-	campaigns  *campaigns.Service
-	referrals  *referrals.Service
-	prizes     *prizes.Service
-	media      *media.Service
-	hub        *realtime.Hub
-	geo        *geo.Service
+	textguard    *textguard.Guard
+	incentives   *incentives.Service
+	offers       *offers.Service
+	campaigns    *campaigns.Service
+	referrals    *referrals.Service
+	prizes       *prizes.Service
+	cartReminder *cartreminder.Service
+	media        *media.Service
+	hub          *realtime.Hub
+	geo          *geo.Service
 	// odoPrune **محوُ صور العدّاد مرّةً بالساعة** (`driver_odometer.go`).
 	odoPrune odoPruneGate
 	// route **محرّكُ المسارات** — وفارغٌ يعني الخطَّ المستقيم.
@@ -367,6 +369,8 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	ordersSvc.SetReferrals(srv.referrals)
 	// **و«جوائز رحّال غو»** (قرارُ المالك ٢٠٢٦-١١-٢٣) — رصيدُ الجوائز يُصرف ويُردّ في معاملة الطلب.
 	srv.prizes = prizes.New(pg, settingsStore, notify, logger)
+	// **و«سلّتك ناطرتك»** (قرارُ المالك ٢٠٢٦-١١-٢٥) — تذكيرُ السلّة المتروكة بعد ساعة.
+	srv.cartReminder = cartreminder.New(pg, settingsStore, notify, logger)
 	ordersSvc.SetPrizes(srv.prizes)
 	// **وكودُ التسليم يصل بالواتساب** — البوتُ يُحقن لاحقاً، فيُسأل عند كلّ نداء.
 	ordersSvc.SetWhatsApp(whatsAppText{srv})
@@ -897,6 +901,9 @@ func (s *Server) Router() http.Handler {
 			// **ولا بابَ للزبون يردّ أسماءَ غيره أو نقاطَهم** — الترتيبُ الكاملُ للّوحة وحدَها.
 			r.Post("/prizes/checkin", s.handlePrizeCheckIn)
 			r.Post("/prizes/follow", s.handlePrizeFollow)
+			// **«سلّتك ناطرتك»** (قرارُ المالك ٢٠٢٦-١١-٢٥) — العميلُ يُبلغ حالَ سلّته ويُفرغها.
+			r.Put("/my/cart-state", s.handleCartState)
+			r.Delete("/my/cart-state", s.handleCartStateClear)
 			// **بابُ الشكوى عند الطلب لا في رقم هاتف.**
 			//
 			// كانت التذاكرُ تُفتح من لوحة الإدارة وحدَها: يتّصل الزبونُ فيفتح

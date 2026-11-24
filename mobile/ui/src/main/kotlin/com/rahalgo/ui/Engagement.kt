@@ -91,6 +91,12 @@ object Engagement {
     const val DEST_PRICE_SYNC = "price_sync"
 
     /**
+     * **«سلّتك ناطرتك»** (قرارُ المالك ٢٠٢٦-١١-٢٥) — يفتح السلّة (`entity="cart"` والمعرّفُ معرّفُ المتجر في
+     * `cartreminder`). وتطبيقٌ لا سلّةَ فيه يسقط إلى البيت.
+     */
+    const val DEST_CART = "cart"
+
+    /**
      * **الوجهةُ بعد التنقية** — **نوعٌ ومعرّف.**
      *
      * **و`Home` ليست فشلاً** — **هي الجوابُ الصحيحُ لِما لا وجهةَ له
@@ -112,7 +118,7 @@ object Engagement {
         val type = entity?.trim().orEmpty()
         val id = entityId?.trim().orEmpty()
         return when (type) {
-            DEST_OFFER, DEST_ORDER_CHAT, DEST_ORDER, DEST_MERCHANT, DEST_PRICE_SYNC ->
+            DEST_OFFER, DEST_ORDER_CHAT, DEST_ORDER, DEST_MERCHANT, DEST_PRICE_SYNC, DEST_CART ->
                 if (id.isEmpty()) HOME else Dest(type, id)
             else -> HOME
         }
