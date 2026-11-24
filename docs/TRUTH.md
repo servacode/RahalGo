@@ -781,6 +781,8 @@ kosom` |
 | `referral.reward_3` | المنصة | money | `0` |
 | `referral.reward_4` | المنصة | money | `0` |
 | `referral.reward_rest` | المنصة | money | `0` |
+| `cart_reminder.enabled` | المنصة | bool | `false` |
+| `cart_reminder.after_minutes` | المنصة | int | `60` |
 | `prizes.enabled` | المنصة | bool | `false` |
 | `prizes.launch_on` | المنصة | text | `2026-12-01` |
 | `prizes.invites_per_entry` | المنصة | int | `5` |

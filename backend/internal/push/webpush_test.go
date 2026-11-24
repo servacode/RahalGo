@@ -222,6 +222,7 @@ func TestWebPush_URLsAndHosts(t *testing.T) {
 		WebURL(WebAppCustomer, "order", "order", "o1"):     "/orders/o1",
 		WebURL(WebAppCustomer, "chat", "order_chat", "o2"): "/orders/o2",
 		WebURL(WebAppCustomer, "ticket", "ticket", "t1"):   "/complaints/t1",
+		WebURL(WebAppCustomer, "promo", "cart", "m1"):      "/cart",
 		WebURL(WebAppCustomer, "wallet", "wallet", ""):     "/notifications",
 		WebURL(WebAppMerchant, "order", "order", "o3"):     "/store/orders",
 		WebURL(WebAppMerchant, "account", "merchant", "m"): "/store/notifications",

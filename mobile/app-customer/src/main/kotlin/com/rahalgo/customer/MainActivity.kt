@@ -1427,6 +1427,14 @@ private fun SignedIn(
                                 shopVm.openStore(id)
                             }
 
+                            // **و«سلّتك ناطرتك» تفتح السلّة** (قرارُ المالك ٢٠٢٦-١١-٢٥) — السلّةُ
+                            // عند الجهاز نفسِه، فلا جلبَ ولا معرّفَ يُستعمل.
+                            com.rahalgo.ui.Engagement.DEST_CART -> {
+                                com.rahalgo.ui.Opened.take()
+                                overlay.clear()
+                                tab = Tab.Cart
+                            }
+
                             else -> Unit
                         }
                     }

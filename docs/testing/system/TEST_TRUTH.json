@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 745,
+    "routes": 747,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 151,
-    "notify_targeted": 78,
+    "notify_sites": 152,
+    "notify_targeted": 79,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 310,
-    "behaviour_settings": 264,
+    "setting_defs": 312,
+    "behaviour_settings": 266,
     "order_fields": 150,
-    "test_files": 871,
-    "test_funcs": 3309
+    "test_files": 872,
+    "test_funcs": 3314
   },
   "flows": [
     {
@@ -3436,6 +3436,42 @@
       "key": "auth.sms_template",
       "group": "platform",
       "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "cart_reminder.after_minutes",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "cart_reminder.enabled",
+      "group": "platform",
+      "kind": "bool",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -16110,6 +16146,36 @@
     {
       "name": "TestCC21_CC22_NoHiddenMinimumOrder",
       "file": "internal/qa/cart_changes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCartReminder_AfterAnHourOncePerCart",
+      "file": "internal/qa/cart_reminder_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCartReminder_BadReportsRefused",
+      "file": "internal/qa/cart_reminder_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCartReminder_CancelledByEmptyingOrOrdering",
+      "file": "internal/qa/cart_reminder_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCartReminder_QuietHoursDeferNotDrop",
+      "file": "internal/qa/cart_reminder_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCartReminder_StaleCartNotRevived",
+      "file": "internal/qa/cart_reminder_test.go",
       "package": "qa",
       "orphan": true
     },
