@@ -153,22 +153,24 @@ function PrizeCard({ item, balance, onOrder }: { item: PrizeItem; balance: numbe
   const diff = difference(item.price, balance);
   const canOrder = balance > 0 && item.available !== false;
   return (
-    <li className="flex items-center gap-3 rounded-rg-lg border border-line bg-surface p-rg-sm">
-      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-rg-md">
-        <ShopPic src={item.thumb_url ?? item.image_url} name={item.name} icon="gifts" iconSize={24} />
+    /* **هديّتان بكلّ سطر متل كروت السوق** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤، مرآةُ `prizeGrid`) — صورةٌ فوق،
+       الاسمُ والسعرُ تحتها، وزرُّ «اطلب» بعرض الكرت. */
+    <li className="flex min-w-0 flex-col overflow-hidden rounded-rg-lg border border-line bg-surface">
+      <div className="relative aspect-square w-full">
+        <ShopPic src={item.image_url ?? item.thumb_url} name={item.name} icon="gifts" iconSize={36} />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <h3 className="truncate text-sm font-bold" title={item.name}>
+      <div className="flex flex-col gap-1 p-rg-sm">
+        <h3 className="line-clamp-2 min-h-[2.5em] text-sm font-bold" title={item.name}>
           {item.name}
         </h3>
-        <Money value={item.price} className="text-sm" />
-        {balance > 0 && diff > 0 && (
-          <span className="text-caption text-warning">{fill(P.payDiff, { amount: fmtMoney(diff) })}</span>
-        )}
+        <Money value={item.price} className="font-bold" />
+        <span className="min-h-[1.25em] text-caption text-warning">
+          {balance > 0 && diff > 0 ? fill(P.payDiff, { amount: fmtMoney(diff) }) : ""}
+        </span>
+        <Button size="sm" className="w-full" disabled={!canOrder} onClick={() => onOrder(item)}>
+          {P.order}
+        </Button>
       </div>
-      <Button size="sm" disabled={!canOrder} onClick={() => onOrder(item)}>
-        {P.order}
-      </Button>
     </li>
   );
 }
@@ -197,7 +199,7 @@ function Items({ me }: { me: PrizesMe }) {
     list.length === 0 ? null : (
       <section className="flex flex-col gap-2">
         <h2 className="text-section-title">{title}</h2>
-        <ul className="flex flex-col gap-2">
+        <ul className="grid grid-cols-2 gap-rg-sm">
           {list.map((p) => (
             <PrizeCard key={p.id} item={p} balance={balance} onOrder={order} />
           ))}
