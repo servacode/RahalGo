@@ -505,6 +505,9 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 			s.qaMerchantSecond(w, r)
 		case "merchant_second_clear":
 			s.qaMerchantSecondClear(w, r)
+		case "prize_demo":
+			// **متجرُ «رحّال غو» تجريبيّ بثلاث هدايا** (طلبُ المالك ٢٠٢٦-١١-٢٤: «وين اصناف سوق رحال غو؟»).
+			s.qaPrizeDemo(w, r)
 		case "merchant_device_setup":
 			s.qaMerchantDeviceSetup(w, r)
 		case "merchant_device_clear":

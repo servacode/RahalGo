@@ -641,3 +641,61 @@ func (s *Server) handleQAStagingReconcile(w http.ResponseWriter, r *http.Request
 		},
 	})
 }
+
+// qaPrizeDemoName اسمُ متجر الجوائز التجريبيّ — علامةٌ ثابتةٌ فلا يُضاعَف.
+const qaPrizeDemoName = "رحّال غو"
+
+// qaPrizeDemo **يبني متجرَ «رحّال غو» للجوائز على التجهيز** بثلاث هدايا وهميّة (٢٠٢٦-١١-٢٤) — ليرى
+// المالكُ صفحةَ الجوائز بأصنافها. **وإن كان متجرُ جوائزٍ قائماً يُعاد كما هو.** ويُرجعه من اللوحة.
+func (s *Server) qaPrizeDemo(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	var mid string
+	err := s.pg.QueryRow(ctx, `SELECT id::text FROM merchants WHERE status = 'prize' LIMIT 1`).Scan(&mid)
+	if err == nil {
+		httpx.JSON(w, http.StatusOK, map[string]any{"merchant_id": mid, "reused": true})
+		return
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		s.respondErr(w, err)
+		return
+	}
+	tx, err := s.pg.Begin(ctx)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO merchants (name, category_id, commission_percent, status)
+		VALUES ($1, (SELECT id FROM categories ORDER BY id LIMIT 1), 0, 'prize')
+		RETURNING id::text`, qaPrizeDemoName).Scan(&mid); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	var secID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO menu_sections (merchant_id, name)
+		VALUES ($1::uuid, 'هدايا الجوائز') RETURNING id::text`, mid).Scan(&secID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	for _, it := range []struct {
+		name  string
+		price int64
+	}{{"سماعات بلوتوث (تجربة)", 1500}, {"ساعة ذكية (تجربة)", 1000}, {"باور بانك (تجربة)", 600}} {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO menu_items
+			  (merchant_id, section_id, platform_section_id, name, merchant_price, price, available, approved)
+			VALUES ($1::uuid, $2::uuid, (SELECT id FROM platform_sections ORDER BY sort_order LIMIT 1),
+			        $3, $4, $4, true, true)`, mid, secID, it.name, it.price); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.logger.Warn("QA prize demo store seeded (staging-only)", "merchant", mid)
+	httpx.JSON(w, http.StatusOK, map[string]any{"merchant_id": mid, "reused": false})
+}
