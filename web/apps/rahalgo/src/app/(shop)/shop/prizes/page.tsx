@@ -269,6 +269,11 @@ export default function PrizesPage() {
           {date && <p className="text-price-lg font-bold text-accent-text">{fill(P.teaserSoon, { date })}</p>}
           <p className="text-sm text-ink-muted">{fill(P.teaserBody, { per: fmtNum(me.invites_per_entry ?? 5) })}</p>
         </section>
+        {/* **«لست ضمن المسابقة بعد» قبل الافتتاح كمان** (٢٠٢٦-١١-٢٤، مرآةُ `EntryStatus`). */}
+        <section className="flex flex-col gap-1 rounded-card bg-warning-tint p-4" data-testid="prize-entry-status">
+          <h2 className="text-section-title">{P.outTitle}</h2>
+          {date && <p className="text-sm">{fill(P.outBefore, { date })}</p>}
+        </section>
         <Podium amounts={amounts} />
         <Rules per={me.invites_per_entry ?? 5} winners={me.winners_count ?? amounts.length} />
         {/* **والهدايا تحتها** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤) — عرضٌ فقط قبل الافتتاح. */}

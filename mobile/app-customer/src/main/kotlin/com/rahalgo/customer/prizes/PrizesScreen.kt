@@ -106,6 +106,8 @@ private fun Teaser(vm: PrizesViewModel, me: PrizesMe) {
                 )
             }
         }
+        // **«لست ضمن المسابقة بعد» قبل الافتتاح كمان** (٢٠٢٦-١١-٢٤) — ومتى تبلش.
+        item { EntryStatus(me, PrizesLogic.launchLabel(me.launchOn.ifBlank { "2026-12-01" })) }
         item { Podium(me.amounts) }
         item { PrizeRules(me.invitesPerEntry, me.winnersCount.takeIf { it > 0 } ?: me.amounts.size) }
         // **والهدايا تحتها** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤) — عرضٌ فقط قبل الافتتاح.
@@ -243,8 +245,8 @@ private fun Active(vm: PrizesViewModel, me: PrizesMe) {
  * التفاصيل: **فرصةٌ وحدة على الأقلّ = داخل سحب هالشهر**، وإلّا كم دعوة باقية ليدخل.
  */
 @Composable
-private fun EntryStatus(me: PrizesMe) {
-    val inside = me.entries > 0
+private fun EntryStatus(me: PrizesMe, startsOn: String? = null) {
+    val inside = startsOn == null && me.entries > 0
     RahalCard(
         variant = CardVariant.Tinted,
         tone = if (inside) StatusTone.Success else StatusTone.Warning,
@@ -258,6 +260,8 @@ private fun EntryStatus(me: PrizesMe) {
         Text(
             if (inside) {
                 stringResource(R.string.prizes_in_body, me.entries)
+            } else if (startsOn != null) {
+                stringResource(R.string.prizes_out_before, startsOn)
             } else {
                 stringResource(R.string.prizes_out_body, me.invitesToNext.coerceAtLeast(1))
             },

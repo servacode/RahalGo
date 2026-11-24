@@ -462,6 +462,7 @@
     <string name="prizes_in_title">✅ إنت ضمن مسابقة هالشهر</string>
     <string name="prizes_in_body">عندك %1$d فرصة بالسحب — كل ما دعيت أكتر فرصتك بتكبر</string>
     <string name="prizes_out_title">لست ضمن المسابقة بعد</string>
+    <string name="prizes_out_before">المسابقة بتبلش %1$s — من وقتها كل دعوة بتنحسبلك</string>
     <string name="prizes_out_body">باقيلك %1$d دعوات لتدخل سحب هالشهر</string>
     <string name="prizes_rules_title">شروط المسابقة</string>
     <string name="prizes_rule_invite">ادعُ أصحابك برابط دعوتك — كل %1$d أصدقاء بيعملو حساب جديد = فرصة بالسحب</string>
