@@ -227,7 +227,8 @@ const WIDE: ReadonlySet<Kind> = new Set<Kind>(["geo", "media", "longtext", "file
 /** **مفاتيحُ تُسأل قبلها وليست ماليّة** — ساعةُ بداية اليوم تقلب يومَ الحساب بالمنصّة كلّها. */
 const DAY_START = "platform.day_start_hour";
 
-const MEDIA_KIND: Record<string, "platform_logo" | "auth_background" | "site_background"> = {
+const MEDIA_KIND: Record<string, "platform_logo" | "auth_background" | "site_background" | "shamcash_qr"> = {
+  "shamcash.qr": "shamcash_qr",
   "platform.logo": "platform_logo",
   "auth.background": "auth_background",
   "auth.background_mobile": "auth_background",

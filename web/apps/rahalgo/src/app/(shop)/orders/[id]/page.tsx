@@ -45,6 +45,7 @@ import { LiveStartButton } from "@/components/customer/LiveShare";
 import { DropoffFix } from "@/components/customer/DropoffFix";
 import WebPushCard from "@/components/WebPushCard";
 import { CustomPhotoGrid } from "@/components/CustomPhotos";
+import { ShamcashPayCard } from "@/components/customer/ShamcashPayCard";
 
 const m = getMessages(defaultLocale);
 const O = m.shop.orders;
@@ -292,6 +293,9 @@ export default function OrderPage() {
           </Row>
         )}
       </dl>
+
+      {/* **الكابتنُ وصل والطلبُ بشام كاش** — المبلغُ وحسابُ المنصّة والباركود. */}
+      {order.pay_shamcash && order.status === "at_dropoff" && order.cash_due > 0 && <ShamcashPayCard amount={order.cash_due} />}
 
       {/* أفعالُ البطاقة (مرآةُ `OrderCard.kt`): الثانويّةُ — محادثة وشكوى — في صفٍّ بأزرارٍ متساويةِ العرض
           بحدٍّ، ثمّ الأساسيّ (إلغاء أحمر مصمت أو تقييم بلون العلامة) بعرضٍ كامل تحتها. */}

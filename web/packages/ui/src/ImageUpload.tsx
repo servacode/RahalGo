@@ -51,7 +51,8 @@ export type MediaKind =
   | "platform_logo"
   | "auth_background"
   | "site_background"
-  | "expense_receipt";
+  | "expense_receipt"
+  | "shamcash_qr";
 
 export function ImageUpload({
   kind,

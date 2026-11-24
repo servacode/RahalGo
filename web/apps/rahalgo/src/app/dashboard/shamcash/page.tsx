@@ -56,7 +56,7 @@ const m = getMessages(defaultLocale);
 const S = m.admin.shamcash;
 
 type Currency = "SYP" | "USD";
-type Kind = "driver_transfer" | "deposit" | "withdrawal";
+type Kind = "driver_transfer" | "customer_topup" | "deposit" | "withdrawal";
 
 interface Movement {
   id: string;
@@ -65,6 +65,9 @@ interface Movement {
   order_number: number | null;
   driver_id: string | null;
   driver_name: string | null;
+  /** شحنُ زبون: اسمُ الزبون وطلبُ الشحن الذي وُلدت منه الحركة. */
+  customer_name?: string | null;
+  topup_id?: string | null;
   currency: Currency;
   amount: number;
   occurred_at: string;
@@ -87,6 +90,8 @@ interface Balance {
   opening: number;
   opening_as_of: string | null;
   transfers: number;
+  /** شحنُ الزبائن بشام كاش — غائبٌ من خادمٍ قديم. */
+  topups?: number;
   deposits: number;
   withdrawals: number;
   balance: number;
@@ -205,6 +210,7 @@ export default function ShamcashPage() {
                   S.balanceSub
                     .replace("{o}", fmtAmount(b.opening, b.currency))
                     .replace("{t}", fmtAmount(b.transfers, b.currency))
+                    .replace("{u}", fmtAmount(b.topups ?? 0, b.currency))
                     .replace("{d}", fmtAmount(b.deposits, b.currency))
                     .replace("{w}", fmtAmount(b.withdrawals, b.currency)),
                   b.not_arrived > 0 ? S.notArrivedSub.replace("{n}", fmtAmount(b.not_arrived, b.currency)) : "",
@@ -291,6 +297,7 @@ export default function ShamcashPage() {
             items={[
               { id: "", label: S.kindAll },
               { id: "driver_transfer", label: S.kinds.driver_transfer },
+              { id: "customer_topup", label: S.kinds.customer_topup },
               { id: "deposit", label: S.kinds.deposit },
               { id: "withdrawal", label: S.kinds.withdrawal },
             ]}
@@ -388,6 +395,13 @@ export default function ShamcashPage() {
                 cell: (r) => <span>{r.driver_name ?? "—"}</span>,
               },
               {
+                id: "customer",
+                header: S.colCustomer,
+                icon: <IconUser size={14} />,
+                hide: (r) => !r.customer_name,
+                cell: (r) => <span>{r.customer_name ?? "—"}</span>,
+              },
+              {
                 id: "note",
                 header: S.colNote,
                 hide: (r) => !r.note && !r.voided_at && !r.compensated_at && !r.exceeds_due,
@@ -456,7 +470,7 @@ export default function ShamcashPage() {
 function KindBadges({ r }: { r: Movement }) {
   return (
     <span className="flex flex-wrap gap-1">
-      <Badge variant={r.kind === "driver_transfer" ? "info" : r.kind === "deposit" ? "success" : "warning"}>
+      <Badge variant={r.kind === "driver_transfer" || r.kind === "customer_topup" ? "info" : r.kind === "deposit" ? "success" : "warning"}>
         {S.kinds[r.kind]}
       </Badge>
       {r.voided_at && <Badge variant="neutral">{S.badgeVoided}</Badge>}
@@ -496,6 +510,8 @@ function RowActions({ r, onAct }: { r: Movement; onAct: (a: Act) => void }) {
   if (r.kind === "driver_transfer") {
     if (r.status === "claimed") acts.push(r.compensated_at ? "uncompensate" : "compensate");
     if (!r.compensated_at) acts.push(r.status === "not_arrived" ? "arrived" : "not-arrived");
+  } else if (r.kind === "customer_topup") {
+    // **حركةُ الشحن تُدار من صفحة «شحن شام كاش»** — لا تُلغى من هنا.
   } else {
     acts.push("void");
   }

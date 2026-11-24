@@ -21,6 +21,7 @@ import { OUTLINE_CARD, RadioCard } from "./kit";
 import { api } from "@/lib/api";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { fill, stageLabel } from "@/lib/customer/texts";
+import { useShamcash } from "@/lib/customer/shamcash";
 import { ENDED, type MyOrder } from "@/lib/customer/types";
 
 const m = getMessages(defaultLocale);
@@ -499,6 +500,7 @@ export function OrderInvoice({ order, totals = false }: { order: MyOrder; totals
 
 /** **اسمُ طريقة الدفع** — «الكل من المحفظة» · «التوصيل من المحفظة والباقي كاش» · كاش. */
 export function payScopeLabel(order: MyOrder): string {
+  if (order.pay_shamcash) return O.payShamcash;
   const scope = order.wallet_scope ?? (order.payment_method === "wallet" ? "full" : "none");
   if (scope === "delivery") return O.payWalletDelivery;
   if (scope === "full") return O.payWalletFull;
@@ -527,7 +529,10 @@ export function PayScope({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const scope = order.wallet_scope ?? (order.payment_method === "wallet" ? "full" : "none");
+  const sham = useShamcash();
+  const scope: "none" | "full" | "delivery" | "shamcash" = order.pay_shamcash
+    ? "shamcash"
+    : (order.wallet_scope ?? (order.payment_method === "wallet" ? "full" : "none"));
   const custom = order.kind === "custom";
   const confirmed = order.quote_confirmed_version != null && order.quote_confirmed_version === order.quote_version;
   const open = !ENDED.has(order.status) && order.status !== "at_dropoff" && (!custom || confirmed);
@@ -538,14 +543,15 @@ export function PayScope({
   const deliveryPart = Math.max(0, Math.min(order.delivery_fee, order.total));
   // **ثلاثُ طرق** (قرارُ المالك ٢٠٢٦-١١-٢٠): «الكل من المحفظة» يظهر حين يغطّي الرصيدُ المجموعَ كلَّه
   // (أو الطلبُ عليه أصلاً).
-  const items: { id: "none" | "full" | "delivery"; label: string }[] = [{ id: "none", label: m.shop.cart.cash }];
+  const items: { id: "none" | "full" | "delivery" | "shamcash"; label: string }[] = [{ id: "none", label: m.shop.cart.cash }];
   if ((order.total > 0 && budget >= order.total) || scope === "full") items.push({ id: "full", label: m.shop.cart.walletFull });
   if ((deliveryPart > 0 && budget >= deliveryPart) || scope === "delivery") {
     items.push({ id: "delivery", label: m.shop.cart.walletDelivery });
   }
+  if (sham.info?.pay_on_delivery_enabled || scope === "shamcash") items.push({ id: "shamcash", label: m.shop.cart.shamcashPod });
   if (items.length < 2) return null;
 
-  const change = async (next: "none" | "full" | "delivery") => {
+  const change = async (next: "none" | "full" | "delivery" | "shamcash") => {
     if (next === scope || busy) return;
     const slot = "wallet_scope_" + order.id;
     setBusy(true);
@@ -554,7 +560,11 @@ export function PayScope({
       await api(`/api/v1/orders/${order.id}/wallet-scope`, {
         method: "POST",
         headers: { "Idempotency-Key": attemptKey(slot) },
-        body: JSON.stringify({ wallet_scope: next, expected_total: order.total }),
+        body: JSON.stringify({
+          wallet_scope: next === "shamcash" ? "none" : next,
+          expected_total: order.total,
+          pay_shamcash: next === "shamcash",
+        }),
       });
       clearAttempt(slot);
       onMessage(O.payChanged);

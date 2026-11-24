@@ -13,6 +13,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { NeedLogin } from "@/components/customer/NeedLogin";
 import { ShopPageHeader } from "@/components/customer/ShopPageHeader";
+import { ShamcashTopUp } from "@/components/customer/ShamcashTopUp";
 
 const m = getMessages(defaultLocale);
 const W = m.shop.wallet;
@@ -24,10 +25,11 @@ export default function WalletRoute() {
   return (
     <div className="mx-auto flex w-full flex-col gap-4 max-w-none">
       <ShopPageHeader title={W.title} />
-      {/* **كيف تُشحن المحفظة** (قرارُ المالك ٢٠٢٦-١١-١١) — لا زرَّ شحنٍ للزبون: الشحنُ عند فريق المنصة. */}
+      {/* **كيف تُشحن المحفظة** — نقداً بالمكتب، أو بتحويل شام كاش حين يفعّله المالك (زرٌّ يظهر بشرطه). */}
       <Alert tone="info" title={W.topUpTitle}>
         {W.topUpBody}
       </Alert>
+      <ShamcashTopUp />
       <WalletPage
         api={api}
         path="/api/v1/my/wallet"

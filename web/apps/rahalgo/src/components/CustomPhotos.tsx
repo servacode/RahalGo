@@ -22,7 +22,7 @@ export const MAX_CUSTOM_PHOTOS = 3;
 export type UploadedPhoto = { id: string; url: string; thumb_url: string };
 
 /** **يصغّر الصورةَ قبل الرفع** — كصورة الحساب: أطولُ ضلعٍ ١٦٠٠ وجودةٌ ٠٫٨٥. */
-async function shrink(file: File): Promise<Blob> {
+export async function shrink(file: File): Promise<Blob> {
   const MAX = 1600;
   try {
     const bmp = await createImageBitmap(file);

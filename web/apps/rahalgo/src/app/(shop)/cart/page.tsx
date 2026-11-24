@@ -48,6 +48,7 @@ import { useCart, drinkRows, lineKey, linePayload, unitPrice, unitPriceUsd, MAX_
 import { useCustomer } from "@/lib/customer/context";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { markElsewhereLocal } from "@/lib/customer/live";
+import { useShamcash } from "@/lib/customer/shamcash";
 import { changeText, dollars, fill, serviceText } from "@/lib/customer/texts";
 import type { CartChange, PromoPreview, Quote } from "@/lib/customer/types";
 import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
@@ -103,6 +104,11 @@ export default function CartPage() {
   const [promoBusy, setPromoBusy] = useState(false);
   // **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩): كاش · الكل · التوصيل والباقي كاش.
   const [scope, setScope] = useState<"none" | "full" | "delivery">("none");
+  // **شام كاش عند الاستلام** — يُرسَل مع `wallet_scope: none` ولا يجتمع مع «الكل» من المحفظة.
+  const [pod, setPod] = useState(false);
+  const sham = useShamcash(!!user);
+  const podOn = sham.info?.pay_on_delivery_enabled === true;
+  const podChosen = pod && podOn;
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -237,6 +243,7 @@ export default function CartPage() {
           lng: address.lng,
           payment_method: scope === "none" ? "cash" : "wallet",
           wallet_scope: scope,
+          ...(podChosen ? { pay_shamcash: true } : {}),
           promo_code: cut ? promo.trim() : "",
           notes: notes.trim(),
         }),
@@ -451,7 +458,7 @@ export default function CartPage() {
               <SectionHeader title={C.payment} />
               <div className={`${OUTLINE_CARD} flex flex-col gap-3`}>
                 {/* **سطرٌ واحدٌ حين لا تكفي المحفظة — لا خيارٌ مطفأٌ ولا «رصيدك لا يكفي»** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
-                {walletBlocked ? (
+                {walletBlocked && !podOn ? (
                   <div className="shop-opt" data-on="true">
                     <span className="shop-opt-ic">
                       <IconCash size={20} />
@@ -468,7 +475,10 @@ export default function CartPage() {
                         role="radio"
                         aria-checked={scope === "full"}
                         data-on={scope === "full"}
-                        onClick={() => setScope("full")}
+                        onClick={() => {
+                          setScope("full");
+                          setPod(false);
+                        }}
                         className="shop-opt"
                       >
                         <span className="shop-opt-ic">
@@ -488,7 +498,10 @@ export default function CartPage() {
                         role="radio"
                         aria-checked={scope === "delivery"}
                         data-on={scope === "delivery"}
-                        onClick={() => setScope("delivery")}
+                        onClick={() => {
+                          setScope("delivery");
+                          setPod(false);
+                        }}
                         className="shop-opt"
                       >
                         <span className="shop-opt-ic">
@@ -507,9 +520,12 @@ export default function CartPage() {
                       type="button"
                       id="pay-cash"
                       role="radio"
-                      aria-checked={scope === "none"}
-                      data-on={scope === "none"}
-                      onClick={() => setScope("none")}
+                      aria-checked={scope === "none" && !podChosen}
+                      data-on={scope === "none" && !podChosen}
+                      onClick={() => {
+                        setScope("none");
+                        setPod(false);
+                      }}
                       className="shop-opt"
                     >
                       <span className="shop-opt-ic">
@@ -520,6 +536,29 @@ export default function CartPage() {
                       </span>
                       <i aria-hidden className="shop-opt-dot" />
                     </button>
+                    {podOn && (
+                      <button
+                        type="button"
+                        id="pay-shamcash"
+                        role="radio"
+                        aria-checked={podChosen}
+                        data-on={podChosen}
+                        onClick={() => {
+                          setScope("none");
+                          setPod(true);
+                        }}
+                        className="shop-opt"
+                      >
+                        <span className="shop-opt-ic">
+                          <IconWallet size={20} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <b className="block">{C.shamcashPod}</b>
+                          <span className="block text-xs text-ink-muted">{C.shamcashPodHint}</span>
+                        </span>
+                        <i aria-hidden className="shop-opt-dot" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

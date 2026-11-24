@@ -182,6 +182,9 @@ const ALL_NAV: NavItem[] = [
   // **سجلّ شام كاش اليدويّ** (قرارُ المالك ٢٠٢٦-١١-١٠) — جانبيٌّ لا يمسّ الخزينة.
   { href: "/dashboard/shamcash", label: m.admin.shamcash.title, icon: IconCash,
     caps: ["finance.read"] },
+  // **طلبات شحن المحفظة بشام كاش** (٢٠٢٦-١١-٢٥) — الموظفُ يؤكّد وصولَ التحويل فتنشحن المحفظة.
+  { href: "/dashboard/shamcash-topups", label: m.admin.shamcashTopups.title, icon: IconCash,
+    caps: ["finance.read"] },
   // **أرصدة من بضاعة** (قرارُ المالك ٢٠٢٦-١١-١٠) — تقريرُ قراءةٍ فقط لأرصدةٍ قديمةٍ أصلُها بضاعة.
   { href: "/dashboard/goods-balances", label: m.admin.goodsBalances.title, icon: IconBalance,
     caps: ["finance.read"] },

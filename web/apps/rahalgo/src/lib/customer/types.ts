@@ -320,6 +320,8 @@ export interface MyOrder {
   payment_method: string;
   /** **شو بيندفع من المحفظة** (٢٠٢٦-١١-٠٩) — `none` كاش · `full` الكل · `delivery` التوصيل والباقي كاش. */
   wallet_scope?: "none" | "full" | "delivery";
+  /** **يدفع للكابتن بشام كاش عند الاستلام** (٢٠٢٦-١١-٢٥) — مع `wallet_scope: none`؛ وغيابُه من خادمٍ قديم. */
+  pay_shamcash?: boolean;
   address_text: string;
   notes: string;
   custom_request: string;

@@ -299,6 +299,8 @@ function targetOf(e: Entry): { text: string; href?: string } | null {
     case "shamcash_movement":
     case "shamcash_opening":
       return { text: T.shamcash, href: "/dashboard/shamcash" };
+    case "shamcash_topup":
+      return { text: T.shamcash, href: "/dashboard/shamcash-topups" };
     case "payout":
       return { text: T.payout, href: "/dashboard/payouts" };
     case "obligation":
@@ -323,6 +325,7 @@ const PAGE_CAPS: [string, string[]][] = [
   ["/dashboard/obligations", ["finance.read"]],
   ["/dashboard/expenses", ["finance.read"]],
   ["/dashboard/shamcash", ["finance.read"]],
+  ["/dashboard/shamcash-topups", ["finance.read"]],
   ["/dashboard/incentives", ["finance.read"]],
   ["/dashboard/leads", ["merchants.verify"]],
   ["/dashboard/branch-requests", ["merchants.verify"]],
