@@ -1114,12 +1114,12 @@ var Catalog = []Def{
 	{Key: "prizes.amount_1", Group: GroupPlatform, Kind: KindMoney,
 		Min: 0, Max: 100_000, Unit: "currency", Default: 1500, Sensitive: true},
 	{Key: "prizes.amount_2", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 100_000, Unit: "currency", Default: 1000, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 1250, Sensitive: true},
 	{Key: "prizes.amount_3", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 100_000, Unit: "currency", Default: 750, Sensitive: true},
+		Min: 0, Max: 100_000, Unit: "currency", Default: 1000, Sensitive: true},
 	{Key: "prizes.amount_4", Group: GroupPlatform, Kind: KindMoney,
-		Min: 0, Max: 100_000, Unit: "currency", Default: 500, Sensitive: true},
-	// **وما بعد الخامس كالخامس.**
+		Min: 0, Max: 100_000, Unit: "currency", Default: 750, Sensitive: true},
+	// **قرارُ المالك ٢٠٢٦-١١-٢٤: ١٥٠٠ · ١٢٥٠ · ١٠٠٠ · ٧٥٠ · ٥٠٠.** وما بعد الخامس كالخامس.
 	{Key: "prizes.amount_5", Group: GroupPlatform, Kind: KindMoney,
 		Min: 0, Max: 100_000, Unit: "currency", Default: 500, Sensitive: true},
 

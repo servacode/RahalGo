@@ -786,9 +786,9 @@ kosom` |
 | `prizes.invites_per_entry` | المنصة | int | `5` |
 | `prizes.winners` | المنصة | int | `5` |
 | `prizes.amount_1` | المنصة | money | `1500` |
-| `prizes.amount_2` | المنصة | money | `1000` |
-| `prizes.amount_3` | المنصة | money | `750` |
-| `prizes.amount_4` | المنصة | money | `500` |
+| `prizes.amount_2` | المنصة | money | `1250` |
+| `prizes.amount_3` | المنصة | money | `1000` |
+| `prizes.amount_4` | المنصة | money | `750` |
 | `prizes.amount_5` | المنصة | money | `500` |
 | `auth.require_whatsapp` | المنصة | bool | `true` |
 | `compensations.cap_driver` | المنصة | money | `500` |

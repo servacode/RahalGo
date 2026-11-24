@@ -69,7 +69,7 @@ function Podium({ amounts }: { amounts: number[] }) {
           <div key={r} className={`flex min-w-0 flex-col items-center gap-1 ${r === 1 ? "flex-[1.25]" : "flex-1"}`}>
             {r === 1 && <img src="/prizes/trophy.svg" alt="" width={64} height={64} />}
             <Money value={amounts[r - 1] ?? 0} className={`font-bold ${r === 1 ? "text-section-title" : "text-sm"}`} />
-            <div className={`prize-step prize-step-${r} flex w-full flex-col items-center pt-2 text-center`}>
+            <div className={`prize-step prize-step-${r} flex w-full items-center justify-center text-center`}>
               <span className={`font-black ${r === 1 ? "text-3xl" : "text-xl"}`}>{fmtNum(r)}</span>
             </div>
           </div>

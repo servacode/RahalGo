@@ -94,18 +94,17 @@ private fun Step(rank: Int, amount: Long, modifier: Modifier) {
                 .shadow(3.dp, Rahal.shape.md)
                 .clip(Rahal.shape.md)
                 .background(Brush.verticalGradient(listOf(top, bottom))),
-            contentAlignment = Alignment.TopCenter,
+            // **الرقمُ وحدَه بوسط المربّع تماماً** (ملاحظتا المالك ٢٠٢٦-١١-٢٤: «يكفي الرقم» و«محاذاة
+            // بالوسط والمنتصف») — أفقيّاً وعموديّاً.
+            contentAlignment = Alignment.Center,
         ) {
-            // **الرقمُ وحدَه** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤: «مايلزم نكتب المركز الاول… يكفي الرقم»).
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(Modifier.height(Rahal.space.xs))
-                Text(
-                    rank.toString(),
-                    color = Color.White,
-                    style = if (rank == 1) Rahal.type.headline else Rahal.type.sectionTitle,
-                    fontWeight = FontWeight.Black,
-                )
-            }
+            Text(
+                rank.toString(),
+                color = Color.White,
+                style = if (rank == 1) Rahal.type.headline else Rahal.type.sectionTitle,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
