@@ -41,6 +41,11 @@ data class DriverOrder(
     @SerialName("holder_name") val holderName: String = "",
     /** **«أبعت» أم «أستقبل»** (٢٠٢٦-١١-١٩) — بـ`send`: استلم من الزبون واقبض منه، وسلّم لـ`holderName`. */
     @SerialName("amanah_direction") val amanahDirection: String = "",
+    /**
+     * **الزبونُ مو بعنوان التوصيل** (قرارُ المالك ٢٠٢٦-١١-٢٤) — جاوب «لا» على «إنت هلق بعنوان التوصيل؟»:
+     * **عم يطلب لشخص تاني، فلا موقعَ مباشر** والكابتنُ يمشي عالعنوان المكتوب. وخطأٌ من خادمٍ قديم.
+     */
+    @SerialName("customer_elsewhere") val customerElsewhere: Boolean = false,
     @SerialName("holder_phone") val holderPhone: String = "",
     /**
      * **أصلُ الطلب** — `app` أو `whatsapp` (قرارُ المالك ٢٠٢٦-١١-٠٥): طلبٌ كتبه المكتبُ من رسالة

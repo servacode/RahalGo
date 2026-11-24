@@ -164,14 +164,21 @@ fun Stages(
     //
     // **وإن لم يسع مجموعُ الأسماء العرضَ صغُر الخطُّ قليلاً** (`StageScales`) —
     // من توكن `labelSmall` نفسِه لا رقمٍ جديد. **والقياسُ بالخطّ الذي يُرسم.**
-    val baseStyle = Rahal.type.label.copy(fontWeight = FontWeight.Bold)
-    val measurer = rememberTextMeasurer()
+    //
+    // **وأصغرُ وأوضح** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤: «الخط كبير وفايت ببعضه لازم اصغر وواضح») —
+    // خطُّ الشارة (١٢) بوزنٍ متوسّط والحاليُّ وحدَه عريض، **وتكبيرُ خطّ الجهاز لا يتجاوز ١٫١ هنا**:
+    // كان الخطُّ الكبيرُ بالإعدادات يدفع الأسماءَ فوق بعضها.
     val dens = LocalDensity.current
+    val tame = if (dens.fontScale > MaxFontScale) MaxFontScale / dens.fontScale else 1f
+    val baseStyle = Rahal.type.badge.copy(fontWeight = FontWeight.Medium).let {
+        it.copy(fontSize = it.fontSize * tame, lineHeight = it.lineHeight * tame)
+    }
+    val measurer = rememberTextMeasurer()
 
     BoxWithConstraints(modifier.fillMaxWidth().heightIn(min = RowH)) {
         val inset = NodeH.value / 2
         val fit = remember(labels, maxWidth, baseStyle) {
-            fitStageLabels(StageScales.filter { baseStyle.fontSize.value * it >= 12f }.ifEmpty { listOf(1f) }, maxWidth.value) { scale ->
+            fitStageLabels(StageScales.filter { baseStyle.fontSize.value * it * dens.fontScale >= 9f }.ifEmpty { listOf(1f) }, maxWidth.value) { scale ->
                 val style = baseStyle.copy(fontSize = baseStyle.fontSize * scale)
                 labels.map { label ->
                     with(dens) {
@@ -294,7 +301,10 @@ fun Stages(
  * **وتصغيرٌ لا التفاف** (قرارُ المالك ٢٠٢٦-١٠-١٥): اسمٌ في سطرين يرفع الشريط،
  * **وخطٌّ أصغرُ بعُشرٍ أو خُمسٍ لا يكاد يُرى.**
  */
-internal val StageScales = listOf(1f, 0.9f, 0.8f)
+internal val StageScales = listOf(1f, 0.9f, 0.8f, 0.7f)
+
+/** **أكبرُ تكبيرٍ لخطّ الجهاز تحت الشريط** (٢٠٢٦-١١-٢٤) — فوقه تتراكب الأسماء. */
+private const val MaxFontScale = 1.1f
 
 /** **فراغٌ بين اسمين متجاورين** — فلا يلتصق اسمٌ باسم. */
 internal const val LabelGap = 4f

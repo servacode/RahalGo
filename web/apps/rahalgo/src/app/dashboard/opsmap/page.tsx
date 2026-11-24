@@ -190,6 +190,12 @@ interface Meta {
   ops_map_smooth?: boolean;
 }
 
+/** **برّا الدوام وموقعُه من أقلّ من ١٠ دقايق** — يُرسم بلا حبّة «برّا الدوام» (٢٠٢٦-١١-٢٤). */
+const RECENT_OFF_SHIFT_SEC = 600;
+function isRecentOffShift(d: { on_shift: boolean; freshness: string; age_sec: number }): boolean {
+  return !d.on_shift && d.freshness !== "NO_LOCATION" && d.age_sec <= RECENT_OFF_SHIFT_SEC;
+}
+
 /** جزءٌ من طريق السائق الأخير (`/driver-monitor/{id}/recent`) — نفس أجزاء صفحة المراقبة. */
 interface RecentPart {
   class: "with_order" | "to_pickup" | "no_order" | "off_shift" | "stopped" | "gap";
@@ -1054,9 +1060,13 @@ export default function OpsMapPage() {
   // **ومن هو برّا الدوام لا يُرسم افتراضاً** (تدقيقُ ٢٠٢٦-١٠-٢٧): كان كلُّ سائقٍ يُرسم
   // رماديّاً باسمه — الموقوفُ ومن لم يفتح الدوامَ أصلاً — **فتزدحم الخريطةُ بمن لا يعمل.**
   // **وحبّةٌ صريحةٌ تُظهرهم**، وفلترُ الرابط (`on_shift`) يحكم إن جاء.
+  //
+  // **إلّا من موقعُه حديث** (قرارُ المالك ٢٠٢٦-١١-٢٤): الكابتن اللي سكّر دوامه وآخرُ موقعٍ
+  // له من أقلّ من ١٠ دقايق **يُرسم وحده** — فهو يتحرّك الآن والمالكُ يريد أن يراه.
   const driverPool = useMemo(() => {
     const all = drivers.data?.drivers ?? [];
-    return onShift || visible.offShift ? all : all.filter((d) => d.on_shift);
+    if (onShift || visible.offShift) return all;
+    return all.filter((d) => d.on_shift || isRecentOffShift(d));
   }, [drivers.data, onShift, visible.offShift]);
   // **والطلباتُ والمتاجرُ بعد التركيز لا تتبع السائقين** (٢٠٢٦-١١-٠٥) — فنبضةُ سائقٍ لا تبني
   // طبقاتِها من جديد ولا تُعيد رفعَها.
@@ -1815,7 +1825,7 @@ export default function OpsMapPage() {
         if (d) {
           if (!focused.drivers.some((x) => x.id === it.id)) setFocusMode("");
           // **ومن هو برّا الدوام تُظهَر طبقتُه** — وإلّا طار إلى مكانٍ لا رمزَ فيه.
-          if (!d.on_shift && !onShift && !visible.offShift) toggle("offShift");
+          if (!d.on_shift && !isRecentOffShift(d) && !onShift && !visible.offShift) toggle("offShift");
           setSelected({ kind: "driver", v: d });
         }
       } else if (it.kind === "merchant") {

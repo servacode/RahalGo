@@ -1385,7 +1385,9 @@ private fun TripFloatActions(order: DriverOrder, state: TripState, actions: Trip
     if (!isReturnTrip(order)) {
         MapButton(R.drawable.ic_warning, R.string.trip_problem, { actions.askFail() }, danger = true)
     }
-    if (state.step >= TripStep.PICKED_UP && (state.customerLive == null || state.liveStale)) {
+    if (state.step >= TripStep.PICKED_UP && (state.customerLive == null || state.liveStale) &&
+        !order.customerElsewhere
+    ) {
         MapButton(R.drawable.ic_pin, R.string.trip_live_request, { actions.requestLive() })
     }
 }
@@ -1446,6 +1448,9 @@ private fun LiveCustomerNotice(state: TripState) {
     // **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — حين لا موقعَ حيٌّ منه:
     // يُسأل الزبونُ ثانيةً وإن رفض أوّلَ مرّة. **والخادمُ يحدّه** (ثلاثٌ ودقيقتان).
     when {
+        // **«الطلب لشخص تاني»** (قرارُ المالك ٢٠٢٦-١١-٢٤) — الزبونُ قال إنّه مو بعنوان التوصيل.
+        state.order?.customerElsewhere == true ->
+            TopNotice(stringResource(R.string.trip_customer_elsewhere), Rahal.colors.ink)
         state.liveSwitched -> TopNotice(stringResource(R.string.trip_live_switched), Rahal.colors.success)
         state.liveStale -> TopNotice(stringResource(R.string.trip_live_stale), Rahal.colors.ink)
         // **«الزبون ما شارك موقعو»** (قرارُ المالك ٢٠٢٦-١١-١٨: «لازم يوصلنا موقع مباشر») — بعد الاستلام

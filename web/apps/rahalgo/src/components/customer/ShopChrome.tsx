@@ -139,7 +139,7 @@ export function ShopTopBar({
           />
         </form>
 
-        {user && <PrizesButton />}
+        {user && path === "/shop" && <PrizesButton />}
 
         {user && (
           <>

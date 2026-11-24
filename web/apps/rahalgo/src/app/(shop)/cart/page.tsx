@@ -30,6 +30,7 @@ import {
   EmptyState,
   Input,
   LoadingState,
+  Modal,
   Money,
   Textarea,
   IconCart,
@@ -46,6 +47,7 @@ import { useAuth } from "@/lib/auth";
 import { useCart, drinkRows, lineKey, linePayload, unitPrice, unitPriceUsd, MAX_DRINK } from "@/lib/customer/cart";
 import { useCustomer } from "@/lib/customer/context";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
+import { markElsewhereLocal } from "@/lib/customer/live";
 import { changeText, dollars, fill, serviceText } from "@/lib/customer/texts";
 import type { CartChange, PromoPreview, Quote } from "@/lib/customer/types";
 import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
@@ -211,7 +213,15 @@ export default function CartPage() {
     }
   };
 
-  const send = async () => {
+  /* **«إنت هلق بعنوان التوصيل؟» قبل الإرسال** (قرارُ المالك ٢٠٢٦-١١-٢٤، مرآةُ `CartScreen.kt`) —
+     ممكن يطلب لشخص تاني، و«لا» = لا موقع مباشر لهالطلب والكابتنُ بيمشي عالعنوان المكتوب. */
+  const [askHere, setAskHere] = useState(false);
+  const ask = () => {
+    if (address && !busy) setAskHere(true);
+  };
+
+  const send = async (elsewhere: boolean) => {
+    setAskHere(false);
     if (!address || busy) return;
     setBusy(true);
     setError("");
@@ -233,6 +243,12 @@ export default function CartPage() {
       });
       clearAttempt(ORDER_SLOT);
       setUncertain(false);
+      if (elsewhere && created?.id) {
+        markElsewhereLocal(created.id);
+        const mark = () =>
+          api(`/api/v1/orders/${created.id}/elsewhere`, { method: "PUT", body: JSON.stringify({ elsewhere: true }) });
+        mark().catch(() => setTimeout(() => mark().catch(() => undefined), 3000));
+      }
       cart.clear();
       reloadWallet();
       toast(C.sent);
@@ -633,7 +649,7 @@ export default function CartPage() {
               <button
                 type="button"
                 className="shop-cta"
-                onClick={send}
+                onClick={ask}
                 disabled={busy || !address || !online || !ordering.open || blocked || !canSubmit}
               >
                 {busy ? C.sending : C.send}
@@ -715,7 +731,7 @@ export default function CartPage() {
             </div>
             <Button
               className="min-h-12 flex-1 text-base"
-              onClick={send}
+              onClick={ask}
               disabled={busy || !address || !online || !ordering.open || blocked || !canSubmit}
             >
               {busy ? C.sending : C.send}
@@ -724,6 +740,17 @@ export default function CartPage() {
         </StickyActionBar>
       )}
       <AddressSheet open={pickAddr} onClose={() => setPickAddr(false)} />
+      <Modal open={askHere} onClose={() => setAskHere(false)} title={C.hereTitle}>
+        <p className="text-body text-ink-muted">{C.hereBody}</p>
+        <div className="mt-4 flex flex-col gap-2">
+          <Button className="min-h-12" onClick={() => void send(false)}>
+            {C.hereYes}
+          </Button>
+          <Button variant="secondary" className="min-h-12" onClick={() => void send(true)}>
+            {C.hereNo}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

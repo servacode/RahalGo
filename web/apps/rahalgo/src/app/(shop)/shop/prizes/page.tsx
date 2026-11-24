@@ -53,7 +53,6 @@ function asItem(p: PrizeItem, storeId: string): Item {
 
 /** **من اليمين**: الرابع، الثاني، الأوّل، الثالث، الخامس — والثاني جنبَ الأوّل حيث تبدأ العين. */
 const PODIUM_ORDER = [4, 2, 1, 3, 5];
-const PLACES = [P.place1, P.place2, P.place3, P.place4, P.place5];
 
 /**
  * **منصّةُ التتويج** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤: «٥ مربعات، الأول مرتفع بوسطهن… وفيه كاس») —
@@ -72,7 +71,6 @@ function Podium({ amounts }: { amounts: number[] }) {
             <Money value={amounts[r - 1] ?? 0} className={`font-bold ${r === 1 ? "text-section-title" : "text-sm"}`} />
             <div className={`prize-step prize-step-${r} flex w-full flex-col items-center pt-2 text-center`}>
               <span className={`font-black ${r === 1 ? "text-3xl" : "text-xl"}`}>{fmtNum(r)}</span>
-              <span className="px-0.5 text-[11px] leading-tight">{PLACES[r - 1]}</span>
             </div>
           </div>
         ))}
@@ -286,6 +284,19 @@ export default function PrizesPage() {
   return (
     <div className="mx-auto flex w-full max-w-none flex-col gap-4">
       <ShopPageHeader title={P.title} href="/shop" />
+
+      {/* **«إنت ضمن المسابقة» أو «لست ضمن المسابقة»** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤، مرآةُ `EntryStatus`). */}
+      <section
+        className={`flex flex-col gap-1 rounded-card p-4 ${(me.entries ?? 0) > 0 ? "bg-success-tint" : "bg-warning-tint"}`}
+        data-testid="prize-entry-status"
+      >
+        <h2 className="text-section-title">{(me.entries ?? 0) > 0 ? P.inTitle : P.outTitle}</h2>
+        <p className="text-sm">
+          {(me.entries ?? 0) > 0
+            ? fill(P.inBody, { n: fmtNum(me.entries ?? 0) })
+            : fill(P.outBody, { n: fmtNum(Math.max(1, left)) })}
+        </p>
+      </section>
 
       <section className={`${OUTLINE_CARD} flex flex-col gap-2`}>
         <h2 className="text-section-title">{P.progressTitle}</h2>

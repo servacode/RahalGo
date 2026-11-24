@@ -144,6 +144,42 @@ fun CartScreen(
         return
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **«إنت هلق بعنوان التوصيل؟» — نعم أو لا** (قرارُ المالك ٢٠٢٦-١١-٢٤)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ممكن يطلب لشخص تاني** — وقتها موقعُه المباشر ما بيدلّ على الباب، فـ«لا» = لا مشاركة لهالطلب
+    // والكابتنُ بيمشي عالعنوان المكتوب. **والسؤالُ بكلّ طلب**: اليوم لإلو وبكرا لأمّو.
+    var askHere by rememberSaveable { mutableStateOf(false) }
+    if (askHere) {
+        val send = { elsewhere: Boolean ->
+            askHere = false
+            address?.let {
+                vm.send(
+                    it.text, it.lat, it.lng,
+                    if (vm.walletScope == "none") "cash" else "wallet", vm.promo.trim(), onDone,
+                    elsewhere = elsewhere,
+                )
+            }
+            Unit
+        }
+        com.rahalgo.ui.RahalDialog(
+            onDismissRequest = { askHere = false },
+            title = { Text(stringResource(R.string.here_title), fontWeight = FontWeight.Bold) },
+            text = { Text(stringResource(R.string.here_body)) },
+            confirmButton = {
+                com.rahalgo.ui.DialogConfirmButton(onClick = { send(false) }) {
+                    Text(stringResource(R.string.here_yes), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                com.rahalgo.ui.DialogDismissButton(onClick = { send(true) }) {
+                    Text(stringResource(R.string.here_no))
+                }
+            },
+        )
+    }
+
     // **وإفراغُ السلّة يُسأل قبله** (تدقيقُ ٢٠٢٦-١٠-٢٧) — ضغطةٌ غلطٌ تطيّر سلّةً كاملة.
     var askClear by rememberSaveable { mutableStateOf(false) }
     if (askClear) {
@@ -910,14 +946,8 @@ fun CartScreen(
             }
             Spacer(Modifier.size(Rahal.space.md))
         RahalButton(
-            onClick = {
-                address?.let {
-                    vm.send(
-                        it.text, it.lat, it.lng,
-                        if (vm.walletScope == "none") "cash" else "wallet", vm.promo.trim(), onDone,
-                    )
-                }
-            },
+            // **ويُسأل قبل الإرسال «إنت هلق بعنوان التوصيل؟»** (قرارُ المالك ٢٠٢٦-١١-٢٤)
+            onClick = { if (address != null) askHere = true },
             // **والاستقبالُ مغلقٌ يُعطّل الزرَّ** — **والسببُ فوقَه
             // مكتوب**: **زرٌّ باهتٌ بلا سببٍ يُقرأ عطباً.**
             // **والزرُّ يقرأ الحالَ الموحَّدة** — **وسببٌ واحدٌ يحكم.**
@@ -1396,6 +1426,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
         payment: String,
         promo: String,
         onDone: () -> Unit,
+        elsewhere: Boolean = false,
     ) {
         if (busy) return
         busy = true
@@ -1414,7 +1445,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
         val key = com.rahalgo.ui.Attempt.key(com.rahalgo.ui.Attempt.ORDER)
         viewModelScope.launch {
             try {
-                api.createOrder(
+                val ref = api.createOrder(
                     NewOrder(
                         items = Cart.lines.map { it.toPayload() },
                         addressText = address,
@@ -1430,6 +1461,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                 // **والمفتاحُ يُمحى بعد النجاح** — انظر `Attempt`.
                 com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.ORDER)
                 uncertain = false
+                if (elsewhere && ref.id.isNotEmpty()) markElsewhere(ref.id)
                 // **والسلّةُ تُفرَغ بعد أن يُقيَّد الطلبُ لا قبله** —
                 // **ومن فرّغها قبل الجواب خسر سلّةَ من سقط نداؤه.**
                 Cart.clear()
@@ -1464,6 +1496,31 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             busy = false
+        }
+    }
+
+    /**
+     * **«لا، لشخص تاني»** (قرارُ المالك ٢٠٢٦-١١-٢٤) — **ما تبدأ المشاركةُ لهالطلب** (`LiveStopped`)
+     * ويُقال للمحرّك فيرفض أيَّ نقطة ويشوف الكابتنُ «الطلب لشخص تاني». **ومحاولتان**: شبكةٌ سقطت
+     * مرّةً لا تقود الكابتنَ إلى موقع زبونٍ قال إنّه مو هناك.
+     */
+    private fun markElsewhere(orderId: String) {
+        val app = getApplication<Application>()
+        com.rahalgo.customer.live.LiveStopped.add(app, orderId)
+        if (com.rahalgo.customer.live.LiveShare.activeOrderId == orderId) {
+            com.rahalgo.customer.live.LiveShare.stop(app)
+        }
+        viewModelScope.launch {
+            repeat(2) {
+                try {
+                    api.setElsewhere(orderId, true)
+                    return@launch
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    kotlinx.coroutines.delay(3000)
+                }
+            }
         }
     }
 

@@ -77,6 +77,38 @@ var liveEarlyStatuses = []string{StPending, StAccepted, StPreparing, StDispatchi
 var ErrLiveNotYet = httpx.NewError(http.StatusConflict,
 	"live_location_not_yet", "errors.live_location_inactive")
 
+// ErrLiveElsewhere **الزبونُ قال إنّه مو بعنوان التوصيل** (قرارُ المالك ٢٠٢٦-١١-٢٤) — عم يطلب
+// لشخص تاني، **فموقعُه ما بيدلّ على الباب**: الهاتفُ يوقف المشاركة لهالطلب بلا رسالة.
+var ErrLiveElsewhere = httpx.NewError(http.StatusConflict,
+	"live_location_elsewhere", "errors.live_location_inactive")
+
+// SetElsewhere **جوابُ «إنت هلق بعنوان التوصيل؟»** — لصاحب الطلب وطلبُه مفتوح.
+//
+// **و«لا» تمحو أيَّ نقطةٍ وصلت** — فلا يُقاد الكابتنُ إليها بعد الجواب. ويردّ سائقَ الطلب ليُنبَّه.
+func (s *Service) SetElsewhere(ctx context.Context, orderID, customerID string, elsewhere bool) (string, error) {
+	var driverID *string
+	err := s.db.QueryRow(ctx, `
+		UPDATE orders SET customer_elsewhere = $3, updated_at = now()
+		 WHERE id = $1::uuid AND customer_id = $2::uuid AND closed_at IS NULL
+		RETURNING driver_id::text`, orderID, customerID, elsewhere).Scan(&driverID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", httpx.ErrNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	if elsewhere {
+		if _, err := s.db.Exec(ctx,
+			`DELETE FROM order_live_locations WHERE order_id = $1::uuid`, orderID); err != nil {
+			return "", err
+		}
+	}
+	if driverID == nil {
+		return "", nil
+	}
+	return *driverID, nil
+}
+
 // LivePoint **آخرُ ما أرسله الزبون** — كما يصل السائقَ والمكتب.
 type LivePoint struct {
 	Lat       float64  `json:"lat"`
@@ -136,6 +168,7 @@ func (s *Service) SaveLiveFrom(ctx context.Context, orderID, customerID string,
 			SELECT id, customer_id, driver_id FROM orders
 			WHERE id = $1::uuid AND customer_id = $2::uuid AND closed_at IS NULL
 			  AND status = ANY($6::text[]) AND kind = ANY($7::text[])
+			  AND NOT customer_elsewhere
 		), up AS (
 			INSERT INTO order_live_locations (order_id, customer_id, point, accuracy_m, at)
 			SELECT o.id, o.customer_id, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5, now()
@@ -166,17 +199,21 @@ func (s *Service) SaveLiveFrom(ctx context.Context, orderID, customerID string,
 // liveRefusal **لماذا لم يُكتب** — **طلبُ غيره لا يُعرَف أنّه موجود** (٤٠٤)،
 // وطلبُه خارجَ طريقه «ليس في طريقه» (٤٠٩).
 func (s *Service) liveRefusal(ctx context.Context, orderID, customerID string) error {
-	var mine, early bool
+	var mine, early, elsewhere bool
 	err := s.db.QueryRow(ctx,
 		`SELECT customer_id = $2::uuid,
-		        closed_at IS NULL AND status = ANY($3::text[]) AND kind = ANY($4::text[])
+		        closed_at IS NULL AND status = ANY($3::text[]) AND kind = ANY($4::text[]),
+		        customer_elsewhere
 		   FROM orders WHERE id = $1::uuid`,
-		orderID, customerID, liveEarlyStatuses, liveKinds).Scan(&mine, &early)
+		orderID, customerID, liveEarlyStatuses, liveKinds).Scan(&mine, &early, &elsewhere)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !mine) {
 		return httpx.ErrNotFound
 	}
 	if err != nil {
 		return err
+	}
+	if elsewhere {
+		return ErrLiveElsewhere
 	}
 	if early {
 		return ErrLiveNotYet

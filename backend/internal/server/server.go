@@ -860,6 +860,7 @@ func (s *Server) Router() http.Handler {
 			// **ويوقفها متى شاء.** انظر `live_location.go`.
 			r.Post("/orders/{id}/live-location", s.handleCustomerLiveLocation)
 			r.Delete("/orders/{id}/live-location", s.handleStopCustomerLiveLocation)
+			r.Put("/orders/{id}/elsewhere", s.handleCustomerElsewhere)
 			// **أثرُ كود الخصم قبل الطلب** — والقواعدُ نفسُها لا نسخةٌ منها.
 			r.Post("/promo/preview", s.handlePromoPreview)
 			r.Post("/orders/{id}/rating", s.handleRateOrder)
@@ -1571,6 +1572,7 @@ func (s *Server) Router() http.Handler {
 			r.Get("/referrals", s.handleAdminReferrals)
 			r.Get("/prizes/entries", s.handleAdminPrizeEntries)
 			r.Get("/prizes/draws", s.handleAdminPrizeDraws)
+			r.Get("/prizes/store", s.handleAdminPrizeStore)
 			r.Get("/banners", s.handleListBanners)
 			r.Get("/settings", s.handleListSettings)
 			// **مثالٌ ماليٌّ حيٌّ بجانب مفاتيح المال** — يحسبه المحرّكُ لا الشاشة (٢٠٢٦-١٠-٠٤).
@@ -2152,6 +2154,8 @@ func (s *Server) Router() http.Handler {
 				r.Delete("/zones/{id}", s.handleDeleteZone)
 				r.Post("/promos", s.handleCreatePromo)
 				r.Post("/free-delivery", s.handleCreateFreeDelivery)
+				// **متجرُ «رحّال غو» للجوائز** (قرارُ المالك ٢٠٢٦-١١-٢٤) — يُختار من صفحة الجوائز.
+				r.Put("/prizes/store", s.handleSetPrizeStore)
 				r.Patch("/free-delivery/{id}", s.handleUpdateFreeDelivery)
 				r.Patch("/promos/{id}", s.handleUpdatePromo)
 				r.Post("/banners", s.handleCreateBanner)

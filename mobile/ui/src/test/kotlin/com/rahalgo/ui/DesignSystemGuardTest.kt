@@ -48,7 +48,10 @@ class DesignSystemGuardTest {
         )
 
         /** **استثناءاتُ `Color(0x…)`** — فارغةٌ اليوم. */
-        val COLOR_ALLOWED = emptyMap<String, String>()
+        val COLOR_ALLOWED = mapOf(
+            // **ألوانُ المراتب** (ذهب · فضّة · برونز) — لونُ الميداليّة هو هو بالوضعين، لا لونُ ثيم (٢٠٢٦-١١-٢٤).
+            "app-customer/src/main/kotlin/com/rahalgo/customer/prizes/PrizesPodium.kt" to "medal colors",
+        )
 
         val FONT_SIZE = Regex("""fontSize\s*=\s*\d+(\.\d+)?\.sp\b""")
         val RAW_COLOR = Regex("""\bColor\(\s*0x""")

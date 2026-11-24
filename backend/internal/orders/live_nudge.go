@@ -52,6 +52,7 @@ func (s *Service) SweepLiveNudgeOnce(ctx context.Context) {
 		  LEFT JOIN order_live_locations l ON l.order_id = o.id
 		 WHERE o.status = ANY($1) AND o.closed_at IS NULL AND o.kind = ANY($3)
 		   AND o.customer_id IS NOT NULL AND o.live_nudge_push_at IS NULL
+		   AND NOT o.customer_elsewhere
 		   AND ow.at IS NOT NULL AND ow.at < now() - make_interval(secs => $2)
 		   AND (l.at IS NULL OR l.at < now() - interval '60 seconds')
 		 ORDER BY ow.at LIMIT 50`, liveNudgeStatuses, pushSec, liveKinds)

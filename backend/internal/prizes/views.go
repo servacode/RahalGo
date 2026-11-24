@@ -3,11 +3,13 @@ package prizes
 import (
 	"context"
 	"errors"
+	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
+	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
@@ -23,6 +25,61 @@ func StoreID(ctx context.Context, q dbtx.Querier) (*string, error) {
 		return nil, err
 	}
 	return &id, nil
+}
+
+// AdminStore **متجرُ الجوائز كما تراه اللوحة** — اسمُه وعددُ أصنافه (قرارُ المالك ٢٠٢٦-١١-٢٤).
+type AdminStore struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Items     int    `json:"items"`
+	Available int    `json:"available"`
+}
+
+// StoreForAdmin **متجرُ الجوائز وأصنافُه** — و`nil` إن لم يُختر بعد.
+func StoreForAdmin(ctx context.Context, q dbtx.Querier) (*AdminStore, error) {
+	var st AdminStore
+	err := q.QueryRow(ctx, `
+		SELECT m.id::text, m.name,
+		       (SELECT count(*) FROM menu_items i WHERE i.merchant_id = m.id),
+		       (SELECT count(*) FROM menu_items i WHERE i.merchant_id = m.id AND i.available AND i.approved)
+		  FROM merchants m WHERE m.status = 'prize' LIMIT 1`).Scan(&st.ID, &st.Name, &st.Items, &st.Available)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &st, nil
+}
+
+// ErrStoreTaken **في متجر جوائز قبله** — متجرٌ واحدٌ لا غير، فيُرجَع الأوّلُ قبل اختيار غيره.
+var ErrStoreTaken = httpx.NewError(http.StatusConflict, "prize_store_taken", "errors.prize_store_taken")
+
+// SetStore **يختار متجرَ الجوائز أو يرجّعه متجراً عاديّاً (مُطفأً)** — `merchantID` فارغ = إرجاع.
+//
+// **والمحظورُ لا يصير متجرَ جوائز** — الحظرُ بابُه `/suspend` وحدَه.
+func SetStore(ctx context.Context, q dbtx.Querier, merchantID string) error {
+	if merchantID == "" {
+		_, err := q.Exec(ctx, `UPDATE merchants SET status = 'inactive', updated_at = now() WHERE status = 'prize'`)
+		return err
+	}
+	cur, err := StoreID(ctx, q)
+	if err != nil {
+		return err
+	}
+	if cur != nil && *cur != merchantID {
+		return ErrStoreTaken
+	}
+	tag, err := q.Exec(ctx, `
+		UPDATE merchants SET status = 'prize', updated_at = now()
+		 WHERE id = $1::uuid AND status IN ('active', 'inactive', 'prize')`, merchantID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return httpx.ErrNotFound
+	}
+	return nil
 }
 
 // Me **حالُ الزبون في الجوائز** — `GET /prizes/me`.

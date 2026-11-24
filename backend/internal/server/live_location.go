@@ -195,3 +195,27 @@ func (s *Server) handleLiveStats(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, st)
 }
+
+// handleCustomerElsewhere **«إنت هلق بعنوان التوصيل؟»** — `PUT /orders/{id}/elsewhere` {elsewhere}
+// (قرارُ المالك ٢٠٢٦-١١-٢٤: «ممكن الزبون عم يطلب لشخص ثاني»). **و«لا» توقف موقعَه المباشر
+// لهالطلب** فيمشي الكابتنُ عالعنوان المكتوب.
+func (s *Server) handleCustomerElsewhere(w http.ResponseWriter, r *http.Request) {
+	orderID := chi.URLParam(r, "id")
+	req, err := decode[struct {
+		Elsewhere bool `json:"elsewhere"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	driverID, err := s.orders.SetElsewhere(r.Context(), orderID, userIDFrom(r), req.Elsewhere)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.notifyCustomerLive(driverID, orderID)
+	if req.Elsewhere {
+		s.publishCustomerLiveToOps(orderID, nil, nil, nil)
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"elsewhere": req.Elsewhere})
+}

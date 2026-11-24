@@ -21,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -56,11 +55,10 @@ fun FloatingGift(badge: String?, onClick: () -> Unit, modifier: Modifier = Modif
     }
     Box(modifier.graphicsLayer { translationY = -HOP_PX * hop.value }) {
         Box(
+            // **بلا دائرةٍ بيضا حواليها** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤) — الهديّةُ وحدها وظلُّها منها.
             Modifier
                 .size(SIZE)
-                .shadow(Rahal.space.sm, CircleShape)
                 .clip(CircleShape)
-                .background(Rahal.colors.surface)
                 .clickable(role = Role.Button, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
@@ -95,5 +93,5 @@ fun FloatingGift(badge: String?, onClick: () -> Unit, modifier: Modifier = Modif
 private const val HOPS = 3
 private const val HOP_MS = 260
 private const val HOP_PX = 28f
-private val SIZE = 68.dp
-private val GIFT = 54.dp
+private val SIZE = 72.dp
+private val GIFT = 72.dp

@@ -167,6 +167,12 @@ class LiveShareService : Service() {
                     }
                     return@launch
                 }
+                // **والزبونُ قال «مو بعنوان التوصيل»** (٢٠٢٦-١١-٢٤) — تقف ولا تعود لهالطلب.
+                if (e.body.code == "live_location_elsewhere") {
+                    orderId?.let { LiveStopped.add(this@LiveShareService, it) }
+                    finish(clearServer = false)
+                    return@launch
+                }
                 // **والطلبُ وصل أو انتهى أو ليس له** — تقف بلا محوٍ: المحرّكُ محاه أصلاً.
                 if (e.body.code == "live_location_inactive" || e.body.code == "not_found") {
                     Log.i(TAG, "الطلبُ ليس في طريقه — تقف المشاركة")
@@ -192,7 +198,12 @@ class LiveShareService : Service() {
                 }
             }
         } catch (e: ApiClient.ApiException) {
-            if (e.body.code == "live_location_inactive" || e.body.code == "not_found") finish(clearServer = false)
+            if (e.body.code == "live_location_elsewhere") LiveStopped.add(this@LiveShareService, id)
+            if (e.body.code == "live_location_inactive" || e.body.code == "not_found" ||
+                e.body.code == "live_location_elsewhere"
+            ) {
+                finish(clearServer = false)
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

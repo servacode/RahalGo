@@ -14,9 +14,11 @@ import {
   AdminLoading,
   AdminReload,
   Badge,
+  Button,
   ButtonLink,
   Chips,
   PageContainer,
+  Select,
   IconCatGifts,
   IconCheck,
   IconDate,
@@ -26,7 +28,7 @@ import {
   phoneText,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { useCanOpen } from "@/lib/policy";
+import { useCanCall, useCanOpen } from "@/lib/policy";
 import { OpenLink } from "@/components/admin/OpenLink";
 import { PageHero } from "@/components/admin/PageHero";
 import { Panel, Tile } from "@/components/admin/DashParts";
@@ -68,6 +70,113 @@ interface Draw {
 interface PrizeSettings {
   enabled: boolean;
   launchOn: string;
+}
+
+interface PrizeStore {
+  id: string;
+  name: string;
+  items: number;
+  available: number;
+}
+
+/**
+ * **متجرُ «رحّال غو» للجوائز** (قرارُ المالك ٢٠٢٦-١١-٢٤) — يُختار من هون متجرٌ عاديٌّ فيصير متجرَ
+ * الجوائز: **يختفي من السوق وتطلع أصنافُه بصفحة الجوائز وحدَها.** والأصنافُ من صفحة أصناف المتجر نفسِها.
+ */
+function PrizeStorePanel() {
+  const canCall = useCanCall();
+  const canSet = canCall("PUT", "/prizes/store");
+  const canMenu = canCall("GET", "/merchants/{id}/menu");
+  const [store, setStore] = useState<PrizeStore | null | undefined>(undefined);
+  const [err, setErr] = useState("");
+  const [list, setList] = useState<{ id: string; name: string; status: string }[]>([]);
+  const [pick, setPick] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(() => {
+    api<{ store: PrizeStore | null }>("/api/v1/admin/prizes/store")
+      .then((r) => {
+        setStore(r.store);
+        setErr("");
+      })
+      .catch((e) => setErr(errorText(e)));
+  }, []);
+  useEffect(load, [load]);
+  useEffect(() => {
+    if (!canSet || store !== null) return;
+    api<{ merchants: { id: string; name: string; status: string }[] }>("/api/v1/admin/merchants?per_page=100")
+      .then((r) => setList((r.merchants ?? []).filter((x) => x.status === "active" || x.status === "inactive")))
+      .catch((e) => setErr(errorText(e)));
+  }, [canSet, store]);
+
+  const save = (merchantId: string) => {
+    setBusy(true);
+    api<{ store: PrizeStore | null }>("/api/v1/admin/prizes/store", {
+      method: "PUT",
+      body: JSON.stringify({ merchant_id: merchantId }),
+    })
+      .then((r) => {
+        setStore(r.store);
+        setPick("");
+        setErr("");
+      })
+      .catch((e) => setErr(errorText(e)))
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <Panel title={P.storeTitle}>
+      {err && <p className="mb-2 text-sm text-danger">{err}</p>}
+      {store === undefined ? (
+        err ? <AdminReload label={err} onRetry={load} /> : <AdminLoading />
+      ) : store ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm">
+            <span className="font-bold">{store.name}</span>
+            <span className="text-ink-muted">
+              {" "}
+              · {P.storeItems.replace("{n}", fmtNum(store.items)).replace("{a}", fmtNum(store.available))}
+            </span>
+          </p>
+          <p className="text-xs text-ink-muted">{P.storeHidden}</p>
+          <div className="flex flex-wrap gap-2">
+            {canMenu && (
+              <ButtonLink href={`/dashboard/merchants/${store.id}/menu`}>
+                <IconCatGifts size={14} />
+                {P.storeOpenItems}
+              </ButtonLink>
+            )}
+            {canSet && (
+              <Button variant="secondary" disabled={busy} onClick={() => save("")}>
+                {P.storeUnset}
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-ink-muted">{P.storeNone}</p>
+          {canSet && (
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-0 flex-1">
+                <Select value={pick} onChange={(e) => setPick(e.target.value)} aria-label={P.storePick}>
+                  <option value="">{P.storePick}</option>
+                  {list.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <Button disabled={!pick || busy} onClick={() => save(pick)}>
+                {P.storeSet}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </Panel>
+  );
 }
 
 /** «YYYY-MM» لشهرٍ ما. */
@@ -177,6 +286,8 @@ export default function PrizesPage() {
       </div>
 
       <div className="space-y-4">
+        <PrizeStorePanel />
+
         <Panel title={P.entrantsTitle}>
           <div className="mb-3">
             <Chips wrap items={months.map((k) => ({ id: k, label: monthLabel(k) }))} value={month} onChange={setMonth} />
@@ -292,7 +403,6 @@ export default function PrizesPage() {
 
         <Panel title={P.settingsTitle}>
           <p className="mb-3 text-sm text-ink-muted">{P.settingsHint}</p>
-          <p className="mb-3 text-sm text-ink-muted">{P.storeHint}</p>
           {open.settings && (
             <ButtonLink href="/dashboard/settings?topic=money" variant="secondary">
               <IconSettings size={14} />

@@ -384,6 +384,14 @@ class CustomerApi(private val api: ApiClient) {
             LiveInput(lat, lng, accuracyM),
         ).maxAccuracyM
 
+    /**
+     * **جوابُ «إنت هلق بعنوان التوصيل؟»** (قرارُ المالك ٢٠٢٦-١١-٢٤) — `true` = لا، عم يطلب لشخص تاني:
+     * **ما بينقبل موقعُه المباشر لهالطلب** والكابتنُ بيمشي عالعنوان المكتوب.
+     */
+    suspend fun setElsewhere(orderId: String, elsewhere: Boolean) {
+        api.call<Ack>("/api/v1/orders/$orderId/elsewhere", HttpMethod.Put, ElsewhereInput(elsewhere))
+    }
+
     /** **«وقّف المشاركة»** — تُمحى النقطةُ فيعود الكابتنُ إلى الدبّوس. */
     suspend fun stopLive(orderId: String) {
         api.call<Ack>("/api/v1/orders/$orderId/live-location", HttpMethod.Delete, null)
@@ -649,6 +657,9 @@ private data class WalletScopeInput(
     @SerialName("wallet_scope") val walletScope: String,
     @SerialName("expected_total") val expectedTotal: Long,
 )
+
+@Serializable
+data class ElsewhereInput(val elsewhere: Boolean)
 
 @Serializable
 data class OrderRef(

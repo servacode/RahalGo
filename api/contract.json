@@ -5740,6 +5740,42 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/prizes/store",
+      "handler": "handleAdminPrizeStore",
+      "auth": true,
+      "response": [
+        {
+          "name": "store",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/prizes/store",
+      "handler": "handleSetPrizeStore",
+      "auth": true,
+      "request": [
+        {
+          "name": "merchant_id",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "store",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/profits",
       "handler": "handleProfits",
       "auth": true,
@@ -12273,6 +12309,27 @@
       "response": [
         {
           "name": "@view",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/orders/{id}/elsewhere",
+      "handler": "handleCustomerElsewhere",
+      "auth": true,
+      "request": [
+        {
+          "name": "elsewhere",
+          "type": "bool"
+        }
+      ],
+      "response": [
+        {
+          "name": "elsewhere",
           "type": "unknown"
         }
       ],

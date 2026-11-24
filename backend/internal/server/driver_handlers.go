@@ -450,6 +450,9 @@ type driverOrder struct {
 	// AmanahDirection **«أبعت» أم «أستقبل»** (قرارُ المالك ٢٠٢٦-١١-١٩) — في «أبعت» الكابتنُ يستلم من
 	// الزبون ويقبض الأجرةَ منه، ويسلّم لـ`holder_*` (المستلِم). **والقديمُ يتجاهله** — ويقرأ «صاحب الأمانة».
 	AmanahDirection string `json:"amanah_direction,omitempty"`
+	// CustomerElsewhere **الزبونُ مو بعنوان التوصيل** (قرارُ المالك ٢٠٢٦-١١-٢٤) — جاوب «لا» على
+	// «إنت هلق بعنوان التوصيل؟»: **عم يطلب لشخص تاني، فامشِ عالدبّوس لا على موقعه.**
+	CustomerElsewhere bool `json:"customer_elsewhere,omitempty"`
 	// **ولا رقمَ للزبون هنا — ولا في أيّ حمولةٍ تبلغ سائقاً.**
 	//
 	// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «لازم الاثنان لا يقدران يوصلان لبعض إلّا
@@ -782,7 +785,8 @@ const driverOrderSelect = `
 	            THEN COALESCE(o.amanah_holder_phone, '') ELSE '' END,
 	       -- **وأصلُ الطلب** — «طلب واتساب» على البطاقة (قرارُ المالك ٢٠٢٦-١١-٠٥).
 	       o.origin, o.wa_amanah,
-	       CASE WHEN o.kind = 'custom' AND o.custom_mode = 'amanah' THEN o.amanah_direction ELSE '' END
+	       CASE WHEN o.kind = 'custom' AND o.custom_mode = 'amanah' THEN o.amanah_direction ELSE '' END,
+	       o.customer_elsewhere
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -828,7 +832,8 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.DeliveryMode, &o.CollectAmount,
 			&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
 			&o.AmountCurrency, &o.EntranceLat, &o.EntranceLng,
-			&o.Subtotal, &o.Discount, &o.HolderName, &o.HolderPhone, &o.Origin, &o.WAAmanah, &o.AmanahDirection); err != nil {
+			&o.Subtotal, &o.Discount, &o.HolderName, &o.HolderPhone, &o.Origin, &o.WAAmanah, &o.AmanahDirection,
+			&o.CustomerElsewhere); err != nil {
 			return nil, err
 		}
 		// **والاسمُ الأوّلُ للزبون وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥) — كما في

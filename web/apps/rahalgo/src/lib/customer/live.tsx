@@ -69,6 +69,16 @@ const STOPPED_KEY = "rahalgo_live_user_stopped";
 const AUTO_KEY = "rahalgo_live_auto";
 
 /**
+ * **«لا، لشخص تاني»** (قرارُ المالك ٢٠٢٦-١١-٢٤) — لا تبدأ المشاركةُ لهالطلب على هذا المتصفّح.
+ * **ومرآتُه بالتطبيق `LiveStopped.add`.**
+ */
+export function markElsewhereLocal(id: string): void {
+  const cur = readJSON<string[]>(STOPPED_KEY, []);
+  const list = Array.isArray(cur) ? cur.filter((x) => typeof x === "string" && x !== id) : [];
+  writeJSON(STOPPED_KEY, [...list, id].slice(-MAX_REMEMBERED));
+}
+
+/**
  * **«شارك موقعي المباشر مع السائق أثناء الطلب»** — تفضيلٌ على هذا المتصفّح، **مفعّلٌ
  * افتراضاً** (قرارُ المالك ٢٠٢٦-١٠-٣٠، مرآةُ `LiveAuto.kt`). وما دام مفعّلاً تبدأ المشاركةُ
  * وحدَها حين يصير الطلبُ «بالطريق» — **والإيقافُ في لافتة المشاركة.**
@@ -294,7 +304,11 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
         .catch((err) => {
           const code = (err as { body?: { code?: string } })?.body?.code;
           /* **ولم يُسند بعد** (`live_location_not_yet`) — تبقى وتنتظر كابتناً. */
-          if (code === "live_location_inactive" || code === "not_found") stop("inactive");
+          /* **والزبونُ قال «مو بعنوان التوصيل»** (٢٠٢٦-١١-٢٤) — تقف ولا تعود لهالطلب. */
+          if (code === "live_location_elsewhere") markElsewhereLocal(id);
+          if (code === "live_location_inactive" || code === "not_found" || code === "live_location_elsewhere") {
+            stop("inactive");
+          }
           /* **والشبكةُ تسقط في الشارع** — والنقطةُ التاليةُ تحلّ محلّها. */
         });
     },

@@ -90,3 +90,35 @@ func (s *Server) SweepPrizes(ctx context.Context) { s.prizes.Sweep(ctx) }
 
 // Prizes **خدمةُ الجوائز** — للفحص.
 func (s *Server) Prizes() *prizes.Service { return s.prizes }
+
+// handleAdminPrizeStore `GET /admin/prizes/store` — متجرُ «رحّال غو» للجوائز وعددُ أصنافه (٢٠٢٦-١١-٢٤).
+func (s *Server) handleAdminPrizeStore(w http.ResponseWriter, r *http.Request) {
+	st, err := prizes.StoreForAdmin(r.Context(), s.pg)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"store": st})
+}
+
+// handleSetPrizeStore `PUT /admin/prizes/store` {merchant_id} — يختار متجرَ الجوائز، والفارغُ يرجّعه
+// متجراً عاديّاً مُطفأً. **فيختفي من السوق فوراً وتطلع أصنافُه بصفحة الجوائز وحدَها.**
+func (s *Server) handleSetPrizeStore(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		MerchantID string `json:"merchant_id"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := prizes.SetStore(r.Context(), s.pg, req.MerchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	st, err := prizes.StoreForAdmin(r.Context(), s.pg)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"store": st})
+}

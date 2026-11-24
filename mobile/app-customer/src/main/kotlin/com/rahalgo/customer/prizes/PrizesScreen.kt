@@ -168,6 +168,7 @@ private fun Active(vm: PrizesViewModel, me: PrizesMe) {
                 com.rahalgo.ui.Note(vm.error, Rahal.colors.danger)
             }
         }
+        item { EntryStatus(me) }
         item { ProgressCard(me, progress) }
         item {
             val r = InviteNudge.referral
@@ -234,6 +235,35 @@ private fun Active(vm: PrizesViewModel, me: PrizesMe) {
                 }
             }
         }
+    }
+}
+
+/**
+ * **«إنت ضمن المسابقة» أو «لست ضمن المسابقة»** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤) — جوابٌ واحدٌ واضح فوق
+ * التفاصيل: **فرصةٌ وحدة على الأقلّ = داخل سحب هالشهر**، وإلّا كم دعوة باقية ليدخل.
+ */
+@Composable
+private fun EntryStatus(me: PrizesMe) {
+    val inside = me.entries > 0
+    RahalCard(
+        variant = CardVariant.Tinted,
+        tone = if (inside) StatusTone.Success else StatusTone.Warning,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            stringResource(if (inside) R.string.prizes_in_title else R.string.prizes_out_title),
+            color = Rahal.colors.ink,
+            style = Rahal.type.sectionTitle,
+        )
+        Text(
+            if (inside) {
+                stringResource(R.string.prizes_in_body, me.entries)
+            } else {
+                stringResource(R.string.prizes_out_body, me.invitesToNext.coerceAtLeast(1))
+            },
+            color = Rahal.colors.ink,
+            style = Rahal.type.body,
+        )
     }
 }
 

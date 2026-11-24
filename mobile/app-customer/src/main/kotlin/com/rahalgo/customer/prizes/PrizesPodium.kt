@@ -95,6 +95,7 @@ private fun Step(rank: Int, amount: Long, modifier: Modifier) {
                 .background(Brush.verticalGradient(listOf(top, bottom))),
             contentAlignment = Alignment.TopCenter,
         ) {
+            // **الرقمُ وحدَه** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤: «مايلزم نكتب المركز الاول… يكفي الرقم»).
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(Rahal.space.xs))
                 Text(
@@ -102,14 +103,6 @@ private fun Step(rank: Int, amount: Long, modifier: Modifier) {
                     color = Color.White,
                     style = if (rank == 1) Rahal.type.headline else Rahal.type.sectionTitle,
                     fontWeight = FontWeight.Black,
-                )
-                Text(
-                    stringResource(PLACE_LABELS[rank - 1]),
-                    color = Color.White,
-                    style = Rahal.type.badge,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    modifier = Modifier.padding(horizontal = 2.dp),
                 )
             }
         }
@@ -170,12 +163,4 @@ private val STEP_COLORS = listOf(
     Color(0xFFE3A06A) to Color(0xFFA9622B),
     Color(0xFF7FB8E6) to Color(0xFF3F7FB5),
     Color(0xFF9FD3B0) to Color(0xFF4E9A6C),
-)
-
-private val PLACE_LABELS = listOf(
-    R.string.prizes_place_1,
-    R.string.prizes_place_2,
-    R.string.prizes_place_3,
-    R.string.prizes_place_4,
-    R.string.prizes_place_5,
 )

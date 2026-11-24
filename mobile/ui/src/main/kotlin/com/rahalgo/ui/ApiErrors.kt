@@ -451,6 +451,7 @@ private val CODES: Map<String, Int> = mapOf(
     // **موقعُ الزبون المباشر لطلبٍ ليس في طريقه** (٢٠٢٦-١٠-١٦) — والخدمةُ تقف به.
     "live_location_inactive" to R.string.err_live_location_inactive,
     "live_location_not_yet" to R.string.err_live_location_not_yet,
+    "live_location_elsewhere" to R.string.err_live_location_elsewhere,
     "prize_mixed" to R.string.err_prize_mixed,
     "prize_no_balance" to R.string.err_prize_no_balance,
     "prize_no_promo" to R.string.err_prize_no_promo,

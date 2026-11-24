@@ -37,10 +37,11 @@ class OfflineCheckoutBlockingTest {
     private val cart = "app-customer/src/main/kotlin/com/rahalgo/customer/cart/CartScreen.kt"
     private val conn = "ui/src/main/kotlin/com/rahalgo/ui/Connectivity.kt"
 
-    /** **يُقتطع نداءُ زرِّ الإرسال** (`RahalButton` الذي يستدعي `vm.send`). */
+    /** **يُقتطع نداءُ زرِّ الإرسال** (`RahalButton` الذي يفتح سؤالَ العنوان ثمّ `vm.send`). */
     private fun sendButtonBlock(): String {
         val s = read(cart)
-        val call = s.indexOf("vm.send(")
+        // **والزرُّ يفتح سؤالَ «إنت بعنوان التوصيل؟» قبل الإرسال** (٢٠٢٦-١١-٢٤) — فهو مرساةُ الزرّ.
+        val call = s.indexOf("askHere = true }")
         assertTrue("**زرُّ الإرسال غائب**", call >= 0)
         // من بداية الـ`RahalButton(` قبله حتّى `cart_send`
         val start = s.lastIndexOf("RahalButton(", call)
