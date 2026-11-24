@@ -409,7 +409,7 @@
     <string name="store_empty_hint">عد لاحقاً — المتجر يضيف أصنافه</string>
     <string name="store_open_page">افتح صفحة المتجر</string>
     <string name="store_open_now">مفتوح هلق</string>
-    <string name="store_closed_now">مسكّر هلق</string>
+    <string name="store_closed_now">مغلق الآن</string>
     <string name="shop_search_stores">متاجر</string>
     <!-- عرض التوصيل المجاني (٢٠٢٦-١٠-٢٦) -->
     <string name="free_badge">مجاني 🎁</string>
