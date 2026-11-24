@@ -496,6 +496,8 @@ fun CartScreen(
                 vm.walletScope = "none"
             }
         }
+        // **والإكرامية للمحفظة وحدَها** — الرجوعُ للنقد يصفّرها.
+        LaunchedEffect(vm.walletScope) { if (vm.walletScope == "none") vm.tip = 0L }
         // **سطرُ الدفع بطاقةٌ تحت عنوانها (تدقيق D13)** — كان سطراً عارياً يضيع بين الحقول.
         com.rahalgo.ui.SectionHeader(stringResource(R.string.ord_payment))
         com.rahalgo.ui.RahalCard(variant = com.rahalgo.ui.CardVariant.Outlined) {
@@ -538,6 +540,11 @@ fun CartScreen(
                     }
                 }
             }
+        }
+        // **إكرامية الكابتن** — تظهر مع المحفظة (الكل/التوصيل) إن فُعّلت من المنصّة.
+        if (vm.walletScope != "none") {
+            Spacer(Modifier.height(Rahal.space.md))
+            TipChooser(tip = vm.tip, onTip = { vm.tip = it })
         }
         }
         // ══════════════════════════════════════════════════════════════
@@ -1207,6 +1214,9 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
     /** **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٢٠): `none` كاش · `delivery` التوصيل · `full` الكل. */
     var walletScope by mutableStateOf("none")
 
+    /** **إكرامية الكابتن** — من المحفظة وحدَها؛ 0 = لا شكراً، وتُصفَّر عند الرجوع للنقد. */
+    var tip by mutableStateOf(0L)
+
     var priced by mutableStateOf<Quote?>(null)
         private set
 
@@ -1455,6 +1465,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                         walletScope = walletScope,
                         promoCode = code,
                         notes = notes.trim(),
+                        tip = tip.takeIf { it > 0 && walletScope != "none" },
                     ),
                     attemptKey = key,
                 )

@@ -790,6 +790,8 @@ kosom` |
 | `prizes.amount_3` | المنصة | money | `1000` |
 | `prizes.amount_4` | المنصة | money | `750` |
 | `prizes.amount_5` | المنصة | money | `500` |
+| `tips.enabled` | المنصة | bool | `false` |
+| `tips.platform_percent` | المنصة | percent | `0` |
 | `auth.require_whatsapp` | المنصة | bool | `true` |
 | `compensations.cap_driver` | المنصة | money | `500` |
 | `compensations.cap_merchant_goods` | المنصة | money | `500` |

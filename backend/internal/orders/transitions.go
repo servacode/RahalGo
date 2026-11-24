@@ -740,6 +740,7 @@ func (s *Service) afterTransition(ctx context.Context, ap *appliedTransition) (*
 	// **بعد الإيداع لا داخلَه**: معاملةٌ تُرجَع بعد أن أُرسل إشعارُها
 	// **تُخبر صاحبَها بمالٍ لم يصله.**
 	s.notifyCredits(ctx, orderID, done.credits)
+	s.notifyTip(ctx, orderID, done.tip)
 	// **وطلبُ تعويضٍ ينتظر يصل المكتبَ** — لا يُقيَّد حتّى يوافق إنسان.
 	if done.compensationRequested {
 		s.alertCompensationPending(ctx, orderID)
@@ -1007,6 +1008,8 @@ type settled struct {
 	credits []walletCredit
 	// compensationRequested **كُتب طلبُ تعويضٍ معلَّق** — فيُنبَّه المكتبُ بعد الإيداع.
 	compensationRequested bool
+	// tip **إكراميةٌ انقيّدت للكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٥) — يُخبَر بعد الإيداع.
+	tip *tipNotice
 }
 
 // walletCredit حركةُ محفظةٍ واحدةٌ تستحقّ أن يُخبَر بها صاحبُها.
@@ -1076,6 +1079,20 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	if refundOnEnter(in.to) && in.from != StDelivered && s.prizes != nil && !in.custom && !in.merchantDelivery {
 		if _, err := s.prizes.RefundOrderTx(ctx, q, in.orderID, 0); err != nil {
 			return err
+		}
+	}
+
+	// (0-إ) **إكراميةُ الكابتن** (`tip.go`، قرارُ المالك ٢٠٢٦-١١-٢٥): التسليمُ يقيّدها لمين سلّم،
+	// **وكلُّ نهايةٍ تانية تفكّ حجزها.** سطورُها مجموعها صفر فما بتمسّ باقي التسوية.
+	if !in.merchantDelivery {
+		if in.to == StDelivered {
+			if err := s.settleTipTx(ctx, q, in.orderID, in.driverID, in.actorID, out); err != nil {
+				return err
+			}
+		} else if terminal(in.to) {
+			if err := s.releaseTipTx(ctx, q, in.orderID); err != nil {
+				return err
+			}
 		}
 	}
 

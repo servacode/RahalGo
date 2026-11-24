@@ -197,6 +197,15 @@
     <string name="ord_change_pay">غيّر طريقة الدفع</string>
     <string name="ord_change_pay_hint">فيك تغيّرها لحد ما يوصل الكابتن لعندك</string>
     <string name="ord_pay_changed">تغيّرت طريقة الدفع</string>
+    <string name="tip_title">إكرامية للكابتن (اختياري)</string>
+    <string name="tip_other">مبلغ تاني</string>
+    <string name="tip_none">لا شكراً</string>
+    <string name="tip_hint">بتنحجز من محفظتك وبتوصل للكابتن لما يسلّمك الطلب، وإذا انلغى الطلب بترجعلك.</string>
+    <string name="tip_custom_label">مبلغ الإكرامية</string>
+    <string name="tip_custom_error">اكتب مبلغ من ١ لـ %1$s</string>
+    <string name="tip_order_line">إكرامية للكابتن</string>
+    <string name="tip_confirm">تأكيد</string>
+    <string name="tip_cancel">إلغاء</string>
     <string name="ord_confirmed_delivery">انحجزت أجرة التوصيل من محفظتك، وثمن البضاعة كاش للكابتن.</string>
     <string name="ord_quote_increased">تغيّر المبلغ المطلوب. يرجى مراجعة المبلغ وتأكيده من جديد.</string>
     <string name="ord_quote_decreased">تم تخفيض تكلفة طلبك إلى %1$s.</string>

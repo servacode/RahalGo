@@ -507,6 +507,8 @@ private val CODES: Map<String, Int> = mapOf(
     // ── المال ─────────────────────────────────────────────────────────
     "insufficient_balance" to R.string.wal_not_enough,
     "payout_pending" to R.string.wal_pending_exists,
+    "tip_invalid" to R.string.err_tip_invalid,
+    "tip_not_allowed" to R.string.err_tip_not_allowed,
     // ── السجلّ والبلاغات ──────────────────────────────────────────────
     "complaint_already_open" to R.string.hist_already_open,
     "already_rated" to R.string.hist_already_rated,

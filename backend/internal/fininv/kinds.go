@@ -149,6 +149,16 @@ var Kinds = map[string]KindContract{
 		Invariants: []string{"FI-01.g", "FI-05.k", "FI-11.h"},
 		Reachable:  true,
 	},
+	// **إكراميةُ الكابتن** — قرارُ المالك ٢٠٢٦-١١-٢٥ (هجرة ٠٥٥٩).
+	"tip": {
+		Kind: "tip", Sign: "±", RefRequired: true, RefTarget: "orders",
+		Creators: []string{"internal/orders/tip.go"},
+		Path:     "تسويةُ التسليم · وتصحيحُ تسليمٍ خاطئ",
+		Semantics: "إكراميةٌ حجزها الزبونُ من محفظته وانقيّدت بالتسليم: سالبٌ عليه، وموجبٌ للكابتن اللي سلّم، " +
+			"ونسبةُ المنصّة للخزينة — **ومجموعُ سطور الطلب صفرٌ دايماً**، فلا ربحَ ولا أجر.",
+		Invariants: []string{"FI-01.d", "FI-03.f", "FI-04.g", "FI-05.l", "FI-11.n"},
+		Reachable:  true,
+	},
 	// **السلفة** — قرارُ المالك ٢٠٢٦-١٠-٢٦.
 	"advance": {
 		Kind: "advance", Sign: "-", RefRequired: true, RefTarget: "wallet_requests",

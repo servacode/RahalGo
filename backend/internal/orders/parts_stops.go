@@ -294,6 +294,7 @@ func (s *Service) StopPickup(ctx context.Context, driverID, orderID, stop string
 	}
 	if out != nil && !out.noop {
 		s.notifyCredits(ctx, orderID, out.settled.credits)
+		s.notifyTip(ctx, orderID, out.settled.tip)
 		s.publishWalletsOf(ctx, orderID)
 	}
 	return updated, nil

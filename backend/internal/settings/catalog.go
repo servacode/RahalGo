@@ -1123,6 +1123,12 @@ var Catalog = []Def{
 	{Key: "prizes.amount_5", Group: GroupPlatform, Kind: KindMoney,
 		Min: 0, Max: 100_000, Unit: "currency", Default: 500, Sensitive: true},
 
+	// ── إكراميةُ الكابتن (قرارُ المالك ٢٠٢٦-١١-٢٥) ───────────────────────
+	// **مطفأةٌ افتراضاً** — ومطفأةً ما بتنعرض ولا بتنقبل إكراميةٌ جديدة. ونسبةُ المنصّة
+	// منها تُلقط لحظةَ الاختيار، والباقي للكابتن اللي بيسلّم.
+	{Key: "tips.enabled", Group: GroupPlatform, Kind: KindBool, Default: false},
+	{Key: "tips.platform_percent", Group: GroupPlatform, Kind: KindPercent, Default: 0},
+
 	// ── السائقون ──────────────────────────────────────────────────────────
 
 	// **كيف يصل الطلبُ إلى سائق: بالتساوي أم للأسرع؟**

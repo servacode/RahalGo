@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 151,
-    "notify_targeted": 78,
+    "notify_sites": 152,
+    "notify_targeted": 79,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 310,
-    "behaviour_settings": 264,
-    "order_fields": 150,
-    "test_files": 871,
-    "test_funcs": 3309
+    "setting_defs": 312,
+    "behaviour_settings": 266,
+    "order_fields": 152,
+    "test_files": 872,
+    "test_funcs": 3314
   },
   "flows": [
     {
@@ -8351,6 +8351,42 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "tips.enabled",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "tips.platform_percent",
+      "group": "platform",
+      "kind": "percent",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "whatsapp.live_location_only",
       "group": "platform",
       "kind": "bool",
@@ -16070,6 +16106,36 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestTIP01_HeldThenPaidToDeliveringCaptain",
+      "file": "internal/qa/captain_tip_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTIP02_Rejections",
+      "file": "internal/qa/captain_tip_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTIP03_CancelReleases",
+      "file": "internal/qa/captain_tip_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTIP04_WalletScopeSwitch",
+      "file": "internal/qa/captain_tip_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTIP05_UndeliverReturnsTip",
+      "file": "internal/qa/captain_tip_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestCA06_AllChangesAreSurfacedNotOnlyFirst",

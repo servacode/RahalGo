@@ -818,6 +818,9 @@
     <string name="signup_password2">تأكيد كلمة المرور</string>
     <string name="signup_password_mismatch">كلمتا المرور غير متطابقتين</string>
     <string name="wal_k_topup">شحن رصيد</string>
+    <string name="wal_k_tip">إكرامية</string>
+    <string name="err_tip_invalid">مبلغ الإكرامية مو صحيح</string>
+    <string name="err_tip_not_allowed">الإكرامية مو متاحة لهالطلب</string>
     <string name="err_custom_photos_invalid">إحدى الصور غير صالحة، أزلها وأضفها من جديد</string>
     <string name="custom_photos_label">صور الطلب</string>
     <string name="wal_topup_title">كيف بشحن محفظتي؟</string>

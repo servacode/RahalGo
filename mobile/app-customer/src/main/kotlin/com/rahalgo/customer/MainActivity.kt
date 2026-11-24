@@ -1230,7 +1230,7 @@ private fun SignedIn(
                         order = o,
                         walletBalance = shell.balance,
                         confirming = ordersVm.acting,
-                        onConfirmQuote = { method -> ordersVm.confirmQuote(o, method) },
+                        onConfirmQuote = { method, tip -> ordersVm.confirmQuote(o, method, tip) },
                         onRejectQuote = { ordersVm.rejectQuote(o.id) },
                         onDismiss = { ordersVm.dismissQuote(o) },
                     )

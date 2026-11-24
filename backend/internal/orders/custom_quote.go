@@ -345,7 +345,7 @@ func sameUSD(a, b *int64) bool {
 // **ومتكرّرٌ بالنسخة والطريقة نفسِها لا شيء** (idempotent).
 func (s *Service) ConfirmQuote(ctx context.Context, orderID, customerID, paymentMethod string,
 	expectedTotal, expectedVersion int64) (*Order, error) {
-	return s.confirmQuote(ctx, orderID, customerID, paymentMethod, "", expectedTotal, expectedVersion, false)
+	return s.confirmQuote(ctx, orderID, customerID, paymentMethod, "", nil, expectedTotal, expectedVersion, false)
 }
 
 // ConfirmQuoteScope **كـ`ConfirmQuote` ومعه شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩):
@@ -353,11 +353,18 @@ func (s *Service) ConfirmQuote(ctx context.Context, orderID, customerID, payment
 // `wallet` يعني `full`** — فالتطبيقُ القديمُ يبقى كما كان.
 func (s *Service) ConfirmQuoteScope(ctx context.Context, orderID, customerID, paymentMethod, scope string,
 	expectedTotal, expectedVersion int64) (*Order, error) {
-	return s.confirmQuote(ctx, orderID, customerID, paymentMethod, scope, expectedTotal, expectedVersion, false)
+	return s.confirmQuote(ctx, orderID, customerID, paymentMethod, scope, nil, expectedTotal, expectedVersion, false)
+}
+
+// ConfirmQuoteScopeTip **كـ`ConfirmQuoteScope` ومعه إكراميةُ الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٥) —
+// `tip` nil = ما تغيّرت، وإلّا بتنحجز (`tip.go`). والكاش بيفكّها دايماً.
+func (s *Service) ConfirmQuoteScopeTip(ctx context.Context, orderID, customerID, paymentMethod, scope string,
+	tip *int64, expectedTotal, expectedVersion int64) (*Order, error) {
+	return s.confirmQuote(ctx, orderID, customerID, paymentMethod, scope, tip, expectedTotal, expectedVersion, false)
 }
 
 func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, paymentMethod, scope string,
-	expectedTotal, expectedVersion int64, quiet bool) (*Order, error) {
+	tip *int64, expectedTotal, expectedVersion int64, quiet bool) (*Order, error) {
 	legacyWallet := paymentMethod == "wallet" && scope == ""
 	paymentMethod, scope, err := normalizePayment(paymentMethod, scope)
 	if err != nil {
@@ -406,7 +413,22 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 	if row.confirmedAt != nil && row.confirmedVersion != nil &&
 		*row.confirmedVersion == row.quoteVersion && row.paymentMethod == paymentMethod &&
 		row.scope == scope {
-		return s.GetByID(ctx, orderID)
+		if tip == nil {
+			return s.GetByID(ctx, orderID)
+		}
+		// **وإكراميةٌ تتبدّل على تأكيدٍ قائم** — وحدَها.
+		if err := s.setTipTx(ctx, tx, orderID, customerID, *tip); err != nil {
+			return nil, err
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return nil, err
+		}
+		o, err := s.GetByID(ctx, orderID)
+		if err == nil {
+			s.publishOrder(o)
+			s.publishWalletsOf(ctx, orderID)
+		}
+		return o, err
 	}
 	// ══════════════════════════════════════════════════════════════════
 	// **وبعد الاستلام يُؤكَّد السعرُ الجديدُ وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٥)
@@ -451,6 +473,16 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 	cashGuards := !(reconfirm && ((row.paymentMethod == paymentMethod && row.scope == scope) || row.goodsUSD != nil))
 	if _, err := s.customPaymentTx(ctx, tx, row, paymentMethod, scope, current, usdEquiv, cashGuards); err != nil {
 		return nil, err
+	}
+	// **إكراميةُ الكابتن** (`tip.go`) — بعد حجز الحصّة. **والكاش بيفكّها**: ما في محفظة تنحجز منها.
+	if scope == ScopeNone {
+		if err := s.setTipTx(ctx, tx, orderID, customerID, 0); err != nil {
+			return nil, err
+		}
+	} else if tip != nil {
+		if err := s.setTipTx(ctx, tx, orderID, customerID, *tip); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := s.auditQuoteTx(ctx, tx, &customerID, "order.custom_quote_confirmed", orderID, map[string]any{

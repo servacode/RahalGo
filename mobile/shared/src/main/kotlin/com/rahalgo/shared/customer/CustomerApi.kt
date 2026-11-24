@@ -311,11 +311,12 @@ class CustomerApi(private val api: ApiClient) {
         expectedQuoteVersion: Long,
         attemptKey: String,
         walletScope: String = "",
+        tip: Long? = null,
     ): MyOrder =
         api.call(
             "/api/v1/orders/$orderId/confirm-quote",
             HttpMethod.Post,
-            ConfirmQuoteInput(paymentMethod, expectedTotal, expectedQuoteVersion, walletScope),
+            ConfirmQuoteInput(paymentMethod, expectedTotal, expectedQuoteVersion, walletScope, tip),
             idempotencyKey = attemptKey,
         )
 
@@ -329,11 +330,12 @@ class CustomerApi(private val api: ApiClient) {
         walletScope: String,
         expectedTotal: Long,
         attemptKey: String,
+        tip: Long? = null,
     ): MyOrder =
         api.call(
             "/api/v1/orders/$orderId/wallet-scope",
             HttpMethod.Post,
-            WalletScopeInput(walletScope, expectedTotal),
+            WalletScopeInput(walletScope, expectedTotal, tip),
             idempotencyKey = attemptKey,
         )
 
@@ -587,6 +589,8 @@ data class NewOrder(
     @SerialName("wallet_scope") val walletScope: String = "",
     @SerialName("promo_code") val promoCode: String = "",
     val notes: String = "",
+    /** **إكرامية الكابتن** — من المحفظة وحدَها؛ وغيابُها (`null`) لا إكرامية. */
+    val tip: Long? = null,
 )
 
 private val photoJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
@@ -649,6 +653,8 @@ private data class ConfirmQuoteInput(
     @SerialName("expected_quote_version") val expectedQuoteVersion: Long,
     /** **«الكل» أو «التوصيل والباقي كاش»** (٢٠٢٦-١١-٠٩) — والفارغُ مع `wallet` = «الكل». */
     @SerialName("wallet_scope") val walletScope: String = "",
+    /** **إكرامية الكابتن** — وغيابُها = بلا تغيير. */
+    val tip: Long? = null,
 )
 
 /** **تبديلُ الدفع من المحفظة** — النطاقُ والمجموعُ الذي رآه الزبون. */
@@ -656,6 +662,8 @@ private data class ConfirmQuoteInput(
 private data class WalletScopeInput(
     @SerialName("wallet_scope") val walletScope: String,
     @SerialName("expected_total") val expectedTotal: Long,
+    /** **إكرامية الكابتن** — وغيابُها = بلا تغيير (والتحويلُ للنقد يحرّرها الخادم). */
+    val tip: Long? = null,
 )
 
 @Serializable
@@ -832,6 +840,8 @@ data class MyOrder(
     /** **ما غطّاه رصيدُ الجوائز** (جوائز رحّال غو) — و0 حين لا جائزةَ في الطلب. */
     @SerialName("prize_discount") val prizeDiscount: Long = 0,
     val total: Long = 0,
+    /** **إكرامية الكابتن** — محجوزةٌ من المحفظة وليست من `total`؛ 0 = لا إكرامية. */
+    val tip: Long = 0,
     @SerialName("payment_method") val paymentMethod: String = "",
     /**
      * **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — `none` · `full` · `delivery`. **وفارغٌ من

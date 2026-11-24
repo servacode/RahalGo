@@ -11,7 +11,7 @@
     "InApp": 8
   },
   "derived": {
-    "emit_sites": 146,
+    "emit_sites": 147,
     "realtime_publishers": 32,
     "rooms": 5,
     "untargeted_user_sites": 41
@@ -58,7 +58,7 @@
     },
     {
       "file": "internal/orders/custom_quote.go",
-      "line": 613,
+      "line": 645,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -67,7 +67,7 @@
     },
     {
       "file": "internal/orders/custom_quote.go",
-      "line": 620,
+      "line": 652,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -76,7 +76,7 @@
     },
     {
       "file": "internal/orders/custom_quote.go",
-      "line": 701,
+      "line": 733,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -85,7 +85,7 @@
     },
     {
       "file": "internal/orders/custom_quote.go",
-      "line": 710,
+      "line": 742,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -220,7 +220,7 @@
     },
     {
       "file": "internal/orders/live_nudge.go",
-      "line": 96,
+      "line": 97,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": false
@@ -485,6 +485,15 @@
       "has_entity_id": true
     },
     {
+      "file": "internal/orders/tip.go",
+      "line": 319,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
       "file": "internal/orders/violations.go",
       "line": 255,
       "call": "NotifyOps",
@@ -495,7 +504,7 @@
     },
     {
       "file": "internal/orders/wallet_scope.go",
-      "line": 380,
+      "line": 406,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -504,7 +513,7 @@
     },
     {
       "file": "internal/orders/wallet_scope.go",
-      "line": 395,
+      "line": 421,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -531,7 +540,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 869,
+      "line": 870,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -540,7 +549,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 936,
+      "line": 937,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -549,7 +558,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 1024,
+      "line": 1148,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -838,7 +847,7 @@
     },
     {
       "file": "internal/server/driver_handlers.go",
-      "line": 1797,
+      "line": 1807,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -1203,14 +1212,14 @@
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 594,
+      "line": 598,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": true
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 766,
+      "line": 770,
       "call": "Notify",
       "kind": "Account",
       "entity": "user",
@@ -1786,7 +1795,7 @@
     },
     {
       "file": "internal/orders/service.go",
-      "line": 1611,
+      "line": 1622,
       "room": "user:*"
     },
     {
@@ -1801,7 +1810,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 1030,
+      "line": 1154,
       "room": "driver:*"
     },
     {
@@ -1875,7 +1884,7 @@
     },
     {
       "file": "internal/orders/live_nudge.go",
-      "line": 96,
+      "line": 97,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": false
@@ -2156,14 +2165,14 @@
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 594,
+      "line": 598,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": true
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 766,
+      "line": 770,
       "call": "Notify",
       "kind": "Account",
       "entity": "user",

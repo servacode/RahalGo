@@ -279,6 +279,8 @@ export interface CustomerPlatform {
   custom_delivery: CustomDelivery;
   /** **الدخولُ برمزٍ على واتساب** — مفتاحُ `auth.otp_login` في اللوحة. */
   otp_login: boolean;
+  /** **إكرامية الكابتن** — غيابُها أو `enabled:false` ⇒ لا واجهةَ لها. */
+  tips?: { enabled: boolean; presets: number[]; max: number };
 }
 
 /**
@@ -320,6 +322,8 @@ export interface MyOrder {
   payment_method: string;
   /** **شو بيندفع من المحفظة** (٢٠٢٦-١١-٠٩) — `none` كاش · `full` الكل · `delivery` التوصيل والباقي كاش. */
   wallet_scope?: "none" | "full" | "delivery";
+  /** **إكرامية الكابتن المحجوزة من المحفظة** (ليست من `total`) — صفرٌ أو غائبٌ = لا إكرامية. */
+  tip?: number;
   address_text: string;
   notes: string;
   custom_request: string;

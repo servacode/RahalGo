@@ -49,6 +49,13 @@ interface CustomerState {
 
 const Ctx = createContext<CustomerState | null>(null);
 
+function normalizeTips(raw: unknown): CustomerPlatform["tips"] {
+  const t = (raw ?? {}) as Record<string, unknown>;
+  if (t.enabled !== true) return { enabled: false, presets: [], max: 0 };
+  const presets = Array.isArray(t.presets) ? t.presets.filter((n): n is number => typeof n === "number" && n > 0) : [];
+  return { enabled: true, presets, max: typeof t.max === "number" ? t.max : 0 };
+}
+
 function normalizePlatform(raw: Record<string, unknown>): CustomerPlatform {
   const ord = (raw.ordering ?? {}) as Record<string, unknown>;
   const launch = (raw.launch ?? {}) as Record<string, unknown>;
@@ -81,6 +88,7 @@ function normalizePlatform(raw: Record<string, unknown>): CustomerPlatform {
       fee_amanah: typeof cd.fee_amanah === "number" ? cd.fee_amanah : 0,
     },
     otp_login: raw.otp_login === true,
+    tips: normalizeTips(raw.tips),
   };
 }
 

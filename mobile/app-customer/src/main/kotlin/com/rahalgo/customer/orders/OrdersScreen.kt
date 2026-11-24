@@ -301,7 +301,7 @@ private fun OrdersList(
                 // **وتأكيدُ عرض الطلب المخصَّص** (Batch 2c) — في الجاري وحدَه.
                 walletBalance = walletBalance,
                 onConfirmQuote = if (!history && o.kind == "custom") {
-                    { method -> vm.confirmQuote(o, method) }
+                    { method, tip -> vm.confirmQuote(o, method, tip) }
                 } else {
                     null
                 },
@@ -314,7 +314,7 @@ private fun OrdersList(
                 confirming = vm.acting,
                 // **وتبديلُ الدفع من المحفظة لحد ما يوصل الكابتن** (قرارُ المالك ٢٠٢٦-١١-٠٩).
                 onChangeWalletScope = if (!history) {
-                    { scope -> vm.changeWalletScope(o, scope) }
+                    { scope, tip -> vm.changeWalletScope(o, scope, tip) }
                 } else {
                     null
                 },

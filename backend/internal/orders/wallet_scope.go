@@ -211,7 +211,7 @@ func (s *Service) ChangeWalletScope(ctx context.Context, orderID, customerID, sc
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	o, after, err := s.ChangeWalletScopeTx(ctx, tx, orderID, customerID, scope, expectedTotal, limit)
+	o, after, err := s.ChangeWalletScopeTx(ctx, tx, orderID, customerID, scope, expectedTotal, limit, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +234,9 @@ func (s *Service) DriverCashLimit(ctx context.Context) int64 {
 // فتُثبَّت علامةُ منع التكرار مع المال في معاملةٍ واحدة (`XG-33`). **و`after` يُنادى بعد الإيداع**:
 // نشرُ الطلب وإخبارُ الكابتن.
 func (s *Service) ChangeWalletScopeTx(ctx context.Context, tx dbtx.Querier, orderID, customerID, scope string,
-	expectedTotal, cashLimit int64) (*Order, func(), error) {
+	expectedTotal, cashLimit int64, tip *int64) (*Order, func(), error) {
+	// **و`tip` إكراميةُ الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٥، `tip.go`): nil = ما تغيّرت،
+	// **والتبديلُ للكاش بيفكّها دايماً.**
 	noop := func() {}
 	if scope == "" {
 		return nil, noop, ErrBadPayment
@@ -275,6 +277,19 @@ func (s *Service) ChangeWalletScopeTx(ctx context.Context, tx dbtx.Querier, orde
 		return nil, noop, ErrOrderChanged
 	}
 	if o.scope == scope {
+		if tip != nil && scope != ScopeNone {
+			if err := s.setTipTx(ctx, tx, orderID, customerID, *tip); err != nil {
+				return nil, noop, err
+			}
+			same, err := s.getByID(ctx, tx, orderID)
+			if err != nil {
+				return nil, noop, err
+			}
+			return same, func() {
+				s.publishOrder(same)
+				s.publishWalletsOf(ctx, orderID)
+			}, nil
+		}
 		same, err := s.getByID(ctx, tx, orderID)
 		return same, noop, err
 	}
@@ -342,6 +357,17 @@ func (s *Service) ChangeWalletScopeTx(ctx context.Context, tx dbtx.Querier, orde
 			if err := s.creditTreasury(ctx, tx, orderID, customerID); err != nil {
 				return nil, noop, err
 			}
+		}
+	}
+
+	// **إكراميةُ الكابتن** — بعد الحصّة، فالمتاحُ يُسأل عن الاتنين. والكاشُ بيفكّها.
+	if scope == ScopeNone {
+		if err := s.setTipTx(ctx, tx, orderID, customerID, 0); err != nil {
+			return nil, noop, err
+		}
+	} else if tip != nil {
+		if err := s.setTipTx(ctx, tx, orderID, customerID, *tip); err != nil {
+			return nil, noop, err
 		}
 	}
 

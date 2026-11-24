@@ -307,14 +307,16 @@ func (s *Server) handleConfirmQuote(w http.ResponseWriter, r *http.Request) {
 		// يُطابَقان بالحاليّ، وإلّا فتغيّر السعرُ تحت يده.
 		ExpectedTotal        int64 `json:"expected_total"`
 		ExpectedQuoteVersion int64 `json:"expected_quote_version"`
+		// Tip **إكراميةُ الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٥) — غيابُها = ما تغيّرت.
+		Tip *int64 `json:"tip"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	orderID := chi.URLParam(r, "id")
-	o, err := s.orders.ConfirmQuoteScope(r.Context(), orderID, userIDFrom(r),
-		req.Payment, req.WalletScope, req.ExpectedTotal, req.ExpectedQuoteVersion)
+	o, err := s.orders.ConfirmQuoteScopeTip(r.Context(), orderID, userIDFrom(r),
+		req.Payment, req.WalletScope, req.Tip, req.ExpectedTotal, req.ExpectedQuoteVersion)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -337,6 +339,8 @@ func (s *Server) handleChangeWalletScope(w http.ResponseWriter, r *http.Request)
 		// WalletScope **none | full | delivery**.
 		WalletScope   string `json:"wallet_scope"`
 		ExpectedTotal int64  `json:"expected_total"`
+		// Tip **إكراميةُ الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٥) — غيابُها = ما تغيّرت، والكاش بيفكّها.
+		Tip *int64 `json:"tip"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -346,7 +350,7 @@ func (s *Server) handleChangeWalletScope(w http.ResponseWriter, r *http.Request)
 	limit := s.orders.DriverCashLimit(r.Context())
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
 		o, after, err := s.orders.ChangeWalletScopeTx(ctx, q, chi.URLParam(r, "id"), userIDFrom(r),
-			req.WalletScope, req.ExpectedTotal, limit)
+			req.WalletScope, req.ExpectedTotal, limit, req.Tip)
 		if err != nil {
 			return IdempotentBody{}, err
 		}
