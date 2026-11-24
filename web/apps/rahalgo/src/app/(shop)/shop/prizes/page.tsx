@@ -230,9 +230,14 @@ function PrizeCard({ item, balance, onOrder }: { item: PrizeItem; balance: numbe
           {item.name}
         </h3>
         <Money value={item.price} className="font-bold" />
-        <span className="min-h-[1.25em] text-caption text-warning">
-          {balance > 0 && diff > 0 ? fill(P.payDiff, { amount: fmtMoney(diff) }) : ""}
-        </span>
+        {balance > 0 ? (
+          <span className="min-h-[1.25em] text-caption text-warning">
+            {diff > 0 ? fill(P.payDiff, { amount: fmtMoney(diff) }) : ""}
+          </span>
+        ) : (
+          /* **وبلا رصيدٍ يُقال لماذا الزرُّ باهت** (المالك ٢٠٢٦-١١-٢٥، مرآةُ `prizes_win_first`). */
+          <span className="min-h-[1.25em] text-caption text-ink-muted">{P.winFirst}</span>
+        )}
         <Button size="sm" className="w-full" disabled={!canOrder} onClick={() => onOrder(item)}>
           {P.order}
         </Button>

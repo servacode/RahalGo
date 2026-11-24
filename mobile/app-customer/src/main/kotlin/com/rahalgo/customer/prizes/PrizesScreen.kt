@@ -84,7 +84,10 @@ private fun Teaser(vm: PrizesViewModel, me: PrizesMe) {
     val media = { path: String? -> Backend.of(context).media(path) }
     LazyColumn(
         Modifier.fillMaxWidth(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(Rahal.space.lg),
+        // **وفراغٌ تحت آخر الصفحة** لزرّ الدردشة العائم — كان يغطّي آخرَ شرط (المالك ٢٠٢٦-١١-٢٥).
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            start = Rahal.space.lg, top = Rahal.space.lg, end = Rahal.space.lg, bottom = Rahal.space.lg * 6,
+        ),
         verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
     ) {
         // **رأسٌ واحد**: متى تبلش وكم يوم باقي، و«لست ضمن المسابقة بعد» (ملاحظةُ المالك ٢٠٢٦-١١-٢٤).
@@ -153,7 +156,10 @@ private fun Active(vm: PrizesViewModel, me: PrizesMe) {
 
     LazyColumn(
         Modifier.fillMaxWidth(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(Rahal.space.lg),
+        // **وفراغٌ تحت آخر الصفحة** لزرّ الدردشة العائم — كان يغطّي آخرَ شرط (المالك ٢٠٢٦-١١-٢٥).
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            start = Rahal.space.lg, top = Rahal.space.lg, end = Rahal.space.lg, bottom = Rahal.space.lg * 6,
+        ),
         verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
     ) {
         item {
@@ -321,9 +327,14 @@ private fun PrizeRow(
                 when {
                     enabled && covered -> stringResource(R.string.prizes_covered)
                     enabled && diff > 0 -> stringResource(R.string.prizes_diff, money(diff))
+                    !enabled -> stringResource(R.string.prizes_win_first)
                     else -> ""
                 },
-                color = if (enabled && covered) Rahal.colors.success else Rahal.colors.accentInk,
+                color = when {
+                    enabled && covered -> Rahal.colors.success
+                    !enabled -> Rahal.colors.inkMuted
+                    else -> Rahal.colors.accentInk
+                },
                 style = Rahal.type.caption,
                 maxLines = 1,
             )
