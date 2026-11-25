@@ -699,3 +699,33 @@ func (s *Server) qaPrizeDemo(w http.ResponseWriter, r *http.Request) {
 	s.logger.Warn("QA prize demo store seeded (staging-only)", "merchant", mid)
 	httpx.JSON(w, http.StatusOK, map[string]any{"merchant_id": mid, "reused": false})
 }
+
+// qaFeaturesDemo **يشغّل ميزاتِ ليلة ٢٠٢٦-١١-٢٥ على التجهيز** — الإكراميةُ وشام كاش (برقم حسابٍ
+// تجريبيٍّ لا حقيقيّ) وتذكيرُ السلّة ومسابقةُ النقاط من أوّل الشهر — لشهودها على المحاكي.
+// **والبابُ كلُّه على التجهيز وحدَه** (`qaStagingEnabled`)، ولا يُسجَّل في الإنتاج.
+func (s *Server) qaFeaturesDemo(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vals := []struct {
+		k string
+		v any
+	}{
+		{"tips.enabled", true},
+		{"shamcash.topup_enabled", true},
+		{"shamcash.pay_on_delivery_enabled", true},
+		{"shamcash.account_name", "حساب تجربة رحّال غو"},
+		{"shamcash.account_number", "0000000000"},
+		{"cart_reminder.enabled", true},
+		{"cart_reminder.after_minutes", 5},
+		{"prizes.enabled", true},
+		{"prizes.launch_on", "2026-11-01"},
+	}
+	set := map[string]any{}
+	for _, x := range vals {
+		if err := s.settings.Set(ctx, x.k, x.v, nil); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		set[x.k] = x.v
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"set": set})
+}

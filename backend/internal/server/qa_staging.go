@@ -306,6 +306,7 @@ var qaSeedAllowlist = map[string]bool{
 	"merchant_second":       true, // إنشاءُ متجرٍ ثانٍ صغيرٍ (مصدرٌ ثانٍ)
 	"merchant_second_clear": true, // حذفُه (FK-safe)
 	"prize_demo":            true, // متجرُ «رحّال غو» تجريبيّ بثلاث هدايا (٢٠٢٦-١١-٢٤) — يُرجَع من اللوحة
+	"features_demo":         true, // يشغّل ميزات ٢٠٢٦-١١-٢٥ على التجهيز لشهودها على المحاكي
 	"merchant_device_setup": true, // مالكُ متجرِ QA ومتجراه (شهادةُ تطبيق المتجر على الجهاز) — reusable
 	"merchant_device_clear": true, // حذفُ متجرَي الجهاز (لا يمسّ المالك)
 	"orders_mode_set":       true, // ضبطُ platform.orders_mode (merchants/platform) مؤقّتاً — يُرجع السابق للاستعادة
@@ -357,7 +358,7 @@ var qaStateSeed = map[string]bool{
 	"rep_money_set": true, "rep_wallet_fund": true, "rep_release_set": true, "rep_qa_cleanup": true,
 	"merchant_release_set": true, // ضبطُ نسخةِ إصدار المتجر أو حدِّه الأدنى (release.merchant.version / app.min_version.merchant) — يُرجع السابق
 	"merchant_open":        true, "merchant_restore": true, "gov_active": true, "merchant_hours_set": true,
-	"merchant_second": true, "merchant_second_clear": true, "prize_demo": true,
+	"merchant_second": true, "merchant_second_clear": true, "prize_demo": true, "features_demo": true,
 	"merchant_device_setup": true, "merchant_device_clear": true, "orders_mode_set": true,
 	"option_available": true, "item_image": true,
 	"customer_suspend": true, "customer_restore": true, "customer_set_password": true,
@@ -509,6 +510,8 @@ func (s *Server) handleQAStagingSeed(w http.ResponseWriter, r *http.Request) {
 		case "prize_demo":
 			// **متجرُ «رحّال غو» تجريبيّ بثلاث هدايا** (طلبُ المالك ٢٠٢٦-١١-٢٤: «وين اصناف سوق رحال غو؟»).
 			s.qaPrizeDemo(w, r)
+		case "features_demo":
+			s.qaFeaturesDemo(w, r)
 		case "merchant_device_setup":
 			s.qaMerchantDeviceSetup(w, r)
 		case "merchant_device_clear":
