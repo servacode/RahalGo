@@ -27,7 +27,8 @@ import { useLiveData } from "./Notifications";
 import { debtLineText, type DebtLine } from "./debtText";
 import {
   IconArrowIn,
-  IconArrowOut, IconWallet, IconWarning, IconPrint } from "./icons";
+  IconArrowOut, IconWallet, IconWarning, IconPrint,
+  IconBanknote, IconStar, IconReturn, IconCart, IconMoto, IconHeart } from "./icons";
 
 const m = getMessages(defaultLocale);
 const P = m.shared.payout;
@@ -72,6 +73,69 @@ const STATUS_VARIANT: Record<Payout["status"], "warning" | "success" | "danger">
   rejected: "danger",
 };
 
+/** **أيقونةُ الحركة بنوعها** — والمجهولُ بسهم الدخول أو الخروج (مرآةُ `txIcon` في `WalletScreen.kt`). */
+function txIcon(kind: string, positive: boolean) {
+  switch (kind) {
+    case "topup":
+      return IconWallet;
+    case "order_payment":
+      return IconCart;
+    case "payout":
+    case "settlement":
+    case "advance":
+      return IconBanknote;
+    case "reward":
+      return IconStar;
+    case "refund":
+    case "custom_goods_return":
+      return IconReturn;
+    case "penalty":
+      return IconWarning;
+    case "driver_earning":
+      return IconMoto;
+    case "tip":
+      return IconHeart;
+    default:
+      return positive ? IconArrowIn : IconArrowOut;
+  }
+}
+
+/** **سطرُ الحركة في وضع الزبون** — أيقونةٌ بلون الإشارة، واسمٌ وتاريخٌ، ومبلغٌ بإشارته في الطرف. */
+function TxListRow({ tx }: { tx: Tx }) {
+  const positive = tx.amount >= 0;
+  const Icon = txIcon(tx.kind, positive);
+  return (
+    <li className="flex min-h-14 items-center gap-3 px-1 py-3" data-testid="wallet-tx">
+      <span
+        aria-hidden
+        className={`flex size-10 shrink-0 items-center justify-center rounded-control ${
+          positive ? "bg-success-tint text-success" : "bg-danger-tint text-danger"
+        }`}
+      >
+        <Icon size={18} />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-sm font-bold">{KIND_LABELS[tx.kind] ?? tx.kind}</span>
+        {tx.note && <span className="line-clamp-2 text-xs text-ink-muted">{tx.note}</span>}
+        <span className="text-xs text-ink-muted" dir="ltr">
+          {fmtDate(tx.created_at)} · {fmtTime(tx.created_at)}
+        </span>
+      </span>
+      <span className="flex shrink-0 flex-col items-end">
+        <span dir="ltr" className={`text-sm font-bold tabular-nums ${positive ? "text-success" : "text-danger"}`}>
+          {positive ? "+" : "−"}
+          <Money value={Math.abs(tx.amount)} small />
+        </span>
+        {tx.order_number ? (
+          <span dir="ltr" className="text-xs tabular-nums text-ink-muted">
+            #{tx.order_number}
+          </span>
+        ) : null}
+      </span>
+    </li>
+  );
+}
+
 export function WalletPage({
   api,
   path,
@@ -83,6 +147,9 @@ export function WalletPage({
   console: consoleMode = false,
   leading,
   aside,
+  hero = false,
+  heroActions,
+  belowHero,
 }: {
   api: ApiFn;
   /** نقطة كشف المحفظة — تختلف بالدور: `/api/v1/rep/wallet` أو `/api/v1/my/wallet` */
@@ -127,6 +194,16 @@ export function WalletPage({
   leading?: ReactNode;
   /** لوحٌ جانبيٌّ بجوار الحركات على الحاسوب، وفوقها على الجوّال (وضع اللوحة). */
   aside?: ReactNode;
+  /**
+   * **شكلُ الزبون** (٢٠٢٦-١١-٢٥) — بطاقةُ رصيدٍ بتدرّج العلامة (مرآةُ `BalanceHero` في `WalletScreen.kt`)،
+   * وتحتها صفُّ أزرارٍ متساويةٍ («كشف حساب» ومعه `heroActions`)، ثمّ `belowHero`، ثمّ حركاتٌ بأيقونةٍ لكلّ نوع.
+   * **عرضٌ فقط**: الجلبُ والكشفُ هما هما.
+   */
+  hero?: boolean;
+  /** زرُّ الفعل الأوّل بجانب «كشف حساب» في صفٍّ واحد (الشحن بشام كاش) — فارغٌ فيأخذ الكشفُ الصفَّ كلَّه. */
+  heroActions?: ReactNode;
+  /** ما يقع تحت صفّ الأزرار وفوق الحركات (طلباتُ الشحن وبطاقةُ الشرح). */
+  belowHero?: ReactNode;
 }) {
   const [tab, setTab] = useState(ALL);
   const [asking, setAsking] = useState(false);
@@ -364,6 +441,7 @@ export function WalletPage({
   );
 
   if (consoleMode) return renderConsole();
+  if (hero) return renderHero();
 
   return (
     <PageContainer>
@@ -596,6 +674,77 @@ export function WalletPage({
       )}
     </PageContainer>
   );
+
+  /** **شكلُ الزبون** — دالةٌ مرفوعةٌ كوضع اللوحة كي يبقى الحارسُ يقرأ الشكلَ العامَّ أوّلاً. */
+  function renderHero() {
+    return (
+      <PageContainer>
+        <section className="prize-hero flex flex-col gap-4 rounded-rg-lg p-rg-lg" data-testid="wallet-balance">
+          <div className="flex items-center gap-3">
+            <span aria-hidden className="prize-hero-soft grid size-10 shrink-0 place-items-center rounded-control">
+              <IconWallet size={20} />
+            </span>
+            <p className="text-sm font-bold opacity-90">{balanceLabel}</p>
+          </div>
+          <p className="figure">
+            <span dir="ltr" className="inline-block">
+              <Money value={balance} small />
+            </span>
+          </p>
+        </section>
+
+        {debtText && (
+          <p className="text-center text-sm text-ink-muted" data-testid="wallet-debt">
+            {debtText}
+          </p>
+        )}
+
+        {/* **الشحنُ وكشفُ الحساب في صفٍّ واحدٍ متساويين** — والشحنُ المملوءُ أوّلاً (يمينَ الصفّ بالعربيّة). */}
+        <div className="flex gap-3">
+          {heroActions}
+          <Button
+            onClick={() => setTab(tab === STATEMENT ? ALL : STATEMENT)}
+            variant="secondary"
+            size="lg"
+            className="flex min-h-12 flex-1 items-center justify-center gap-2"
+          >
+            <IconPrint size={16} />
+            {m.shared.statement.open}
+          </Button>
+        </div>
+
+        {belowHero}
+
+        <Card title={m.terms.transactions} icon={IconWallet}>
+          {current === STATEMENT ? (
+            <StatementSheet
+              data={sheet}
+              loading={sheetLoading}
+              from={range.from}
+              to={range.to}
+              onFrom={(from) => setRange((r) => ({ ...r, from }))}
+              onTo={(to) => setRange((r) => ({ ...r, to }))}
+              onQuick={(from, to) => setRange({ from, to })}
+              holderName={holderName}
+              holderPhone={holderPhone}
+              onBack={() => setTab(ALL)}
+            />
+          ) : txs.length === 0 ? (
+            <EmptyState icon={IconWallet} title={m.terms.noTransactions} />
+          ) : (
+            <ul className="divide-y divide-line-soft">
+              {txs.map((tx) => (
+                <TxListRow key={String(tx.id)} tx={tx} />
+              ))}
+            </ul>
+          )}
+          {statement?.truncated && current === ALL && (
+            <p className="mt-3 text-center text-xs text-ink-muted">{W.glanceHint}</p>
+          )}
+        </Card>
+      </PageContainer>
+    );
+  }
 
   /** **وضعُ اللوحة** (للمتجر) — دالةٌ مرفوعةٌ هنا بعد الشكل العامّ كي يبقى الحارسُ يقرأ الشكلَ العامَّ أوّلاً. */
   function renderConsole() {

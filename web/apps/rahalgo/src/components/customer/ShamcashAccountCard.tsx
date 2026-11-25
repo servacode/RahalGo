@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button } from "@rahalgo/ui";
+import { Button, IconCopy, IconDownload } from "@rahalgo/ui";
 import { mediaUrl } from "@/lib/api";
 import type { ShamcashInfo } from "@/lib/customer/shamcash";
 import { useShopToast } from "@/components/customer/toast";
@@ -53,30 +53,46 @@ export function ShamcashAccountCard({ info }: { info: ShamcashInfo }) {
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-control border border-line p-3" data-testid="shamcash-account">
-      {qr && <img src={qr} alt={S.qrAlt} className="mx-auto h-52 w-52 rounded-control border border-line object-contain" />}
-      <dl className="flex flex-col gap-1 text-sm">
+    <div className="flex flex-col gap-4 rounded-rg-lg border border-line bg-surface p-rg-lg" data-testid="shamcash-account">
+      {/* **الباركودُ في المقدّمة على أرضٍ فاتحةٍ ثابتة** — يُمسح من شاشةٍ أخرى. */}
+      {qr && (
+        <div className="mx-auto rounded-control border border-line bg-canvas p-3">
+          <img src={qr} alt={S.qrAlt} className="h-56 w-56 object-contain" />
+        </div>
+      )}
+      <dl className="flex flex-col gap-3 text-sm">
         {info.account_name && (
-          <div className="flex justify-between gap-3">
-            <dt className="text-ink-muted">{S.holder}</dt>
+          <div className="flex flex-col gap-0.5">
+            <dt className="text-xs text-ink-muted">{S.holder}</dt>
             <dd className="font-bold">{info.account_name}</dd>
           </div>
         )}
-        <div className="flex justify-between gap-3">
-          <dt className="text-ink-muted">{S.number}</dt>
-          <dd dir="ltr" className="font-bold">
+        <div className="flex flex-col gap-1">
+          <dt className="text-xs text-ink-muted">{S.number}</dt>
+          <dd dir="ltr" className="rounded-control bg-ink-faint px-3 py-2 text-start heading-card tabular-nums">
             {info.account_number}
           </dd>
         </div>
       </dl>
-      <Button type="button" size="lg" className="w-full" onClick={() => void copy()}>
-        {copied ? S.copied : S.copy}
-      </Button>
-      {qr && (
-        <Button type="button" size="lg" variant="secondary" className="w-full" onClick={() => void saveQr()}>
-          {S.saveQr}
+      {/* **النسخُ وحفظُ الصورة جنباً إلى جنب** — فعلان متكافئان. */}
+      <div className="flex gap-3">
+        <Button type="button" size="lg" className="flex min-h-12 flex-1 items-center justify-center gap-2" onClick={() => void copy()}>
+          <IconCopy size={16} />
+          {copied ? S.copied : S.copy}
         </Button>
-      )}
+        {qr && (
+          <Button
+            type="button"
+            size="lg"
+            variant="secondary"
+            className="flex min-h-12 flex-1 items-center justify-center gap-2"
+            onClick={() => void saveQr()}
+          >
+            <IconDownload size={16} />
+            {S.saveQr}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

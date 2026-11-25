@@ -1,13 +1,16 @@
 "use client";
 
 /**
- * **شحنُ المحفظة بشام كاش** — زرٌّ كبيرٌ يفتح لوحةً فيها حسابُ المنصة ونموذجُ «أرسلت»، وتحتها قائمةُ
- * طلبات الزبون وحالاتِها. **والطلبُ يُنشأ مرّةً واحدةً مهما أُعيدت المحاولة** (`Idempotency-Key`).
+ * **شحنُ المحفظة بشام كاش** — زرٌّ يفتح لوحةً بثلاث خطواتٍ مرقَّمة (حوّل ← اكتب رقم العملية ← أرسل)،
+ * وقائمةُ طلبات الزبون وحالاتِها. **والطلبُ يُنشأ مرّةً واحدةً مهما أُعيدت المحاولة** (`Idempotency-Key`).
+ *
+ * **والزرُّ والقائمةُ يُسلَّمان لمن يرسم الصفحة** (`children`) كي يقع الزرُّ بجانب «كشف حساب» في صفٍّ
+ * واحد، وتقع القائمةُ تحت الصفّ — والمنطقُ كلُّه (الجلبُ والإرسالُ والمفتاح) هنا لم يتغيّر.
  */
 
-import { useRef, useState } from "react";
-import { getMessages, defaultLocale, errorText, fmtMoney } from "@rahalgo/i18n";
-import { Alert, Button, Input, Modal } from "@rahalgo/ui";
+import { useRef, useState, type ReactNode } from "react";
+import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
+import { Alert, Badge, Button, IconCheck, IconClock, IconClose, IconPhoto, IconWallet, Input, Modal } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { fill } from "@/lib/customer/texts";
@@ -20,10 +23,48 @@ const m = getMessages(defaultLocale);
 const S = m.shop.shamcash;
 const SLOT = "shamcash_topup";
 
-function statusText(r: ShamcashRequest): string {
-  if (r.status === "approved") return S.statusApproved;
-  if (r.status === "rejected") return r.reject_reason ? fill(S.statusRejected, { r: r.reject_reason }) : S.statusRejectedNoReason;
-  return S.statusPending;
+/** **رأسُ خطوةٍ مرقَّمة** — دائرةٌ بالرقم وعنوانٌ؛ ومحتواها تحتها. */
+function Step({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-on-bright"
+        >
+          {fmtNum(n)}
+        </span>
+        <h3 className="text-card-title">{title}</h3>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** **رقاقةُ حالة الطلب** — لونٌ وأيقونةٌ ونصّ، فلا يُترك اللونُ وحدَه. */
+function StatusBadge({ r }: { r: ShamcashRequest }) {
+  if (r.status === "approved") {
+    return (
+      <Badge variant="success" className="gap-1">
+        <IconCheck size={12} />
+        {S.statusApproved}
+      </Badge>
+    );
+  }
+  if (r.status === "rejected") {
+    return (
+      <Badge variant="danger" className="gap-1">
+        <IconClose size={12} />
+        {S.statusRejectedNoReason}
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="warning" className="gap-1">
+      <IconClock size={12} />
+      {S.statusPending}
+    </Badge>
+  );
 }
 
 function TopUpForm({ info, onSent }: { info: ShamcashInfo; onSent: () => void }) {
@@ -82,75 +123,108 @@ function TopUpForm({ info, onSent }: { info: ShamcashInfo; onSent: () => void })
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <Input
-        id="sc-amount"
-        label={S.amount}
-        inputMode="numeric"
-        dir="ltr"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value.replace(/\D/g, ""))}
-        placeholder={fill(S.amountHint, { min: fmtMoney(info.min_topup) })}
-        error={amount !== "" && !amountOk ? fill(S.amountInvalid, { min: fmtMoney(info.min_topup) }) : undefined}
-      />
-      <Input id="sc-txn" label={S.txn} dir="ltr" value={txn} onChange={(e) => setTxn(e.target.value)} placeholder={S.txnHint} />
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-bold">{S.receipt}</p>
-        <div className="flex flex-wrap items-center gap-2">
-          {photo && <img src={mediaUrl(photo.thumb_url) ?? photo.thumb_url} alt="" className="h-16 w-16 rounded-control border border-line object-cover" />}
-          <input ref={ref} type="file" accept="image/*" className="hidden" onChange={(e) => void pick(e)} />
-          {photo ? (
-            <Button type="button" variant="secondary" onClick={() => setPhoto(null)}>
-              {S.receiptRemove}
-            </Button>
-          ) : (
-            <Button type="button" variant="secondary" disabled={upBusy} onClick={() => ref.current?.click()}>
-              {S.receiptAdd}
-            </Button>
-          )}
+    <div className="flex flex-col gap-6">
+      <Step n={2} title={S.step2}>
+        <div className={`${OUTLINE_CARD} flex flex-col gap-3`}>
+          <Input
+            id="sc-amount"
+            label={S.amount}
+            inputMode="numeric"
+            dir="ltr"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value.replace(/\D/g, ""))}
+            placeholder={fill(S.amountHint, { min: fmtMoney(info.min_topup) })}
+            error={amount !== "" && !amountOk ? fill(S.amountInvalid, { min: fmtMoney(info.min_topup) }) : undefined}
+          />
+          <Input id="sc-txn" label={S.txn} dir="ltr" value={txn} onChange={(e) => setTxn(e.target.value)} placeholder={S.txnHint} />
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-bold">{S.receipt}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              {photo && <img src={mediaUrl(photo.thumb_url) ?? photo.thumb_url} alt="" className="h-16 w-16 rounded-control border border-line object-cover" />}
+              <input ref={ref} type="file" accept="image/*" className="hidden" onChange={(e) => void pick(e)} />
+              {photo ? (
+                <Button type="button" variant="secondary" onClick={() => setPhoto(null)}>
+                  {S.receiptRemove}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={upBusy}
+                  className="flex items-center gap-2"
+                  onClick={() => ref.current?.click()}
+                >
+                  <IconPhoto size={16} />
+                  {S.receiptAdd}
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-      {error && <Alert>{error}</Alert>}
-      {done && <Alert tone="success">{S.sent}</Alert>}
-      <Button type="button" size="lg" className="w-full" disabled={!canSend} onClick={() => void send()}>
-        {S.send}
-      </Button>
+      </Step>
+      <Step n={3} title={S.step3}>
+        <p className="text-sm text-ink-muted">{S.step3Hint}</p>
+        {error && <Alert>{error}</Alert>}
+        {done && <Alert tone="success">{S.sent}</Alert>}
+        <Button type="button" size="lg" className="w-full" disabled={!canSend} onClick={() => void send()}>
+          {S.send}
+        </Button>
+      </Step>
     </div>
   );
 }
 
-/** **زرُّ الشحن + اللوحةُ + قائمةُ الطلبات** — لا يظهر شيءٌ حتّى يردّ الخادمُ ويكون الشحنُ مفعَّلاً. */
-export function ShamcashTopUp() {
+/**
+ * **زرُّ الشحن + اللوحةُ + قائمةُ الطلبات** — لا يظهر شيءٌ حتّى يردّ الخادمُ ويكون الشحنُ مفعَّلاً
+ * (والأبناءُ يُرسَمون دائماً، وزرُّهم وقائمتُهم `null` حتّى ذلك).
+ */
+export function ShamcashTopUp({ children }: { children: (parts: { action: ReactNode; requests: ReactNode }) => ReactNode }) {
   const { info, requests, reload } = useShamcash();
   const [open, setOpen] = useState(false);
-  if (!info || !info.topup_enabled) return null;
+  const enabled = !!info && info.topup_enabled;
+
+  const action = enabled ? (
+    <Button type="button" size="lg" className="flex min-h-12 flex-1 items-center justify-center gap-2" onClick={() => setOpen(true)}>
+      <IconWallet size={16} />
+      {S.topUpButton}
+    </Button>
+  ) : null;
+
+  const list =
+    enabled && requests.length > 0 ? (
+      <div className={`${OUTLINE_CARD} flex flex-col gap-2`} data-testid="shamcash-requests">
+        <p className="text-card-title">{S.listTitle}</p>
+        <ul className="divide-y divide-line-soft">
+          {requests.map((r) => (
+            <li key={r.id} className="flex items-center justify-between gap-3 py-3">
+              <span className="flex min-w-0 flex-col">
+                <span className="font-bold tabular-nums">{fmtMoney(r.amount)}</span>
+                <span dir="ltr" className="truncate text-start text-xs text-ink-muted">
+                  {r.txn_ref}
+                </span>
+                {r.status === "rejected" && r.reject_reason && <span className="text-xs text-danger">{r.reject_reason}</span>}
+              </span>
+              <StatusBadge r={r} />
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : null;
+
   return (
     <>
-      <Button type="button" size="lg" className="w-full" onClick={() => setOpen(true)}>
-        {S.topUpButton}
-      </Button>
-      {requests.length > 0 && (
-        <div className={`${OUTLINE_CARD} flex flex-col gap-2`}>
-          <p className="text-card-title">{S.listTitle}</p>
-          <ul className="divide-y divide-line-soft">
-            {requests.map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                <span className="font-bold">{fmtMoney(r.amount)}</span>
-                <span className={r.status === "rejected" ? "text-danger" : r.status === "approved" ? "text-success" : "text-ink-muted"}>
-                  {statusText(r)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {children({ action, requests: list })}
+      {enabled && info && (
+        <Modal open={open} onClose={() => setOpen(false)} title={S.panelTitle}>
+          <div className="flex flex-col gap-6">
+            <Step n={1} title={S.step1}>
+              <p className="text-sm text-ink-muted">{S.panelHint}</p>
+              <ShamcashAccountCard info={info} />
+            </Step>
+            <TopUpForm info={info} onSent={reload} />
+          </div>
+        </Modal>
       )}
-      <Modal open={open} onClose={() => setOpen(false)} title={S.panelTitle}>
-        <div className="flex flex-col gap-3">
-          <p className="text-sm text-ink-muted">{S.panelHint}</p>
-          <ShamcashAccountCard info={info} />
-          <TopUpForm info={info} onSent={reload} />
-        </div>
-      </Modal>
     </>
   );
 }

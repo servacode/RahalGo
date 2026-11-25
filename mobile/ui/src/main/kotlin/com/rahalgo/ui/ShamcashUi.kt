@@ -10,7 +10,12 @@ import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -80,15 +85,23 @@ fun ShamcashAccountCard(info: ShamcashInfo, modifier: Modifier = Modifier) {
 
     RahalCard(modifier = modifier.fillMaxWidth(), variant = CardVariant.Outlined) {
         if (qr != null) {
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                AsyncImage(
-                    model = qr,
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(240.dp),
-                )
+            // **الباركودُ في المقدّمة على أرضٍ بيضاءَ ثابتة** — يُمسح من شاشةٍ أخرى فلا يصحّ أن تغمق أرضُه بالسمة الغامقة.
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier
+                        .clip(Rahal.shape.md)
+                        .background(Rahal.colors.onPanel)
+                        .padding(Rahal.space.md),
+                ) {
+                    AsyncImage(
+                        model = qr,
+                        contentDescription = stringResource(R.string.sham_qr_desc),
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(224.dp),
+                    )
+                }
             }
-            Spacer(Modifier.height(Rahal.space.md))
+            Spacer(Modifier.height(Rahal.space.lg))
         }
         if (info.accountName.isNotBlank()) {
             Text(stringResource(R.string.sham_holder), color = Rahal.colors.inkMuted, style = Rahal.type.caption)
@@ -98,34 +111,52 @@ fun ShamcashAccountCard(info: ShamcashInfo, modifier: Modifier = Modifier) {
                 style = Rahal.type.bodyLarge,
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.height(Rahal.space.sm))
+            Spacer(Modifier.height(Rahal.space.md))
         }
         Text(stringResource(R.string.sham_account_number), color = Rahal.colors.inkMuted, style = Rahal.type.caption)
+        // **رقمُ الحساب في أرضٍ خفيضةٍ** — هو ما يُنسخ، فيُعزل عمّا حوله.
         Text(
             info.accountNumber,
             color = Rahal.colors.ink,
             style = Rahal.type.sectionTitle,
             fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(Rahal.shape.sm)
+                .background(Rahal.colors.field)
+                .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
         )
         Spacer(Modifier.height(Rahal.space.md))
-        RahalButton(
-            onClick = {
-                clipboard.setText(AnnotatedString(info.accountNumber))
-                Flash.ok(copiedText)
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.sham_copy)) }
-        if (qr != null) {
-            Spacer(Modifier.height(Rahal.space.sm))
-            RahalOutlineButton(
+        // **النسخُ وحفظُ الصورة جنباً إلى جنب** — فعلان متكافئان.
+        Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.md)) {
+            RahalButton(
                 onClick = {
-                    val needPerm = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
-                        context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
-                        PackageManager.PERMISSION_GRANTED
-                    if (needPerm) permission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE) else doSave()
+                    clipboard.setText(AnnotatedString(info.accountNumber))
+                    Flash.ok(copiedText)
                 },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.sham_save_qr)) }
+                modifier = Modifier.weight(1f),
+                compact = qr != null,
+            ) {
+                Icon(painterResource(R.drawable.ic_copy), contentDescription = null, modifier = Modifier.size(Rahal.icon.xs))
+                Spacer(Modifier.size(Rahal.space.xs))
+                Text(stringResource(R.string.sham_copy), maxLines = 1)
+            }
+            if (qr != null) {
+                RahalOutlineButton(
+                    onClick = {
+                        val needPerm = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+                            context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+                            PackageManager.PERMISSION_GRANTED
+                        if (needPerm) permission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE) else doSave()
+                    },
+                    modifier = Modifier.weight(1f),
+                    compact = true,
+                ) {
+                    Icon(painterResource(R.drawable.ic_image), contentDescription = null, modifier = Modifier.size(Rahal.icon.xs))
+                    Spacer(Modifier.size(Rahal.space.xs))
+                    Text(stringResource(R.string.sham_save_qr), maxLines = 1)
+                }
+            }
         }
     }
 }
@@ -167,20 +198,15 @@ fun saveQrToGallery(context: Context, bytes: ByteArray): Boolean = runCatching {
     }
 }.getOrDefault(false)
 
-/** **كلمةُ حالة طلب الشحن** — ناطر · انشحنت · مرفوض مع سببه. */
+/** **كلمةُ حالة طلب الشحن** — ناطر · انشحنت · مرفوض (وسببُه سطرٌ تحتها). */
 @Composable
-private fun shamStatusText(r: ShamcashRequest): String {
-    val why = r.rejectReason
-    return when (r.status) {
-        "approved" -> stringResource(R.string.sham_st_approved)
-        "rejected" ->
-            if (!why.isNullOrBlank()) stringResource(R.string.sham_st_rejected_why, why)
-            else stringResource(R.string.sham_st_rejected)
-        else -> stringResource(R.string.sham_st_pending)
-    }
+private fun shamStatusText(r: ShamcashRequest): String = when (r.status) {
+    "approved" -> stringResource(R.string.sham_st_approved)
+    "rejected" -> stringResource(R.string.sham_st_rejected)
+    else -> stringResource(R.string.sham_st_pending)
 }
 
-/** **قائمةُ طلبات الشحن بشام كاش** في المحفظة. */
+/** **قائمةُ طلبات الشحن بشام كاش** في المحفظة — الحالةُ رقاقةٌ بلونٍ وأيقونةٍ ونصّ، لا لوناً وحدَه. */
 @Composable
 fun ShamcashRequestsList(requests: List<ShamcashRequest>) {
     if (requests.isEmpty()) return
@@ -188,23 +214,58 @@ fun ShamcashRequestsList(requests: List<ShamcashRequest>) {
     RahalCard(padding = Rahal.space.none) {
         requests.forEachIndexed { i, r ->
             if (i > 0) RahalDivider(inset = Rahal.space.lg)
-            val color = when (r.status) {
-                "approved" -> Rahal.colors.success
-                "rejected" -> Rahal.colors.danger
-                else -> Rahal.colors.inkMuted
+            val tone = when (r.status) {
+                "approved" -> StatusTone.Success
+                "rejected" -> StatusTone.Danger
+                else -> StatusTone.Warning
             }
-            Column(
+            val icon = when (r.status) {
+                "approved" -> R.drawable.ic_check
+                "rejected" -> R.drawable.ic_close
+                else -> R.drawable.ic_time
+            }
+            Row(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
             ) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(money(r.amount), style = Rahal.type.cardTitle)
-                    Text(shamStatusText(r), color = color, style = Rahal.type.label)
+                Column(Modifier.weight(1f)) {
+                    Text(money(r.amount), color = Rahal.colors.ink, style = Rahal.type.cardTitle)
+                    Text(r.txnRef, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
+                    val why = r.rejectReason
+                    if (r.status == "rejected" && !why.isNullOrBlank()) {
+                        Text(why, color = Rahal.colors.danger, style = Rahal.type.caption)
+                    }
+                    if (r.createdAt.isNotBlank()) {
+                        Text(whenText(r.createdAt), color = Rahal.colors.inkMuted, style = Rahal.type.meta)
+                    }
                 }
-                Text(r.txnRef, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
+                StatusChip(shamStatusText(r), tone, icon = icon)
             }
         }
+    }
+}
+
+/** **رأسُ خطوةٍ مرقَّمة** — دائرةٌ بالرقم وعنوانُ الخطوة؛ ومحتواها تحتها. */
+@Composable
+private fun StepHeader(number: String, title: String) {
+    Row(
+        Modifier.fillMaxWidth().padding(bottom = Rahal.space.md),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
+    ) {
+        Box(
+            Modifier
+                .size(Rahal.size.iconBox)
+                .clip(Rahal.shape.pill)
+                .background(Rahal.colors.brand),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(number, color = Rahal.colors.onBrand, style = Rahal.type.cardTitle)
+        }
+        Text(title, color = Rahal.colors.ink, style = Rahal.type.sectionTitle)
     }
 }
 
@@ -245,50 +306,68 @@ fun ShamcashTopupScreen(vm: WalletViewModel, info: ShamcashInfo, onBack: () -> U
             }
             return@Column
         }
+        // **١ — حوّل** (الحسابُ والباركود)
+        StepHeader("١", stringResource(R.string.sham_step1))
         Text(stringResource(R.string.sham_step_hint), color = Rahal.colors.inkMuted, style = Rahal.type.body)
         Spacer(Modifier.height(Rahal.space.md))
         ShamcashAccountCard(info)
-        Spacer(Modifier.height(Rahal.space.lg))
-        LabeledField(
-            label = stringResource(R.string.sham_amount),
-            value = amount,
-            onValueChange = { amount = it.filter(Char::isDigit) },
-            keyboardType = KeyboardType.Number,
-            leadingIcon = R.drawable.ic_banknotes,
-        )
-        Text(
-            text = if (belowMin) stringResource(R.string.sham_amount_min, money(info.minTopup))
-            else stringResource(R.string.sham_amount_hint, money(info.minTopup)),
-            color = if (belowMin) Rahal.colors.danger else Rahal.colors.inkMuted,
-            style = Rahal.type.caption,
-        )
-        Spacer(Modifier.height(Rahal.space.sm))
-        LabeledField(
-            label = stringResource(R.string.sham_txn),
-            value = txn,
-            onValueChange = { txn = it },
-            supporting = stringResource(R.string.sham_txn_hint),
-        )
-        Spacer(Modifier.height(Rahal.space.sm))
-        RahalOutlineButton(
-            onClick = {
-                pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-            },
-            enabled = !s.receiptBusy,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(stringResource(if (s.receiptId != null) R.string.sham_receipt_change else R.string.sham_receipt_add))
+        Spacer(Modifier.height(Rahal.space.xl))
+
+        // **٢ — اكتب رقم العملية** (المبلغ ورقمُ العملية والإيصال)
+        StepHeader("٢", stringResource(R.string.sham_step2))
+        RahalCard(variant = CardVariant.Outlined) {
+            LabeledField(
+                label = stringResource(R.string.sham_amount),
+                value = amount,
+                onValueChange = { amount = it.filter(Char::isDigit) },
+                keyboardType = KeyboardType.Number,
+                leadingIcon = R.drawable.ic_banknotes,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = if (belowMin) stringResource(R.string.sham_amount_min, money(info.minTopup))
+                else stringResource(R.string.sham_amount_hint, money(info.minTopup)),
+                color = if (belowMin) Rahal.colors.danger else Rahal.colors.inkMuted,
+                style = Rahal.type.caption,
+            )
+            Spacer(Modifier.height(Rahal.space.md))
+            LabeledField(
+                label = stringResource(R.string.sham_txn),
+                value = txn,
+                onValueChange = { txn = it },
+                supporting = stringResource(R.string.sham_txn_hint),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(Rahal.space.md))
+            RahalOutlineButton(
+                onClick = {
+                    pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                enabled = !s.receiptBusy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(painterResource(R.drawable.ic_photo), contentDescription = null, modifier = Modifier.size(Rahal.icon.xs))
+                Spacer(Modifier.size(Rahal.space.sm))
+                Text(stringResource(if (s.receiptId != null) R.string.sham_receipt_change else R.string.sham_receipt_add))
+            }
+            if (s.receiptId != null) {
+                Spacer(Modifier.height(Rahal.space.xs))
+                Text(stringResource(R.string.sham_receipt_attached), color = Rahal.colors.success, style = Rahal.type.caption)
+            }
         }
-        if (s.receiptId != null) {
-            Text(stringResource(R.string.sham_receipt_attached), color = Rahal.colors.success, style = Rahal.type.caption)
-        }
+        Spacer(Modifier.height(Rahal.space.xl))
+
+        // **٣ — أرسل**
+        StepHeader("٣", stringResource(R.string.sham_step3))
+        Text(stringResource(R.string.sham_step3_hint), color = Rahal.colors.inkMuted, style = Rahal.type.body)
         Spacer(Modifier.height(Rahal.space.md))
         RahalButton(
             onClick = { vm.submitShamcashTopup(value, txn.trim()) },
             enabled = !s.shamBusy && !s.receiptBusy && value >= maxOf(info.minTopup, 1) && txn.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(R.string.sham_send)) }
-        Spacer(Modifier.height(Rahal.space.xxl))
+        // **وفراغٌ لقرص الحديث العائم** (مراجعةُ المحاكي ٢٠٢٦-١١-٢٥) — كان يغطّي زرَّ «أرسلت».
+        Spacer(Modifier.height(Rahal.space.xxl + LocalChatFabInset.current))
     }
 }
 

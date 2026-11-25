@@ -72,7 +72,9 @@ func (tr *dmTrail) stand(dur time.Duration) {
 // dmDay أمس بتوقيت دمشق عند الساعة ١٠:٠٠ — داخل يوم الحساب (٩ ← ٩) لتاريخ أمس.
 func dmDay() (string, time.Time) {
 	loc := drivermonitor.Loc()
-	y := time.Now().In(loc).AddDate(0, 0, -1)
+	// **أمسُ يوم الحساب لا أمسُ التقويم** — يومُ الحساب ٩ ← ٩، فقبل التاسعة صباحاً «أمس» التقويم
+	// هو يومُ الحساب الجاري لم يُغلَق بعد، وكانت الفحوصُ تسقط صباحاً وتنجح مساءً.
+	y := time.Now().In(loc).Add(-9*time.Hour).AddDate(0, 0, -1)
 	base := time.Date(y.Year(), y.Month(), y.Day(), 10, 0, 0, 0, loc)
 	return base.Format("2006-01-02"), base
 }

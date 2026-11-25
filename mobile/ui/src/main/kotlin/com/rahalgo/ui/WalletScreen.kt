@@ -4,6 +4,14 @@ import android.app.Application
 import com.rahalgo.design.Rahal
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -339,25 +347,7 @@ fun WalletScreen(
         //
         // **والرقمُ وحدَه في سطرٍ يُقرأ سطراً بين سطور** — والكرتُ يعزله
         // فيقع عليه البصرُ أوّلا، **وهو ما يفتح الشاشةَ لأجله.**
-        Column(
-            Modifier
-                .fillMaxWidth()
-                // **بطاقةُ الرصيد بلون العلامة** (مراجعةُ التصميم ٢٠٢٦-١١-٠٩) — أوّلُ ما تقع عليه العين.
-                .shadow(Rahal.elevation.raised, Rahal.shape.lg)
-                .clip(Rahal.shape.lg)
-                .background(Rahal.colors.brand)
-                .padding(vertical = Rahal.space.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(stringResource(R.string.wal_balance), color = Rahal.colors.onBrand.copy(alpha = 0.8f), style = Rahal.type.label)
-            Spacer(Modifier.height(Rahal.space.sm))
-            Text(
-                text = money(st.balance),
-                color = Rahal.colors.onBrand,
-                style = Rahal.type.display,
-                fontWeight = FontWeight.Bold,
-            )
-        }
+        BalanceHero(st.balance)
 
         // **والدينُ سطرٌ بسيطٌ تحت الرصيد** — للمتجر والمندوب والسائق (قرارُ المالك
         // ٢٠٢٦-١٠-١٥)، ولا يظهر لمن لا دينَ عليه.
@@ -407,8 +397,21 @@ fun WalletScreen(
                     modifier = Modifier.weight(1f),
                 ) { Text(stringResource(R.string.wal_statement)) }
             }
+        } else if (shamInfo != null) {
+            // **شحنُ شام كاش وكشفُ الحساب في صفٍّ واحدٍ متساويين** (طلبُ المالك ٢٠٢٦-١١-٢٥) —
+            // **والشحنُ هو المملوءُ لأنّه الفعلُ الأوّل**، وكشفُ الحساب إخراجُ ورقة.
+            Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.md)) {
+                RahalButton(
+                    onClick = { vm.resetShamcashForm(); shamOpen = true },
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.sham_topup_btn)) }
+                RahalOutlineButton(
+                    onClick = { statement = true },
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.wal_statement)) }
+            }
         } else {
-            // **ومن لا يسحب له زرٌّ واحد** — يمتدّ عرضَ الشاشة: **زرٌّ
+            // **ومن لا يسحب ولا يشحن له زرٌّ واحد** — يمتدّ عرضَ الشاشة: **زرٌّ
             // بنصف العرض بجانب فراغٍ يُقرأ أنّ شيئاً سقط.**
             RahalOutlineButton(
                 onClick = { statement = true },
@@ -427,30 +430,27 @@ fun WalletScreen(
             }
         }
 
-        if (shamInfo != null) {
-            Spacer(Modifier.height(Rahal.space.md))
-            RahalButton(
-                onClick = { vm.resetShamcashForm(); shamOpen = true },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.sham_topup_btn)) }
-        }
         if (topUpInfo) s.sham?.requests?.let { ShamcashRequestsList(it) }
 
         if (topUpInfo) {
             Spacer(Modifier.height(Rahal.space.lg))
-            RahalCard {
-                Text(
-                    stringResource(R.string.wal_topup_title),
-                    color = Rahal.colors.ink,
-                    style = Rahal.type.label,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.height(Rahal.space.sm))
-                Text(
-                    stringResource(R.string.wal_topup_body),
-                    color = Rahal.colors.inkMuted,
-                    style = Rahal.type.body,
-                )
+            // **بطاقةٌ مضغوطة** — أيقونةٌ وجملتان، لا فقرةٌ تحتلّ نصفَ الشاشة.
+            RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Info) {
+                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(Rahal.space.md)) {
+                    IconBox(R.drawable.ic_info, Rahal.colors.brand)
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.wal_topup_title),
+                            color = Rahal.colors.ink,
+                            style = Rahal.type.cardTitle,
+                        )
+                        Text(
+                            stringResource(R.string.wal_topup_body),
+                            color = Rahal.colors.inkMuted,
+                            style = Rahal.type.caption,
+                        )
+                    }
+                }
             }
         }
 
@@ -575,9 +575,14 @@ private fun TxRow(t: WalletTx) {
     // **والملاحظةُ تحت الاسم تقول لماذا**، والتاريخُ مع كلّ حركةٍ بأمر المالك.
     Row(
         WalletRowModifier,
-        verticalAlignment = Alignment.Top,
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
     ) {
+        // **أيقونةٌ بلون الإشارة** — النوعُ بالشكل، والدخلُ والخرجُ باللون، **ولا يُترك اللونُ وحدَه** (الإشارةُ مكتوبةٌ في المبلغ).
+        IconBox(
+            icon = txIcon(t.kind, positive),
+            tint = if (positive) Rahal.colors.success else Rahal.colors.danger,
+        )
         Column(Modifier.weight(1f)) {
             Text(kindLabel(t.kind), style = Rahal.type.bodyStrong, color = Rahal.colors.ink)
             if (t.note.isNotEmpty()) {
@@ -600,6 +605,54 @@ private fun TxRow(t: WalletTx) {
                 Text("#$it", color = Rahal.colors.inkMuted, style = Rahal.type.meta)
             }
         }
+    }
+}
+
+/** **أيقونةُ الحركة بنوعها** — والمجهولُ بإشارته (زائدٌ أو ناقص). */
+private fun txIcon(kind: String, positive: Boolean): Int = when (kind) {
+    "topup" -> R.drawable.ic_wallet
+    "order_payment" -> R.drawable.ic_cart
+    "payout", "settlement", "advance" -> R.drawable.ic_banknotes
+    "reward" -> R.drawable.ic_star
+    "refund", "custom_goods_return" -> R.drawable.ic_return
+    "penalty" -> R.drawable.ic_warning
+    "driver_earning" -> R.drawable.ic_moto
+    "tip" -> R.drawable.ic_heart
+    else -> if (positive) R.drawable.ic_plus else R.drawable.ic_minus
+}
+
+/**
+ * **بطاقةُ الرصيد** — تدرّجٌ بلون العلامة مع دائرتين شفّافتين، على نسق بطاقة جوائز «رحّال غو».
+ * **والنصُّ `onBrand` فوق التدرّج**: التدرّجُ يغمق في الفاتحة ويفتح في الغامقة فيبقى التباين.
+ */
+@Composable
+private fun BalanceHero(balance: Long) {
+    val top = Rahal.colors.brand
+    val on = Rahal.colors.onBrand
+    val bottom = if (Rahal.colors.dark) lerp(top, Rahal.colors.onPanel, 0.30f) else lerp(top, Rahal.colors.panel, 0.60f)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .shadow(Rahal.elevation.raised, Rahal.shape.lg)
+            .clip(Rahal.shape.lg)
+            .background(Brush.linearGradient(listOf(top, bottom)))
+            .drawBehind {
+                drawCircle(on.copy(alpha = 0.08f), radius = size.minDimension * 0.55f, center = Offset(size.width * 0.12f, size.height * 0.05f))
+                drawCircle(on.copy(alpha = 0.06f), radius = size.minDimension * 0.4f, center = Offset(size.width * 0.95f, size.height * 1.0f))
+            }
+            .padding(Rahal.space.xl),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Rahal.space.md)) {
+            IconBox(R.drawable.ic_wallet, on, size = Rahal.size.avatarSm)
+            Text(stringResource(R.string.wal_balance), color = on.copy(alpha = 0.85f), style = Rahal.type.bodyStrong)
+        }
+        Spacer(Modifier.height(Rahal.space.lg))
+        Text(
+            text = money(balance),
+            color = on,
+            style = Rahal.type.display,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 

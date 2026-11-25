@@ -825,7 +825,7 @@
     <string name="err_custom_photos_invalid">إحدى الصور غير صالحة، أزلها وأضفها من جديد</string>
     <string name="custom_photos_label">صور الطلب</string>
     <string name="wal_topup_title">كيف بشحن محفظتي؟</string>
-    <string name="wal_topup_body">فيك تشحن محفظتك بطريقتين: نقداً بمكتب رحّال غو، أو بتحويل شام كاش من زر «اشحن بشام كاش» (إذا كان متاح). وبالمحفظة بتقدر تدفع الطلب كلّه أو أجرة التوصيل بس. والدفع كاش عند الاستلام متاح دائماً.</string>
+    <string name="wal_topup_body">نقداً بمكتب رحّال غو، أو بتحويل شام كاش. وبالمحفظة بتدفع الطلب كلّه أو أجرة التوصيل بس. والدفع كاش عند الاستلام متاح دايماً.</string>
     <string name="sham_back">تمام</string>
     <string name="sham_topup_btn">اشحن بشام كاش</string>
     <string name="sham_topup_title">الشحن بشام كاش</string>
@@ -847,6 +847,11 @@
     <string name="sham_receipt_change">غيّر صورة الإيصال</string>
     <string name="sham_receipt_attached">انرفعت صورة الإيصال</string>
     <string name="sham_send">أرسلت</string>
+    <string name="sham_qr_desc">باركود حساب شام كاش</string>
+    <string name="sham_step1">حوّل المبلغ لحسابنا</string>
+    <string name="sham_step2">اكتب رقم العملية</string>
+    <string name="sham_step3">أرسل</string>
+    <string name="sham_step3_hint">رح نشحن محفظتك أول ما نتأكد من التحويل.</string>
     <string name="sham_sent">وصل طلبك، رح نشحن محفظتك أول ما نتأكد من التحويل</string>
     <string name="sham_requests_title">طلبات الشحن بشام كاش</string>
     <string name="sham_st_pending">ناطر التأكيد</string>

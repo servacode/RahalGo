@@ -213,16 +213,16 @@ func TestCHATMEDIA_RejectsBadInput(t *testing.T) {
 		t.Fatalf("**مرفقان بلا فاصل**: %s", r)
 	}
 
-	// **وفوق العشرين يُردّ** — تسعَ عشرةَ أخرى تُكتب في القاعدة، والحادية والعشرون تُرفض.
+	// **وفوق الخمسين يُردّ** (رُفع السقفُ ٢٠←٥٠ بقرار المالك ٢٠٢٦-١١-٢٤) — تسعٌ وأربعون أخرى تُكتب في القاعدة، والحادي والخمسون يُرفض.
 	if _, err := h.Pool.Exec(ctxBG(), `
 		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, attachment_kind, created_at)
 		SELECT $1::uuid, $2::uuid, 'customer', 'x', $3::uuid, 'photo', now() - interval '1 hour'
-		  FROM generate_series(1, 19)`, fx.Order, fx.Cust.ID, fx.DrvA.ID); err != nil {
+		  FROM generate_series(1, 49)`, fx.Order, fx.Cust.ID, fx.DrvA.ID); err != nil {
 		t.Fatalf("تهيئة: %v", err)
 	}
 	ageChat(t, h, fx.Order)
 	if r := h.sendAttachment(fx.Cust.Token, fx.Order, "photo", qaJPEG(t), nil); r.Code != http.StatusConflict || r.Err() != "chat_attachments_limit" {
-		t.Fatalf("**المرفقُ الحادي والعشرون قُبل**: %s", r)
+		t.Fatalf("**المرفقُ الحادي والخمسون قُبل**: %s", r)
 	}
 	// **والسقفُ لكلّ مرسِل** — السائقُ يرسل.
 	if r := h.sendAttachment(fx.DrvA.Token, fx.Order, "photo", qaJPEG(t), nil); r.Code != http.StatusCreated {

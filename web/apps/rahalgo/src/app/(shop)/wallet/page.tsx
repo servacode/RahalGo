@@ -8,7 +8,7 @@
  */
 
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Alert, LoadingState, WalletPage } from "@rahalgo/ui";
+import { IconHelp, LoadingState, WalletPage } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { NeedLogin } from "@/components/customer/NeedLogin";
@@ -25,19 +25,35 @@ export default function WalletRoute() {
   return (
     <div className="mx-auto flex w-full flex-col gap-4 max-w-none">
       <ShopPageHeader title={W.title} />
-      {/* **كيف تُشحن المحفظة** — نقداً بالمكتب، أو بتحويل شام كاش حين يفعّله المالك (زرٌّ يظهر بشرطه). */}
-      <Alert tone="info" title={W.topUpTitle}>
-        {W.topUpBody}
-      </Alert>
-      <ShamcashTopUp />
-      <WalletPage
-        api={api}
-        path="/api/v1/my/wallet"
-        balanceLabel={W.balance}
-        holderName={user.full_name}
-        holderPhone={user.phone}
-        cardsOnly
-      />
+      {/* **شحنُ المحفظة** — نقداً بالمكتب، أو بتحويل شام كاش حين يفعّله المالك (الزرُّ يظهر بشرطه بجانب «كشف حساب»). */}
+      <ShamcashTopUp>
+        {({ action, requests }) => (
+          <WalletPage
+            api={api}
+            path="/api/v1/my/wallet"
+            balanceLabel={W.balance}
+            holderName={user.full_name}
+            holderPhone={user.phone}
+            cardsOnly
+            hero
+            heroActions={action}
+            belowHero={
+              <>
+                {requests}
+                <div className="flex items-start gap-3 rounded-rg-lg bg-info-tint p-3" data-testid="wallet-topup-info">
+                  <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-control bg-surface text-info">
+                    <IconHelp size={18} />
+                  </span>
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <p className="text-card-title">{W.topUpTitle}</p>
+                    <p className="text-xs text-ink-muted">{W.topUpBody}</p>
+                  </div>
+                </div>
+              </>
+            }
+          />
+        )}
+      </ShamcashTopUp>
     </div>
   );
 }
