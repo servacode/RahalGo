@@ -82,6 +82,7 @@
     <string name="err_prize_no_balance">ما عندك رصيد جوائز لتطلب من صفحة الجوائز</string>
     <string name="err_prize_no_promo">ما بينفع كود خصم مع طلب الجوائز</string>
     <string name="err_prize_order_locked">طلب الجوائز ما بيتحوّل لمتجر تاني</string>
+    <string name="err_prizes_not_started">مسابقة الجوائز لسا ما بلشت</string>
     <string name="err_prize_balance_insufficient">رصيد الجوائز ما بيكفي</string>
     <string name="err_offer_not_yours">هذا العرض لم يعد لك</string>
     <string name="err_order_not_closed">الطلب لم يغلق بعد — البلاغ بعد انتهائه</string>
@@ -818,6 +819,9 @@
     <string name="signup_password2">تأكيد كلمة المرور</string>
     <string name="signup_password_mismatch">كلمتا المرور غير متطابقتين</string>
     <string name="wal_k_topup">شحن رصيد</string>
+    <string name="wal_k_tip">إكرامية</string>
+    <string name="err_tip_invalid">مبلغ الإكرامية مو صحيح</string>
+    <string name="err_tip_not_allowed">الإكرامية مو متاحة لهالطلب</string>
     <string name="err_custom_photos_invalid">إحدى الصور غير صالحة، أزلها وأضفها من جديد</string>
     <string name="custom_photos_label">صور الطلب</string>
     <string name="wal_topup_title">كيف بشحن محفظتي؟</string>

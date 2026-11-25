@@ -279,6 +279,8 @@ export interface CustomerPlatform {
   custom_delivery: CustomDelivery;
   /** **الدخولُ برمزٍ على واتساب** — مفتاحُ `auth.otp_login` في اللوحة. */
   otp_login: boolean;
+  /** **إكرامية الكابتن** — غيابُها أو `enabled:false` ⇒ لا واجهةَ لها. */
+  tips?: { enabled: boolean; presets: number[]; max: number };
 }
 
 /**
@@ -322,6 +324,8 @@ export interface MyOrder {
   wallet_scope?: "none" | "full" | "delivery";
   /** **يدفع للكابتن بشام كاش عند الاستلام** (٢٠٢٦-١١-٢٥) — مع `wallet_scope: none`؛ وغيابُه من خادمٍ قديم. */
   pay_shamcash?: boolean;
+  /** **إكرامية الكابتن المحجوزة من المحفظة** (ليست من `total`) — صفرٌ أو غائبٌ = لا إكرامية. */
+  tip?: number;
   address_text: string;
   notes: string;
   custom_request: string;
@@ -485,18 +489,44 @@ export interface FreeDelivery {
   ends_at: string | null;
 }
 
-/** **جوائز رحّال غو — حالُ الزبون هذا الشهر** (`/prizes/me`). كلُّ حقلٍ اختياريٌّ احتياطاً من خادمٍ قديم. */
+/** **نقاطُ كلّ فعل** كما في إعدادات المسابقة. */
+export interface PrizePointValues {
+  checkin?: number;
+  order?: number;
+  invite_signup?: number;
+  invite_first_order?: number;
+  follow_facebook?: number;
+  follow_instagram?: number;
+}
+
+/**
+ * **جوائز رحّال غو — حالُ الزبون في مسابقة النقاط** (`/prizes/me`). **نقاطُه وترتيبُه هو وحدَه** —
+ * لا أسماءَ ولا نقاطَ لغيره (قرارُ المالك ٢٠٢٦-١١-٢٥). كلُّ حقلٍ اختياريٌّ احتياطاً من خادمٍ قديم.
+ */
 export interface PrizesMe {
   enabled?: boolean;
   launch_on?: string;
+  started?: boolean;
   month?: string;
-  month_invites?: number;
-  invites_per_entry?: number;
-  entries?: number;
-  invites_to_next?: number;
-  draw_at?: string;
+  cutoff_at?: string;
+  announce_at?: string;
+  points?: number;
+  rank?: number;
+  min_points?: number;
+  to_qualify?: number;
+  qualified?: boolean;
+  excluded?: boolean;
+  checked_in_today?: boolean;
+  followed_facebook?: boolean;
+  followed_instagram?: boolean;
+  facebook_url?: string;
+  instagram_url?: string;
+  point_values?: PrizePointValues;
   amounts?: number[];
   winners_count?: number;
+  last_month?: string | null;
+  last_rank?: number;
+  last_amount?: number;
   prize_balance?: number;
   prize_expires_at?: string | null;
   store_id?: string | null;
@@ -518,13 +548,3 @@ export interface PrizeItems {
   items?: PrizeItem[];
 }
 
-export interface PrizeWinner {
-  rank: number;
-  name: string;
-  amount: number;
-}
-
-export interface PrizeWinners {
-  month?: string | null;
-  winners?: PrizeWinner[];
-}

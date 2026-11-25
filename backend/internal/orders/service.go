@@ -431,6 +431,10 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		if err := s.checkPayShamcash(ctx, unit.settings, scope, in.PayShamcash); err != nil {
 			return nil, nil, err
 		}
+		// **والإكرامية للمحفظة بس** — شام كاش عند الاستلام متل الكاش.
+		if in.PayShamcash && in.Tip != 0 {
+			return nil, nil, ErrTipNotAllowed
+		}
 	}
 
 	// الزبون: معرف مباشر أو رقم هاتف (طلب هاتفي — يُنشأ الحساب إن لزم)
@@ -995,6 +999,17 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 			// المقروء بضمّه إلى الجدول. **فالملاحظةُ هنا تكرارٌ لعنوان الحركة
 			// بلفظٍ أسوأ** — وحذفُها يُظهر الرقمَ الصحيح مكانها.
 			orderID, "", &actorID); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// **إكراميةُ الكابتن** (`tip.go`) — بعد خصم الحصّة، فالمتاحُ يُسأل عن الاتنين معاً.
+	// **والزبونُ بنفسه وحدَه** — الطلبُ الهاتفيُّ من المكتب ما بيحطّ إكرامية عن حدا.
+	if in.Tip != 0 {
+		if actorID != customerID {
+			return nil, nil, ErrTipNotAllowed
+		}
+		if err := s.setTipTx(ctx, tx, orderID, customerID, in.Tip); err != nil {
 			return nil, nil, err
 		}
 	}

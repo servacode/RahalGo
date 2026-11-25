@@ -149,6 +149,8 @@ type lockedOrder struct {
 	walletScope string
 	// moneyModel **نموذجُ المال** (هجرة ٠٥٣٢) — ٢: البضاعةُ خارجَ كلّ حساب (`money_model2.go`).
 	moneyModel int16
+	// tipReserved **إكراميةُ الكابتن المحجوزة** (هجرة ٠٥٥٩) — صفرٌ = لا شي يتسوّى.
+	tipReserved int64
 }
 
 // lockOrderTx **يقفل صفَّ الطلب ويقرؤه** — أوّلُ ما في كلّ انتقالٍ وكلّ فعلِ قسم.
@@ -164,11 +166,11 @@ func lockOrderTx(ctx context.Context, tx pgx.Tx, orderID string) (*lockedOrder, 
 		       -- كلَّ انتقالٍ لها: قبولَ السائق واستلامَه وتسليمَه.
 		       COALESCE(customer_id::text, ''),
 		       COALESCE(promo_code,''), kind, custom_reserved_amount, origin, stops, wallet_scope,
-		       money_model
+		       money_model, tip_reserved
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&lo.from, &lo.driverID, &lo.walletPaid, &lo.cashDue, &lo.deliveryFee, &lo.customerID,
 			&lo.promoCode, &lo.kind, &lo.customReserved, &lo.origin, &lo.stops, &lo.walletScope,
-			&lo.moneyModel)
+			&lo.moneyModel, &lo.tipReserved)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -626,6 +628,7 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 		walletScope:      lo.walletScope,
 		merchantDelivery: kind == KindMerchantDelivery,
 		moneyModel:       lo.moneyModel,
+		tipReserved:      lo.tipReserved,
 	}, &done); err != nil {
 		return nil, err
 	}
@@ -740,6 +743,7 @@ func (s *Service) afterTransition(ctx context.Context, ap *appliedTransition) (*
 	// **بعد الإيداع لا داخلَه**: معاملةٌ تُرجَع بعد أن أُرسل إشعارُها
 	// **تُخبر صاحبَها بمالٍ لم يصله.**
 	s.notifyCredits(ctx, orderID, done.credits)
+	s.notifyTip(ctx, orderID, done.tip)
 	// **وطلبُ تعويضٍ ينتظر يصل المكتبَ** — لا يُقيَّد حتّى يوافق إنسان.
 	if done.compensationRequested {
 		s.alertCompensationPending(ctx, orderID)
@@ -1007,6 +1011,8 @@ type settled struct {
 	credits []walletCredit
 	// compensationRequested **كُتب طلبُ تعويضٍ معلَّق** — فيُنبَّه المكتبُ بعد الإيداع.
 	compensationRequested bool
+	// tip **إكراميةٌ انقيّدت للكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٥) — يُخبَر بعد الإيداع.
+	tip *tipNotice
 }
 
 // walletCredit حركةُ محفظةٍ واحدةٌ تستحقّ أن يُخبَر بها صاحبُها.
@@ -1048,6 +1054,8 @@ type settlement struct {
 	merchantDelivery bool
 	// moneyModel **نموذجُ المال** — ٢: البضاعةُ خارجَ كلّ حساب (`money_model2.go`).
 	moneyModel int16
+	// tipReserved **إكراميةُ الكابتن المحجوزة** (`tip.go`) — من اللقطة المقفولة، فطلبٌ بلاها ما بيقرأ شي.
+	tipReserved int64
 }
 
 // settle ينفّذ كل الأثر المالي لانتقال الحالة داخل معاملة المستدعي.
@@ -1076,6 +1084,20 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	if refundOnEnter(in.to) && in.from != StDelivered && s.prizes != nil && !in.custom && !in.merchantDelivery {
 		if _, err := s.prizes.RefundOrderTx(ctx, q, in.orderID, 0); err != nil {
 			return err
+		}
+	}
+
+	// (0-إ) **إكراميةُ الكابتن** (`tip.go`، قرارُ المالك ٢٠٢٦-١١-٢٥): التسليمُ يقيّدها لمين سلّم،
+	// **وكلُّ نهايةٍ تانية تفكّ حجزها.** سطورُها مجموعها صفر فما بتمسّ باقي التسوية.
+	if !in.merchantDelivery && in.tipReserved > 0 {
+		if in.to == StDelivered {
+			if err := s.settleTipTx(ctx, q, in.orderID, in.driverID, in.actorID, out); err != nil {
+				return err
+			}
+		} else if terminal(in.to) {
+			if err := s.releaseTipTx(ctx, q, in.orderID); err != nil {
+				return err
+			}
 		}
 	}
 

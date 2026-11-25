@@ -75,7 +75,9 @@ type UndeliverResult struct {
 	ReferralKept     int64 `json:"referral_kept"`
 	// CustomerRefund ما رُدّ لمحفظة الزبون · DrawerOut ما خرج من الدرج.
 	CustomerRefund int64 `json:"customer_refund"`
-	DrawerOut      int64 `json:"drawer_out"`
+	// TipRefund **إكراميةٌ رجعت للزبون** (٢٠٢٦-١١-٢٥).
+	TipRefund int64 `json:"tip_refund"`
+	DrawerOut int64 `json:"drawer_out"`
 	// DriverID · RepID للإشعار والتدقيق.
 	DriverID string `json:"-"`
 	RepID    string `json:"-"`
@@ -262,6 +264,13 @@ func (s *Service) undeliverTx(ctx context.Context, q wallet.Querier,
 			return res, err
 		}
 	}
+
+	// (٦ب) **إكراميةُ الكابتن ترجع للزبون** (`tip.go`) — الطلبُ ما انسلّم فعلاً.
+	tipBack, err := s.reverseTipTx(ctx, q, orderID, actorID)
+	if err != nil {
+		return res, err
+	}
+	res.TipRefund = tipBack
 
 	// (٧) **الزبون** — ما دفعه من محفظته يُردّ (§1). والنقدُ لم يدفعه.
 	if walletPaid > 0 && customerID != "" {

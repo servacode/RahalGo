@@ -416,7 +416,11 @@ type Order struct {
 	// «من رصيد الجوائز».
 	PrizeDiscount int64 `json:"prize_discount"`
 	Total         int64 `json:"total"`
-	WalletPaid    int64 `json:"wallet_paid"`
+	// Tip **إكراميةُ الكابتن** (هجرة ٠٥٥٩) — خارج `Total`، محجوزةٌ أو مقيّدة. للزبون والمكتب.
+	Tip int64 `json:"tip"`
+	// TipDriver **حصّةُ الكابتن منها** بعد نسبة المنصّة — للكابتن والمكتب.
+	TipDriver  int64 `json:"tip_driver"`
+	WalletPaid int64 `json:"wallet_paid"`
 
 	// ══════════════════════════════════════════════════════════════════
 	// **شفافيّةُ المتجر — كم بِيع وكم أخذت المنصّة**
@@ -743,6 +747,9 @@ type CreateInput struct {
 	PayShamcash bool   `json:"pay_shamcash"`
 	PromoCode   string `json:"promo_code"`
 	Notes       string `json:"notes"`
+	// Tip **إكراميةُ الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٥) — بتنحجز من المحفظة، وبس مع `full`/`delivery`.
+	// صفرٌ أو غيابُه = بلا إكرامية.
+	Tip int64 `json:"tip"`
 }
 
 type ItemInput struct {

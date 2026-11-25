@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * **جوائز رحّال غو** — سحبٌ شهريٌّ على الدعوات (قرارُ المالك ٢٠٢٦-١١-٢٣).
+ * **جوائز رحّال غو** — مسابقةُ نقاطٍ شهريّة (قرارا المالك ٢٠٢٦-١١-٢٣ و٢٠٢٦-١١-٢٥).
  *
- * كلُّ N دعواتٍ بالشهر = فرصةٌ؛ والسحبُ تلقائيٌّ أوّلَ الشهر ١٢ ظهراً بتوقيت دمشق على الشهر السابق.
- * **والإعداداتُ كلُّها من صفحة الإعدادات** (`prizes.*` من فهرس المحرّك) — هنا قراءةٌ ورابطٌ لا غير.
+ * الحسمُ يومَ ٢٩ (أو ٢٧ بشباط) ١٢ ظهراً والإعلانُ آخرَ يومٍ ١٢ ظهراً بتوقيت دمشق. **والترتيبُ الكاملُ بالأسماء
+ * الحقيقيّة هنا للموظّفين وحدَهم** — الزبونُ لا يرى إلّا نفسَه. والإعداداتُ كلُّها من صفحة الإعدادات (`prizes.*`).
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -36,23 +36,31 @@ import { Panel, Tile } from "@/components/admin/DashParts";
 const m = getMessages(defaultLocale);
 const P = m.admin.prizes;
 
-interface Entrant {
+interface Standing {
+  rank: number;
   user_id: string;
   name: string;
   phone: string;
-  invites: number;
-  entries: number;
+  points: number;
+  reached_at: string;
+  excluded: boolean;
+  qualified: boolean;
+  breakdown?: Record<string, number>;
 }
-interface Entries {
+interface Board {
   month: string;
-  invites_per_entry: number;
-  entrants: Entrant[];
+  cutoff_at: string;
+  announce_at: string;
+  min_points: number;
+  winners: number;
+  standings: Standing[];
 }
 interface Winner {
   rank: number;
   user_id: string;
   name: string;
   phone: string;
+  points: number;
   amount: number;
   spent: number;
   expired: number;
@@ -61,7 +69,7 @@ interface Draw {
   month: string;
   drawn_at: string;
   entrants: number;
-  total_entries: number;
+  qualified: number;
   awarded: number;
   spent: number;
   expired: number;
@@ -183,21 +191,30 @@ function PrizeStorePanel() {
 function monthKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
-/** الشهرُ الحاليّ والأشهرُ الماضية. */
+/** الشهرُ الجاي والحاليّ والأشهرُ الماضية — فبعد الحسم يُحسب كلُّ شيءٍ للشهر الجاي. */
 function recentMonths(n: number): string[] {
   const now = new Date();
-  return Array.from({ length: n }, (_, i) => monthKey(new Date(now.getFullYear(), now.getMonth() - i, 1)));
+  return Array.from({ length: n }, (_, i) => monthKey(new Date(now.getFullYear(), now.getMonth() + 1 - i, 1)));
 }
 function monthLabel(key: string): string {
   const [y = "", mo = "1"] = key.split("-");
   return `${P.months[Number(mo) - 1] ?? mo} ${fmtNum(Number(y))}`;
 }
 
-/** السحبُ القادم: أوّلُ الشهر الذي يلي (اليومَ أو تاريخَ البدء، الأبعد). */
-function nextDraw(launchOn: string): string {
-  const launch = launchOn ? new Date(`${launchOn}T00:00:00`) : new Date(0);
-  const ref = launch.getTime() > Date.now() ? launch : new Date();
-  return `${monthKey(new Date(ref.getFullYear(), ref.getMonth() + 1, 1))}-01`;
+/** **تفصيلُ النقاط** — «حضور ٥ · طلبات ٤٠ …»، وما كان صفراً لا يُذكر. */
+function breakdownText(b?: Record<string, number>): string {
+  if (!b) return "";
+  const parts: [string, string][] = [
+    ["checkin", P.bdCheckin],
+    ["order", P.bdOrder],
+    ["invite_signup", P.bdInvite],
+    ["invite_first_order", P.bdInviteOrder],
+    ["follow", P.bdFollow],
+  ];
+  return parts
+    .filter(([k]) => (b[k] ?? 0) > 0)
+    .map(([k, t]) => t.replace("{n}", fmtNum(b[k] ?? 0)))
+    .join(" · ");
 }
 
 function Person({ id, name, phone, canUser }: { id: string; name: string; phone: string; canUser: boolean }) {
@@ -219,9 +236,10 @@ function Person({ id, name, phone, canUser }: { id: string; name: string; phone:
 
 export default function PrizesPage() {
   const open = useCanOpen();
-  const months = useMemo(() => recentMonths(6), []);
-  const [month, setMonth] = useState(months[0] ?? "");
-  const [entries, setEntries] = useState<Entries | null>(null);
+  const months = useMemo(() => recentMonths(7), []);
+  // **الافتراضُ المسابقةُ الجارية كما يقولها المحرّك** (`month` فارغ) — ثمّ تُختار من الشرائح.
+  const [month, setMonth] = useState("");
+  const [entries, setEntries] = useState<Board | null>(null);
   const [entriesErr, setEntriesErr] = useState("");
   const [draws, setDraws] = useState<Draw[] | null>(null);
   const [drawsErr, setDrawsErr] = useState("");
@@ -229,7 +247,7 @@ export default function PrizesPage() {
 
   const loadEntries = useCallback(() => {
     setEntries(null);
-    api<Entries>(`/api/v1/admin/prizes/entries?month=${month}`)
+    api<Board>(`/api/v1/admin/prizes/leaderboard${month ? `?month=${month}` : ""}`)
       .then((r) => {
         setEntries(r);
         setEntriesErr("");
@@ -259,8 +277,8 @@ export default function PrizesPage() {
       .catch(() => setCfg(null));
   }, []);
 
-  const rows = entries?.entrants ?? [];
-  const totalEntries = rows.reduce((a, r) => a + r.entries, 0);
+  const rows = entries?.standings ?? [];
+  const shownMonth = month || entries?.month || "";
 
   return (
     <PageContainer>
@@ -279,8 +297,8 @@ export default function PrizesPage() {
         <Tile
           icon={IconDate}
           label={P.nextDraw}
-          value={cfg ? fmtDate(nextDraw(cfg.launchOn)) : "—"}
-          sub={P.nextDrawHint}
+          value={entries && !month ? fmtDate(entries.cutoff_at) : "—"}
+          sub={entries && !month ? P.nextDrawHint.replace("{date}", fmtDate(entries.announce_at)) : undefined}
           tone="accent"
         />
       </div>
@@ -290,7 +308,7 @@ export default function PrizesPage() {
 
         <Panel title={P.entrantsTitle}>
           <div className="mb-3">
-            <Chips wrap items={months.map((k) => ({ id: k, label: monthLabel(k) }))} value={month} onChange={setMonth} />
+            <Chips wrap items={months.map((k) => ({ id: k, label: monthLabel(k) }))} value={shownMonth} onChange={setMonth} />
           </div>
           {entriesErr ? (
             <AdminReload label={entriesErr} onRetry={loadEntries} />
@@ -301,25 +319,38 @@ export default function PrizesPage() {
           ) : (
             <>
               <p className="mb-2 text-xs text-ink-muted">
-                {P.perEntry.replace("{n}", fmtNum(entries.invites_per_entry))} · {P.colEntries}: {fmtNum(totalEntries)}
+                {P.perEntry.replace("{n}", fmtNum(entries.min_points)).replace("{w}", fmtNum(entries.winners))}
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-start text-ink-muted">
+                      <th className="p-2 text-start">{P.colRank}</th>
                       <th className="p-2 text-start">{P.colName}</th>
-                      <th className="p-2 text-start">{P.colInvites}</th>
-                      <th className="p-2 text-start">{P.colEntries}</th>
+                      <th className="p-2 text-start">{P.colPoints}</th>
+                      <th className="p-2 text-start">{P.colBreakdown}</th>
+                      <th className="p-2 text-start">{P.colReached}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((r) => (
                       <tr key={r.user_id} className="border-t border-line-soft">
                         <td className="p-2">
-                          <Person id={r.user_id} name={r.name} phone={r.phone} canUser={open.user} />
+                          {r.excluded ? (
+                            <Badge variant="neutral">{P.excluded}</Badge>
+                          ) : (
+                            <Badge variant={r.qualified ? "success" : "neutral"}>{fmtNum(r.rank)}</Badge>
+                          )}
                         </td>
-                        <td className="p-2 tabular-nums">{fmtNum(r.invites)}</td>
-                        <td className="p-2 font-bold tabular-nums">{fmtNum(r.entries)}</td>
+                        <td className="p-2">
+                          <Person id={r.user_id} name={r.name} phone={r.phone} canUser={open.user} />
+                          {r.qualified && <span className="block text-xs font-bold text-success">{P.qualified}</span>}
+                        </td>
+                        <td className="p-2 font-bold tabular-nums">{fmtNum(r.points)}</td>
+                        <td className="p-2 text-xs text-ink-muted">{breakdownText(r.breakdown)}</td>
+                        <td className="p-2 text-xs" dir="ltr">
+                          {fmtDate(r.reached_at)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -344,7 +375,7 @@ export default function PrizesPage() {
                     <h3 className="heading-card">{monthLabel(d.month)}</h3>
                     <span className="text-xs text-ink-muted">
                       {P.drawnAt}: {fmtDate(d.drawn_at)} · {P.drawEntrants}: {fmtNum(d.entrants)} · {P.drawEntries}:{" "}
-                      {fmtNum(d.total_entries)}
+                      {fmtNum(d.qualified)}
                     </span>
                   </div>
                   <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -366,6 +397,7 @@ export default function PrizesPage() {
                           <tr className="text-start text-ink-muted">
                             <th className="p-2 text-start">{P.colRank}</th>
                             <th className="p-2 text-start">{P.colName}</th>
+                            <th className="p-2 text-start">{P.colPoints}</th>
                             <th className="p-2 text-start">{P.colAmount}</th>
                             <th className="p-2 text-start">{P.colSpent}</th>
                             <th className="p-2 text-start">{P.colExpired}</th>
@@ -380,6 +412,7 @@ export default function PrizesPage() {
                               <td className="p-2">
                                 <Person id={w.user_id} name={w.name} phone={w.phone} canUser={open.user} />
                               </td>
+                              <td className="p-2 tabular-nums">{fmtNum(w.points)}</td>
                               <td className="p-2 font-bold" dir="ltr">
                                 {fmtMoney(w.amount)}
                               </td>

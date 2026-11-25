@@ -5716,21 +5716,33 @@
     },
     {
       "method": "GET",
-      "path": "/api/v1/admin/prizes/entries",
-      "handler": "handleAdminPrizeEntries",
+      "path": "/api/v1/admin/prizes/leaderboard",
+      "handler": "handleAdminPrizeLeaderboard",
       "auth": true,
       "capability": "offers.manage",
       "response": [
         {
-          "name": "entrants",
+          "name": "announce_at",
           "type": "unknown"
         },
         {
-          "name": "invites_per_entry",
+          "name": "cutoff_at",
+          "type": "unknown"
+        },
+        {
+          "name": "min_points",
           "type": "unknown"
         },
         {
           "name": "month",
+          "type": "unknown"
+        },
+        {
+          "name": "standings",
+          "type": "unknown"
+        },
+        {
+          "name": "winners",
           "type": "unknown"
         }
       ],
@@ -12000,6 +12012,50 @@
       ]
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/my/cart-state",
+      "handler": "handleCartStateClear",
+      "auth": true,
+      "response": [
+        {
+          "name": "ok",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/my/cart-state",
+      "handler": "handleCartState",
+      "auth": true,
+      "request": [
+        {
+          "name": "merchant_id",
+          "type": "string"
+        },
+        {
+          "name": "items_count",
+          "type": "int"
+        },
+        {
+          "name": "signature",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "ok",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/my/chats",
       "handler": "handleMyChats",
@@ -12486,6 +12542,10 @@
         {
           "name": "expected_quote_version",
           "type": "int64"
+        },
+        {
+          "name": "tip",
+          "type": "?int64"
         }
       ],
       "response": [
@@ -12692,6 +12752,28 @@
         {
           "name": "pay_shamcash",
           "type": "?bool"
+        },
+        {
+          "name": "tip",
+          "type": "?int64"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/prizes/checkin",
+      "handler": "handlePrizeCheckIn",
+      "auth": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/prizes/follow",
+      "handler": "handlePrizeFollow",
+      "auth": true,
+      "request": [
+        {
+          "name": "network",
+          "type": "string"
         }
       ]
     },
@@ -12722,25 +12804,6 @@
       "response": [
         {
           "name": "@me",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/prizes/winners",
-      "handler": "handlePrizeWinners",
-      "auth": true,
-      "response": [
-        {
-          "name": "month",
-          "type": "unknown"
-        },
-        {
-          "name": "winners",
           "type": "unknown"
         }
       ],
@@ -13327,6 +13390,10 @@
         {
           "name": "support_phone",
           "type": "unknown"
+        },
+        {
+          "name": "tips",
+          "type": "object"
         }
       ],
       "statuses": [

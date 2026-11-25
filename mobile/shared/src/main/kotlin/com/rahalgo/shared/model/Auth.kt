@@ -215,6 +215,16 @@ data class Platform(
      * السائق». **وهي عرضٌ لا حكم** — اللقطةُ على الطلب هي التي تُلزم.
      */
     @SerialName("custom_delivery") val customDelivery: CustomDelivery = CustomDelivery(),
+    /** **الإكرامية للكابتن** — وغيابُها أو `enabled=false` ⇒ لا شيءَ منها يُعرض (خادمٌ قديم). */
+    val tips: TipsConfig? = null,
+)
+
+/** **إعدادُ الإكرامية** — مبالغُها بالليرة الجديدة كما المحفظة. */
+@Serializable
+data class TipsConfig(
+    val enabled: Boolean = false,
+    val presets: List<Long> = emptyList(),
+    val max: Long = 0,
 )
 
 /**

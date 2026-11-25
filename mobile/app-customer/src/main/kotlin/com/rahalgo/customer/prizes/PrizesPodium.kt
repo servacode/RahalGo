@@ -2,6 +2,7 @@ package com.rahalgo.customer.prizes
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.rahalgo.customer.R
 import com.rahalgo.design.Rahal
+import com.rahalgo.shared.customer.PrizesMe
+import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalCard
 import com.rahalgo.ui.money
 
@@ -110,22 +113,68 @@ private fun Step(rank: Int, amount: Long, modifier: Modifier) {
 }
 
 /**
- * **شروطُ المسابقة بتصميمٍ واضح** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤) — بنودٌ مرقّمةٌ بدوائر،
- * **وأرقامُها من المحرّك** (عددُ الدعوات وعددُ الرابحين) فلا يُكتب رقمٌ ويتبدّل في اللوحة.
+ * **كيف بتجمع نقاط** (قرارُ المالك ٢٠٢٦-١١-٢٥) — جدولٌ قصيرٌ بقيم الإعدادات، وما قيمتُه صفرٌ لا يُذكر.
  */
 @Composable
-fun PrizeRules(perEntry: Int, winners: Int) {
-    // **أربعةُ سطورٍ قصار** (ملاحظةُ المالك ٢٠٢٦-١١-٢٤: «مختصرة مشان ما ينزل كثير لتحت»).
-    val rules = listOf(
-        stringResource(R.string.prizes_rule_invite, perEntry),
-        stringResource(R.string.prizes_rule_draw, winners),
-        stringResource(R.string.prizes_rule_use),
-        stringResource(R.string.prizes_rule_expire),
+fun PointsTable(me: PrizesMe) {
+    val v = me.pointValues
+    val rows = listOf(
+        stringResource(R.string.prizes_pt_checkin) to v.checkin,
+        stringResource(R.string.prizes_pt_order) to v.order,
+        stringResource(R.string.prizes_pt_invite) to v.inviteSignup,
+        stringResource(R.string.prizes_pt_invite_order) to v.inviteFirstOrder,
+        stringResource(R.string.prizes_pt_follow) to maxOf(v.followFacebook, v.followInstagram),
+    ).filter { it.second > 0 }
+    RahalCard(modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.prizes_points_title), color = Rahal.colors.ink, style = Rahal.type.sectionTitle)
+        Spacer(Modifier.height(Rahal.space.sm))
+        for ((label, n) in rows) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = Rahal.space.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(label, color = Rahal.colors.ink, style = Rahal.type.body, modifier = Modifier.weight(1f))
+                Spacer(Modifier.width(Rahal.space.sm))
+                Text(
+                    stringResource(R.string.prizes_pt_value, n),
+                    color = Rahal.colors.onBrand,
+                    style = Rahal.type.badge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clip(Rahal.shape.pill)
+                        .background(Rahal.colors.brand)
+                        .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * **الشروطُ الرسميّة** (سياسةُ غوغل بلاي للمسابقات) — مجانيّة، عددُ الرابحين والحدّ، الحسمُ والإعلان،
+ * الجائزةُ رصيدُ متجر، استراحةُ الرابح، وغوغل ليست راعية. **وأرقامُها من المحرّك.**
+ */
+@Composable
+fun PrizeTerms(me: PrizesMe) {
+    val winners = me.winnersCount.takeIf { it > 0 } ?: me.amounts.size
+    val lines = listOf(
+        stringResource(R.string.prizes_term_free),
+        stringResource(R.string.prizes_term_winners, winners, me.minPoints),
+        stringResource(
+            R.string.prizes_term_dates,
+            PrizesLogic.dayLabel(me.cutoffAt),
+            PrizesLogic.dayLabel(me.announceAt),
+        ),
+        stringResource(R.string.prizes_term_prize),
+        stringResource(R.string.prizes_term_once),
+        stringResource(R.string.prizes_term_google),
     )
     RahalCard(modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.prizes_rules_title), color = Rahal.colors.ink, style = Rahal.type.sectionTitle)
+        Text(stringResource(R.string.prizes_terms_title), color = Rahal.colors.ink, style = Rahal.type.sectionTitle)
         Spacer(Modifier.height(Rahal.space.sm))
-        rules.forEachIndexed { i, line ->
+        lines.forEachIndexed { i, line ->
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -148,6 +197,83 @@ fun PrizeRules(perEntry: Int, winners: Int) {
     }
 }
 
+/**
+ * **شروطي هالشهر** — الحضورُ اليوم، فيسبوك، إنستغرام، والحدّ — بعلامات صحّ، وزرُّ «سجّل حضوري».
+ * **والمتابعةُ بالأمانة**: «تابع» يفتح الصفحةَ ويُعلِّم بلا تحقّق.
+ */
+@Composable
+fun PrizeConditions(
+    me: PrizesMe,
+    busy: Boolean,
+    onCheckIn: () -> Unit,
+    onFollow: (network: String) -> Unit,
+) {
+    RahalCard(modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.prizes_cond_title), color = Rahal.colors.ink, style = Rahal.type.sectionTitle)
+        Spacer(Modifier.height(Rahal.space.sm))
+        CondRow(me.checkedInToday, stringResource(R.string.prizes_cond_checkin))
+        CondRow(me.followedFacebook, stringResource(R.string.prizes_cond_facebook)) {
+            if (!me.followedFacebook) FollowChip(busy) { onFollow("facebook") }
+        }
+        CondRow(me.followedInstagram, stringResource(R.string.prizes_cond_instagram)) {
+            if (!me.followedInstagram) FollowChip(busy) { onFollow("instagram") }
+        }
+        CondRow(me.qualified, stringResource(R.string.prizes_cond_threshold, me.minPoints))
+        Spacer(Modifier.height(Rahal.space.sm))
+        RahalButton(
+            onClick = onCheckIn,
+            enabled = !busy && !me.checkedInToday,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(if (me.checkedInToday) R.string.prizes_checked_in else R.string.prizes_checkin))
+        }
+    }
+}
+
+@Composable
+private fun CondRow(done: Boolean, label: String, action: @Composable () -> Unit = {}) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = Rahal.space.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(if (done) Rahal.colors.success else Rahal.colors.line),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (done) Text("✓", color = Rahal.colors.onBrand, style = Rahal.type.badge, fontWeight = FontWeight.Black)
+        }
+        Spacer(Modifier.width(Rahal.space.sm))
+        Text(
+            label,
+            color = if (done) Rahal.colors.ink else Rahal.colors.inkMuted,
+            style = Rahal.type.body,
+            fontWeight = if (done) FontWeight.Bold else FontWeight.Normal,
+            modifier = Modifier.weight(1f),
+        )
+        action()
+    }
+}
+
+@Composable
+private fun FollowChip(busy: Boolean, onClick: () -> Unit) {
+    Text(
+        stringResource(R.string.prizes_follow),
+        color = Rahal.colors.onBrand,
+        style = Rahal.type.meta,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .clip(Rahal.shape.pill)
+            .background(if (busy) Rahal.colors.line else Rahal.colors.brand)
+            .then(if (busy) Modifier else Modifier.clickable(onClick = onClick))
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs),
+    )
+}
+
 /** **من اليمين**: الرابع، الثاني، الأوّل، الثالث، الخامس. */
 private val PODIUM_ORDER = listOf(4, 2, 1, 3, 5)
 
@@ -168,8 +294,8 @@ private val STEP_COLORS = listOf(
  * وانتظرونا… نعيد ترتيبها بشكل احترافي»)
  * ══════════════════════════════════════════════════════════════════════
  *
- * **كرتٌ واحدٌ يجاوب على السؤالين**: متى (التاريخ وكم يوم باقي) **ووين أنا** (ضمن المسابقة أو لا،
- * وتقدّمُه) — بدل عنوانٍ وأيقونةٍ ولافتةٍ ومربّعين. **ولونُه من ألوان العلامة** ثابتٌ بالوضعين.
+ * **كرتٌ واحدٌ يجاوب على السؤالين**: متى (آخرُ يومٍ لجمع النقاط وكم يوم باقي) **ووين أنا** (متأهّلٌ أو
+ * كم باقي، ونقاطي وترتيبي) — بدل عنوانٍ وأيقونةٍ ولافتةٍ ومربّعين. **ولونُه من ألوان العلامة** ثابتٌ بالوضعين.
  */
 @Composable
 fun PrizeHero(
@@ -250,7 +376,7 @@ fun PrizeHero(
             )
             if (progressLine != null) {
                 Spacer(Modifier.height(Rahal.space.xs))
-                Text(progressLine, color = Color.White.copy(alpha = 0.85f), style = Rahal.type.caption)
+                Text(progressLine, color = Color.White, style = Rahal.type.bodyStrong, fontWeight = FontWeight.Bold)
             }
         }
         if (action != null) {
@@ -260,7 +386,7 @@ fun PrizeHero(
     }
 }
 
-/** **ألوانُ العلامة للرأس** — أزرقُ رحّال غو وبرتقاليُّه، وأخضرُ «ضمن المسابقة». */
+/** **ألوانُ العلامة للرأس** — أزرقُ رحّال غو وبرتقاليُّه، وأخضرُ «متأهّل». */
 private val HERO_TOP = Color(0xFF1378B3)
 private val HERO_BOTTOM = Color(0xFF0A3F61)
 private val HERO_ACCENT = Color(0xFFF39200)

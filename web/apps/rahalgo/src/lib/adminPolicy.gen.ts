@@ -287,7 +287,7 @@ export const ADMIN_POLICY: ReadonlyArray<readonly [string, string, string]> = [
   ["", "/platform/closure", "settings.general.manage"],
   ["", "/platform/hours", "settings.general.manage"],
   ["GET", "/prizes/draws", "offers.manage"],
-  ["GET", "/prizes/entries", "offers.manage"],
+  ["GET", "/prizes/leaderboard", "offers.manage"],
   ["", "/prizes/store", "offers.manage"],
   ["GET", "/profits", "finance.read"],
   ["GET", "/promo-approvals", "finance.read"],

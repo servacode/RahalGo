@@ -53,6 +53,9 @@ const orderSelect = `
 	       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
 	       o.zone_id, z.name,
 	       o.payment_method, o.wallet_scope, o.pay_shamcash, o.subtotal, o.delivery_fee, o.promo_delivery_waived, o.discount, o.prize_discount, o.total,
+	       -- **إكراميةُ الكابتن** (٠٥٥٩) — وحصّتُه: المقيّدةُ إن انقيّدت، وإلّا المتوقّعةُ باللقطة.
+	       o.tip_amount, o.tip_amount - CASE WHEN o.tip_paid_at IS NOT NULL THEN o.tip_platform_cut
+	                                        ELSE o.tip_amount * o.tip_platform_percent / 100 END,
 	       o.wallet_paid, o.cash_due, o.promo_code, o.notes, o.cancel_reason, o.created_at,
 	       o.sent_to_merchant_at, o.dispatched_at,
 	       -- **ومن عُرض عليه ولم يقبل بعد** — يُعرض ما دام العرضُ حيّاً.
@@ -217,6 +220,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.DriverID, &o.DriverPhone, &o.DriverName,
 		&o.Status, &o.AddressText, &o.Lat, &o.Lng, &o.ZoneID, &o.ZoneName,
 		&o.PaymentMethod, &o.WalletScope, &o.PayShamcash, &o.Subtotal, &o.DeliveryFee, &o.FreeWaived, &o.Discount, &o.PrizeDiscount, &o.Total,
+		&o.Tip, &o.TipDriver,
 		&o.WalletPaid, &o.CashDue, &o.PromoCode, &o.Notes, &o.CancelReason, &o.CreatedAt,
 		&o.SentToMerchantAt, &o.DispatchedAt, &o.OfferedDriverName,
 		&o.ProofURL, &o.ProofTakenAt, &o.ProofMeters, &o.ProofSkipReason, &o.ProofMocked,

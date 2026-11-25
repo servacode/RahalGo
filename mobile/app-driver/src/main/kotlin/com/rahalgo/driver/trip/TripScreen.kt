@@ -1979,6 +1979,15 @@ private fun TripCard(
                                     )
                                 }
                             }
+                            // **إكرامية الزبون** — تصل الكابتنَ عند التسليم من محفظته، لا تُقبض.
+                            if (order.tipDriver > 0) {
+                                InfoBox(
+                                    icon = R.drawable.ic_cash,
+                                    text = stringResource(R.string.trip_tip_line, money(order.tipDriver)),
+                                    tint = Rahal.colors.success,
+                                    bold = true,
+                                )
+                            }
                             if (order.addressText.isNotBlank()) {
                                 InfoBox(icon = R.drawable.ic_pin, text = cleanAddress(order.addressText), tint = Rahal.colors.brand)
                             }

@@ -1,7 +1,7 @@
 package qa
 
 // ══════════════════════════════════════════════════════════════════════
-// **«جوائز رحّال غو»** — السحبُ والرصيدُ وطلبُ الجوائز (قرارُ المالك ٢٠٢٦-١١-٢٣)
+// **«جوائز رحّال غو»** — النقاطُ والإعلانُ والرصيدُ وطلبُ الجوائز (قرارا المالك ٢٠٢٦-١١-٢٣ و٢٠٢٦-١١-٢٥)
 // ══════════════════════════════════════════════════════════════════════
 //
 // الإعداداتُ كعائلة `MPS`: عمولةُ ١٠٪، هامشٌ صفر، أجرةٌ ٥٠٠ وحصّةُ المنصّة ١٠٪ (الكابتنُ ٤٥٠).
@@ -37,7 +37,7 @@ func prizeStore(t *testing.T, h *Harness, f *Factory, cost int64) (*Merchant, *I
 	return m, item
 }
 
-// award **يمنح رصيدَ جوائز** بالدفتر نفسِه الذي يمنحه السحب.
+// award **يمنح رصيدَ جوائز** بالدفتر نفسِه الذي يمنحه الإعلان.
 func award(t *testing.T, h *Harness, userID string, amount int64) {
 	t.Helper()
 	tx, err := h.Pool.Begin(ctxBG())
@@ -288,148 +288,315 @@ func TestPRZ05_RecomputeKeepsPrize(t *testing.T) {
 	assertPrizeLedger(t, h, cust.ID)
 }
 
-// prizeInvites **يزرع دعواتٍ بتاريخٍ** — كما يكتبها `referrals.Attach`.
-func prizeInvites(t *testing.T, h *Harness, inviter *User, n int, at time.Time) {
-	t.Helper()
-	for i := 0; i < n; i++ {
-		invitee := h.Customer()
-		if _, err := h.Pool.Exec(ctxBG(), `
-			INSERT INTO referrals (invitee_id, inviter_id, rank, created_at)
-			VALUES ($1::uuid, $2::uuid, $3, $4)`, invitee.ID, inviter.ID, i+1, at); err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-// prizeClean **سحوباتُ ورصيدُ الفحص السابق تُمحى** — الشهرُ مفتاحٌ مشترك.
+// prizeClean **إعلاناتُ ونقاطُ الفحص السابق تُمحى** — الشهرُ مفتاحٌ مشترك.
+//
+// **ومصادرُ النقاط في أشهر الفحص (٢٠٣١) تُنقل خارجَها** — فما زرعته جولةٌ سابقةٌ لا يدخل.
 func prizeClean(t *testing.T, h *Harness) {
 	t.Helper()
-	for _, q := range []string{`DELETE FROM prize_winners`, `DELETE FROM prize_draws`} {
+	for _, q := range []string{
+		`DELETE FROM prize_winners`, `DELETE FROM prize_draws`,
+		`DELETE FROM prize_checkins`, `DELETE FROM prize_follows`,
+		`UPDATE referrals SET created_at = '2026-06-15' WHERE created_at >= '2031-01-01'`,
+		`UPDATE orders SET delivered_at = delivered_at - interval '20 years' WHERE delivered_at >= '2031-01-01'`,
+	} {
 		if _, err := h.Pool.Exec(ctxBG(), q); err != nil {
 			t.Fatal(err)
 		}
 	}
 }
 
-// TestPRZ06_DrawOnceWeightedRanks **السحبُ مرّةً واحدةً للشهر، بالمراتب وجوائزها.**
-//
-// ديسمبر ٢٠٢٦: أ دعا ١٠ (فرصتان) · ب دعا ٥ (فرصة) · ج دعا ٤ (لا شيء) · د دعا ٩ نوفمبر (قبل الإطلاق).
-// الساعةُ ١ يناير ١١:٥٩ ⇒ لا سحب. ١٢:٠٥ ⇒ رابحان بجائزتي المرتبتين ١٥٠٠ و١٠٠٠. **وسحبان
-// متزامنان ثمّ ثالثٌ لا يسحبون مرّةً ثانية.**
-func TestPRZ06_DrawOnceWeightedRanks(t *testing.T) {
-	h := New(t)
-	prizeClean(t, h)
+// prizeOn **المسابقةُ مفعّلةٌ بقيمها الافتراضيّة** — والإطلاقُ ٢٠٢٦-١٢-٠١.
+func prizeOn(h *Harness) {
 	h.Setting("prizes.enabled", "true")
 	h.Setting("prizes.launch_on", `"2026-12-01"`)
-	h.Setting("prizes.invites_per_entry", "5")
 	h.Setting("prizes.winners", "5")
-	// **ودعواتُ الشهر من فحوصٍ أخرى لا تدخل** — تُنقل خارجَه.
-	if _, err := h.Pool.Exec(ctxBG(), `
-		UPDATE referrals SET created_at = '2026-06-15' WHERE created_at >= '2026-11-01' AND created_at < '2027-02-01'`); err != nil {
+	h.Setting("prizes.min_points", "80")
+	h.Setting("prizes.points_checkin", "1")
+	h.Setting("prizes.points_order", "10")
+	h.Setting("prizes.points_invite_signup", "5")
+	h.Setting("prizes.points_invite_first_order", "10")
+	h.Setting("prizes.points_follow_facebook", "5")
+	h.Setting("prizes.points_follow_instagram", "5")
+}
+
+// prizeCheckins **يزرع حضوراً بلحظاته** — كما يكتبه `CheckIn`.
+func prizeCheckins(t *testing.T, h *Harness, u *User, at ...time.Time) {
+	t.Helper()
+	for _, a := range at {
+		if _, err := h.Pool.Exec(ctxBG(), `
+			INSERT INTO prize_checkins (user_id, day, created_at) VALUES ($1::uuid, $2::date, $3)`,
+			u.ID, prizes.DamascusDay(a), a); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// prizeDeliveredAt **طلبٌ حقيقيٌّ يُسلَّم ثمّ تُنقل لحظةُ تسليمه** إلى شهر الفحص.
+func prizeDeliveredAt(t *testing.T, h *Harness, cust *User, item *Item, at time.Time) string {
+	t.Helper()
+	oid := mpsPlace(t, h, cust, item, "")
+	deliverOrder(t, h, oid, h.driverOf(oid))
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE orders SET delivered_at = $2 WHERE id = $1::uuid`, oid, at); err != nil {
 		t.Fatal(err)
 	}
-	dec := time.Date(2026, 12, 15, 10, 0, 0, 0, offers.Damascus)
-	a, b, c, d := h.Customer(), h.Customer(), h.Customer(), h.Customer()
-	prizeInvites(t, h, a, 10, dec)
-	prizeInvites(t, h, b, 5, dec)
-	prizeInvites(t, h, c, 4, dec)
-	prizeInvites(t, h, d, 9, time.Date(2026, 11, 20, 10, 0, 0, 0, offers.Damascus))
+	return oid
+}
 
+func prizeMe(t *testing.T, h *Harness, u *User) map[string]any {
+	t.Helper()
+	r := h.GET("/api/v1/prizes/me", u.Token)
+	if r.Code >= 400 {
+		t.Fatalf("حالي: %s", r)
+	}
+	return r.JSON()
+}
+
+// TestPRZ06_PointsCountAndCancel **النقاطُ من مصادرها، وإلغاءُ التسليم يُسقطها.**
+//
+// شباط ٢٠٣١ (حسمُه ٢٧ ١٢:٠٠): أ يسجّل حضوره (١، والثاني باليوم نفسِه لا يضيف) ويتابع فيسبوك
+// (٥، والثانية لا تضيف) ويُسلَّم له طلب (١٠) ويدعو ب (٥) ويُسلَّم لب أوّلُ طلب (١٠ لأ و١٠ لب)
+// ⇒ أ = ٣١. **وحضورٌ بعد الحسم للشهر التالي**، **وإلغاءُ تسليم طلب أ ثمّ طلب ب ⇒ ٢١ ثمّ ١١.**
+// **وردُّ الزبون لا يحمل اسمَ غيره ولا معرّفَه.**
+func TestPRZ06_PointsCountAndCancel(t *testing.T) {
+	h := New(t)
+	treasury(t, h)
+	mpsSettings(h)
+	mpsNoCampaign(t, h)
+	prizeClean(t, h)
+	prizeOn(h)
 	p := h.API.Prizes()
 	t.Cleanup(func() { p.SetClock(nil); prizeClean(t, h) })
-	p.SetClock(func() time.Time { return time.Date(2027, 1, 1, 11, 59, 0, 0, offers.Damascus) })
-	if w, err := p.DrawDue(ctxBG()); err != nil || len(w) != 0 {
-		t.Fatalf("**سحبٌ قبل موعده**: %v %v", w, err)
-	}
-	p.SetClock(func() time.Time { return time.Date(2027, 1, 1, 12, 5, 0, 0, offers.Damascus) })
 
+	item := h.NewItem(1000)
+	a, b := h.Customer(), h.Customer()
+	if _, err := h.Pool.Exec(ctxBG(), `
+		INSERT INTO referrals (invitee_id, inviter_id, rank, created_at) VALUES ($1::uuid, $2::uuid, 1, $3)`,
+		b.ID, a.ID, time.Date(2031, 2, 6, 10, 0, 0, 0, offers.Damascus)); err != nil {
+		t.Fatal(err)
+	}
+	oa := prizeDeliveredAt(t, h, a, item, time.Date(2031, 2, 10, 10, 0, 0, 0, offers.Damascus))
+	ob := prizeDeliveredAt(t, h, b, item, time.Date(2031, 2, 12, 10, 0, 0, 0, offers.Damascus))
+
+	p.SetClock(func() time.Time { return time.Date(2031, 2, 5, 9, 0, 0, 0, offers.Damascus) })
+	for i := 0; i < 2; i++ {
+		if r := h.POST("/api/v1/prizes/checkin", a.Token, map[string]any{}); r.Code >= 400 || r.JSON()["checked_in_today"] != true {
+			t.Fatalf("الحضور: %s", r)
+		}
+		if r := h.POST("/api/v1/prizes/follow", a.Token, map[string]any{"network": "facebook"}); r.Code >= 400 {
+			t.Fatalf("المتابعة: %s", r)
+		}
+	}
+	if r := h.POST("/api/v1/prizes/follow", a.Token, map[string]any{"network": "tiktok"}); r.Code < 400 {
+		t.Fatalf("**شبكةٌ مجهولةٌ قُبلت**: %s", r)
+	}
+
+	p.SetClock(func() time.Time { return time.Date(2031, 2, 20, 9, 0, 0, 0, offers.Damascus) })
+	me := prizeMe(t, h, a)
+	if me["month"] != "2031-02" || me["points"] != float64(31) || me["to_qualify"] != float64(49) ||
+		me["qualified"] != false || me["checked_in_today"] != false || me["followed_facebook"] != true ||
+		me["followed_instagram"] != false || me["rank"] == float64(0) {
+		t.Fatalf("حالُ أ: %v — والمنتظَر ٣١ نقطة وباقي ٤٩", me)
+	}
+	raw := string(h.GET("/api/v1/prizes/me", a.Token).Body)
+	if strings.Contains(raw, b.ID) || (b.Name != "" && strings.Contains(raw, b.Name)) {
+		t.Fatalf("**ردُّ الزبون يحمل غيرَه**: %s", raw)
+	}
+	if mb := prizeMe(t, h, b); mb["points"] != float64(10) {
+		t.Fatalf("نقاطُ ب %v — والمنتظَر ١٠ (طلبُه)", mb["points"])
+	}
+
+	// **وحضورٌ بعد الحسم (٢٧ شباط ١٢:٠٠) لآذار.**
+	p.SetClock(func() time.Time { return time.Date(2031, 2, 27, 13, 0, 0, 0, offers.Damascus) })
+	if r := h.POST("/api/v1/prizes/checkin", a.Token, map[string]any{}); r.Code >= 400 ||
+		r.JSON()["month"] != "2031-03" || r.JSON()["points"] != float64(1) {
+		t.Fatalf("حضورٌ بعد الحسم: %s — والمنتظَر شهر ٢٠٣١-٠٣ ونقطة", r)
+	}
+
+	admin := h.NewUser("admin")
+	board := func() map[string]float64 {
+		r := h.GET("/api/v1/admin/prizes/leaderboard?month=2031-02", admin.Token)
+		if r.Code >= 400 {
+			t.Fatalf("ترتيبُ اللوحة: %s", r)
+		}
+		out := map[string]float64{}
+		list, _ := r.JSON()["standings"].([]any)
+		for _, x := range list {
+			row, _ := x.(map[string]any)
+			id, _ := row["user_id"].(string)
+			out[id], _ = row["points"].(float64)
+		}
+		return out
+	}
+	if got := board(); got[a.ID] != 31 || got[b.ID] != 10 {
+		t.Fatalf("اللوحة: أ %v ب %v — والمنتظَر ٣١ و١٠", got[a.ID], got[b.ID])
+	}
+	if r := h.GET("/api/v1/admin/prizes/leaderboard", a.Token); r.Code != http.StatusForbidden {
+		t.Fatalf("**زبونٌ يقرأ الترتيب**: %d", r.Code)
+	}
+
+	if r := undeliver(h, admin, oa, "سُلّم خطأً"); r.Code >= 400 {
+		t.Fatalf("إلغاءُ تسليم أ: %s", r)
+	}
+	if got := board(); got[a.ID] != 21 {
+		t.Fatalf("أ بعد إلغاء طلبه %v — والمنتظَر ٢١", got[a.ID])
+	}
+	if r := undeliver(h, admin, ob, "سُلّم خطأً"); r.Code >= 400 {
+		t.Fatalf("إلغاءُ تسليم ب: %s", r)
+	}
+	if got := board(); got[a.ID] != 11 || got[b.ID] != 0 {
+		t.Fatalf("بعد إلغاء طلب ب: أ %v ب %v — والمنتظَر ١١ و٠ (أوّلُ طلبٍ للمدعوّ سقط)", got[a.ID], got[b.ID])
+	}
+}
+
+// TestPRZ09_AnnounceOnceTieThresholdExclusion **الإعلانُ مرّةً واحدةً آخرَ الشهر.**
+//
+// شباط ٢٠٣١ والحضورُ بعشرين نقطة: س رابحُ كانون الثاني (٢٠٠، مستثنى) · ب ١٠٠ بلغها ٨ شباط ·
+// أ ١٠٠ بلغها ١٠ شباط · ج ٨٠ تماماً · د ٦٠ · هـ ٨٠ لكنّ آخرَ حضوره ٢٧ شباط ١٣:٠٠ بعد الحسم
+// (فله ٦٠ في شباط). ⇒ ب ١٥٠٠ · أ ١٢٥٠ · ج ١٠٠٠، ولا أحدَ غيرهم. **و٢٨ شباط ١١:٥٩ لا إعلان،
+// و١٢:٠٥ ثلاثةُ إعلاناتٍ متزامنةٍ يقع منها واحد.**
+func TestPRZ09_AnnounceOnceTieThresholdExclusion(t *testing.T) {
+	h := New(t)
+	prizeClean(t, h)
+	prizeOn(h)
+	h.Setting("prizes.points_checkin", "20")
+	p := h.API.Prizes()
+	t.Cleanup(func() { p.SetClock(nil); prizeClean(t, h) })
+
+	d := func(day, hour int) time.Time { return time.Date(2031, 2, day, hour, 0, 0, 0, offers.Damascus) }
+	s, a, b, c, dd, e := h.Customer(), h.Customer(), h.Customer(), h.Customer(), h.Customer(), h.Customer()
+	prizeCheckins(t, h, s, d(1, 9), d(2, 9), d(3, 9), d(4, 9), d(5, 9), d(6, 9), d(7, 9), d(8, 9), d(9, 9), d(10, 9))
+	prizeCheckins(t, h, b, d(4, 9), d(5, 9), d(6, 9), d(7, 9), d(8, 9))
+	prizeCheckins(t, h, a, d(6, 9), d(7, 9), d(8, 9), d(9, 9), d(10, 9))
+	prizeCheckins(t, h, c, d(1, 9), d(2, 9), d(3, 9), d(4, 9))
+	prizeCheckins(t, h, dd, d(1, 9), d(2, 9), d(3, 9))
+	prizeCheckins(t, h, e, d(1, 9), d(2, 9), d(3, 9), d(27, 13))
+	if _, err := h.Pool.Exec(ctxBG(), `
+		INSERT INTO prize_draws (month, drawn_at) VALUES ('2031-01-01', '2031-01-31 09:00Z');
+		`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.Pool.Exec(ctxBG(), `
+		INSERT INTO prize_winners (month, rank, user_id, points, amount) VALUES ('2031-01-01', 1, $1::uuid, 300, 1500)`,
+		s.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	p.SetClock(func() time.Time { return d(28, 11).Add(59 * time.Minute) })
+	if w, err := p.AnnounceDue(ctxBG()); err != nil || len(w) != 0 {
+		t.Fatalf("**إعلانٌ قبل موعده**: %v %v", w, err)
+	}
+	p.SetClock(func() time.Time { return d(28, 12).Add(5 * time.Minute) })
 	var wg sync.WaitGroup
 	results := make([]int, 3)
 	for i := range results {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			w, err := p.DrawDue(ctxBG())
+			w, err := p.AnnounceDue(ctxBG())
 			if err != nil {
-				t.Errorf("السحب: %v", err)
+				t.Errorf("الإعلان: %v", err)
 			}
 			results[i] = len(w)
 		}(i)
 	}
 	wg.Wait()
-	drew := 0
+	done := 0
 	for _, n := range results {
 		if n > 0 {
-			drew++
-			if n != 2 {
-				t.Fatalf("الرابحون %d — والمنتظَر 2 (أ و ب)", n)
+			done++
+			if n != 3 {
+				t.Fatalf("الرابحون %d — والمنتظَر 3 (ب أ ج)", n)
 			}
 		}
 	}
-	if drew != 1 {
-		t.Fatalf("**سُحب %d مرّة** — والمنتظَر مرّةً واحدة", drew)
+	if done != 1 {
+		t.Fatalf("**أُعلن %d مرّة** — والمنتظَر مرّةً واحدة", done)
 	}
-	if w, _ := p.DrawDue(ctxBG()); len(w) != 0 {
-		t.Fatal("**سحبٌ ثانٍ للشهر نفسِه**")
+	if w, _ := p.AnnounceDue(ctxBG()); len(w) != 0 {
+		t.Fatal("**إعلانٌ ثانٍ للشهر نفسِه**")
 	}
 
+	want := map[int]struct {
+		user   string
+		amount int64
+	}{1: {b.ID, 1500}, 2: {a.ID, 1250}, 3: {c.ID, 1000}}
 	rows, err := h.Pool.Query(ctxBG(), `
-		SELECT rank, user_id::text, entries, amount FROM prize_winners WHERE month = '2026-12-01' ORDER BY rank`)
+		SELECT rank, user_id::text, points, amount FROM prize_winners WHERE month = '2031-02-01' ORDER BY rank`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	won := map[string]int64{}
+	n := 0
 	for rows.Next() {
-		var rank, entries int
+		var rank, pts int
 		var uid string
 		var amt int64
-		if err := rows.Scan(&rank, &uid, &entries, &amt); err != nil {
+		if err := rows.Scan(&rank, &uid, &pts, &amt); err != nil {
 			t.Fatal(err)
 		}
-		want := map[int]int64{1: 1500, 2: 1000}[rank]
-		if amt != want {
-			t.Errorf("المرتبة %d جائزتها %d — والمنتظَر %d", rank, amt, want)
+		n++
+		if w := want[rank]; w.user != uid || w.amount != amt {
+			t.Errorf("المرتبة %d: %s بـ %d — والمنتظَر %s بـ %d", rank, uid, amt, w.user, w.amount)
 		}
-		won[uid] = amt
 	}
 	rows.Close()
-	if _, ok := won[a.ID]; !ok {
-		t.Error("أ لم يربح")
+	if n != 3 {
+		t.Fatalf("رابحو شباط %d — والمنتظَر 3", n)
 	}
-	if _, ok := won[b.ID]; !ok {
-		t.Error("ب لم يربح")
-	}
-	if _, ok := won[c.ID]; ok {
-		t.Error("**ج ربح بلا فرصة**")
-	}
-	if _, ok := won[d.ID]; ok {
-		t.Error("**د ربح بدعواتٍ قبل الإطلاق**")
-	}
-	for uid, amt := range won {
-		if got := prizeBalance(t, h, uid); got != amt {
-			t.Errorf("رصيدُ الرابح %d — والمنتظَر %d", got, amt)
+	for _, w := range want {
+		if got := prizeBalance(t, h, w.user); got != w.amount {
+			t.Errorf("رصيدُ الرابح %d — والمنتظَر %d", got, w.amount)
 		}
+		assertPrizeLedger(t, h, w.user)
+	}
+	var exp time.Time
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT expires_at FROM prize_balances WHERE user_id = $1::uuid`, b.ID).Scan(&exp); err != nil ||
+		!exp.Equal(time.Date(2031, 3, 31, 23, 59, 59, 0, offers.Damascus)) {
+		t.Fatalf("انتهاءُ الجائزة %v (%v) — والمنتظَر آخرَ آذار", exp, err)
 	}
 
-	// **والقراءاتُ العامّة**: رابحو آخر سحبٍ بلا رقم.
-	res := h.GET("/api/v1/prizes/winners", a.Token)
-	if res.Code >= 400 || res.JSON()["month"] != "2026-12" || strings.Contains(string(res.Body), a.Phone) {
-		t.Fatalf("الرابحون: %s", res)
+	// **وحالُ الرابح: نتيجتُه هو ومستثنًى من آذار** — ولا أسماءَ غيره.
+	me := prizeMe(t, h, a)
+	if me["last_month"] != "2031-02" || me["last_rank"] != float64(2) || me["last_amount"] != float64(1250) ||
+		me["excluded"] != true || me["month"] != "2031-03" {
+		t.Fatalf("حالُ أ بعد الإعلان: %v", me)
 	}
+	if raw := string(h.GET("/api/v1/prizes/me", a.Token).Body); strings.Contains(raw, b.ID) {
+		t.Fatalf("**ردُّ الزبون يحمل الرابحَ الآخر**: %s", raw)
+	}
+	// **وحضورُ هـ بعد حسم شباط في آذار.**
 	admin := h.NewUser("admin")
-	if r := h.GET("/api/v1/admin/prizes/draws", admin.Token); r.Code >= 400 || !strings.Contains(string(r.Body), a.ID) {
-		t.Fatalf("سحوباتُ اللوحة: %s", r)
+	if r := h.GET("/api/v1/admin/prizes/leaderboard?month=2031-03", admin.Token); r.Code >= 400 ||
+		!strings.Contains(string(r.Body), e.ID) {
+		t.Fatalf("ترتيبُ آذار: %s", r)
 	}
-	if r := h.GET("/api/v1/admin/prizes/entries?month=2026-12", admin.Token); r.Code >= 400 ||
-		!strings.Contains(string(r.Body), b.ID) || strings.Contains(string(r.Body), c.ID) {
-		t.Fatalf("مشتركو اللوحة: %s", r)
+	if r := h.GET("/api/v1/admin/prizes/draws", admin.Token); r.Code >= 400 || !strings.Contains(string(r.Body), b.ID) {
+		t.Fatalf("نتائجُ اللوحة: %s", r)
 	}
 	if r := h.GET("/api/v1/admin/prizes/draws", h.Customer().Token); r.Code != http.StatusForbidden {
-		t.Fatalf("**زبونٌ يقرأ سحوباتِ اللوحة**: %d", r.Code)
+		t.Fatalf("**زبونٌ يقرأ نتائجَ اللوحة**: %d", r.Code)
 	}
 }
 
-// TestPRZ07_RemindOnceThenExpire **«بينتهي بعد ٣ أيام» مرّةً، ثمّ ينتهي آخرَ الشهر.**
+// TestPRZ10_NotStartedRejects **قبل الإطلاق لا حضورَ ولا متابعة** — فلا تضيع متابعةُ العمر.
+func TestPRZ10_NotStartedRejects(t *testing.T) {
+	h := New(t)
+	prizeOn(h)
+	p := h.API.Prizes()
+	t.Cleanup(func() { p.SetClock(nil) })
+	p.SetClock(func() time.Time { return time.Date(2026, 11, 30, 10, 0, 0, 0, offers.Damascus) })
+	cust := h.Customer()
+	if r := h.POST("/api/v1/prizes/checkin", cust.Token, map[string]any{}); r.Err() != "prizes_not_started" {
+		t.Fatalf("حضورٌ قبل الإطلاق: %s", r)
+	}
+	if r := h.POST("/api/v1/prizes/follow", cust.Token, map[string]any{"network": "instagram"}); r.Err() != "prizes_not_started" {
+		t.Fatalf("متابعةٌ قبل الإطلاق: %s", r)
+	}
+	if me := prizeMe(t, h, cust); me["started"] != false || me["month"] != "2026-12" {
+		t.Fatalf("حالي قبل الإطلاق: %v", me)
+	}
+}
+
+// TestPRZ07_RemindOnceThenExpire **«بينتهي بعد ٣ أيام» مرّةً، ثمّ ينتهي آخرَ الشهر الذي يلي المنح.**
 func TestPRZ07_RemindOnceThenExpire(t *testing.T) {
 	h := New(t)
 	p := h.API.Prizes()
@@ -443,11 +610,11 @@ func TestPRZ07_RemindOnceThenExpire(t *testing.T) {
 		_ = h.Pool.QueryRow(ctxBG(), `SELECT reminded_for IS NOT NULL FROM prize_balances WHERE user_id = $1::uuid`, cust.ID).Scan(&r)
 		return r
 	}
-	p.SetClock(func() time.Time { return time.Date(2027, 1, 27, 23, 0, 0, 0, offers.Damascus) })
+	p.SetClock(func() time.Time { return time.Date(2027, 2, 24, 23, 0, 0, 0, offers.Damascus) })
 	if _, err := p.RemindDue(ctxBG()); err != nil || reminded() {
 		t.Fatalf("**تذكيرٌ قبل الأيّام الثلاثة** (%v)", err)
 	}
-	p.SetClock(func() time.Time { return time.Date(2027, 1, 29, 9, 0, 0, 0, offers.Damascus) })
+	p.SetClock(func() time.Time { return time.Date(2027, 2, 26, 9, 0, 0, 0, offers.Damascus) })
 	if _, err := p.RemindDue(ctxBG()); err != nil || !reminded() {
 		t.Fatalf("لم يُذكَّر (%v)", err)
 	}
@@ -465,12 +632,12 @@ func TestPRZ07_RemindOnceThenExpire(t *testing.T) {
 		t.Fatalf("**ذُكِّر مرّتين**: %d", notes)
 	}
 
-	p.SetClock(func() time.Time { return time.Date(2027, 1, 31, 23, 59, 0, 0, offers.Damascus) })
+	p.SetClock(func() time.Time { return time.Date(2027, 2, 28, 23, 59, 0, 0, offers.Damascus) })
 	_, _ = p.ExpireDue(ctxBG())
 	if b := prizeBalance(t, h, cust.ID); b != 750 {
 		t.Fatalf("**انتهى قبل آخر الشهر**: %d", b)
 	}
-	p.SetClock(func() time.Time { return time.Date(2027, 2, 1, 0, 0, 1, 0, offers.Damascus) })
+	p.SetClock(func() time.Time { return time.Date(2027, 3, 1, 0, 0, 1, 0, offers.Damascus) })
 	if _, err := p.ExpireDue(ctxBG()); err != nil {
 		t.Fatal(err)
 	}

@@ -1,7 +1,7 @@
 package server
 
 // ══════════════════════════════════════════════════════════════════════
-// **«جوائز رحّال غو»** — أبوابُ الزبون واللوحة (قرارُ المالك ٢٠٢٦-١١-٢٣)
+// **«جوائز رحّال غو»** — أبوابُ الزبون واللوحة (قرارا المالك ٢٠٢٦-١١-٢٣ و٢٠٢٦-١١-٢٥: مسابقةُ نقاط)
 // ══════════════════════════════════════════════════════════════════════
 //
 // المنطقُ كلُّه في `internal/prizes` — وهنا قراءةٌ وردّ. **والطلبُ من متجر الجوائز يمرّ
@@ -16,7 +16,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/prizes"
 )
 
-// handlePrizesMe `GET /prizes/me` — دعواتي هذا الشهر وفرصي وموعدُ السحب ورصيدي.
+// handlePrizesMe `GET /prizes/me` — نقاطي وترتيبي وشروطي وموعدُ الحسم ورصيدي. **ولا شيءَ عن غيري.**
 func (s *Server) handlePrizesMe(w http.ResponseWriter, r *http.Request) {
 	me, err := s.prizes.MeFor(r.Context(), userIDFrom(r))
 	if err != nil {
@@ -36,19 +36,37 @@ func (s *Server) handlePrizeItems(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"store_id": store, "items": items})
 }
 
-// handlePrizeWinners `GET /prizes/winners` — رابحو آخر سحب، بالاسم الأوّل وحرفٍ ولا رقم.
-func (s *Server) handlePrizeWinners(w http.ResponseWriter, r *http.Request) {
-	month, winners, err := s.prizes.LastWinners(r.Context())
+// handlePrizeCheckIn `POST /prizes/checkin` — «سجّل حضوري»، مرّةً باليوم. يردّ الحالَ بعده.
+func (s *Server) handlePrizeCheckIn(w http.ResponseWriter, r *http.Request) {
+	uid := userIDFrom(r)
+	if _, err := s.prizes.CheckIn(r.Context(), uid); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.handlePrizesMe(w, r)
+}
+
+// handlePrizeFollow `POST /prizes/follow` {network: facebook|instagram} — بالأمانة، مرّةً في العمر.
+func (s *Server) handlePrizeFollow(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Network string `json:"network"`
+	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"month": month, "winners": winners})
+	if _, err := s.prizes.Follow(r.Context(), userIDFrom(r), req.Network); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.handlePrizesMe(w, r)
 }
 
-// handleAdminPrizeEntries `GET /admin/prizes/entries?month=YYYY-MM` — مشتركو الشهر (افتراضاً الحاليّ).
-func (s *Server) handleAdminPrizeEntries(w http.ResponseWriter, r *http.Request) {
-	month := prizes.MonthStart(time.Now())
+// handleAdminPrizeLeaderboard `GET /admin/prizes/leaderboard?month=YYYY-MM` — ترتيبُ الشهر كاملاً
+// بالأسماء والأرقام (افتراضاً المسابقةُ الجارية).
+func (s *Server) handleAdminPrizeLeaderboard(w http.ResponseWriter, r *http.Request) {
+	_, launch := s.prizes.LaunchOn(r.Context())
+	month := prizes.CurrentMonth(time.Now(), launch)
 	if raw := r.URL.Query().Get("month"); raw != "" {
 		m, ok := prizes.ParseMonth(raw)
 		if !ok {
@@ -57,19 +75,22 @@ func (s *Server) handleAdminPrizeEntries(w http.ResponseWriter, r *http.Request)
 		}
 		month = m
 	}
-	list, err := s.prizes.AdminEntries(r.Context(), month)
+	list, err := s.prizes.AdminLeaderboard(r.Context(), month)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"month":             prizes.MonthKey(month),
-		"invites_per_entry": s.prizes.PerEntry(r.Context()),
-		"entrants":          list,
+		"month":       prizes.MonthKey(month),
+		"cutoff_at":   prizes.CutoffAt(month).UTC(),
+		"announce_at": prizes.AnnounceAt(month).UTC(),
+		"min_points":  s.prizes.MinPoints(r.Context()),
+		"winners":     s.prizes.WinnersCount(r.Context()),
+		"standings":   list,
 	})
 }
 
-// handleAdminPrizeDraws `GET /admin/prizes/draws` — السحوباتُ السابقة بكلفتها.
+// handleAdminPrizeDraws `GET /admin/prizes/draws` — النتائجُ السابقة بكلفتها.
 func (s *Server) handleAdminPrizeDraws(w http.ResponseWriter, r *http.Request) {
 	draws, err := s.prizes.AdminDraws(r.Context())
 	if err != nil {
@@ -79,7 +100,7 @@ func (s *Server) handleAdminPrizeDraws(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"draws": draws})
 }
 
-// RunPrizes **نبضةُ الجوائز** — انتهاءٌ ثمّ سحبٌ ثمّ تذكير، ولا شيءَ يتكرّر.
+// RunPrizes **نبضةُ الجوائز** — انتهاءٌ ثمّ إعلانٌ ثمّ تذكير، ولا شيءَ يتكرّر.
 func (s *Server) RunPrizes(ctx context.Context, interval time.Duration) {
 	s.prizes.Sweep(ctx)
 	s.prizes.Run(ctx, interval)

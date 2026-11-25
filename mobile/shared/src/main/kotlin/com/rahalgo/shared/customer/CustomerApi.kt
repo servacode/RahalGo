@@ -327,11 +327,12 @@ class CustomerApi(private val api: ApiClient) {
         expectedQuoteVersion: Long,
         attemptKey: String,
         walletScope: String = "",
+        tip: Long? = null,
     ): MyOrder =
         api.call(
             "/api/v1/orders/$orderId/confirm-quote",
             HttpMethod.Post,
-            ConfirmQuoteInput(paymentMethod, expectedTotal, expectedQuoteVersion, walletScope),
+            ConfirmQuoteInput(paymentMethod, expectedTotal, expectedQuoteVersion, walletScope, tip),
             idempotencyKey = attemptKey,
         )
 
@@ -346,11 +347,12 @@ class CustomerApi(private val api: ApiClient) {
         expectedTotal: Long,
         attemptKey: String,
         payShamcash: Boolean? = null,
+        tip: Long? = null,
     ): MyOrder =
         api.call(
             "/api/v1/orders/$orderId/wallet-scope",
             HttpMethod.Post,
-            WalletScopeInput(walletScope, expectedTotal, payShamcash),
+            WalletScopeInput(walletScope, expectedTotal, payShamcash = payShamcash, tip = tip),
             idempotencyKey = attemptKey,
         )
 
@@ -407,6 +409,19 @@ class CustomerApi(private val api: ApiClient) {
      */
     suspend fun setElsewhere(orderId: String, elsewhere: Boolean) {
         api.call<Ack>("/api/v1/orders/$orderId/elsewhere", HttpMethod.Put, ElsewhereInput(elsewhere))
+    }
+
+    /**
+     * **«سلّتك ناطرتك»** (قرارُ المالك ٢٠٢٦-١١-٢٥) — يُبلغ الخادمَ حالَ السلّة (متجرُها وعددُ قطعها وبصمةُ
+     * محتواها) ليرسل تذكيراً واحداً إن بقيت ساعةً بلا طلب. **والسلّةُ عندنا فقط**، فهذا بابُ علم الخادم بها.
+     */
+    suspend fun reportCartState(merchantId: String, itemsCount: Int, signature: String) {
+        api.call<Ack>("/api/v1/my/cart-state", HttpMethod.Put, CartStateInput(merchantId, itemsCount, signature))
+    }
+
+    /** **سلّةٌ فُرّغت أو صارت طلباً** — يُلغى التذكير. */
+    suspend fun clearCartState() {
+        api.call<Ack>("/api/v1/my/cart-state", HttpMethod.Delete, mapOf<String, String>())
     }
 
     /** **«وقّف المشاركة»** — تُمحى النقطةُ فيعود الكابتنُ إلى الدبّوس. */
@@ -490,17 +505,21 @@ class CustomerApi(private val api: ApiClient) {
     suspend fun referral(): Referral = api.call("/api/v1/auth/referral")
 
     // ══════════════════════════════════════════════════════════════════
-    // **جوائزُ رحّال غو** — حالُه وأصنافُ الجوائز ورابحو الشهر الماضي
+    // **جوائزُ رحّال غو** — مسابقةُ النقاط وأصنافُ الجوائز
     // ══════════════════════════════════════════════════════════════════
 
-    /** **حالُه في السحب الشهريّ** — دعواتُه وفرصُه ورصيدُ جوائزه. */
+    /** **حالُه في مسابقة النقاط** — نقاطُه وترتيبُه وشروطُه ورصيدُ جوائزه، ولا شيءَ عن غيره. */
     suspend fun prizesMe(): PrizesMe = api.call("/api/v1/prizes/me")
 
     /** **أصنافُ الجوائز** — تُطلب من السلّة العاديّة بمعرّف متجرها. */
     suspend fun prizeItems(): PrizeItems = api.call("/api/v1/prizes/items")
 
-    /** **رابحو الشهر الماضي** — أسماؤهم ومبالغهم. */
-    suspend fun prizeWinners(): PrizeWinners = api.call("/api/v1/prizes/winners")
+    /** **«سجّل حضوري»** — مرّةً باليوم؛ ويردّ الحالَ بعده. */
+    suspend fun prizeCheckIn(): PrizesMe = api.call("/api/v1/prizes/checkin", HttpMethod.Post)
+
+    /** **«تابعنا»** بالأمانة — مرّةً في العمر لكلّ صفحة؛ ويردّ الحالَ بعده. */
+    suspend fun prizeFollow(network: String): PrizesMe =
+        api.call("/api/v1/prizes/follow", HttpMethod.Post, PrizeFollowInput(network))
 
     /**
      * **أسبابُ الشكوى لهذا الطلب** — مصنّفةٌ لا نصٌّ حرّ.
@@ -606,6 +625,8 @@ data class NewOrder(
     val notes: String = "",
     /** **الدفعُ بشام كاش عند الباب** — مع `none`/`delivery` فقط، ولا يُرسَل إلا إن كان صحيحاً. */
     @SerialName("pay_shamcash") val payShamcash: Boolean? = null,
+    /** **إكرامية الكابتن** — من المحفظة وحدَها؛ وغيابُها (`null`) لا إكرامية. */
+    val tip: Long? = null,
 )
 
 private val photoJson = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
@@ -668,6 +689,8 @@ private data class ConfirmQuoteInput(
     @SerialName("expected_quote_version") val expectedQuoteVersion: Long,
     /** **«الكل» أو «التوصيل والباقي كاش»** (٢٠٢٦-١١-٠٩) — والفارغُ مع `wallet` = «الكل». */
     @SerialName("wallet_scope") val walletScope: String = "",
+    /** **إكرامية الكابتن** — وغيابُها = بلا تغيير. */
+    val tip: Long? = null,
 )
 
 /** **تبديلُ الدفع من المحفظة** — النطاقُ والمجموعُ الذي رآه الزبون. */
@@ -676,6 +699,8 @@ private data class WalletScopeInput(
     @SerialName("wallet_scope") val walletScope: String,
     @SerialName("expected_total") val expectedTotal: Long,
     @SerialName("pay_shamcash") val payShamcash: Boolean? = null,
+    /** **إكرامية الكابتن** — وغيابُها = بلا تغيير (والتحويلُ للنقد يحرّرها الخادم). */
+    val tip: Long? = null,
 )
 
 @Serializable
@@ -852,6 +877,8 @@ data class MyOrder(
     /** **ما غطّاه رصيدُ الجوائز** (جوائز رحّال غو) — و0 حين لا جائزةَ في الطلب. */
     @SerialName("prize_discount") val prizeDiscount: Long = 0,
     val total: Long = 0,
+    /** **إكرامية الكابتن** — محجوزةٌ من المحفظة وليست من `total`؛ 0 = لا إكرامية. */
+    val tip: Long = 0,
     @SerialName("payment_method") val paymentMethod: String = "",
     /**
      * **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — `none` · `full` · `delivery`. **وفارغٌ من
@@ -1132,4 +1159,12 @@ private data class ShamcashTopupInput(
     val amount: Long,
     @SerialName("txn_ref") val txnRef: String,
     @SerialName("receipt_id") val receiptId: String? = null,
+)
+
+/** **حالُ السلّة للتذكير** — انظر `reportCartState`. */
+@Serializable
+data class CartStateInput(
+    @SerialName("merchant_id") val merchantId: String,
+    @SerialName("items_count") val itemsCount: Int,
+    val signature: String,
 )

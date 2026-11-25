@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 745,
+    "routes": 754,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 151,
-    "notify_targeted": 78,
+    "notify_sites": 154,
+    "notify_targeted": 80,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 310,
-    "behaviour_settings": 264,
-    "order_fields": 150,
-    "test_files": 871,
-    "test_funcs": 3309
+    "setting_defs": 326,
+    "behaviour_settings": 279,
+    "order_fields": 153,
+    "test_files": 874,
+    "test_funcs": 3329
   },
   "flows": [
     {
@@ -3436,6 +3436,42 @@
       "key": "auth.sms_template",
       "group": "platform",
       "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "cart_reminder.after_minutes",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "cart_reminder.enabled",
+      "group": "platform",
+      "kind": "bool",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -7279,7 +7315,25 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
-      "key": "prizes.invites_per_entry",
+      "key": "prizes.launch_on",
+      "group": "platform",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.min_points",
       "group": "platform",
       "kind": "int",
       "sensitive": false,
@@ -7297,9 +7351,99 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
-      "key": "prizes.launch_on",
+      "key": "prizes.points_checkin",
       "group": "platform",
-      "kind": "text",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.points_follow_facebook",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.points_follow_instagram",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.points_invite_first_order",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.points_invite_signup",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "prizes.points_order",
+      "group": "platform",
+      "kind": "int",
       "sensitive": false,
       "money": false,
       "flows": [
@@ -8130,6 +8274,96 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "shamcash.account_name",
+      "group": "platform",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "shamcash.account_number",
+      "group": "platform",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "shamcash.min_topup",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "shamcash.pay_on_delivery_enabled",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "shamcash.topup_enabled",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "shop.rail_auto",
       "group": "site",
       "kind": "bool",
@@ -8338,6 +8572,42 @@
       "kind": "int",
       "sensitive": false,
       "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "tips.enabled",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "tips.platform_percent",
+      "group": "platform",
+      "kind": "percent",
+      "sensitive": false,
+      "money": true,
       "flows": [
         "F-33"
       ],
@@ -14129,31 +14399,37 @@
       "orphan": true
     },
     {
-      "name": "TestDisplayName",
+      "name": "TestAwardExpiry",
       "file": "internal/prizes/prizes_test.go",
       "package": "prizes",
       "orphan": true
     },
     {
-      "name": "TestEntriesMath",
+      "name": "TestCompetitionMonth",
       "file": "internal/prizes/prizes_test.go",
       "package": "prizes",
       "orphan": true
     },
     {
-      "name": "TestMonthMath",
+      "name": "TestCountWindow",
       "file": "internal/prizes/prizes_test.go",
       "package": "prizes",
       "orphan": true
     },
     {
-      "name": "TestNextDrawAt_AfterLaunch",
+      "name": "TestCurrentMonthBeforeLaunch",
       "file": "internal/prizes/prizes_test.go",
       "package": "prizes",
       "orphan": true
     },
     {
-      "name": "TestPickWinnersWeightedOncePerPerson",
+      "name": "TestCutoffAndAnnounce",
+      "file": "internal/prizes/prizes_test.go",
+      "package": "prizes",
+      "orphan": true
+    },
+    {
+      "name": "TestRankTieThresholdExclusion",
       "file": "internal/prizes/prizes_test.go",
       "package": "prizes",
       "orphan": true
@@ -16072,6 +16348,36 @@
       "orphan": false
     },
     {
+      "name": "TestTIP01_HeldThenPaidToDeliveringCaptain",
+      "file": "internal/qa/captain_tip_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTIP02_Rejections",
+      "file": "internal/qa/captain_tip_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTIP03_CancelReleases",
+      "file": "internal/qa/captain_tip_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTIP04_WalletScopeSwitch",
+      "file": "internal/qa/captain_tip_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestTIP05_UndeliverReturnsTip",
+      "file": "internal/qa/captain_tip_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestCA06_AllChangesAreSurfacedNotOnlyFirst",
       "file": "internal/qa/cart_changes_test.go",
       "package": "qa",
@@ -16110,6 +16416,36 @@
     {
       "name": "TestCC21_CC22_NoHiddenMinimumOrder",
       "file": "internal/qa/cart_changes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCartReminder_AfterAnHourOncePerCart",
+      "file": "internal/qa/cart_reminder_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCartReminder_BadReportsRefused",
+      "file": "internal/qa/cart_reminder_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCartReminder_CancelledByEmptyingOrOrdering",
+      "file": "internal/qa/cart_reminder_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCartReminder_QuietHoursDeferNotDrop",
+      "file": "internal/qa/cart_reminder_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCartReminder_StaleCartNotRevived",
+      "file": "internal/qa/cart_reminder_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -25401,7 +25737,7 @@
       "orphan": true
     },
     {
-      "name": "TestPRZ06_DrawOnceWeightedRanks",
+      "name": "TestPRZ06_PointsCountAndCancel",
       "file": "internal/qa/prizes_test.go",
       "package": "qa",
       "orphan": true
@@ -25414,6 +25750,18 @@
     },
     {
       "name": "TestPRZ08_PrizeStoreHiddenEverywhere",
+      "file": "internal/qa/prizes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPRZ09_AnnounceOnceTieThresholdExclusion",
+      "file": "internal/qa/prizes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPRZ10_NotStartedRejects",
       "file": "internal/qa/prizes_test.go",
       "package": "qa",
       "orphan": true
@@ -28034,6 +28382,48 @@
     {
       "name": "TestSWR02_MigrationFlipsWalletStoresBalanceStaysAndNewOrderIsCash",
       "file": "internal/qa/settlement_wallet_removed_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcash_ApproveIdempotent",
+      "file": "internal/qa/shamcash_topup_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcash_CustomerTokenForbiddenOnAdmin",
+      "file": "internal/qa/shamcash_topup_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcash_DuplicateTxnRef",
+      "file": "internal/qa/shamcash_topup_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcash_PayOnDeliveryClearsTip",
+      "file": "internal/qa/shamcash_topup_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcash_PayOnDeliveryOption",
+      "file": "internal/qa/shamcash_topup_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcash_RejectFlow",
+      "file": "internal/qa/shamcash_topup_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcash_TopupMinAndDisabled",
+      "file": "internal/qa/shamcash_topup_test.go",
       "package": "qa",
       "orphan": true
     },

@@ -81,6 +81,8 @@ object Cart {
             prefs.edit().remove(KEY).apply()
             emptyList()
         }
+        // **ويُبلَّغ الخادمُ بما استُعيد** (٢٠٢٦-١١-٢٥) — بصمةٌ لم تتغيّر لا تُعيد مؤقّتَ التذكير.
+        if (lines.isNotEmpty()) CartReminderSync.changed(lines)
     }
 
     /**
@@ -267,6 +269,8 @@ object Cart {
             json.encodeToString(lines.map { Saved(it.item, it.qty, it.options, if (it.legacy) null else it.drinks) })
         }.getOrNull() ?: return
         prefs.edit().putString(KEY, raw).apply()
+        // **«سلّتك ناطرتك»** (٢٠٢٦-١١-٢٥) — الخادمُ يعرف حالَها ليذكّر بعد ساعة.
+        CartReminderSync.changed(lines)
     }
 
     private val json = Json {

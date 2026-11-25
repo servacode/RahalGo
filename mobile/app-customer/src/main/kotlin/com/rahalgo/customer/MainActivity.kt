@@ -1230,7 +1230,7 @@ private fun SignedIn(
                         order = o,
                         walletBalance = shell.balance,
                         confirming = ordersVm.acting,
-                        onConfirmQuote = { method -> ordersVm.confirmQuote(o, method) },
+                        onConfirmQuote = { method, tip -> ordersVm.confirmQuote(o, method, tip) },
                         onRejectQuote = { ordersVm.rejectQuote(o.id) },
                         onDismiss = { ordersVm.dismissQuote(o) },
                     )
@@ -1425,6 +1425,14 @@ private fun SignedIn(
                                 overlay.clear()
                                 tab = Tab.Shop
                                 shopVm.openStore(id)
+                            }
+
+                            // **و«سلّتك ناطرتك» تفتح السلّة** (قرارُ المالك ٢٠٢٦-١١-٢٥) — السلّةُ
+                            // عند الجهاز نفسِه، فلا جلبَ ولا معرّفَ يُستعمل.
+                            com.rahalgo.ui.Engagement.DEST_CART -> {
+                                com.rahalgo.ui.Opened.take()
+                                overlay.clear()
+                                tab = Tab.Cart
                             }
 
                             else -> Unit

@@ -38,6 +38,8 @@ var walletKinds = []string{
 	"payout_reversal",
 	// **السلفة** — قرارُ المالك ٢٠٢٦-١٠-٢٦.
 	"advance",
+	// **إكراميةُ الكابتن** — قرارُ المالك ٢٠٢٦-١١-٢٥.
+	"tip",
 }
 
 func TestWalletKinds_AllAcceptedByTheDatabase(t *testing.T) {

@@ -496,6 +496,8 @@ fun CartScreen(
                 vm.walletScope = "none"
             }
         }
+        // **والإكرامية للمحفظة وحدَها** — الرجوعُ للنقد يصفّرها.
+        LaunchedEffect(vm.walletScope) { if (vm.walletScope == "none") vm.tip = 0L }
         // **سطرُ الدفع بطاقةٌ تحت عنوانها (تدقيق D13)** — كان سطراً عارياً يضيع بين الحقول.
         // **شام كاش عند الاستلام** — يظهر حين يفعّله المالك (`pay_on_delivery_enabled`).
         val shamOn = com.rahalgo.ui.rememberShamcashInfo()?.payOnDeliveryEnabled == true
@@ -550,6 +552,11 @@ fun CartScreen(
                     }
                 }
             }
+        }
+        // **إكرامية الكابتن** — تظهر مع المحفظة (الكل/التوصيل) إن فُعّلت من المنصّة.
+        if (vm.walletScope != "none") {
+            Spacer(Modifier.height(Rahal.space.md))
+            TipChooser(tip = vm.tip, onTip = { vm.tip = it })
         }
         }
         // ══════════════════════════════════════════════════════════════
@@ -1221,6 +1228,8 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **يدفع عند الباب بشام كاش** (مع `none` وحدَه) — يُرسَل `pay_shamcash` للمحرّك. */
     var payShamcash by mutableStateOf(false)
+    /** **إكرامية الكابتن** — من المحفظة وحدَها؛ 0 = لا شكراً، وتُصفَّر عند الرجوع للنقد. */
+    var tip by mutableStateOf(0L)
 
     var priced by mutableStateOf<Quote?>(null)
         private set
@@ -1471,6 +1480,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                         promoCode = code,
                         notes = notes.trim(),
                         payShamcash = if (payShamcash && walletScope != "full") true else null,
+                        tip = tip.takeIf { it > 0 && walletScope != "none" && !payShamcash },
                     ),
                     attemptKey = key,
                 )

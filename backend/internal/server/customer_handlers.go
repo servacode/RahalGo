@@ -129,6 +129,12 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 		// **وشاشةُ الدخول لا تعرف أيَّ أبوابٍ تعرض حتّى تسأل**، ونداءٌ ثانٍ
 		// لسطرٍ واحدٍ رحلةٌ زائدةٌ في أوّل ما يُفتح.
 		"otp_login": s.settings.GetBool(r.Context(), "auth.otp_login"),
+		// **إكراميةُ الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٥) — مطفأةً ما بتنعرض أبداً.
+		"tips": map[string]any{
+			"enabled": s.orders.TipsEnabled(r.Context()),
+			"presets": orders.TipPresets,
+			"max":     orders.MaxTip,
+		},
 		// **فيديو شرح تطبيق المتجر** — يفتحه زرُّ «شرح التطبيق» في درجه (٢٠٢٦-١٠-٠٨).
 		"merchant_tutorial_url": s.merchantTutorial(r.Context()),
 		// **وفيديو الزبون** — فارغٌ حتّى يُنشر، فلا يظهر زرُّه.

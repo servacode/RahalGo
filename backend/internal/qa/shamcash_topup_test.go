@@ -5,7 +5,7 @@ package qa
 // ══════════════════════════════════════════════════════════════════════
 //
 // على المحرّك الحقيقيّ: الحدّ الأدنى، ورقم العملية المكرّر، والموافقة مرّة وحدة (قيد واحد
-// وحركة وحدة — FI-05.l)، والرفض بسببه، و٤٠٣ لتوكن زبون عاللوحة، وخيار الدفع عند الاستلام.
+// وحركة وحدة — FI-05.m)، والرفض بسببه، و٤٠٣ لتوكن زبون عاللوحة، وخيار الدفع عند الاستلام.
 
 import (
 	"net/http"
@@ -266,4 +266,61 @@ func TestShamcash_PayOnDeliveryOption(t *testing.T) {
 	if after := wsRead(t, h, oid); after.paid != 0 || after.cashDue != o.total {
 		t.Errorf("التبديل حرّك مال: %+v", after)
 	}
+}
+
+// ── شام كاش عند الاستلام متل الكاش: ما إلو إكرامية، والتبديل إلو بيفكّها ──────────
+func TestShamcash_PayOnDeliveryClearsTip(t *testing.T) {
+	h := New(t)
+	treasury(t, h)
+	tipSettings(h, "0")
+	mpsNoCampaign(t, h)
+	h.Setting("shamcash.pay_on_delivery_enabled", "true")
+	base := financialBaseline(t, h)
+	cust := h.Customer()
+	fundWallet(t, h, h.NewUser("admin"), cust.ID, 1000)
+	item := h.NewItem(1000)
+
+	// **إنشاء بشام كاش مع إكرامية ⇒ ٤٠٩.**
+	body := orderBody(item, 1)
+	body["payment_method"] = ""
+	body["wallet_scope"] = "none"
+	body["pay_shamcash"] = true
+	body["tip"] = 5
+	if r := h.POSTKey("/api/v1/orders", cust.Token, uniq("sctip"), body); r.Code != http.StatusConflict || r.Err() != "tip_not_allowed" {
+		t.Errorf("إنشاء شام كاش مع إكرامية: %s — يُنتظر 409 tip_not_allowed", r)
+	}
+
+	oid, made := tipWalletOrder(t, h, cust, item, "delivery", 5)
+	if made.Code >= 400 {
+		t.Fatalf("الإنشاء: %s", made)
+	}
+	total, _ := made.JSON()["total"].(float64)
+	if r := readTip(t, h, oid); r.reserved != 5 {
+		t.Fatalf("الإكرامية ما انحجزت: %+v", r)
+	}
+	// **شام كاش مع إكرامية بنداء التبديل ⇒ ٤٠٩.**
+	if r := h.POSTKey("/api/v1/orders/"+oid+"/wallet-scope", cust.Token, uniq("ws"), map[string]any{
+		"wallet_scope": "delivery", "expected_total": int64(total), "pay_shamcash": true, "tip": 5,
+	}); r.Code != http.StatusConflict || r.Err() != "tip_not_allowed" {
+		t.Errorf("تبديل لشام كاش مع إكرامية: %s — يُنتظر 409 tip_not_allowed", r)
+	}
+	// **والتبديل لشام كاش (نفس النطاق) بيفكّ الإكرامية.**
+	if r := h.POSTKey("/api/v1/orders/"+oid+"/wallet-scope", cust.Token, uniq("ws"), map[string]any{
+		"wallet_scope": "delivery", "expected_total": int64(total), "pay_shamcash": true,
+	}); r.Code >= 400 {
+		t.Fatalf("التبديل لشام كاش: %s", r)
+	}
+	if r := readTip(t, h, oid); r.reserved != 0 || r.amount != 0 {
+		t.Fatalf("**شام كاش ما فكّ الإكرامية**: %+v", r)
+	}
+	if _, reserved, _ := walletLayers(t, h, cust.ID); reserved != 0 {
+		t.Fatalf("محجوز باقي: %d", reserved)
+	}
+	// **وما بتنحطّ إكرامية وهو شام كاش.**
+	if r := h.POSTKey("/api/v1/orders/"+oid+"/wallet-scope", cust.Token, uniq("ws"), map[string]any{
+		"wallet_scope": "delivery", "expected_total": int64(total), "tip": 5,
+	}); r.Code != http.StatusConflict {
+		t.Errorf("إكرامية مع شام كاش: %s — يُنتظر 409", r)
+	}
+	assertNewViolations(t, h, base, "FI-03", "FI-04", "FI-05", "FI-11")
 }

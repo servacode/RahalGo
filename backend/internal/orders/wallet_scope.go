@@ -232,7 +232,7 @@ func (s *Service) ChangeWalletScope(ctx context.Context, orderID, customerID, sc
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	o, after, err := s.ChangeWalletScopeTx(ctx, tx, orderID, customerID, scope, nil, expectedTotal, limit)
+	o, after, err := s.ChangeWalletScopeTx(ctx, tx, orderID, customerID, scope, nil, expectedTotal, limit, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +258,9 @@ func (s *Service) DriverCashLimit(ctx context.Context) int64 {
 // **و`payShamcash`** «شام كاش عند الاستلام» (قرار المالك ٢٠٢٦-١١-٢٥): `nil` = متل ما هو. والنطاقُ
 // الفارغ مع `payShamcash` = النطاقُ الحاليّ (تبديل طريقة دفع الباقي بس). **وما بيحرّك مال.**
 func (s *Service) ChangeWalletScopeTx(ctx context.Context, tx dbtx.Querier, orderID, customerID, scope string,
-	payShamcash *bool, expectedTotal, cashLimit int64) (*Order, func(), error) {
+	payShamcash *bool, expectedTotal, cashLimit int64, tip *int64) (*Order, func(), error) {
+	// **و`tip` إكراميةُ الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٥، `tip.go`): nil = ما تغيّرت،
+	// **والتبديلُ للكاش أو لشام كاش عند الاستلام بيفكّها دايماً.**
 	noop := func() {}
 	if scope == "" && payShamcash == nil {
 		return nil, noop, ErrBadPayment
@@ -311,6 +313,9 @@ func (s *Service) ChangeWalletScopeTx(ctx context.Context, tx dbtx.Querier, orde
 	if newPay && scope == ScopeFull {
 		return nil, noop, ErrBadPayment
 	}
+	if newPay && tip != nil && *tip > 0 {
+		return nil, noop, ErrTipNotAllowed
+	}
 	if newPay && !o.payShamcash {
 		var st *settings.Store
 		if s.settings != nil {
@@ -321,27 +326,39 @@ func (s *Service) ChangeWalletScopeTx(ctx context.Context, tx dbtx.Querier, orde
 		}
 	}
 	if o.scope == scope {
-		if newPay == o.payShamcash {
-			same, err := s.getByID(ctx, tx, orderID)
+		changed := false
+		if newPay != o.payShamcash {
+			// **تبديل طريقة دفع الباقي** (كاش ⇄ شام كاش) — ولا قرش بيتحرّك.
+			if _, err := tx.Exec(ctx, `UPDATE orders SET pay_shamcash = $2, updated_at = now() WHERE id = $1`,
+				orderID, newPay); err != nil {
+				return nil, noop, err
+			}
+			if err := s.auditQuoteTx(ctx, tx, &customerID, "order.pay_shamcash_changed", orderID, map[string]any{
+				"pay_shamcash": newPay, "status": o.status, "actor_role": "customer",
+			}); err != nil {
+				return nil, noop, err
+			}
+			changed = true
+		}
+		// **والإكرامية للمحفظة بس**: شام كاش متل الكاش بيفكّها.
+		if newPay {
+			if err := s.setTipTx(ctx, tx, orderID, customerID, 0); err != nil {
+				return nil, noop, err
+			}
+		} else if tip != nil && scope != ScopeNone {
+			if err := s.setTipTx(ctx, tx, orderID, customerID, *tip); err != nil {
+				return nil, noop, err
+			}
+			changed = true
+		}
+		same, err := s.getByID(ctx, tx, orderID)
+		if err != nil || !changed {
 			return same, noop, err
 		}
-		// **تبديل طريقة دفع الباقي بس** (كاش ⇄ شام كاش) — ولا قرش بيتحرّك.
-		if _, err := tx.Exec(ctx, `UPDATE orders SET pay_shamcash = $2, updated_at = now() WHERE id = $1`,
-			orderID, newPay); err != nil {
-			return nil, noop, err
-		}
-		if err := s.auditQuoteTx(ctx, tx, &customerID, "order.pay_shamcash_changed", orderID, map[string]any{
-			"pay_shamcash": newPay, "status": o.status, "actor_role": "customer",
-		}); err != nil {
-			return nil, noop, err
-		}
-		out, err := s.getByID(ctx, tx, orderID)
-		if err != nil {
-			return nil, noop, err
-		}
-		return out, func() {
-			s.publishOrder(out)
-			s.notifyWalletScopeDriver(ctx, out)
+		return same, func() {
+			s.publishOrder(same)
+			s.publishWalletsOf(ctx, orderID)
+			s.notifyWalletScopeDriver(ctx, same)
 		}, nil
 	}
 
@@ -416,6 +433,17 @@ func (s *Service) ChangeWalletScopeTx(ctx context.Context, tx dbtx.Querier, orde
 			return nil, noop, err
 		}
 	}
+	// **إكراميةُ الكابتن** — بعد الحصّة، فالمتاحُ يُسأل عن الاتنين. والكاشُ وشام كاش بيفكّوها.
+	if scope == ScopeNone || newPay {
+		if err := s.setTipTx(ctx, tx, orderID, customerID, 0); err != nil {
+			return nil, noop, err
+		}
+	} else if tip != nil {
+		if err := s.setTipTx(ctx, tx, orderID, customerID, *tip); err != nil {
+			return nil, noop, err
+		}
+	}
+
 	if err := s.auditQuoteTx(ctx, tx, &customerID, "order.wallet_scope_changed", orderID, map[string]any{
 		"old_scope": o.scope, "new_scope": scope, "status": o.status, "pay_shamcash": newPay,
 		"old_cash_due": o.cashDue, "new_cash_due": newCash,

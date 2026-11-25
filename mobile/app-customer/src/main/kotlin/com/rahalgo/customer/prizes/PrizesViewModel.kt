@@ -8,7 +8,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.shared.customer.CustomerApi
 import com.rahalgo.shared.customer.PrizeItem
-import com.rahalgo.shared.customer.PrizeWinner
 import com.rahalgo.shared.customer.PrizesMe
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.apiError
@@ -18,13 +17,12 @@ import kotlinx.coroutines.launch
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **عقلُ «جوائز رحّال غو»** — حالُه وأصنافُ الجوائز ورابحو الشهر الماضي
+ * **عقلُ «جوائز رحّال غو»** — حالُه في مسابقة النقاط وأصنافُ الجوائز
  * ══════════════════════════════════════════════════════════════════════
  *
  * **وهو واحدٌ للتطبيق** (يقرؤه زرُّ الهديّة في السوق وشاشةُ الجوائز) — فالشارةُ والشاشةُ
- * تقرآن حالاً واحدة. **وقبل الافتتاح لا يُنادى غيرُ `prizes/me`** فلا أصنافَ ولا رابحين.
- *
- * **ورابحو الشهر الماضي لا يُسقطون الشاشة** — فشلُهم يعني قائمةً فارغةً مخفيّة.
+ * تقرآن حالاً واحدة. **ولا يُجلب شيءٌ عن زبونٍ آخر** (قرارُ المالك ٢٠٢٦-١١-٢٥): نقاطُه وترتيبُه
+ * وشروطُه ونتيجتُه هو وحدَه.
  */
 class PrizesViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -34,10 +32,6 @@ class PrizesViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var items by mutableStateOf<List<PrizeItem>>(emptyList())
         private set
-    var winners by mutableStateOf<List<PrizeWinner>>(emptyList())
-        private set
-    var winnersMonth by mutableStateOf<String?>(null)
-        private set
 
     /** **المتجرُ الذي تُطلب منه الجوائز** — من الأصناف أوّلاً، وإلّا من حال الزبون. */
     var storeId by mutableStateOf<String?>(null)
@@ -46,6 +40,10 @@ class PrizesViewModel(app: Application) : AndroidViewModel(app) {
     var loading by mutableStateOf(false)
         private set
     var error by mutableStateOf("")
+        private set
+
+    /** **حضورٌ أو متابعةٌ قيد الإرسال** — فلا يُضغط الزرُّ مرّتين. */
+    var busy by mutableStateOf(false)
         private set
 
     private var job: Job? = null
@@ -61,8 +59,7 @@ class PrizesViewModel(app: Application) : AndroidViewModel(app) {
     val badge: String? get() = PrizesLogic.badge(me, teaser)
 
     /**
-     * **يُجلب الحالُ** — ومنه تُجلب الأصنافُ والرابحون حين يكون الافتتاحُ قد جاء.
-     * **ومن كان عنده بياناتٌ يُبقيها أثناء التحديث** فلا تومض الشاشة.
+     * **يُجلب الحالُ** ثمّ الأصناف. **ومن كان عنده بياناتٌ يُبقيها أثناء التحديث** فلا تومض الشاشة.
      */
     fun load() {
         job?.cancel()
@@ -79,13 +76,6 @@ class PrizesViewModel(app: Application) : AndroidViewModel(app) {
                     items = page.items
                     if (!page.storeId.isNullOrBlank()) storeId = page.storeId
                 }
-                if (PrizesLogic.isTeaser(m.enabled, m.launchOn, PrizesLogic.today())) {
-                    winners = emptyList()
-                } else {
-                    val w = runCatching { api.prizeWinners() }.getOrNull()
-                    winners = w?.winners.orEmpty()
-                    winnersMonth = w?.month
-                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -97,15 +87,37 @@ class PrizesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** **«سجّل حضوري»** — والحالُ الجديدُ من الردّ نفسِه. */
+    fun checkIn() = act { api.prizeCheckIn() }
+
+    /** **«تابع»** بالأمانة — الشاشةُ تفتح الصفحة، وهنا يُعلَّم. */
+    fun follow(network: String) = act { api.prizeFollow(network) }
+
+    private fun act(call: suspend () -> PrizesMe) {
+        if (busy) return
+        viewModelScope.launch {
+            busy = true
+            error = ""
+            try {
+                me = call()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                error = apiError(getApplication(), e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
     /** **عند الخروج من الحساب يُمحى الحال** فلا يرثه حسابٌ تالٍ. */
     fun reset() {
         job?.cancel()
         me = null
         items = emptyList()
-        winners = emptyList()
-        winnersMonth = null
         storeId = null
         error = ""
         loading = false
+        busy = false
     }
 }

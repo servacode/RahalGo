@@ -1101,14 +1101,39 @@ var Catalog = []Def{
 		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 
 	// ══════════════════════════════════════════════════════════════════
-	// **«جوائز رحّال غو»** — سحبٌ شهريٌّ على الدعوات (قرارُ المالك ٢٠٢٦-١١-٢٣، `internal/prizes`)
+	// **«سلّتك ناطرتك» — تذكيرُ السلّة المتروكة** (قرارُ المالك ٢٠٢٦-١١-٢٥)
 	// ══════════════════════════════════════════════════════════════════
 	//
-	// **مطفأٌ افتراضاً**، والدعواتُ تُعدّ من `prizes.launch_on`. والجوائزُ بالليرة الجديدة.
+	// زبونٌ في سلّته أغراضٌ ولم يطلب ⇒ بعد `after_minutes` من آخر تغييرٍ إشعارٌ واحد، **مرّةً لكلّ سلّة**.
+	// **مطفأٌ افتراضاً — والمالكُ يشغّله.** ويحترم ساعةَ الهدوء (`notify.quiet_*`) فيُؤجَّل ولا يسقط.
+	{Key: "cart_reminder.enabled", Group: GroupPlatform, Kind: KindBool, Default: false},
+	{Key: "cart_reminder.after_minutes", Group: GroupPlatform, Kind: KindInt,
+		Min: 5, Max: 720, Unit: "minute", Default: 60},
+
+	// ══════════════════════════════════════════════════════════════════
+	// **«جوائز رحّال غو»** — مسابقةُ نقاطٍ شهريّة (قرارا المالك ٢٠٢٦-١١-٢٣ و٢٠٢٦-١١-٢٥، `internal/prizes`)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **مطفأٌ افتراضاً**، والنقاطُ تُعدّ من `prizes.launch_on`. والجوائزُ بالليرة الجديدة.
+	// الحسمُ يومَ min(29, آخرُ يومٍ − 1) ١٢:٠٠ والإعلانُ آخرَ يومٍ ١٢:٠٠ بتوقيت دمشق — ثابتان لا إعداد.
 	{Key: "prizes.enabled", Group: GroupPlatform, Kind: KindBool, Default: false},
 	{Key: "prizes.launch_on", Group: GroupPlatform, Kind: KindText, Max: 10, Default: "2026-12-01"},
-	{Key: "prizes.invites_per_entry", Group: GroupPlatform, Kind: KindInt,
-		Min: 1, Max: 100, Unit: "invites", Default: 5},
+	// **أقلُّ نقاطٍ بالشهر ليتأهّل الزبون للفوز.**
+	{Key: "prizes.min_points", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 100_000, Unit: "points", Default: 80},
+	// **نقاطُ كلّ فعل** — الحضورُ مرّةً باليوم، والمتابعةُ مرّةً في العمر.
+	{Key: "prizes.points_checkin", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 1000, Unit: "points", Default: 1},
+	{Key: "prizes.points_order", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 1000, Unit: "points", Default: 10},
+	{Key: "prizes.points_invite_signup", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 1000, Unit: "points", Default: 5},
+	{Key: "prizes.points_invite_first_order", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 1000, Unit: "points", Default: 10},
+	{Key: "prizes.points_follow_facebook", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 1000, Unit: "points", Default: 5},
+	{Key: "prizes.points_follow_instagram", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 1000, Unit: "points", Default: 5},
 	{Key: "prizes.winners", Group: GroupPlatform, Kind: KindInt,
 		Min: 1, Max: 50, Unit: "winners", Default: 5},
 	{Key: "prizes.amount_1", Group: GroupPlatform, Kind: KindMoney,
@@ -1122,6 +1147,12 @@ var Catalog = []Def{
 	// **قرارُ المالك ٢٠٢٦-١١-٢٤: ١٥٠٠ · ١٢٥٠ · ١٠٠٠ · ٧٥٠ · ٥٠٠.** وما بعد الخامس كالخامس.
 	{Key: "prizes.amount_5", Group: GroupPlatform, Kind: KindMoney,
 		Min: 0, Max: 100_000, Unit: "currency", Default: 500, Sensitive: true},
+
+	// ── إكراميةُ الكابتن (قرارُ المالك ٢٠٢٦-١١-٢٥) ───────────────────────
+	// **مطفأةٌ افتراضاً** — ومطفأةً ما بتنعرض ولا بتنقبل إكراميةٌ جديدة. ونسبةُ المنصّة
+	// منها تُلقط لحظةَ الاختيار، والباقي للكابتن اللي بيسلّم.
+	{Key: "tips.enabled", Group: GroupPlatform, Kind: KindBool, Default: false},
+	{Key: "tips.platform_percent", Group: GroupPlatform, Kind: KindPercent, Default: 0},
 
 	// ── السائقون ──────────────────────────────────────────────────────────
 

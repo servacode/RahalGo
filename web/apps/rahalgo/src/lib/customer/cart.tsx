@@ -11,8 +11,10 @@
  * (`/public/quote`)، **ويُقارَن ما عُرض بما قيل** فيُسأل الزبونُ إن تبدّل.
  */
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { isDrinksGroup, type Item, type ModifierGroup, type ModifierOption } from "./types";
+import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { readJSON, writeJSON } from "./storage";
 
 /** **مشروبٌ وعددُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا يُضرب بعدد الصنف. مرآةُ `Cart.DrinkPick`. */
@@ -293,6 +295,36 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clear = useCallback(() => save([]), [save]);
+
+  /* **«سلّتك ناطرتك» — الخادمُ يعرف حالَ السلّة** (قرارُ المالك ٢٠٢٦-١١-٢٥). السلّةُ عندنا فقط، فبعد كلّ
+     تغييرٍ (وعند فتح الصفحة) يُبلَّغ بمتجرها وعددها وبصمة محتواها، **ويرسل تذكيراً واحداً بعد ساعةٍ
+     بلا طلب**؛ وسلّةٌ فارغةٌ (إفراغٌ أو طلب) تُلغيه. **ثوانٍ تُجمَّع فيها الضغطاتُ**، وفشلُه صمتٌ — تحسينٌ
+     لا يوقف الطلب. **والضيفُ لا نداءَ له.** البصمةُ بصيغة `Cart.kt` نفسِها فلا يعيد التبديلُ بين التطبيق
+     والمتصفّح مؤقّتَ التذكير. */
+  const { user } = useAuth();
+  const userId = user?.id ?? "";
+  /* **وإفراغٌ لم نشهده لا يُبلَّغ**: سلّةُ المتصفّح الفارغةُ عند فتحه لا تُلغي تذكيرَ سلّةِ التطبيق. */
+  const hadItems = useRef(false);
+  useEffect(() => {
+    if (!ready || !userId) return;
+    const count = lines.reduce((s, l) => s + l.qty, 0);
+    const merchant = lines[0]?.item.merchant_id ?? "";
+    if (count > 0) hadItems.current = true;
+    else if (!hadItems.current) return;
+    const t = setTimeout(() => {
+      if (count <= 0 || !merchant) {
+        api("/api/v1/my/cart-state", { method: "DELETE" }).catch(() => undefined);
+        hadItems.current = false;
+        return;
+      }
+      const signature = lines.map((l) => lineKey(l) + "x" + l.qty).sort().join(";");
+      api("/api/v1/my/cart-state", {
+        method: "PUT",
+        body: JSON.stringify({ merchant_id: merchant, items_count: count, signature }),
+      }).catch(() => undefined);
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [lines, ready, userId]);
 
   const value = useMemo<CartState>(
     () => ({
