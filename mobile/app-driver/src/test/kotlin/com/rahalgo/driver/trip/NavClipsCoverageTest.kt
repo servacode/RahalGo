@@ -168,6 +168,8 @@ class NavClipsCoverageTest {
         val notAudio = setOf(
             "keep", "rahalgo_style",
             "firebase_common_keep", "firebase_crashlytics_keep",
+            // **ورنّةُ العرض ليست مقطعَ ملاحة** — ينطقها `OfferAlert` لا `NavClips` (٢٠٢٦-١١-١٤).
+            "order_chime",
         )
 
         val orphans = (available - reachable - eventsPending - notAudio).toSortedSet()
