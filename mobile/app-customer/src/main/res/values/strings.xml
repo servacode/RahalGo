@@ -191,9 +191,9 @@
     <string name="ord_confirmed_cash">تم تأكيد المبلغ.</string>
     <string name="ord_confirmed_wallet">تم حجز المبلغ من محفظتك لهذا الطلب حتى إتمامه.</string>
     <string name="ord_reserved_note">محجوز من محفظتك: %1$s</string>
-    <string name="ord_pay_wallet_full">الكل من المحفظة</string>
-    <string name="ord_pay_wallet_delivery">التوصيل من المحفظة والباقي كاش</string>
-    <string name="ord_pay_cash">كاش للكابتن</string>
+    <string name="ord_pay_wallet_full">المبلغ كامل مع التوصيل من المحفظة</string>
+    <string name="ord_pay_wallet_delivery">التوصيل من المحفظة والباقي نقداً عند الاستلام</string>
+    <string name="ord_pay_cash">نقداً عند الاستلام</string>
     <string name="ord_change_pay">غيّر طريقة الدفع</string>
     <string name="ord_change_pay_hint">فيك تغيّرها لحد ما يوصل الكابتن لعندك</string>
     <string name="ord_pay_changed">تغيّرت طريقة الدفع</string>
@@ -298,8 +298,8 @@
     <string name="cart_promo_free_delivery">تم تطبيق الكود — توصيل مجاني</string>
     <string name="cart_cash">نقداً عند الاستلام</string>
     <string name="cart_wallet">من محفظتي</string>
-    <string name="cart_wallet_full">الكل من المحفظة</string>
-    <string name="cart_wallet_delivery">التوصيل من المحفظة والباقي كاش</string>
+    <string name="cart_wallet_full">المبلغ كامل مع التوصيل من المحفظة</string>
+    <string name="cart_wallet_delivery">التوصيل من المحفظة والباقي نقداً عند الاستلام</string>
     <string name="cart_wallet_delivery_hint">%1$s من المحفظة و%2$s كاش للكابتن</string>
     <!-- **سقفُ الدفع نقداً**: زرُّ تواصلٍ عبر واتساب برسالةٍ مهيّأة، والرقمُ مركزيٌّ من المنصّة. -->
     <string name="cta_contact_whatsapp">تواصل عبر واتساب</string>
