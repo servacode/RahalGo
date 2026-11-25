@@ -325,6 +325,7 @@ func TestDriverMonitor_DayInRoadMetres(t *testing.T) {
 	const lat, lng = 35.6500, 38.7000
 	east, north := 300.0/90700, 300.0/111200
 	a, b := base, base.Add(90*time.Second)
+	dmOnShift(t, h, drv.ID, base.Add(-time.Hour), base.Add(23*time.Hour))
 	if _, err := h.Pool.Exec(ctxBG(), `
 		INSERT INTO driver_trail (driver_id, recorded_at, lat, lng, accuracy_m, speed_mps)
 		VALUES ($1::uuid, $2, $3, $4, 5, 8), ($1::uuid, $5, $6, $7, 5, 8)`,

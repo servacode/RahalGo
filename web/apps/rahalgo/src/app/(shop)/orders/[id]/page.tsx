@@ -32,7 +32,6 @@ import {
   OrderStages,
   PayScope,
   QuoteAmounts,
-  payScopeLabel,
 } from "@/components/customer/orderParts";
 import { OrderStatusChip } from "@/components/customer/OrderSummary";
 import { OUTLINE_CARD } from "@/components/customer/kit";
@@ -181,7 +180,6 @@ export default function OrderPage() {
           <Row label={fill(O.items, { n: fmtNum(order.items_count) })}>{order.items_preview}</Row>
         )}
         <Row label={O.placed}>{fmtDateTime(order.created_at)}</Row>
-        <Row label={O.payment}>{payScopeLabel(order)}</Row>
         {order.address_text && <Row label={O.address}>{order.address_text}</Row>}
         {order.notes && <Row label={O.notes}>{order.notes}</Row>}
       </dl>

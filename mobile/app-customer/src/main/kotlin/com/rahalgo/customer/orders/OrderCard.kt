@@ -3,6 +3,9 @@ package com.rahalgo.customer.orders
 import com.rahalgo.ui.RahalDivider
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -401,21 +404,23 @@ fun OrderCard(
         Since.text(ctx, order.createdAt, now).takeIf { it.isNotEmpty() }?.let {
             KeyValue(stringResource(R.string.ord_placed), it)
         }
-        KeyValue(
-            stringResource(R.string.ord_payment),
-            stringResource(
-                when (order.effectiveWalletScope) {
-                    "delivery" -> R.string.ord_pay_wallet_delivery
-                    "full" -> R.string.ord_pay_wallet_full
-                    else -> if (order.payShamcash) R.string.sham_pay_option else R.string.cart_cash
-                },
-            ),
-        )
-        if (order.tip > 0) {
-            KeyValue(stringResource(R.string.tip_order_line), money(order.tip))
-        }
         if (onChangeWalletScope != null) {
+            // **كتلةُ الدفع: الطريقةُ الحاليّةُ بأيقونتها و«تغيير» يفتح الخيارات** (طلب المالك ٢٠٢٦-١١-٢٥).
             PayScopeRow(order, walletBalance, confirming, onChangeWalletScope)
+        } else {
+            KeyValue(
+                stringResource(R.string.ord_payment),
+                stringResource(
+                    when (order.effectiveWalletScope) {
+                        "delivery" -> R.string.ord_pay_wallet_delivery
+                        "full" -> R.string.ord_pay_wallet_full
+                        else -> if (order.payShamcash) R.string.sham_pay_option else R.string.cart_cash
+                    },
+                ),
+            )
+            if (order.tip > 0) {
+                KeyValue(stringResource(R.string.tip_order_line), money(order.tip))
+            }
         }
         // **الكابتن عند الباب والزبون اختار شام كاش** — الباركودُ والحسابُ والمبلغ.
         if (order.payShamcash && order.status == "at_dropoff" && order.cashDue > 0) {
@@ -1049,8 +1054,6 @@ private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onCh
     val custom = order.kind == "custom"
     val confirmed = order.quoteConfirmedVersion != null && order.quoteConfirmedVersion == order.quoteVersion
     val ended = order.status in setOf("delivered", "cancelled", "rejected", "failed", "refunded")
-    if (ended || order.status == "at_dropoff" || (custom && !confirmed)) return
-    if (order.kind != "standard" && !custom) return
     val scope = order.effectiveWalletScope
     val own = if (custom) order.customReservedAmount else order.walletPaid
     val budget = walletBalance + own
@@ -1058,46 +1061,167 @@ private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onCh
     // **«الكل من المحفظة» يظهر حين يغطّي الرصيدُ المجموعَ كلَّه** (قرارُ المالك ٢٠٢٦-١١-٢٠) — أو الطلبُ عليه أصلاً.
     val showFull = (order.total > 0 && budget >= order.total) || scope == "full"
     val showDelivery = (deliveryPart > 0 && budget >= deliveryPart) || scope == "delivery"
-    if (!showFull && !showDelivery && !shamOn && !order.payShamcash) return
-    Spacer(Modifier.height(Rahal.space.sm))
-    Text(
-        stringResource(R.string.ord_change_pay),
-        color = Rahal.colors.ink,
-        style = Rahal.type.body,
-        fontWeight = FontWeight.Bold,
-    )
-    Text(
-        stringResource(R.string.ord_change_pay_hint),
-        color = Rahal.colors.inkMuted,
-        style = Rahal.type.caption,
-    )
-    Spacer(Modifier.height(Rahal.space.sm))
-    Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
-        com.rahalgo.customer.cart.PayChoice(
-            text = stringResource(R.string.ord_pay_cash),
-            on = scope == "none" && !order.payShamcash,
-            modifier = Modifier.fillMaxWidth(),
-        ) { if (!busy && (scope != "none" || order.payShamcash)) onChange("none", if (order.payShamcash) false else null, null) }
-        if (shamOn || order.payShamcash) {
-            com.rahalgo.customer.cart.PayChoice(
-                text = stringResource(R.string.sham_pay_option),
-                on = scope == "none" && order.payShamcash,
-                modifier = Modifier.fillMaxWidth(),
-            ) { if (!busy && !(scope == "none" && order.payShamcash)) onChange("none", true, null) }
+    // **قواعدُ الإظهار كما كانت** — ما تغيّر إلّا الشكل: الطريقةُ الحاليّةُ تُرى دائماً، و«تغيير» حين يجوز.
+    val canChange = !(ended || order.status == "at_dropoff" || (custom && !confirmed)) &&
+        (order.kind == "standard" || custom) &&
+        (showFull || showDelivery || shamOn || order.payShamcash)
+    val onCash = scope == "none" && !order.payShamcash
+    val onSham = scope == "none" && order.payShamcash
+    var open by rememberSaveable(order.id) { mutableStateOf(false) }
+    val shape = Rahal.shape.md
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = Rahal.space.xs)
+            .clip(shape)
+            .border(Rahal.stroke.hair, Rahal.colors.line, shape)
+            .padding(Rahal.space.md),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PayIcon(payIconFor(scope, order.payShamcash), on = true)
+            Spacer(Modifier.width(Rahal.space.md))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.ord_payment),
+                    color = Rahal.colors.inkMuted,
+                    style = Rahal.type.caption,
+                )
+                Text(
+                    stringResource(
+                        when (scope) {
+                            "delivery" -> R.string.ord_pay_wallet_delivery
+                            "full" -> R.string.ord_pay_wallet_full
+                            else -> if (order.payShamcash) R.string.sham_pay_option else R.string.cart_cash
+                        },
+                    ),
+                    color = Rahal.colors.ink,
+                    style = Rahal.type.body,
+                    fontWeight = FontWeight.Bold,
+                )
+                if (order.tip > 0) {
+                    Text(
+                        stringResource(R.string.ord_pay_tip_note, money(order.tip)),
+                        color = Rahal.colors.inkMuted,
+                        style = Rahal.type.caption,
+                    )
+                }
+            }
+            if (canChange) {
+                RahalTextButton(onClick = { open = !open }) {
+                    Text(stringResource(if (open) R.string.ord_pay_close else R.string.ord_pay_change))
+                    Spacer(Modifier.width(Rahal.space.xs))
+                    androidx.compose.material3.Icon(
+                        painter = androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_chevron_down),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(Rahal.icon.xs)
+                            .rotate(if (open) 180f else 0f),
+                    )
+                }
+            }
         }
-        if (showFull) {
-            com.rahalgo.customer.cart.PayChoice(
-                text = stringResource(R.string.cart_wallet_full),
-                on = scope == "full",
-                modifier = Modifier.fillMaxWidth(),
-            ) { if (!busy && scope != "full") toWallet("full") }
+        if (canChange && open) {
+            Spacer(Modifier.height(Rahal.space.sm))
+            Text(
+                stringResource(R.string.ord_change_pay_hint),
+                color = Rahal.colors.inkMuted,
+                style = Rahal.type.caption,
+            )
+            Spacer(Modifier.height(Rahal.space.sm))
+            Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                PayOption(
+                    com.rahalgo.ui.R.drawable.ic_banknotes,
+                    stringResource(R.string.ord_pay_cash),
+                    stringResource(R.string.ord_pay_cash_sub),
+                    on = onCash,
+                ) { if (!busy && (scope != "none" || order.payShamcash)) onChange("none", if (order.payShamcash) false else null, null) }
+                if (shamOn || order.payShamcash) {
+                    PayOption(
+                        com.rahalgo.ui.R.drawable.ic_phone,
+                        stringResource(R.string.sham_pay_option),
+                        stringResource(R.string.ord_pay_sham_sub),
+                        on = onSham,
+                    ) { if (!busy && !onSham) onChange("none", true, null) }
+                }
+                if (showFull) {
+                    PayOption(
+                        com.rahalgo.ui.R.drawable.ic_wallet,
+                        stringResource(R.string.cart_wallet_full),
+                        stringResource(R.string.ord_pay_full_sub),
+                        on = scope == "full",
+                    ) { if (!busy && scope != "full") toWallet("full") }
+                }
+                if (showDelivery) {
+                    PayOption(
+                        com.rahalgo.ui.R.drawable.ic_wallet,
+                        stringResource(R.string.cart_wallet_delivery),
+                        stringResource(R.string.ord_pay_delivery_sub),
+                        on = scope == "delivery",
+                    ) { if (!busy && scope != "delivery") toWallet("delivery") }
+                }
+            }
         }
-        if (showDelivery) {
-            com.rahalgo.customer.cart.PayChoice(
-                text = stringResource(R.string.cart_wallet_delivery),
-                on = scope == "delivery",
-                modifier = Modifier.fillMaxWidth(),
-            ) { if (!busy && scope != "delivery") toWallet("delivery") }
+    }
+}
+
+private fun payIconFor(scope: String, sham: Boolean): Int = when {
+    scope == "full" || scope == "delivery" -> com.rahalgo.ui.R.drawable.ic_wallet
+    sham -> com.rahalgo.ui.R.drawable.ic_phone
+    else -> com.rahalgo.ui.R.drawable.ic_banknotes
+}
+
+/** **أيقونةُ الدفع في مربّعٍ ملوَّنٍ خفيف** — بلون العلامة حين تكون مختارة. */
+@Composable
+private fun PayIcon(res: Int, on: Boolean) {
+    Box(
+        Modifier
+            .size(Rahal.size.iconBox)
+            .clip(Rahal.shape.md)
+            .background(if (on) Rahal.colors.brand.copy(alpha = 0.12f) else Rahal.colors.line.copy(alpha = 0.4f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.material3.Icon(
+            painter = androidx.compose.ui.res.painterResource(res),
+            contentDescription = null,
+            tint = if (on) Rahal.colors.brand else Rahal.colors.inkMuted,
+            modifier = Modifier.size(Rahal.icon.sm),
+        )
+    }
+}
+
+/** **خيارُ دفعٍ مدمج**: أيقونةٌ وعنوانٌ وشرحٌ بسطر، والمختارُ بلون العلامة وعلامة صحّ. */
+@Composable
+private fun PayOption(res: Int, title: String, sub: String, on: Boolean, onPick: () -> Unit) {
+    val shape = Rahal.shape.md
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .border(if (on) Rahal.stroke.focus else Rahal.stroke.hair, if (on) Rahal.colors.brand else Rahal.colors.line, shape)
+            .background(if (on) Rahal.colors.brand.copy(alpha = 0.06f) else androidx.compose.ui.graphics.Color.Transparent)
+            .selectable(selected = on, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = onPick)
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PayIcon(res, on)
+        Spacer(Modifier.width(Rahal.space.md))
+        Column(Modifier.weight(1f)) {
+            Text(
+                title,
+                color = Rahal.colors.ink,
+                style = Rahal.type.body,
+                fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+            )
+            Text(sub, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
+        }
+        if (on) {
+            Spacer(Modifier.width(Rahal.space.sm))
+            androidx.compose.material3.Icon(
+                painter = androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_check_mark),
+                contentDescription = null,
+                tint = Rahal.colors.brand,
+                modifier = Modifier.size(Rahal.icon.sm),
+            )
         }
     }
 }

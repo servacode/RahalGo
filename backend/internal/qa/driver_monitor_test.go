@@ -79,6 +79,18 @@ func dmDay() (string, time.Time) {
 	return base.Format("2006-01-02"), base
 }
 
+// dmOnShift **دوامٌ مسكَّر يغطّي [from, to)** — من ٢٠٢٦-١١-٢٢ (`drivermonitor.OffShiftSince`) الحركةُ
+// بلا طلب وبرّا كل دوام بتنعدّ «برّا الدوام» (`km_off_shift`) لا «بلا طلب». الأيامُ المصنوعة هون
+// بتمشي على تاريخٍ نسبيٍّ لليوم فصارت بعد هالحدّ — فالسائقُ بدوامه صراحةً متل الحقيقة.
+func dmOnShift(t *testing.T, h *Harness, driver string, from, to time.Time) {
+	t.Helper()
+	if _, err := h.Pool.Exec(ctxBG(), `
+		INSERT INTO driver_shifts (driver_id, opened_at, closed_at, close_reason)
+		VALUES ($1::uuid, $2, $3, 'qa')`, driver, from, to); err != nil {
+		t.Fatalf("صفّ الدوام: %v", err)
+	}
+}
+
 // dmPlaceStore ينقل متجرا إلى موقع معيّن ويجعله الوحيد الفعّال بجواره.
 func dmPlaceStore(t *testing.T, h *Harness, id string, p dmSpot) {
 	t.Helper()
@@ -170,6 +182,7 @@ func dmBuildDay(t *testing.T, h *Harness, f *Factory, withCover bool) (driver, d
 	dmPlaceStore(t, h, mA.ID, dmA)
 	dmPlaceStore(t, h, mB.ID, dmB)
 
+	dmOnShift(t, h, drv.ID, base.Add(-time.Hour), base.Add(23*time.Hour))
 	tr := &dmTrail{t: t, h: h, driver: drv.ID, cur: base, pos: dmP}
 	tr.put(base, dmP, false)
 	// **بسرعة درّاجة (~٤ م/ث)** — فالكيلومترات قيادة فعليّة لا زحف (قرار المالك ٢٠٢٦-١١-٠٥).

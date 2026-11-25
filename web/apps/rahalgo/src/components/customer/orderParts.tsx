@@ -13,10 +13,10 @@
  * جوابه — **قبولٌ أخضرُ أو رفضٌ أحمر**، ولا بابَ ثالث.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtRef, fmtSpan, fmtUsd } from "@rahalgo/i18n";
-import { Alert, Button, Confirm, InvoiceLines, Money } from "@rahalgo/ui";
+import { Alert, Button, Confirm, IconCash, IconCheck, IconChevronDown, IconPhone, IconWallet, InvoiceLines, Money } from "@rahalgo/ui";
 import { OUTLINE_CARD, RadioCard } from "./kit";
 import { TipChooser, tipOffered } from "./TipChooser";
 import { useCustomer } from "@/lib/customer/context";
@@ -28,6 +28,8 @@ import { ENDED, type MyOrder } from "@/lib/customer/types";
 
 const m = getMessages(defaultLocale);
 const O = m.shop.orders;
+
+type PayId = "none" | "full" | "delivery" | "shamcash";
 
 /** **أينتظر هذا الطلبُ تأكيدَ سعرٍ منه؟** — مرآةُ `quotePending`. */
 export function quotePending(o: MyOrder): boolean {
@@ -544,28 +546,37 @@ export function PayScope({
   const sham = useShamcash();
   const [tip, setTip] = useState(order.tip ?? 0);
   const { platform } = useCustomer();
-  const scope: "none" | "full" | "delivery" | "shamcash" = order.pay_shamcash
+  const scope: PayId = order.pay_shamcash
     ? "shamcash"
     : (order.wallet_scope ?? (order.payment_method === "wallet" ? "full" : "none"));
   const custom = order.kind === "custom";
   const confirmed = order.quote_confirmed_version != null && order.quote_confirmed_version === order.quote_version;
-  const open = !ENDED.has(order.status) && order.status !== "at_dropoff" && (!custom || confirmed);
-  if (!open || (order.kind !== "standard" && !custom)) return null;
+  const [open, setOpen] = useState(false);
+  const canOpen = !ENDED.has(order.status) && order.status !== "at_dropoff" && (!custom || confirmed);
+  const eligible = canOpen && (order.kind === "standard" || custom);
 
   const own = custom ? order.custom_reserved_amount : order.wallet_paid;
   const budget = available + own;
   const deliveryPart = Math.max(0, Math.min(order.delivery_fee, order.total));
   // **ثلاثُ طرق** (قرارُ المالك ٢٠٢٦-١١-٢٠): «الكل من المحفظة» يظهر حين يغطّي الرصيدُ المجموعَ كلَّه
   // (أو الطلبُ عليه أصلاً).
-  const items: { id: "none" | "full" | "delivery" | "shamcash"; label: string }[] = [{ id: "none", label: m.shop.cart.cash }];
-  if ((order.total > 0 && budget >= order.total) || scope === "full") items.push({ id: "full", label: m.shop.cart.walletFull });
-  if ((deliveryPart > 0 && budget >= deliveryPart) || scope === "delivery") {
-    items.push({ id: "delivery", label: m.shop.cart.walletDelivery });
+  const items: { id: PayId; label: string; sub: string; icon: ReactNode }[] = [
+    { id: "none", label: m.shop.cart.cash, sub: O.payCashSub, icon: <IconCash size={20} /> },
+  ];
+  if ((order.total > 0 && budget >= order.total) || scope === "full") {
+    items.push({ id: "full", label: m.shop.cart.walletFull, sub: O.payFullSub, icon: <IconWallet size={20} /> });
   }
-  if (sham.info?.pay_on_delivery_enabled || scope === "shamcash") items.push({ id: "shamcash", label: m.shop.cart.shamcashPod });
-  if (items.length < 2) return null;
+  if ((deliveryPart > 0 && budget >= deliveryPart) || scope === "delivery") {
+    items.push({ id: "delivery", label: m.shop.cart.walletDelivery, sub: O.payDeliverySub, icon: <IconWallet size={20} /> });
+  }
+  if (sham.info?.pay_on_delivery_enabled || scope === "shamcash") {
+    items.push({ id: "shamcash", label: m.shop.cart.shamcashPod, sub: O.payShamSub, icon: <IconPhone size={20} /> });
+  }
+  // **قواعدُ الإظهار كما كانت** — الطريقةُ الحاليّةُ تُرى دائماً، و«تغيير» حين يجوز.
+  const canChange = eligible && items.length >= 2;
+  const currentIcon = scope === "shamcash" ? <IconPhone size={20} /> : scope === "none" ? <IconCash size={20} /> : <IconWallet size={20} />;
 
-  const change = async (next: "none" | "full" | "delivery" | "shamcash") => {
+  const change = async (next: PayId) => {
     if (next === scope || busy) return;
     const slot = "wallet_scope_" + order.id;
     setBusy(true);
@@ -596,14 +607,57 @@ export function PayScope({
 
   return (
     <div className={`${OUTLINE_CARD} flex flex-col gap-rg-sm`}>
-      <p className="text-card-title">{O.changePay}</p>
-      <p className="text-caption text-ink-muted">{O.changePayHint}</p>
-      {platform?.tips?.enabled === true && <TipChooser value={tip} onChange={setTip} disabled={busy} />}
-      <div role="radiogroup" aria-label={O.changePay} className="flex flex-col gap-rg-sm">
-        {items.map((it) => (
-          <RadioCard key={it.id} selected={scope === it.id} onSelect={() => void change(it.id)} title={it.label} disabled={busy} />
-        ))}
+      <div className="flex items-center gap-3">
+        <span className="shop-opt-ic !bg-primary-tint !text-primary" aria-hidden>
+          {currentIcon}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-caption text-ink-muted">{O.payment}</span>
+          <b className="block text-body-strong">{payScopeLabel(order)}</b>
+          {(order.tip ?? 0) > 0 && (
+            <span className="block text-caption text-ink-muted">{fill(O.payTipNote, { amount: fmtMoney(order.tip ?? 0) })}</span>
+          )}
+        </span>
+        {canChange && (
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={"pay-opts-" + order.id}
+            onClick={() => setOpen((v) => !v)}
+            className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-rg-sm px-2 text-body-strong text-primary"
+          >
+            {open ? O.payClose : O.payChange}
+            <IconChevronDown size={16} className={open ? "rotate-180" : ""} />
+          </button>
+        )}
       </div>
+      {canChange && open && (
+        <div id={"pay-opts-" + order.id} className="flex flex-col gap-rg-sm">
+          <p className="text-caption text-ink-muted">{O.changePayHint}</p>
+          {platform?.tips?.enabled === true && <TipChooser value={tip} onChange={setTip} disabled={busy} />}
+          <div role="radiogroup" aria-label={O.changePay} className="flex flex-col gap-rg-sm">
+            {items.map((it) => (
+              <button
+                key={it.id}
+                type="button"
+                role="radio"
+                aria-checked={scope === it.id}
+                data-on={scope === it.id}
+                disabled={busy}
+                onClick={() => void change(it.id)}
+                className="shop-opt min-h-12 w-full disabled:opacity-60"
+              >
+                <span className="shop-opt-ic">{it.icon}</span>
+                <span className="min-w-0 flex-1">
+                  <b className="block text-body-strong">{it.label}</b>
+                  <span className="block text-caption text-ink-muted">{it.sub}</span>
+                </span>
+                {scope === it.id && <IconCheck size={20} className="shrink-0 text-primary" aria-hidden />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {error && <Alert>{error}</Alert>}
     </div>
   );

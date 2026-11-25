@@ -196,6 +196,13 @@
     <string name="ord_pay_cash">نقداً عند الاستلام</string>
     <string name="ord_change_pay">غيّر طريقة الدفع</string>
     <string name="ord_change_pay_hint">فيك تغيّرها لحد ما يوصل الكابتن لعندك</string>
+    <string name="ord_pay_change">تغيير</string>
+    <string name="ord_pay_close">إغلاق</string>
+    <string name="ord_pay_tip_note">إكرامية للكابتن: %1$s</string>
+    <string name="ord_pay_cash_sub">بتدفع للكابتن كاش لما يوصل</string>
+    <string name="ord_pay_sham_sub">بتدفع بشام كاش لما يوصل الكابتن</string>
+    <string name="ord_pay_full_sub">المبلغ كله والتوصيل من رصيد محفظتك</string>
+    <string name="ord_pay_delivery_sub">أجرة التوصيل من المحفظة والباقي كاش</string>
     <string name="ord_pay_changed">تغيّرت طريقة الدفع</string>
     <string name="tip_title">إكرامية للكابتن (اختياري)</string>
     <string name="tip_other">مبلغ تاني</string>

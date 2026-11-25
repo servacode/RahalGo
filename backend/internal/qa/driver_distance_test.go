@@ -32,9 +32,21 @@ type rdPoint struct {
 
 func rdF(v float64) *float64 { return &v }
 
-// rdPut يكتب نقاطاً في `driver_trail` مباشرة.
+// rdPut يكتب نقاطاً في `driver_trail` مباشرة — **والسائقُ بدوامه** طول مدّتها (`dmOnShift`).
 func rdPut(t *testing.T, h *Harness, driver string, pts []rdPoint) {
 	t.Helper()
+	if len(pts) > 0 {
+		lo, hi := pts[0].at, pts[0].at
+		for _, p := range pts {
+			if p.at.Before(lo) {
+				lo = p.at
+			}
+			if p.at.After(hi) {
+				hi = p.at
+			}
+		}
+		dmOnShift(t, h, driver, lo.Add(-time.Minute), hi.Add(time.Minute))
+	}
 	for _, p := range pts {
 		if _, err := h.Pool.Exec(ctxBG(), `
 			INSERT INTO driver_trail (driver_id, recorded_at, lat, lng, accuracy_m, speed_mps)
