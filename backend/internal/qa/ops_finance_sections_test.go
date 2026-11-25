@@ -231,13 +231,16 @@ var financeOwnerSections = []string{
 	"/dashboard/promos",     // العروض والخصومات
 	// **وأقسامُ المال رجعت كلٌّ قسماً لحاله في القائمة** — قرارُ المالك ٢٠٢٦-١٠-٢٧:
 	// «كل واحد قسم لحاله نرجعهن ع القائمة»، وشُطب صفُّ روابط الخزينة.
-	"/dashboard/cash",           // النقد
-	"/dashboard/payouts",        // الدفعات
-	"/dashboard/obligations",    // الديون
-	"/dashboard/profits",        // الأرباح
-	"/dashboard/expenses",       // المصروفات
-	"/dashboard/shamcash",       // شام كاش — سجلٌّ جانبيّ (قرارُ المالك ٢٠٢٦-١١-١٠)
-	"/dashboard/goods-balances", // أرصدة من بضاعة — قراءةٌ فقط (قرارُ المالك ٢٠٢٦-١١-١٠)
+	"/dashboard/cash",            // النقد
+	"/dashboard/payouts",         // الدفعات
+	"/dashboard/obligations",     // الديون
+	"/dashboard/profits",         // الأرباح
+	"/dashboard/expenses",        // المصروفات
+	"/dashboard/shamcash",        // شام كاش — سجلٌّ جانبيّ (قرارُ المالك ٢٠٢٦-١١-١٠)
+	"/dashboard/goods-balances",  // أرصدة من بضاعة — قراءةٌ فقط (قرارُ المالك ٢٠٢٦-١١-١٠)
+	"/dashboard/order-debts",     // ديون الطلبات (قرارُ المالك ٢٠٢٦-١١-٢٠)
+	"/dashboard/prizes",          // جوائز المسابقة (قرارُ المالك ٢٠٢٦-١١-٢٥)
+	"/dashboard/shamcash-topups", // موافقات شحن شام كاش — «انا وموظف المالية» (٢٠٢٦-١١-٢٥)
 }
 
 // TestFinSections_NavEqualsOwnerList **ما تراه الماليّةُ في القائمة = قائمةُ المالك.**
