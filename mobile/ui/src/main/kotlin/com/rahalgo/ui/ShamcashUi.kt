@@ -18,6 +18,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -57,7 +75,7 @@ import kotlinx.coroutines.withContext
  * وحفظُ صورة الباركود بالمعرض. **تُستعمل في شحن المحفظة وفي الدفع عند الباب** فلا تفترق نسختان.
  */
 @Composable
-fun ShamcashAccountCard(info: ShamcashInfo, modifier: Modifier = Modifier) {
+fun ShamcashAccountCard(info: ShamcashInfo, modifier: Modifier = Modifier, hero: Boolean = false) {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
@@ -83,81 +101,169 @@ fun ShamcashAccountCard(info: ShamcashInfo, modifier: Modifier = Modifier) {
         if (granted) doSave() else Flash.fail(permText)
     }
 
-    RahalCard(modifier = modifier.fillMaxWidth(), variant = CardVariant.Outlined) {
+    val copyNumber = {
+        clipboard.setText(AnnotatedString(info.accountNumber))
+        Flash.ok(copiedText)
+    }
+    val saveQr = {
+        val needPerm = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+            PackageManager.PERMISSION_GRANTED
+        if (needPerm) permission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE) else doSave()
+    }
+
+    // **الباركودُ على «تذكرةٍ» بيضاءَ ثابتة** — يُمسح من شاشةٍ أخرى فلا تغمق أرضُه بالسمة الغامقة.
+    val ticket: @Composable () -> Unit = {
         if (qr != null) {
-            // **الباركودُ في المقدّمة على أرضٍ بيضاءَ ثابتة** — يُمسح من شاشةٍ أخرى فلا يصحّ أن تغمق أرضُه بالسمة الغامقة.
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Box(
                     Modifier
-                        .clip(Rahal.shape.md)
+                        .widthIn(max = 236.dp)
+                        .fillMaxWidth()
+                        .shadow(Rahal.elevation.raised, Rahal.shape.lg)
+                        .clip(Rahal.shape.lg)
                         .background(Rahal.colors.onPanel)
-                        .padding(Rahal.space.md),
+                        .padding(Rahal.space.sm),
                 ) {
                     AsyncImage(
                         model = qr,
                         contentDescription = stringResource(R.string.sham_qr_desc),
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(224.dp),
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                     )
                 }
             }
-            Spacer(Modifier.height(Rahal.space.lg))
         }
+    }
+
+    // **اسمُ صاحب الحساب ثمّ رقمُه في رقاقةٍ بأحرفٍ متباعدةٍ ومعها أيقونةُ نسخٍ** ثمّ الزرّان.
+    val details: @Composable () -> Unit = {
         if (info.accountName.isNotBlank()) {
-            Text(stringResource(R.string.sham_holder), color = Rahal.colors.inkMuted, style = Rahal.type.caption)
+            Text(
+                stringResource(R.string.sham_holder),
+                color = Rahal.colors.inkMuted,
+                style = Rahal.type.caption,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
             Text(
                 info.accountName,
                 color = Rahal.colors.ink,
-                style = Rahal.type.bodyLarge,
+                style = Rahal.type.sectionTitle,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(Rahal.space.md))
         }
-        Text(stringResource(R.string.sham_account_number), color = Rahal.colors.inkMuted, style = Rahal.type.caption)
-        // **رقمُ الحساب في أرضٍ خفيضةٍ** — هو ما يُنسخ، فيُعزل عمّا حوله.
         Text(
-            info.accountNumber,
-            color = Rahal.colors.ink,
-            style = Rahal.type.sectionTitle,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(Rahal.shape.sm)
-                .background(Rahal.colors.field)
-                .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+            stringResource(R.string.sham_account_number),
+            color = Rahal.colors.inkMuted,
+            style = Rahal.type.caption,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(Rahal.space.md))
-        // **النسخُ وحفظُ الصورة جنباً إلى جنب** — فعلان متكافئان.
-        Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.md)) {
-            RahalButton(
-                onClick = {
-                    clipboard.setText(AnnotatedString(info.accountNumber))
-                    Flash.ok(copiedText)
-                },
-                modifier = Modifier.weight(1f),
-                compact = qr != null,
+        Spacer(Modifier.height(Rahal.space.xs))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clip(Rahal.shape.md)
+                .background(Rahal.colors.field)
+                .border(1.dp, Rahal.colors.line, Rahal.shape.md)
+                .padding(start = Rahal.space.md, top = Rahal.space.xs, bottom = Rahal.space.xs, end = Rahal.space.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+        ) {
+            // **الرقمُ أحرفٌ لاتينيّةٌ وأرقام** فيُعرض من اليسار بخطٍّ ثابتِ العرض، ويلتفّ على السطر التالي إن ضاق.
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Text(
+                    info.accountNumber,
+                    color = Rahal.colors.ink,
+                    style = Rahal.type.bodyStrong,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 1.sp,
+                    maxLines = 3,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            val copyDesc = stringResource(R.string.sham_copy)
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(Rahal.colors.brand)
+                    .clickable(role = Role.Button, onClickLabel = copyDesc, onClick = copyNumber),
+                contentAlignment = Alignment.Center,
             ) {
+                Icon(
+                    painterResource(R.drawable.ic_copy),
+                    contentDescription = copyDesc,
+                    tint = Rahal.colors.onBrand,
+                    modifier = Modifier.size(Rahal.icon.xs),
+                )
+            }
+        }
+        Spacer(Modifier.height(Rahal.space.md))
+        Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.md)) {
+            RahalButton(onClick = copyNumber, modifier = Modifier.weight(1f), compact = qr != null) {
                 Icon(painterResource(R.drawable.ic_copy), contentDescription = null, modifier = Modifier.size(Rahal.icon.xs))
                 Spacer(Modifier.size(Rahal.space.xs))
                 Text(stringResource(R.string.sham_copy), maxLines = 1)
             }
             if (qr != null) {
-                RahalOutlineButton(
-                    onClick = {
-                        val needPerm = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
-                            context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
-                            PackageManager.PERMISSION_GRANTED
-                        if (needPerm) permission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE) else doSave()
-                    },
-                    modifier = Modifier.weight(1f),
-                    compact = true,
-                ) {
+                RahalOutlineButton(onClick = saveQr, modifier = Modifier.weight(1f), compact = true) {
                     Icon(painterResource(R.drawable.ic_image), contentDescription = null, modifier = Modifier.size(Rahal.icon.xs))
                     Spacer(Modifier.size(Rahal.space.xs))
                     Text(stringResource(R.string.sham_save_qr), maxLines = 1)
                 }
             }
         }
+    }
+
+    if (!hero) {
+        RahalCard(modifier = modifier.fillMaxWidth(), variant = CardVariant.Outlined) {
+            ticket()
+            if (qr != null) Spacer(Modifier.height(Rahal.space.lg))
+            details()
+        }
+        return
+    }
+
+    // **بطاقةُ الشحن**: رأسٌ بتدرّج العلامة (على نسق بطاقة الرصيد) فيه عنوانٌ وسطرٌ والتذكرة، وتحته التفاصيلُ.
+    val top = Rahal.colors.brand
+    val on = Rahal.colors.onBrand
+    val bottom = if (Rahal.colors.dark) lerp(top, Rahal.colors.onPanel, 0.30f) else lerp(top, Rahal.colors.panel, 0.60f)
+    Column(
+        modifier
+            .fillMaxWidth()
+            .shadow(Rahal.elevation.raised, Rahal.shape.lg)
+            .clip(Rahal.shape.lg)
+            // **أرضُ التفاصيل فاتحة** (مراجعةُ المحاكي ٢٠٢٦-١١-٢٥) — `panel` لوحُ الخريطة الداكن، فكان الاسمُ
+            // وزرُّ «حفظ صورة» لا يُقرآن عليه.
+            .background(Rahal.colors.surface)
+            .border(1.dp, Rahal.colors.line, Rahal.shape.lg),
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .background(Brush.linearGradient(listOf(top, bottom)))
+                .drawBehind {
+                    drawCircle(on.copy(alpha = 0.08f), radius = size.minDimension * 0.5f, center = Offset(size.width * 0.1f, size.height * 0.05f))
+                    drawCircle(on.copy(alpha = 0.06f), radius = size.minDimension * 0.4f, center = Offset(size.width * 0.95f, size.height * 0.95f))
+                }
+                .padding(Rahal.space.lg),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Rahal.space.md)) {
+                IconBox(R.drawable.ic_wallet, on, size = Rahal.size.avatarSm)
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.sham_account_title), color = on, style = Rahal.type.sectionTitle, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.sham_account_sub), color = on.copy(alpha = 0.88f), style = Rahal.type.caption)
+                }
+            }
+            if (qr != null) Spacer(Modifier.height(Rahal.space.lg))
+            ticket()
+        }
+        Column(Modifier.fillMaxWidth().padding(Rahal.space.lg)) { details() }
     }
 }
 
@@ -233,7 +339,16 @@ fun ShamcashRequestsList(requests: List<ShamcashRequest>) {
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(money(r.amount), color = Rahal.colors.ink, style = Rahal.type.cardTitle)
-                    Text(r.txnRef, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Text(
+                            r.txnRef,
+                            color = Rahal.colors.inkMuted,
+                            style = Rahal.type.caption,
+                            fontFamily = FontFamily.Monospace,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        )
+                    }
                     val why = r.rejectReason
                     if (r.status == "rejected" && !why.isNullOrBlank()) {
                         Text(why, color = Rahal.colors.danger, style = Rahal.type.caption)
@@ -250,22 +365,29 @@ fun ShamcashRequestsList(requests: List<ShamcashRequest>) {
 
 /** **رأسُ خطوةٍ مرقَّمة** — دائرةٌ بالرقم وعنوانُ الخطوة؛ ومحتواها تحتها. */
 @Composable
-private fun StepHeader(number: String, title: String) {
-    Row(
-        Modifier.fillMaxWidth().padding(bottom = Rahal.space.md),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
-    ) {
-        Box(
-            Modifier
-                .size(Rahal.size.iconBox)
-                .clip(Rahal.shape.pill)
-                .background(Rahal.colors.brand),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(number, color = Rahal.colors.onBrand, style = Rahal.type.cardTitle)
+private fun Step(number: String, title: String, last: Boolean = false, content: @Composable () -> Unit) {
+    // **سلّمٌ عموديّ**: دائرةٌ مرقَّمة وخطٌّ رفيعٌ يصلها بالخطوة التالية، والمحتوى بجانبها.
+    // **ولا `IntrinsicSize`** (مراجعةُ المحاكي ٢٠٢٦-١١-٢٥) — صورةُ الباركود تُحمَّل بعد القياس فكان يترك فراغاً
+    // كبيراً تحت الخطوة؛ فالدوائرُ المرقّمةُ وحدها تكفي دليلاً.
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.md)) {
+        Column(Modifier.width(Rahal.size.iconBox), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                Modifier
+                    .size(Rahal.size.iconBox)
+                    .clip(CircleShape)
+                    .background(Rahal.colors.brand),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(number, color = Rahal.colors.onBrand, style = Rahal.type.cardTitle)
+            }
         }
-        Text(title, color = Rahal.colors.ink, style = Rahal.type.sectionTitle)
+        Column(Modifier.weight(1f).padding(bottom = if (last) Rahal.space.none else Rahal.space.xl)) {
+            Box(Modifier.height(Rahal.size.iconBox), contentAlignment = Alignment.CenterStart) {
+                Text(title, color = Rahal.colors.ink, style = Rahal.type.sectionTitle, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(Rahal.space.sm))
+            content()
+        }
     }
 }
 
@@ -307,65 +429,66 @@ fun ShamcashTopupScreen(vm: WalletViewModel, info: ShamcashInfo, onBack: () -> U
             return@Column
         }
         // **١ — حوّل** (الحسابُ والباركود)
-        StepHeader("١", stringResource(R.string.sham_step1))
-        Text(stringResource(R.string.sham_step_hint), color = Rahal.colors.inkMuted, style = Rahal.type.body)
-        Spacer(Modifier.height(Rahal.space.md))
-        ShamcashAccountCard(info)
-        Spacer(Modifier.height(Rahal.space.xl))
+        Step("١", stringResource(R.string.sham_step1)) {
+            Text(stringResource(R.string.sham_step_hint), color = Rahal.colors.inkMuted, style = Rahal.type.body)
+            Spacer(Modifier.height(Rahal.space.md))
+            ShamcashAccountCard(info, hero = true)
+        }
 
         // **٢ — اكتب رقم العملية** (المبلغ ورقمُ العملية والإيصال)
-        StepHeader("٢", stringResource(R.string.sham_step2))
-        RahalCard(variant = CardVariant.Outlined) {
-            LabeledField(
-                label = stringResource(R.string.sham_amount),
-                value = amount,
-                onValueChange = { amount = it.filter(Char::isDigit) },
-                keyboardType = KeyboardType.Number,
-                leadingIcon = R.drawable.ic_banknotes,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Text(
-                text = if (belowMin) stringResource(R.string.sham_amount_min, money(info.minTopup))
-                else stringResource(R.string.sham_amount_hint, money(info.minTopup)),
-                color = if (belowMin) Rahal.colors.danger else Rahal.colors.inkMuted,
-                style = Rahal.type.caption,
-            )
-            Spacer(Modifier.height(Rahal.space.md))
-            LabeledField(
-                label = stringResource(R.string.sham_txn),
-                value = txn,
-                onValueChange = { txn = it },
-                supporting = stringResource(R.string.sham_txn_hint),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(Rahal.space.md))
-            RahalOutlineButton(
-                onClick = {
-                    pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                },
-                enabled = !s.receiptBusy,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(painterResource(R.drawable.ic_photo), contentDescription = null, modifier = Modifier.size(Rahal.icon.xs))
-                Spacer(Modifier.size(Rahal.space.sm))
-                Text(stringResource(if (s.receiptId != null) R.string.sham_receipt_change else R.string.sham_receipt_add))
-            }
-            if (s.receiptId != null) {
-                Spacer(Modifier.height(Rahal.space.xs))
-                Text(stringResource(R.string.sham_receipt_attached), color = Rahal.colors.success, style = Rahal.type.caption)
+        Step("٢", stringResource(R.string.sham_step2)) {
+            RahalCard(variant = CardVariant.Outlined) {
+                LabeledField(
+                    label = stringResource(R.string.sham_amount),
+                    value = amount,
+                    onValueChange = { amount = it.filter(Char::isDigit) },
+                    keyboardType = KeyboardType.Number,
+                    leadingIcon = R.drawable.ic_banknotes,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = if (belowMin) stringResource(R.string.sham_amount_min, money(info.minTopup))
+                    else stringResource(R.string.sham_amount_hint, money(info.minTopup)),
+                    color = if (belowMin) Rahal.colors.danger else Rahal.colors.inkMuted,
+                    style = Rahal.type.caption,
+                )
+                Spacer(Modifier.height(Rahal.space.lg))
+                LabeledField(
+                    label = stringResource(R.string.sham_txn),
+                    value = txn,
+                    onValueChange = { txn = it },
+                    supporting = stringResource(R.string.sham_txn_hint),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(Rahal.space.lg))
+                RahalOutlineButton(
+                    onClick = {
+                        pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    },
+                    enabled = !s.receiptBusy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(painterResource(R.drawable.ic_photo), contentDescription = null, modifier = Modifier.size(Rahal.icon.xs))
+                    Spacer(Modifier.size(Rahal.space.sm))
+                    Text(stringResource(if (s.receiptId != null) R.string.sham_receipt_change else R.string.sham_receipt_add))
+                }
+                if (s.receiptId != null) {
+                    Spacer(Modifier.height(Rahal.space.xs))
+                    Text(stringResource(R.string.sham_receipt_attached), color = Rahal.colors.success, style = Rahal.type.caption)
+                }
             }
         }
-        Spacer(Modifier.height(Rahal.space.xl))
 
         // **٣ — أرسل**
-        StepHeader("٣", stringResource(R.string.sham_step3))
-        Text(stringResource(R.string.sham_step3_hint), color = Rahal.colors.inkMuted, style = Rahal.type.body)
-        Spacer(Modifier.height(Rahal.space.md))
-        RahalButton(
-            onClick = { vm.submitShamcashTopup(value, txn.trim()) },
-            enabled = !s.shamBusy && !s.receiptBusy && value >= maxOf(info.minTopup, 1) && txn.isNotBlank(),
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.sham_send)) }
+        Step("٣", stringResource(R.string.sham_step3), last = true) {
+            Text(stringResource(R.string.sham_step3_hint), color = Rahal.colors.inkMuted, style = Rahal.type.body)
+            Spacer(Modifier.height(Rahal.space.md))
+            RahalButton(
+                onClick = { vm.submitShamcashTopup(value, txn.trim()) },
+                enabled = !s.shamBusy && !s.receiptBusy && value >= maxOf(info.minTopup, 1) && txn.isNotBlank(),
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.sham_send)) }
+        }
         // **وفراغٌ لقرص الحديث العائم** (مراجعةُ المحاكي ٢٠٢٦-١١-٢٥) — كان يغطّي زرَّ «أرسلت».
         Spacer(Modifier.height(Rahal.space.xxl + LocalChatFabInset.current))
     }

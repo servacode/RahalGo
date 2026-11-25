@@ -23,20 +23,23 @@ const m = getMessages(defaultLocale);
 const S = m.shop.shamcash;
 const SLOT = "shamcash_topup";
 
-/** **رأسُ خطوةٍ مرقَّمة** — دائرةٌ بالرقم وعنوانٌ؛ ومحتواها تحتها. */
-function Step({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+/** **خطوةٌ في سلّمٍ عموديّ** — دائرةٌ مرقَّمة وخطٌّ رفيعٌ يصلها بالتالية، والمحتوى بجانبها. */
+function Step({ n, title, last = false, children }: { n: number; title: string; last?: boolean; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
+    <section className="flex gap-3">
+      <div className="flex flex-col items-center">
         <span
           aria-hidden
-          className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-on-bright"
+          className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-on-bright"
         >
           {fmtNum(n)}
         </span>
-        <h3 className="text-card-title">{title}</h3>
+        {!last && <span aria-hidden className="my-1 w-0.5 flex-1 bg-line" />}
       </div>
-      {children}
+      <div className={`flex min-w-0 flex-1 flex-col gap-3 ${last ? "" : "pb-6"}`}>
+        <h3 className="text-card-title flex min-h-10 items-center">{title}</h3>
+        {children}
+      </div>
     </section>
   );
 }
@@ -123,9 +126,9 @@ function TopUpForm({ info, onSent }: { info: ShamcashInfo; onSent: () => void })
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col">
       <Step n={2} title={S.step2}>
-        <div className={`${OUTLINE_CARD} flex flex-col gap-3`}>
+        <div className={`${OUTLINE_CARD} flex flex-col gap-4`}>
           <Input
             id="sc-amount"
             label={S.amount}
@@ -162,7 +165,7 @@ function TopUpForm({ info, onSent }: { info: ShamcashInfo; onSent: () => void })
           </div>
         </div>
       </Step>
-      <Step n={3} title={S.step3}>
+      <Step n={3} title={S.step3} last>
         <p className="text-sm text-ink-muted">{S.step3Hint}</p>
         {error && <Alert>{error}</Alert>}
         {done && <Alert tone="success">{S.sent}</Alert>}
@@ -199,7 +202,7 @@ export function ShamcashTopUp({ children }: { children: (parts: { action: ReactN
             <li key={r.id} className="flex items-center justify-between gap-3 py-3">
               <span className="flex min-w-0 flex-col">
                 <span className="font-bold tabular-nums">{fmtMoney(r.amount)}</span>
-                <span dir="ltr" className="truncate text-start text-xs text-ink-muted">
+                <span dir="ltr" className="sham-number truncate text-start text-xs text-ink-muted">
                   {r.txn_ref}
                 </span>
                 {r.status === "rejected" && r.reject_reason && <span className="text-xs text-danger">{r.reject_reason}</span>}
@@ -216,10 +219,10 @@ export function ShamcashTopUp({ children }: { children: (parts: { action: ReactN
       {children({ action, requests: list })}
       {enabled && info && (
         <Modal open={open} onClose={() => setOpen(false)} title={S.panelTitle}>
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col">
             <Step n={1} title={S.step1}>
               <p className="text-sm text-ink-muted">{S.panelHint}</p>
-              <ShamcashAccountCard info={info} />
+              <ShamcashAccountCard info={info} hero />
             </Step>
             <TopUpForm info={info} onSent={reload} />
           </div>

@@ -11,3 +11,6 @@
 @import "@fontsource/tajawal/400.css";
 @import "@fontsource/tajawal/500.css";
 @import "@fontsource/tajawal/700.css";
+
+/* خط ثابت العرض لأرقام الحسابات والعمليات (نظامي، بلا تحميل) */
+:root { --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }

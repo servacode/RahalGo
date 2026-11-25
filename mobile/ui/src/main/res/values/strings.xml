@@ -848,6 +848,8 @@
     <string name="sham_receipt_attached">انرفعت صورة الإيصال</string>
     <string name="sham_send">أرسلت</string>
     <string name="sham_qr_desc">باركود حساب شام كاش</string>
+    <string name="sham_account_title">حساب شام كاش</string>
+    <string name="sham_account_sub">امسح الباركود أو انسخ رقم الحساب وحوّل من تطبيق شام كاش</string>
     <string name="sham_step1">حوّل المبلغ لحسابنا</string>
     <string name="sham_step2">اكتب رقم العملية</string>
     <string name="sham_step3">أرسل</string>

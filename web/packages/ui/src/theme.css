@@ -6438,3 +6438,7 @@ html[data-console-theme="dark"] .console-root .seg-item[aria-pressed="true"] {
 .earn-tile[data-tone="ig"] { --tint: #d62976; }
 .earn-tile-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 999px; color: var(--tint); background-color: color-mix(in srgb, var(--tint) 16%, transparent); }
 .earn-tile-value { color: var(--tint); font-size: 1.25rem; font-weight: 900; line-height: 1.2; }
+
+/* شحن شام كاش: تذكرة الباركود (أرضٌ بيضاء ثابتة للمسح) ورقاقة الرقم */
+.sham-ticket { background-color: #fff; box-shadow: 0 6px 18px rgb(10 63 97 / 0.28); }
+.sham-number { font-family: var(--font-mono); letter-spacing: 0.06em; overflow-wrap: anywhere; word-break: break-all; }
