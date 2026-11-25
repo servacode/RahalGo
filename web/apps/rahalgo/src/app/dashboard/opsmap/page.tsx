@@ -1221,28 +1221,6 @@ export default function OpsMapPage() {
         }),
       ),
     });
-    out.push({
-      id: "order-routes",
-      kind: "line",
-      order: 55,
-      lineWidth: 1.5,
-      visible: !!visible.orders,
-      color: ["case", ["get", "stuck"], toneColor("order-stuck"), toneColor("order")],
-      data: fc(
-        orderList
-          // **وأمانةٌ لم يصل موقعُ تسليمها بلا خطّ** — المرسومةُ مرساةٌ لا عنوان.
-          .filter((o) => o.pick_lng != null && o.pick_lat != null && !(o.wa_amanah && o.drop_pending))
-          .map((o) => ({
-            type: "Feature" as const,
-            geometry: {
-              type: "LineString",
-              coordinates: [[o.pick_lng, o.pick_lat], [o.drop_lng, o.drop_lat]],
-            },
-            properties: { stuck: !!o.stuck_reason },
-          })),
-      ),
-    });
-
     // ── الزبونُ بموضعه الحيّ (طلبُ المالك ٢٠٢٦-١٠-١٩) ─────────────
     //
     // **«لنقدر نعطي احداثيات للسائق»** — علامةٌ حيث هو الآن، **وخطٌّ متقطّعٌ إلى
@@ -1602,6 +1580,51 @@ export default function OpsMapPage() {
     };
   }, [focused.drivers, visible.drivers, smooth]);
 
+  // ── خطُّ كلّ طلب: من الكابتن (طلبُ المالك ٢٠٢٦-١١-٢٦) ─────────────
+  //
+  // «الخط يكون من السائق للزبون». **قبل الاستلام: كابتن ← متجر ← زبون، وبعده: كابتن ← زبون،
+  // وبلا كابتن: متجر ← زبون** — نفسُ `orderRoute` يلي برسم الطلب المختار. **وموضعُ الكابتن من
+  // طبقة السائقين الحيّة** إن وُجد، وإلّا من الطلب. **طبقةٌ لحالها** فنبضةُ كابتن ما بتعيد رفع الباقي.
+  const routeDrivers = useMemo(() => {
+    const ids = new Set(focusedOM.orders.map((o) => o.driver_id).filter(Boolean));
+    return (drivers.data?.drivers ?? [])
+      .filter((d) => ids.has(d.id) && d.freshness !== "NO_LOCATION")
+      .map((d) => `${d.id}:${d.lng},${d.lat}`)
+      .join("|");
+  }, [focusedOM.orders, drivers.data]);
+  const orderRoutesLayer = useMemo<LayerSpec>(() => {
+    const live = new Map<string, LngLat>(
+      routeDrivers
+        ? routeDrivers.split("|").map((x) => {
+            const [id, p] = x.split(":");
+            return [id, (p ?? "").split(",").map(Number) as LngLat] as [string, LngLat];
+          })
+        : [],
+    );
+    const features: FeatureCollection["features"] = [];
+    for (const o of focusedOM.orders) {
+      // **وأمانةٌ لم يصل موقعُ تسليمها بلا خطّ** — المرسومةُ مرساةٌ لا عنوان.
+      if (o.wa_amanah && o.drop_pending) continue;
+      const pos = o.driver_id ? (live.get(o.driver_id) ?? null) : null;
+      for (const leg of orderRoute(o, pos)) {
+        features.push({
+          type: "Feature" as const,
+          geometry: { type: "LineString", coordinates: leg.coords },
+          properties: { stuck: !!o.stuck_reason, leg: leg.leg },
+        });
+      }
+    }
+    return {
+      id: "order-routes",
+      kind: "line",
+      order: 55,
+      lineWidth: 1.5,
+      visible: !!visible.orders,
+      color: ["case", ["get", "stuck"], toneColor("order-stuck"), toneColor("order")],
+      data: fc(features),
+    };
+  }, [focusedOM.orders, routeDrivers, visible.orders]);
+
   // ── مسارُ الطلب المُحدَّد (البند ١١ · تحسيناتُ ٢٠٢٦-١٠-٠٦) ──────
   //
   // **سائقٌ ← متجرٌ ← زبون، خطوطٌ مستقيمةٌ متقطّعة** — **الخريطةُ ليست
@@ -1704,8 +1727,8 @@ export default function OpsMapPage() {
   }, [recent, recentID]);
 
   const layers = useMemo<LayerSpec[]>(
-    () => [...baseLayers, merchantLayer, ...recentLayers, driverLayer, linkLayer],
-    [baseLayers, merchantLayer, recentLayers, driverLayer, linkLayer],
+    () => [...baseLayers, orderRoutesLayer, merchantLayer, ...recentLayers, driverLayer, linkLayer],
+    [baseLayers, orderRoutesLayer, merchantLayer, recentLayers, driverLayer, linkLayer],
   );
 
   // ── المكتبُ علامةٌ بشعار المنصّة ─────────────────────────────
