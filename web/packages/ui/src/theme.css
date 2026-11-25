@@ -6429,3 +6429,12 @@ html[data-console-theme="dark"] .console-root .seg-item[aria-pressed="true"] {
 .prize-step-3 { height: 80px; background: linear-gradient(#e3a06a, #a9622b); }
 .prize-step-4 { height: 64px; background: linear-gradient(#7fb8e6, #3f7fb5); }
 .prize-step-5 { height: 56px; background: linear-gradient(#9fd3b0, #4e9a6c); }
+
+/* **مربّعاتُ «كيف بتجمع نقاط»** (٢٠٢٦-١١-٢٥، مرآةُ `EarnTileView`) — خلفيّةٌ خفيفةٌ بلون الفعل ودائرةُ أيقونةٍ أغمق. */
+.earn-tile { --tint: #1378b3; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; border-radius: 14px; text-align: center; background-color: color-mix(in srgb, var(--tint) 8%, transparent); }
+.earn-tile[data-tone="ok"] { --tint: #2ead6b; }
+.earn-tile[data-tone="accent"] { --tint: #e08600; }
+.earn-tile[data-tone="fb"] { --tint: #1877f2; }
+.earn-tile[data-tone="ig"] { --tint: #d62976; }
+.earn-tile-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 999px; color: var(--tint); background-color: color-mix(in srgb, var(--tint) 16%, transparent); }
+.earn-tile-value { color: var(--tint); font-size: 1.25rem; font-weight: 900; line-height: 1.2; }

@@ -15,11 +15,15 @@ import { useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtDate, fmtMoney, fmtNum, withPlatform } from "@rahalgo/i18n";
 import {
   Button,
+  IconBag,
+  IconCatGifts,
   IconCheck,
   IconCopy,
+  IconDate,
   IconFacebook,
   IconInstagram,
   IconShare,
+  IconSignup,
   LoadingState,
   Money,
   ReloadState,
@@ -91,32 +95,35 @@ function Podium({ amounts }: { amounts: number[] }) {
   );
 }
 
-/** **كيف بتجمع نقاط** — جدولٌ قصيرٌ بقيم الإعدادات (مرآةُ `PointsTable`). */
+/** **كيف بتجمع نقاط** — مربّعان بكلّ سطر: أيقونةٌ بدائرةٍ ملوّنة و«+النقاط» واسمُ الفعل
+    (تصميمُ المالك ٢٠٢٦-١١-٢٥، مرآةُ `PointsTable`). وما قيمتُه صفرٌ لا يُذكر. */
 function PointsTable({ me }: { me: PrizesMe }) {
   const v = me.point_values ?? {};
-  const follow = Math.max(v.follow_facebook ?? 0, v.follow_instagram ?? 0);
-  const rows: [string, number][] = [
-    [P.ptCheckin, v.checkin ?? 0],
-    [P.ptOrder, v.order ?? 0],
-    [P.ptInvite, v.invite_signup ?? 0],
-    [P.ptInviteOrder, v.invite_first_order ?? 0],
-    [P.ptFollow, follow],
+  const tiles: { key: string; icon: React.ReactNode; label: string; n: number; tone: string }[] = [
+    { key: "checkin", icon: <IconDate size={22} />, label: P.ptCheckin, n: v.checkin ?? 0, tone: "ok" },
+    { key: "order", icon: <IconBag size={22} />, label: P.ptOrder, n: v.order ?? 0, tone: "brand" },
+    { key: "invite", icon: <IconSignup size={22} />, label: P.ptInvite, n: v.invite_signup ?? 0, tone: "accent" },
+    { key: "inviteOrder", icon: <IconCatGifts size={22} />, label: P.ptInviteOrder, n: v.invite_first_order ?? 0, tone: "accent" },
+    { key: "fb", icon: <IconFacebook size={22} />, label: P.ptFacebook, n: v.follow_facebook ?? 0, tone: "fb" },
+    { key: "ig", icon: <IconInstagram size={22} />, label: P.ptInstagram, n: v.follow_instagram ?? 0, tone: "ig" },
   ];
   return (
-    <section className={`${OUTLINE_CARD} flex flex-col gap-2`}>
+    <section className={`${OUTLINE_CARD} flex flex-col gap-3`}>
       <h2 className="text-section-title">{P.pointsTitle}</h2>
-      <ul className="flex flex-col divide-y divide-line-soft text-sm">
-        {rows
-          .filter(([, n]) => n > 0)
-          .map(([label, n]) => (
-            <li key={label} className="flex items-center justify-between gap-2 py-2">
-              <span className="min-w-0 flex-1">{label}</span>
-              <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-on-bright">
-                {fill(P.ptValue, { n: fmtNum(n) })}
-              </span>
+      <ul className="grid grid-cols-2 gap-2">
+        {tiles
+          .filter((t) => t.n > 0)
+          .map((t) => (
+            <li key={t.key} className="earn-tile" data-tone={t.tone}>
+              <span className="earn-tile-icon">{t.icon}</span>
+              <span className="earn-tile-value">{fill(P.ptValue, { n: fmtNum(t.n) })}</span>
+              <span className="text-caption text-ink">{t.label}</span>
             </li>
           ))}
       </ul>
+      {(me.min_points ?? 0) > 0 && (
+        <p className="text-center text-caption text-ink-muted">{fill(P.ptMin, { n: fmtNum(me.min_points ?? 0) })}</p>
+      )}
     </section>
   );
 }

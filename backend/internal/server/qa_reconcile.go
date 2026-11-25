@@ -18,6 +18,7 @@ package server
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -25,6 +26,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/fininv"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
+	"github.com/servacode/rahalgo/backend/internal/media"
 )
 
 // qaSecondMerchantName اسمُ المتجر الثاني القابلِ للحذف — علامةٌ ثابتةٌ للتنظيف.
@@ -728,4 +730,44 @@ func (s *Server) qaFeaturesDemo(w http.ResponseWriter, r *http.Request) {
 		set[x.k] = x.v
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"set": set})
+}
+
+// qaShamcashAccount **يضع حسابَ شام كاش على التجهيز** (طلبُ المالك ٢٠٢٦-١١-٢٥: «بالتجربة تضيف حسابي
+// الحقيقي وصورة الباركود») — الاسمُ والرقمُ وصورةُ الباركود **من الطلب نفسه** (multipart: name، number،
+// file)، **فلا حسابَ في الشيفرة العامّة**، والصورةُ تُحفظ بمسار الرفع الإنتاجيّ بنوع `shamcash_qr`.
+func (s *Server) qaShamcashAccount(w http.ResponseWriter, r *http.Request) {
+	lim := s.media.MaxBytes(r.Context())
+	r.Body = http.MaxBytesReader(w, r.Body, lim+64<<10)
+	if err := r.ParseMultipartForm(lim); err != nil {
+		s.respondErr(w, media.ErrTooLarge)
+		return
+	}
+	ctx := r.Context()
+	set := map[string]any{}
+	if v := strings.TrimSpace(r.FormValue("name")); v != "" {
+		set["shamcash.account_name"] = v
+	}
+	if v := strings.TrimSpace(r.FormValue("number")); v != "" {
+		set["shamcash.account_number"] = v
+	}
+	if file, _, err := r.FormFile("file"); err == nil {
+		defer file.Close()
+		m, err := s.media.Save(ctx, userIDFrom(r), "shamcash_qr", file)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		set["shamcash.qr"] = m.ID
+	}
+	for k, v := range set {
+		if err := s.settings.Set(ctx, k, v, nil); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
+	keys := make([]string, 0, len(set))
+	for k := range set {
+		keys = append(keys, k)
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"set": keys})
 }

@@ -500,12 +500,15 @@
     <string name="prizes_checkin">سجّل حضوري</string>
     <string name="prizes_checked_in">سجّلت اليوم</string>
     <string name="prizes_points_title">كيف بتجمع نقاط</string>
-    <string name="prizes_pt_checkin">سجّل حضورك كل يوم</string>
+    <string name="prizes_pt_checkin">حضورك كل يوم</string>
     <string name="prizes_pt_order">كل طلب بيوصلك</string>
     <string name="prizes_pt_invite">صديق بيعمل حساب من رابطك</string>
     <string name="prizes_pt_invite_order">أول طلب بيوصل لصديقك</string>
     <string name="prizes_pt_follow">تابع صفحتنا على فيسبوك أو إنستغرام (مرة وحدة)</string>
     <string name="prizes_pt_value">+%1$d</string>
+    <string name="prizes_pt_facebook">تابع صفحتنا على فيسبوك</string>
+    <string name="prizes_pt_instagram">تابع صفحتنا على إنستغرام</string>
+    <string name="prizes_pt_min">لازم تجمع %1$d نقطة بالشهر لتدخل المنافسة</string>
     <string name="prizes_terms_title">شروط المسابقة</string>
     <string name="prizes_term_free">المشاركة مجانية، وتسجيل الحضور والمتابعة ما بيحتاجوا شراء.</string>
     <string name="prizes_term_winners">%1$d رابحين كل شهر: الأعلى نقاط من يلي جمعوا %2$d نقطة أو أكتر، وإذا تساوت النقاط بيربح يلي وصلها أول.</string>

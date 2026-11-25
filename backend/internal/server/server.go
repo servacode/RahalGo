@@ -666,6 +666,7 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/qa/users/{id}", s.handleAdminUpdateUser)       // إيقاف/تفعيل المندوب
 				r.Patch("/qa/merchants/{id}", s.handleUpdateMerchant)    // نقلُ المتجر بين مندوبَين (بسبب)
 				r.Post("/qa/app-file", s.handleUploadAppFile)            // نشرُ أثرِ التطبيق (APK) عبر معالِج الرفع الحقيقيّ — ?key=release.rep.apk
+				r.Post("/qa/shamcash-account", s.qaShamcashAccount)      // حسابُ شام كاش على التجهيز (اسم/رقم/باركود) — القيمُ من الطلب لا من الشيفرة
 			})
 			// ── جسرُ شهادةِ النموذج ٢ الحيّة (موافقةُ المالك ٢٠٢٦-١١-١٠، `qa_money_model2.go`) ──
 			//

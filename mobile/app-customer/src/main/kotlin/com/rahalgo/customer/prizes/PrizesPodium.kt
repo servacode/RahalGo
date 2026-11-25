@@ -113,42 +113,87 @@ private fun Step(rank: Int, amount: Long, modifier: Modifier) {
 }
 
 /**
- * **كيف بتجمع نقاط** (قرارُ المالك ٢٠٢٦-١١-٢٥) — جدولٌ قصيرٌ بقيم الإعدادات، وما قيمتُه صفرٌ لا يُذكر.
+ * **كيف بتجمع نقاط** (قرارُ المالك ٢٠٢٦-١١-٢٥، وتصميمُه الاحترافيّ بطلبه نفس اليوم) — مربّعاتٌ اثنان بكلّ
+ * سطر: أيقونةٌ بدائرةٍ ملوّنة، «+النقاط» كبيرة، واسمُ الفعل. **بقيم الإعدادات، وما قيمتُه صفرٌ لا يُذكر**،
+ * وتحتها سطرُ الحدّ الأدنى للدخول.
  */
 @Composable
 fun PointsTable(me: PrizesMe) {
     val v = me.pointValues
-    val rows = listOf(
-        stringResource(R.string.prizes_pt_checkin) to v.checkin,
-        stringResource(R.string.prizes_pt_order) to v.order,
-        stringResource(R.string.prizes_pt_invite) to v.inviteSignup,
-        stringResource(R.string.prizes_pt_invite_order) to v.inviteFirstOrder,
-        stringResource(R.string.prizes_pt_follow) to maxOf(v.followFacebook, v.followInstagram),
-    ).filter { it.second > 0 }
+    val fb = Color(0xFF1877F2)
+    val ig = Color(0xFFD62976)
+    val tiles = listOf(
+        EarnTile(R.drawable.ic_check_mark, stringResource(R.string.prizes_pt_checkin), v.checkin, Rahal.colors.success),
+        EarnTile(R.drawable.ic_orders, stringResource(R.string.prizes_pt_order), v.order, Rahal.colors.brand),
+        EarnTile(R.drawable.ic_invite, stringResource(R.string.prizes_pt_invite), v.inviteSignup, Rahal.colors.accent),
+        EarnTile(R.drawable.ic_gift, stringResource(R.string.prizes_pt_invite_order), v.inviteFirstOrder, Rahal.colors.accent),
+        EarnTile(R.drawable.ic_facebook, stringResource(R.string.prizes_pt_facebook), v.followFacebook, fb),
+        EarnTile(R.drawable.ic_instagram, stringResource(R.string.prizes_pt_instagram), v.followInstagram, ig),
+    ).filter { it.points > 0 }
     RahalCard(modifier = Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.prizes_points_title), color = Rahal.colors.ink, style = Rahal.type.sectionTitle)
-        Spacer(Modifier.height(Rahal.space.sm))
-        for ((label, n) in rows) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = Rahal.space.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(label, color = Rahal.colors.ink, style = Rahal.type.body, modifier = Modifier.weight(1f))
-                Spacer(Modifier.width(Rahal.space.sm))
-                Text(
-                    stringResource(R.string.prizes_pt_value, n),
-                    color = Rahal.colors.onBrand,
-                    style = Rahal.type.badge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .clip(Rahal.shape.pill)
-                        .background(Rahal.colors.brand)
-                        .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
-                )
+        Spacer(Modifier.height(Rahal.space.md))
+        Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+            for (pair in tiles.chunked(2)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                    for (t in pair) EarnTileView(t, Modifier.weight(1f))
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
             }
         }
+        if (me.minPoints > 0) {
+            Spacer(Modifier.height(Rahal.space.md))
+            Text(
+                stringResource(R.string.prizes_pt_min, me.minPoints),
+                color = Rahal.colors.inkMuted,
+                style = Rahal.type.caption,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+private data class EarnTile(val icon: Int, val label: String, val points: Int, val tint: Color)
+
+@Composable
+private fun EarnTileView(t: EarnTile, modifier: Modifier) {
+    Column(
+        modifier
+            .clip(Rahal.shape.md)
+            .background(t.tint.copy(alpha = 0.08f))
+            .padding(Rahal.space.md),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(t.tint.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            androidx.compose.material3.Icon(
+                painter = painterResource(t.icon),
+                contentDescription = null,
+                tint = t.tint,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        Spacer(Modifier.height(Rahal.space.xs))
+        Text(
+            stringResource(R.string.prizes_pt_value, t.points),
+            color = t.tint,
+            style = Rahal.type.sectionTitle,
+            fontWeight = FontWeight.Black,
+        )
+        Text(
+            t.label,
+            color = Rahal.colors.ink,
+            style = Rahal.type.caption,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            minLines = 2,
+        )
     }
 }
 
