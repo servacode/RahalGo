@@ -417,8 +417,9 @@ private fun ConfirmCancel(
             }
         },
         confirmButton = {
-            DialogConfirmButton(onClick = onConfirm, enabled = !sending) {
-                Text(stringResource(R.string.ord_cancel_yes), color = Rahal.colors.danger)
+            // **زرٌّ أحمرُ بكتابةٍ بيضا** (مراجعةُ المحاكي ٢٠٢٦-١١-٢٥) — كانت كتابةً حمراءَ على زرٍّ أزرق لا تُقرأ.
+            DialogConfirmButton(onClick = onConfirm, enabled = !sending, tone = com.rahalgo.ui.Tone.Danger) {
+                Text(stringResource(R.string.ord_cancel_yes))
             }
         },
         dismissButton = {
