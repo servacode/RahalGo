@@ -12314,6 +12314,10 @@
         {
           "name": "receipt_id",
           "type": "string"
+        },
+        {
+          "name": "as",
+          "type": "string"
         }
       ]
     },

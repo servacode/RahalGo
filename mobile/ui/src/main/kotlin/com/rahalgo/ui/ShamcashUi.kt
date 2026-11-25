@@ -395,7 +395,13 @@ private fun Step(number: String, title: String, last: Boolean = false, content: 
  * **شاشةُ الشحن بشام كاش** — بطاقةُ الحساب ثمّ نموذجُ: المبلغ · رقمُ العملية · صورةُ الإيصال (اختياريّة).
  */
 @Composable
-fun ShamcashTopupScreen(vm: WalletViewModel, info: ShamcashInfo, onBack: () -> Unit) {
+fun ShamcashTopupScreen(
+    vm: WalletViewModel,
+    info: ShamcashInfo,
+    onBack: () -> Unit,
+    /** **شرحُ الخطوة الأولى** — للمتجر يقول إنّ المشحونَ رصيدُ شحنٍ ما بينسحب (٢٠٢٦-١١-٢٦). */
+    @androidx.annotation.StringRes hint: Int = R.string.sham_step_hint,
+) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
     val s = vm.state
@@ -430,7 +436,7 @@ fun ShamcashTopupScreen(vm: WalletViewModel, info: ShamcashInfo, onBack: () -> U
         }
         // **١ — حوّل** (الحسابُ والباركود)
         Step("١", stringResource(R.string.sham_step1)) {
-            Text(stringResource(R.string.sham_step_hint), color = Rahal.colors.inkMuted, style = Rahal.type.body)
+            Text(stringResource(hint), color = Rahal.colors.inkMuted, style = Rahal.type.body)
             Spacer(Modifier.height(Rahal.space.md))
             ShamcashAccountCard(info, hero = true)
         }

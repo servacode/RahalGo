@@ -212,6 +212,9 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** **بصفة المتجر** (`as: merchant`) — يضبطها `WalletScreen(shamcashTopup = true)` بتطبيق المتجر. */
+    var shamcashAs: String? = null
+
     /** **يرسل طلبَ الشحن** — بمفتاحِ محاولةٍ يُولَّد مرّةً لكلّ ضغطة (كالسحب). */
     fun submitShamcashTopup(amount: Long, txn: String) {
         if (state.shamBusy || amount <= 0 || txn.isEmpty()) return
@@ -220,7 +223,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         val receipt = state.receiptId
         viewModelScope.launch {
             state = try {
-                customerApi.requestShamcashTopup(amount, txn, receipt, key)
+                customerApi.requestShamcashTopup(amount, txn, receipt, key, shamcashAs)
                 val fresh = runCatching { customerApi.shamcash() }.getOrNull() ?: state.sham
                 state.copy(shamBusy = false, shamDone = true, sham = fresh, receiptId = null)
             } catch (e: Exception) {
@@ -295,6 +298,12 @@ fun WalletScreen(
     topUpInfo: Boolean = false,
     /** **سهمُ رجوعٍ وعنوان «محفظتك» فوقها** — و`null` بلا رأس كما كانت. */
     onBack: (() -> Unit)? = null,
+    /**
+     * **شحنُ المتجر بشام كاش** (قرارُ المالك ٢٠٢٦-١١-٢٦) — لتطبيق المتجر وحدَه: زرُّ الشحن تحت زرّي السحب
+     * والكشف، والمشحونُ «رصيد شحن» للتوصيل والديون **ما بينسحب** (حدُّ السحب `withdrawable`).
+     * المندوبُ والسائقُ بلاه (الخادمُ يردّهم ٤٠٣).
+     */
+    shamcashTopup: Boolean = false,
 ) {
     val s = vm.state
     val st = s.statement?.let { raw ->
@@ -312,11 +321,20 @@ fun WalletScreen(
     var asking by rememberSaveable { mutableStateOf(false) }
     var statement by rememberSaveable { mutableStateOf(false) }
     var shamOpen by rememberSaveable { mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(topUpInfo) { if (topUpInfo) vm.loadShamcash() }
-    val shamInfo = s.sham?.info?.takeIf { topUpInfo && it.topupEnabled }
+    val shamOn = topUpInfo || shamcashTopup
+    androidx.compose.runtime.LaunchedEffect(shamOn) {
+        vm.shamcashAs = if (shamcashTopup) "merchant" else null
+        if (shamOn) vm.loadShamcash()
+    }
+    val shamInfo = s.sham?.info?.takeIf { shamOn && it.topupEnabled }
 
     if (shamOpen && shamInfo != null) {
-        ShamcashTopupScreen(vm, shamInfo, onBack = { shamOpen = false; vm.loadShamcash() })
+        ShamcashTopupScreen(
+            vm,
+            shamInfo,
+            onBack = { shamOpen = false; vm.loadShamcash(); vm.load() },
+            hint = if (shamcashTopup) R.string.sham_step_hint_merchant else R.string.sham_step_hint,
+        )
         return
     }
 
@@ -360,8 +378,20 @@ fun WalletScreen(
         Spacer(Modifier.height(Rahal.space.md))
         // **وحدُّ السحب المتاحُ لا الرصيد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — ما حُجز لطلبٍ مفتوحٍ
         // ليس له أن يطلبه ثانيةً. **ومحرّكٌ أقدمُ لا يرسله ⇒ الرصيد.**
-        val available = st.available ?: st.balance
+        // **ورصيدُ شحن شام كاش ما بينسحب** (٢٠٢٦-١١-٢٦) — الحدُّ `withdrawable`، ومحرّكٌ أقدم ⇒ المتاح.
+        val available = st.withdrawable ?: st.available ?: st.balance
         val reserved = st.reserved ?: 0
+        if (payouts && st.topupLocked > 0) {
+            Text(
+                text = stringResource(R.string.wal_topup_locked, money(st.topupLocked)) + " · " +
+                    stringResource(R.string.wal_withdrawable, money(available)),
+                color = Rahal.colors.inkMuted,
+                style = Rahal.type.caption,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(Rahal.space.md))
+        }
         // **والمحجوزُ يُقال تحت الرصيد** (ملاحظةُ المالك ٢٠٢٦-١٠-١٥) — كان الزرُّ يُطفأ
         // بلا سبب حين يحجز طلبٌ مفتوحٌ كلَّ الرصيد، **فيُضغط فلا يقع شيءٌ ويُظنّ عطباً.**
         if (payouts && reserved > 0) {
@@ -419,6 +449,22 @@ fun WalletScreen(
             ) { Text(stringResource(R.string.wal_statement)) }
         }
 
+        // **زرُّ شحن المتجر بشام كاش** تحت زرّي السحب والكشف — بعرض الشاشة، وجملةٌ تقول إنّه ما بينسحب.
+        if (payouts && shamcashTopup && shamInfo != null && !asking) {
+            Spacer(Modifier.height(Rahal.space.md))
+            RahalOutlineButton(
+                onClick = { vm.resetShamcashForm(); shamOpen = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.sham_topup_btn)) }
+            Text(
+                text = stringResource(R.string.sham_merchant_hint),
+                color = Rahal.colors.inkMuted,
+                style = Rahal.type.caption,
+                modifier = Modifier.fillMaxWidth().padding(top = Rahal.space.xs),
+                textAlign = TextAlign.Center,
+            )
+        }
+
         if (payouts && s.payouts.isNotEmpty()) {
             SectionHeader(stringResource(R.string.wal_payouts))
             // **مجموعةٌ واحدةٌ بفواصل** — لا بطاقةٌ لكلّ سطر: القائمةُ تُقرأ قائمة.
@@ -430,7 +476,7 @@ fun WalletScreen(
             }
         }
 
-        if (topUpInfo) s.sham?.requests?.let { ShamcashRequestsList(it) }
+        if (topUpInfo || (shamcashTopup && shamInfo != null)) s.sham?.requests?.let { ShamcashRequestsList(it) }
 
         if (topUpInfo) {
             Spacer(Modifier.height(Rahal.space.lg))

@@ -49,8 +49,9 @@ var Kinds = map[string]KindContract{
 		Path: "POST /admin/wallet-requests/{id}/approve",
 		Semantics: "شحنٌ نقديٌّ لمحفظةٍ بموافقة الماليّة — **ويقابله سطرٌ داخلٌ في صندوق المكتب.** " +
 			"**أو شحنٌ بتحويل شام كاش** (٢٠٢٦-١١-٢٥، `POST /admin/shamcash-topups/{id}/approve`): مرجعُه " +
-			"طلبُ الشحن، ويقابله حركةٌ داخلةٌ بسجلّ شام كاش لا سطرٌ بالصندوق.",
-		Invariants: []string{"FI-02.a", "FI-05.m"},
+			"طلبُ الشحن، ويقابله حركةٌ داخلةٌ بسجلّ شام كاش لا سطرٌ بالصندوق. " +
+			"**وشحنُ شام كاش (للزبون والمتجر، ٢٠٢٦-١١-٢٦) بيدخل رصيدَ الشحن اللي ما بينسحب** (`locked_delta`).",
+		Invariants: []string{"FI-02.a", "FI-05.m", "FI-16.a", "FI-16.b", "FI-16.c"},
 		Reachable:  true,
 	},
 	"order_payment": {
@@ -139,7 +140,7 @@ var Kinds = map[string]KindContract{
 		Creators:   []string{"internal/server/payout_handlers.go:290"},
 		Path:       "PATCH /admin/payouts/{id}",
 		Semantics:  "خروجُ مالٍ من محفظةٍ إلى صاحبها خارجَ المنظومة.",
-		Invariants: []string{"FI-01.e", "FI-04.c", "FI-05.d", "FI-11.a", "FI-11.b", "FI-11.c"},
+		Invariants: []string{"FI-01.e", "FI-04.c", "FI-05.d", "FI-11.a", "FI-11.b", "FI-11.c", "FI-16.d"},
 		Reachable:  true,
 	},
 	// **إرجاعُ سحبٍ مدفوع** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (قسمُ طلبات السحب).

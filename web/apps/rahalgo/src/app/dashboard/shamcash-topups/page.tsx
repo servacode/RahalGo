@@ -8,6 +8,9 @@
  * الزبونُ يحوّل على حساب شام كاش ويبعث رقمَ العملية (وصورةَ الإيصال اختياراً). **الموظفُ يتأكّد أنّ
  * التحويلَ وصل الحسابَ** ثمّ «تم، اشحن» فتنضاف الحصّةُ لمحفظة الزبون، أو «مرفوض» بسببٍ يراه الزبون.
  * **والقرارُ يُكتب مرّةً** — وإعادتُه تردّ `already` ولا تُكرّر الشحن.
+ *
+ * **والمتجرُ كمان** (٢٠٢٦-١١-٢٦): طلبُه بعلامة «متجر» واسمِ متجره، ومشحونُه «رصيد شحن» للتوصيل
+ * والديون ما بينسحب — فالتأكيدُ بيقولها.
  */
 
 import { useState } from "react";
@@ -43,12 +46,16 @@ const m = getMessages(defaultLocale);
 const T = m.admin.shamcashTopups;
 
 type Status = "pending" | "approved" | "rejected";
+type Role = "" | "customer" | "merchant";
 
 interface TopupRow {
   id: string;
   user_id: string;
   user_name: string;
   user_phone: string;
+  /** **زبون أو متجر** — ومحفظةُ المتجر محفظةُ صاحبه. */
+  role?: "customer" | "merchant";
+  store_name?: string | null;
   currency: string;
   amount: number;
   txn_ref: string;
@@ -76,6 +83,7 @@ export default function ShamcashTopupsPage() {
   const canManage = can("finance.manage");
   const [view, setView, { narrow }] = useViewMode("admin-shamcash-topups", "table");
   const [status, setStatus] = useState<Status>("pending");
+  const [role, setRole] = useState<Role>("");
   const [q, setQ] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -88,6 +96,7 @@ export default function ShamcashTopupsPage() {
 
   const qs = new URLSearchParams();
   qs.set("status", status);
+  if (role) qs.set("role", role);
   if (q.trim()) qs.set("q", q.trim());
   if (from) qs.set("from", from);
   if (to) qs.set("to", to);
@@ -140,6 +149,15 @@ export default function ShamcashTopupsPage() {
               { id: "rejected", label: T.tabRejected },
             ]}
           />
+          <Chips
+            value={role || "all"}
+            onChange={(v) => filter(() => setRole(v === "all" ? "" : (v as Role)))}
+            items={[
+              { id: "all", label: T.roleAll },
+              { id: "customer", label: T.roleCustomer },
+              { id: "merchant", label: T.roleMerchant },
+            ]}
+          />
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <Input id="sct-q" label={T.search} value={q} onChange={(e) => filter(() => setQ(e.target.value))} />
             <Input id="sct-from" type="date" label={T.from} value={from} onChange={(e) => filter(() => setFrom(e.target.value))} />
@@ -169,8 +187,14 @@ export default function ShamcashTopupsPage() {
                 primary: true,
                 icon: <IconUser size={14} />,
                 cell: (r) => (
-                  <span className="flex flex-col">
-                    <span className="font-bold">{r.user_name}</span>
+                  <span className="flex flex-col gap-0.5">
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-bold">{r.user_name}</span>
+                      <Badge variant={r.role === "merchant" ? "info" : "neutral"}>
+                        {r.role === "merchant" ? T.roleMerchant : T.roleCustomer}
+                      </Badge>
+                    </span>
+                    {r.role === "merchant" && r.store_name && <span className="text-xs font-bold">{r.store_name}</span>}
                     <span dir="ltr" className="text-xs text-ink-muted">
                       {r.user_phone}
                     </span>
@@ -263,7 +287,13 @@ export default function ShamcashTopupsPage() {
         open={approving !== null}
         tone="primary"
         title={T.approveTitle}
-        body={approving ? T.approveBody.replace("{amount}", fmtMoney(approving.amount)).replace("{name}", approving.user_name) : undefined}
+        body={
+          approving
+            ? (approving.role === "merchant" ? T.approveBodyMerchant : T.approveBody)
+                .replace("{amount}", fmtMoney(approving.amount))
+                .replace("{name}", approving.role === "merchant" && approving.store_name ? approving.store_name : approving.user_name)
+            : undefined
+        }
         confirmLabel={T.approveYes}
         busy={busy}
         onCancel={() => setApproving(null)}

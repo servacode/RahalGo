@@ -15,6 +15,10 @@ package server
 // داخلة بسجلّ شام كاش + سدّ الدين أوّلاً متل الشحن النقديّ + أثر بالتدقيق. وكبسة تانية = ولا شي.
 //
 // **والتأكيد الآليّ لاحقاً** من `shamcash.Verifier` (`s.shamcashVerifier()`): اليوم يدويّ.
+//
+// **والمتجر كمان** (قرار المالك ٢٠٢٦-١١-٢٦) — بنفس النقاط، والطلب بينكتب بدوره (`role`).
+// **وكل شحن شام كاش بيدخل «رصيد شحن» ما بينسحب** (`wallets.topup_locked`): بينصرف عالتوصيل
+// والديون بس، وطلب السحب ما بيتجاوز (الرصيد − المحجوز − رصيد الشحن). المندوب والسائق ممنوعين.
 
 import (
 	"context"
@@ -26,14 +30,15 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/obligations"
 	"github.com/servacode/rahalgo/backend/internal/shamcash"
 )
 
-// errShamcashCustomerOnly **الشحن بشام كاش للزبون بس** — محفظة السائق والمندوب بتنسحب، والشحن
-// من برّا عليها باب لتصريف مال.
+// errShamcashCustomerOnly **الشحن بشام كاش للزبون والمتجر بس** — محفظة السائق والمندوب بتنسحب،
+// والشحن من برّا عليها باب لتصريف مال. (والمتجر محميّ برصيد الشحن اللي ما بينسحب.)
 var errShamcashCustomerOnly = httpx.NewError(http.StatusForbidden, "shamcash_customer_only", "errors.forbidden")
 
 // shamcashVerifier **مين بيأكّد التحويل** — يدويّ لحتى يصير في ربط رسميّ.
@@ -103,18 +108,36 @@ func (s *Server) handleMyShamcash(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"info": s.shamcashInfoFor(r), "requests": toMyTopups(list)})
 }
 
-// isCustomer **أيحمل دور الزبون؟**
-func (s *Server) isCustomer(ctx context.Context, userID string) bool {
-	var ok bool
-	_ = s.pg.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM user_roles WHERE user_id = $1::uuid AND role_code = 'customer')`,
-		userID).Scan(&ok)
-	return ok
+// shamcashTopupRole **بأيّ صفة عم يشحن؟** — `customer` أو `merchant`، و`false` = ممنوع (مندوب/سائق).
+//
+// `want` من الطلب (`as`، صفحة المتجر عالموقع بتبعت `merchant`) بيُقبل بس إذا الحساب حامل الدور.
+// وبلاه: تطبيق المتجر (`X-RahalGo-Client`) ⇒ متجر، وإلّا زبون إذا حامل دور الزبون، وإلّا متجر.
+// **ومحفظة المتجر محفظة صاحبه** (`merchants.owner_user_id` = هالحساب) — متل أجرة التوصيل بالضبط.
+func (s *Server) shamcashTopupRole(ctx context.Context, userID, want string) (string, bool) {
+	var hasC, hasM bool
+	_ = s.pg.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM user_roles WHERE user_id = $1::uuid AND role_code = 'customer'),
+		       EXISTS (SELECT 1 FROM user_roles WHERE user_id = $1::uuid AND role_code = 'merchant')`,
+		userID).Scan(&hasC, &hasM)
+	switch want {
+	case shamcash.RoleMerchant:
+		return shamcash.RoleMerchant, hasM
+	case shamcash.RoleCustomer:
+		return shamcash.RoleCustomer, hasC
+	}
+	if _, r := identity.RequiredRole(identity.ClientFrom(ctx)); r == "merchant" && hasM {
+		return shamcash.RoleMerchant, true
+	}
+	if hasC {
+		return shamcash.RoleCustomer, true
+	}
+	return shamcash.RoleMerchant, hasM
 }
 
 // handleMyShamcashReceipt **`POST /my/shamcash/receipt`** — صورة الإيصال (النوع مثبَّت).
 func (s *Server) handleMyShamcashReceipt(w http.ResponseWriter, r *http.Request) {
 	uid := userIDFrom(r)
-	if !s.isCustomer(r.Context(), uid) {
+	if _, ok := s.shamcashTopupRole(r.Context(), uid, ""); !ok {
 		s.respondErr(w, errShamcashCustomerOnly)
 		return
 	}
@@ -154,19 +177,26 @@ func (s *Server) handleMyShamcashReceipt(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-// handleCreateShamcashTopup **`POST /my/shamcash/topups`** `{amount, txn_ref, receipt_id?}`.
+// handleCreateShamcashTopup **`POST /my/shamcash/topups`** `{amount, txn_ref, receipt_id?, as?}` —
+// `as: "merchant"` من صفحة المتجر عالموقع.
 func (s *Server) handleCreateShamcashTopup(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Amount    *float64 `json:"amount"`
 		TxnRef    string   `json:"txn_ref"`
 		ReceiptID string   `json:"receipt_id"`
+		As        string   `json:"as"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	uid := userIDFrom(r)
-	if !s.isCustomer(r.Context(), uid) {
+	if req.As != "" && req.As != shamcash.RoleCustomer && req.As != shamcash.RoleMerchant {
+		s.respondErr(w, errValidation)
+		return
+	}
+	role, ok := s.shamcashTopupRole(r.Context(), uid, req.As)
+	if !ok {
 		s.respondErr(w, errShamcashCustomerOnly)
 		return
 	}
@@ -197,12 +227,12 @@ func (s *Server) handleCreateShamcashTopup(w http.ResponseWriter, r *http.Reques
 	// **والطلب وعلامة منع التكرار بمعاملة وحدة** (`XG-33`) — إعادة الإرسال بنفس المفتاح بترجّع
 	// نفس الردّ وما بتنبّه المالك مرّتين.
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
-		id, err := shamcash.CreateTopup(ctx, q, uid, amount, txn, strings.TrimSpace(req.ReceiptID))
+		id, err := shamcash.CreateTopupAs(ctx, q, uid, role, amount, txn, strings.TrimSpace(req.ReceiptID))
 		if err != nil {
 			return IdempotentBody{}, err
 		}
 		if err := s.auditTx(ctx, q, r, "finance.shamcash_topup_requested", "shamcash_topup", id,
-			map[string]any{"amount": amount, "txn_ref": txn, "receipt": req.ReceiptID != ""}); err != nil {
+			map[string]any{"amount": amount, "txn_ref": txn, "receipt": req.ReceiptID != "", "role": role}); err != nil {
 			return IdempotentBody{}, err
 		}
 		t, err := shamcash.GetTopup(ctx, q, id)
@@ -232,8 +262,12 @@ func amountSYP(v float64) (int64, bool) {
 
 // alertShamcashTopup **واتساب للمالك** بنفس باب تنبيهات المراقبة (`alertOwner`) — وإلّا إشعار اللوحة.
 func (s *Server) alertShamcashTopup(t shamcash.Topup) {
-	text := "💳 طلب شحن محفظة بشام كاش\n" +
-		"الزبون: " + t.UserName + "\n" +
+	head, who := "💳 طلب شحن محفظة بشام كاش\n", "الزبون: "
+	if t.Role == shamcash.RoleMerchant {
+		head, who = "💳 طلب شحن محفظة متجر بشام كاش (للتوصيل والديون، ما بينسحب)\n", "المتجر: "+s.merchantNamesOf(t.UserID)+" · "
+	}
+	text := head +
+		who + t.UserName + "\n" +
 		"المبلغ: " + fmtMoneyAr(t.Amount) + "\n" +
 		"رقم العملية: " + t.TxnRef + "\n" +
 		"تأكّد إنه وصل لحسابك ووافق من هون: " + s.siteURL() + "/dashboard/shamcash-topups"
@@ -242,6 +276,18 @@ func (s *Server) alertShamcashTopup(t shamcash.Topup) {
 		defer cancel()
 		s.alertOwner(ctx, text)
 	}()
+}
+
+// merchantNamesOf **أسماء متاجر صاحب الحساب** — لتنبيه المالك («المتجر: فلان»).
+func (s *Server) merchantNamesOf(userID string) string {
+	var names string
+	_ = s.pg.QueryRow(context.Background(), `
+		SELECT COALESCE(string_agg(name, '، ' ORDER BY created_at), '') FROM merchants
+		 WHERE owner_user_id = $1::uuid`, userID).Scan(&names)
+	if names == "" {
+		return "—"
+	}
+	return names
 }
 
 // autoVerifyShamcash **الفاصل للتأكيد الآليّ** — اليدويّ بيقول «ما بعرف» فما بيصير شي.
@@ -287,8 +333,11 @@ func (s *Server) autoVerifyShamcash(t shamcash.Topup) {
 
 // approveShamcashTopupTx **«تم، اشحن»** — بمعاملة المستدعي. `already` = كانت مقبولة (ولا أثر جديد).
 //
-// القيد `topup` بمحفظة الزبون ومرجعه معرّف الطلب، والحركة داخلة بالسجلّ، **والشحن بيسدّ الدين أوّلاً**
+// القيد `topup` بمحفظة صاحب الطلب ومرجعه معرّف الطلب، والحركة داخلة بالسجلّ، **والشحن بيسدّ الدين أوّلاً**
 // متل الشحن النقديّ (`payDebtFromTopup`). **و`actor` فاضي** = متحقّق آليّ (بلا موظّف).
+//
+// **والمبلغ كلّه بيدخل «رصيد شحن» ما بينسحب** (`ApplyLockedTopupTxID`، ٢٠٢٦-١١-٢٦) — للزبون والمتجر:
+// الزبون ما بيسحب أصلاً، والمتجر بيصرفه عالتوصيل والديون بس. وسدّ الدين بعده بياكل منه أوّلاً.
 func (s *Server) approveShamcashTopupTx(ctx context.Context, q dbtx.Querier, id, verifier, actor string) (
 	t shamcash.Topup, already bool, debtPaid int64, err error) {
 	userID, amount, txn, status, err := shamcash.LockTopup(ctx, q, id)
@@ -307,7 +356,7 @@ func (s *Server) approveShamcashTopupTx(ctx context.Context, q dbtx.Querier, id,
 		actorPtr = &actor
 	}
 	note := "شحن بشام كاش · رقم العملية " + txn
-	_, txID, err := s.wallet.ApplyTxID(ctx, q, userID, amount, "topup", id, note, actorPtr)
+	_, txID, err := s.wallet.ApplyLockedTopupTxID(ctx, q, userID, amount, id, note, actorPtr)
 	if err != nil {
 		return t, false, 0, err
 	}
@@ -361,9 +410,17 @@ func (s *Server) rejectShamcashTopupTx(ctx context.Context, q dbtx.Querier, id, 
 func (s *Server) afterShamcashDecision(ctx context.Context, t shamcash.Topup, debtPaid int64) {
 	in := notifications.Input{UserID: t.UserID, Kind: notifications.KindWallet,
 		Entity: "wallet", Href: "/portal/wallet"}
+	merchant := t.Role == shamcash.RoleMerchant
+	if merchant {
+		// **لتطبيق المتجر** — مو لتطبيق الزبون عنفس الجهاز.
+		in.Href, in.Apps = "/store/wallet", []string{notifications.AppMerchant}
+	}
 	if t.Status == shamcash.TopupApproved {
 		in.Title = "انشحنت محفظتك بـ " + fmtMoneyAr(t.Amount)
 		in.Body = "وصل تحويل شام كاش (رقم العملية " + t.TxnRef + ") وانضاف المبلغ لمحفظتك."
+		if merchant {
+			in.Body = "وصل تحويل شام كاش (رقم العملية " + t.TxnRef + ") وانضاف لرصيد الشحن — للتوصيل والديون، وما بينسحب."
+		}
 		if debtPaid > 0 {
 			in.Body += " وانسدّ منه " + fmtMoneyAr(debtPaid) + " من الدين اللي عليك."
 		}
@@ -379,9 +436,17 @@ func (s *Server) afterShamcashDecision(ctx context.Context, t shamcash.Topup, de
 // handleListShamcashTopups **`GET /admin/shamcash-topups?status&q&from&to&page`**.
 func (s *Server) handleListShamcashTopups(w http.ResponseWriter, r *http.Request) {
 	qs := r.URL.Query()
-	f := shamcash.TopupFilter{Status: qs.Get("status"), Search: clip(qs.Get("q"), 80), From: qs.Get("from"), To: qs.Get("to")}
+	f := shamcash.TopupFilter{Status: qs.Get("status"), Search: clip(qs.Get("q"), 80), From: qs.Get("from"), To: qs.Get("to"),
+		Role: qs.Get("role")}
 	switch f.Status {
 	case "", shamcash.TopupPending, shamcash.TopupApproved, shamcash.TopupRejected:
+	default:
+		s.respondErr(w, errValidation)
+		return
+	}
+	// **زبون أو متجر** (٢٠٢٦-١١-٢٦) — والفارغ الكل.
+	switch f.Role {
+	case "", shamcash.RoleCustomer, shamcash.RoleMerchant:
 	default:
 		s.respondErr(w, errValidation)
 		return

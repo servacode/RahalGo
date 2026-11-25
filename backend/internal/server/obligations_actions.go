@@ -509,6 +509,10 @@ type walletWithDebts struct {
 	// لطلبه الأوّل فيُردّ بـ«رصيد غير كافٍ» وهو يرى الرصيدَ يكفي.** — `wallet.LayersOf`.
 	Reserved  int64 `json:"reserved"`
 	Available int64 `json:"available"`
+	// TopupLocked وWithdrawable **رصيد شحن شام كاش وما بينسحب فعلاً** (قرار المالك ٢٠٢٦-١١-٢٦) —
+	// `available` بيضلّ «المتاح للصرف» (الزبون بيشوفه رصيده)، وحدّ السحب صار `withdrawable`.
+	TopupLocked  int64 `json:"topup_locked"`
+	Withdrawable int64 `json:"withdrawable"`
 }
 
 // statementWithDebts يضمّ ديونَ صاحب الكشف إلى كشفه.
@@ -523,6 +527,7 @@ func (s *Server) statementWithDebts(ctx context.Context, userID string, st *wall
 		return walletWithDebts{}, err
 	}
 	out.Reserved, out.Available = layers.Reserved, layers.Available
+	out.TopupLocked, out.Withdrawable = layers.TopupLocked, layers.Withdrawable
 	if total > 0 {
 		out.Debts, out.DebtTotal = debts, total
 	}

@@ -283,11 +283,18 @@ class CustomerApi(private val api: ApiClient) {
         photoJson.decodeFromString(CustomPhoto.serializer(), api.upload("/api/v1/my/shamcash/receipt", fileName, bytes))
 
     /** **طلبُ شحنٍ بشام كاش** — بمفتاح محاولةٍ كأبواب المال. */
-    suspend fun requestShamcashTopup(amount: Long, txnRef: String, receiptId: String?, attemptKey: String): ShamcashTopupReply =
+    suspend fun requestShamcashTopup(
+        amount: Long,
+        txnRef: String,
+        receiptId: String?,
+        attemptKey: String,
+        /** **`merchant` من تطبيق المتجر** (٢٠٢٦-١١-٢٦) — والفارغ بيقرّره الخادم. */
+        asRole: String? = null,
+    ): ShamcashTopupReply =
         api.call(
             "/api/v1/my/shamcash/topups",
             HttpMethod.Post,
-            ShamcashTopupInput(amount, txnRef, receiptId),
+            ShamcashTopupInput(amount, txnRef, receiptId, asRole),
             idempotencyKey = attemptKey,
         )
 
@@ -1159,6 +1166,7 @@ private data class ShamcashTopupInput(
     val amount: Long,
     @SerialName("txn_ref") val txnRef: String,
     @SerialName("receipt_id") val receiptId: String? = null,
+    @SerialName("as") val asRole: String? = null,
 )
 
 /** **حالُ السلّة للتذكير** — انظر `reportCartState`. */

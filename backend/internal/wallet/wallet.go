@@ -268,6 +268,21 @@ func (s *Service) ApplyTxID(ctx context.Context, q Querier, userID string, amoun
 }
 
 func (s *Service) applyTx(ctx context.Context, q Querier, userID string, amount int64, kind, ref, note string, actorID *string, txID *int64) (int64, error) {
+	return s.post(ctx, q, userID, amount, kind, ref, note, actorID, txID, false)
+}
+
+// post **القيد ورصيد الشحن بخطوة وحدة** — `lockAll` = القيد كلّه شحن شام كاش ما بينسحب.
+//
+// رصيد الشحن (`topup_locked`، قرار المالك ٢٠٢٦-١١-٢٦) جزء من الرصيد:
+//
+//	شحن شام كاش            بيزيد بقدّ المبلغ
+//	أجرة/دين/عقوبة/إكرامية  بتاكل منه أوّلاً (`LockedSpendKinds`)
+//	غيرها من الخصم          بياكل من الحرّ أوّلاً، وبس إذا ما كفّى بياكل منه
+//	استرجاع بنفس المرجع     بيرجّع ما انصرف منه (`lockedRestoreKinds`)
+//
+// **والفرق بينكتب عالقيد** (`locked_delta`) — فمجموعه = رصيد الشحن (FI-16.b).
+func (s *Service) post(ctx context.Context, q Querier, userID string, amount int64, kind, ref, note string,
+	actorID *string, txID *int64, lockAll bool) (int64, error) {
 	if amount == 0 {
 		return 0, ErrInvalidAmount
 	}
@@ -280,11 +295,43 @@ func (s *Service) applyTx(ctx context.Context, q Querier, userID string, amount 
 		return 0, err
 	}
 
-	var balance int64
+	// **قفل الصفّ وقراءة الطبقات** قبل التحديث — نفس القفل اللي كان التحديث بياخده.
+	var bal, res, locked int64
+	if err := q.QueryRow(ctx, `
+		SELECT balance, reserved, topup_locked FROM wallets WHERE user_id = $1 FOR UPDATE`,
+		userID).Scan(&bal, &res, &locked); err != nil {
+		return 0, err
+	}
+	var consume, add int64
+	switch {
+	case amount < 0 && locked > 0:
+		out := -amount
+		if spendsLocked(kind) {
+			consume = min(locked, out)
+		} else {
+			free := max(bal-res-locked, 0)
+			consume = min(locked, max(out-free, 0))
+		}
+	case amount > 0 && lockAll:
+		add = amount
+	case amount > 0 && ref != "" && restoresLocked(kind):
+		var used int64
+		if err := q.QueryRow(ctx, `
+			SELECT COALESCE(-sum(locked_delta), 0) FROM wallet_transactions
+			 WHERE user_id = $1 AND ref = $2 AND locked_delta <> 0 AND kind = ANY($3)`,
+			userID, ref, lockedRestoreKinds).Scan(&used); err != nil {
+			return 0, err
+		}
+		add = min(max(used, 0), amount)
+	}
+
+	var balance, after int64
 	err := q.QueryRow(ctx, `
-		UPDATE wallets SET balance = balance + $2, updated_at = now()
+		UPDATE wallets SET balance = balance + $2,
+		       topup_locked = LEAST(topup_locked - $3 + $4, GREATEST(balance + $2, 0)),
+		       updated_at = now()
 		WHERE user_id = $1
-		RETURNING balance`, userID, amount).Scan(&balance)
+		RETURNING balance, topup_locked`, userID, amount, consume, add).Scan(&balance, &after)
 	if isCheckViolation(err) {
 		return 0, ErrInsufficient
 	}
@@ -293,12 +340,48 @@ func (s *Service) applyTx(ctx context.Context, q Querier, userID string, amount 
 	}
 
 	if err := q.QueryRow(ctx, `
-		INSERT INTO wallet_transactions (user_id, amount, kind, ref, note, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-		userID, amount, kind, ref, note, actorID).Scan(txID); err != nil {
+		INSERT INTO wallet_transactions (user_id, amount, kind, ref, note, created_by, locked_delta)
+		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+		userID, amount, kind, ref, note, actorID, after-locked).Scan(txID); err != nil {
 		return 0, err
 	}
 	return balance, nil
+}
+
+// LockedSpendKinds **شو بيصرف من رصيد الشحن أوّلاً** — أجرة التوصيل ودفع الطلب (`order_payment`)،
+// وسدّ الدين والتسوية (`adjustment`)، والعقوبة، والإكرامية. **والسحب مو منها أبداً.**
+var LockedSpendKinds = []string{"order_payment", "adjustment", "penalty", "tip"}
+
+// lockedRestoreKinds **شو بيرجّع لرصيد الشحن** ما انصرف منه بنفس المرجع — الاسترجاع وعكس الصرف.
+var lockedRestoreKinds = append([]string{"refund"}, LockedSpendKinds...)
+
+func spendsLocked(kind string) bool {
+	for _, k := range LockedSpendKinds {
+		if k == kind {
+			return true
+		}
+	}
+	return false
+}
+
+func restoresLocked(kind string) bool {
+	for _, k := range lockedRestoreKinds {
+		if k == kind {
+			return true
+		}
+	}
+	return false
+}
+
+// ApplyLockedTopupTxID **شحن ما بينسحب** (شام كاش) — قيد `topup` بيزيد الرصيد ورصيد الشحن سوا،
+// ويرجّع رقم القيد. بمعاملة المستدعي.
+func (s *Service) ApplyLockedTopupTxID(ctx context.Context, q Querier, userID string, amount int64, ref, note string, actorID *string) (int64, int64, error) {
+	if amount <= 0 {
+		return 0, 0, ErrInvalidAmount
+	}
+	var txID int64
+	balance, err := s.post(ctx, q, userID, amount, "topup", ref, note, actorID, &txID, true)
+	return balance, txID, err
 }
 
 // AdvanceTx **قيدُ السلفة** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — يُنقص المحفظةَ بالمبلغ
@@ -316,11 +399,18 @@ func (s *Service) AdvanceTx(ctx context.Context, q Querier, userID string, amoun
 		ON CONFLICT (user_id) DO NOTHING`, userID); err != nil {
 		return 0, err
 	}
-	var balance int64
+	var locked int64
+	if err := q.QueryRow(ctx,
+		`SELECT topup_locked FROM wallets WHERE user_id = $1 FOR UPDATE`, userID).Scan(&locked); err != nil {
+		return 0, err
+	}
+	// **ورصيد الشحن ما بيتجاوز الرصيد** — السلفة ما بتنعطى لمتجر ولا لزبون أصلاً (`advanceEligible`).
+	var balance, after int64
 	err := q.QueryRow(ctx, `
-		UPDATE wallets SET balance = balance - $2, advance_owed = advance_owed + $2, updated_at = now()
+		UPDATE wallets SET balance = balance - $2, advance_owed = advance_owed + $2,
+		       topup_locked = LEAST(topup_locked, GREATEST(balance - $2, 0)), updated_at = now()
 		WHERE user_id = $1
-		RETURNING balance`, userID, amount).Scan(&balance)
+		RETURNING balance, topup_locked`, userID, amount).Scan(&balance, &after)
 	if isCheckViolation(err) {
 		// **محجوزٌ لسحبٍ جارٍ لا يجتمع مع رصيدٍ سالب** — يُفكّ أو يُصرف أوّلاً.
 		return 0, ErrInsufficient
@@ -330,9 +420,9 @@ func (s *Service) AdvanceTx(ctx context.Context, q Querier, userID string, amoun
 	}
 	var id int64
 	if err := q.QueryRow(ctx, `
-		INSERT INTO wallet_transactions (user_id, amount, kind, ref, note, created_by)
-		VALUES ($1, $2, 'advance', $3, $4, $5) RETURNING id`,
-		userID, -amount, ref, note, actorID).Scan(&id); err != nil {
+		INSERT INTO wallet_transactions (user_id, amount, kind, ref, note, created_by, locked_delta)
+		VALUES ($1, $2, 'advance', $3, $4, $5, $6) RETURNING id`,
+		userID, -amount, ref, note, actorID, after-locked).Scan(&id); err != nil {
 		return 0, err
 	}
 	return balance, nil

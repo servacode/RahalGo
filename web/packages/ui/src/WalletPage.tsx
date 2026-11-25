@@ -14,7 +14,7 @@
 import { FormActions } from "./FormActions";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Money } from "./money";
-import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtMoney, fmtNum, fmtDate, fmtTime, errorText } from "@rahalgo/i18n";
 import { Badge, Button, Input, Modal } from "./components";
 import { Tabs } from "./navigation";
 import { Alert } from "./feedback";
@@ -200,9 +200,12 @@ export function WalletPage({
    * **عرضٌ فقط**: الجلبُ والكشفُ هما هما.
    */
   hero?: boolean;
-  /** زرُّ الفعل الأوّل بجانب «كشف حساب» في صفٍّ واحد (الشحن بشام كاش) — فارغٌ فيأخذ الكشفُ الصفَّ كلَّه. */
+  /**
+   * زرُّ الفعل الأوّل بجانب «كشف حساب» في صفٍّ واحد (الشحن بشام كاش) — فارغٌ فيأخذ الكشفُ الصفَّ كلَّه.
+   * **وفي وضع اللوحة (المتجر، ٢٠٢٦-١١-٢٦) يقع مع أزرار الرأس.**
+   */
   heroActions?: ReactNode;
-  /** ما يقع تحت صفّ الأزرار وفوق الحركات (طلباتُ الشحن وبطاقةُ الشرح). */
+  /** ما يقع تحت صفّ الأزرار وفوق الحركات (طلباتُ الشحن وبطاقةُ الشرح) — وفي وضع اللوحة تحت المؤشّرات. */
   belowHero?: ReactNode;
 }) {
   const [tab, setTab] = useState(ALL);
@@ -232,6 +235,12 @@ export function WalletPage({
     /** **ديونُه المفتوحة بأسبابها** — لا تُرسَل لمن لا دينَ عليه (`walletWithDebts`). */
     debts?: DebtLine[];
     debt_total?: number;
+    /** **المتاحُ للصرف** (الرصيد − المحجوز). */
+    available?: number;
+    /** **رصيدُ شحن شام كاش** — للتوصيل والديون، وما بينسحب (٢٠٢٦-١١-٢٦). */
+    topup_locked?: number;
+    /** **حدُّ السحب** = المتاح − رصيد الشحن. محرّكٌ أقدم بلاه ⇒ المتاح ثمّ الرصيد. */
+    withdrawable?: number;
   }>(
     () => api(path),
     ["wallet"],
@@ -414,6 +423,18 @@ export function WalletPage({
     Array.isArray(statement?.debts) ? statement.debts : [],
   );
   const hasPending = reqs.some((p) => p.status === "pending");
+  // **وحدُّ السحب ما بينسحب فعلاً** — رصيدُ شحن شام كاش ما بيدخله (قرارُ المالك ٢٠٢٦-١١-٢٦).
+  const withdrawable = statement?.withdrawable ?? statement?.available ?? balance;
+  const locked = statement?.topup_locked ?? 0;
+  /** **سطرُ رصيد الشحن** — لمن يسحب وعنده رصيد شحن بس. */
+  const lockedLine =
+    payouts && locked > 0 ? (
+      <p className="text-center text-sm text-ink-muted" data-testid="wallet-topup-locked">
+        {m.store.wallet.topupLocked.replace("{amount}", fmtMoney(locked))}
+        {" · "}
+        {m.store.wallet.withdrawable.replace("{amount}", fmtMoney(withdrawable))}
+      </p>
+    ) : null;
   // التبويب المختار قد يختفي بعد تحديث حيّ (آخر طلب سحب أُلغي) — نرتدّ للكل
   const current = tab === STATEMENT || tabs.some((t) => t.key === tab) ? tab : ALL;
 
@@ -458,7 +479,7 @@ export function WalletPage({
               {/* كشف الحساب إجراء لا تصنيف: لا رقم له فلا مكان له بين البطاقات */}
               {statementBtn}
               {payouts && (
-                <Button onClick={() => setAsking(true)} disabled={balance <= 0 || hasPending}>
+                <Button onClick={() => setAsking(true)} disabled={withdrawable <= 0 || hasPending}>
                   {P.request}
                 </Button>
               )}
@@ -466,6 +487,7 @@ export function WalletPage({
           }
         />
       )}
+      {lockedLine}
 
       {/* ══════════════════════════════════════════════════════════════
           **الرصيدُ مع البطاقات الذكيّة في صفٍّ واحدٍ أعلى الصفحة**
@@ -664,7 +686,7 @@ export function WalletPage({
       {asking && (
         <PayoutModal
           api={api}
-          balance={balance}
+          balance={withdrawable}
           onClose={() => setAsking(false)}
           onDone={() => {
             setAsking(false);
@@ -785,8 +807,9 @@ export function WalletPage({
           actions={
             <>
               {statementBtn}
+              {heroActions}
               {payouts && (
-                <Button className="min-h-11" onClick={() => setAsking(true)} disabled={balance <= 0 || hasPending}>
+                <Button className="min-h-11" onClick={() => setAsking(true)} disabled={withdrawable <= 0 || hasPending}>
                   {P.request}
                 </Button>
               )}
@@ -811,6 +834,8 @@ export function WalletPage({
             {debtText}
           </p>
         )}
+        {lockedLine}
+        {belowHero}
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_22rem] md:items-start md:gap-5">
           <section className="panel min-w-0 overflow-hidden" aria-label={m.terms.transactions}>
             <div className="panel-head">
@@ -871,7 +896,7 @@ export function WalletPage({
         {asking && (
           <PayoutModal
             api={api}
-            balance={balance}
+            balance={withdrawable}
             onClose={() => setAsking(false)}
             onDone={() => {
               setAsking(false);

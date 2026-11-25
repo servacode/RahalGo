@@ -37,6 +37,10 @@ type Layers struct {
 	Reserved int64 `json:"reserved"`
 	// Available **المتاحُ للإنفاق** — مشتقٌّ لا مخزَّن.
 	Available int64 `json:"available"`
+	// TopupLocked **رصيد الشحن** (شام كاش، ٢٠٢٦-١١-٢٦) — جزء من الرصيد بينصرف عالتوصيل والديون، وما بينسحب.
+	TopupLocked int64 `json:"topup_locked"`
+	// Withdrawable **ما بينسحب** = المتاح − رصيد الشحن (وما بينزل تحت الصفر).
+	Withdrawable int64 `json:"withdrawable"`
 }
 
 // LayersOf يقرأ الطبقاتِ الثلاث.
@@ -53,13 +57,20 @@ func (s *Service) LayersTx(ctx context.Context, q Querier, userID string) (Layer
 	// **وحسابٌ بلا محفظةٍ صفرٌ لا خطأ** — كما في `Balance`.
 	err := q.QueryRow(ctx, `
 		SELECT COALESCE((SELECT balance  FROM wallets WHERE user_id = $1), 0),
-		       COALESCE((SELECT reserved FROM wallets WHERE user_id = $1), 0)`,
-		userID).Scan(&l.Balance, &l.Reserved)
+		       COALESCE((SELECT reserved FROM wallets WHERE user_id = $1), 0),
+		       COALESCE((SELECT topup_locked FROM wallets WHERE user_id = $1), 0)`,
+		userID).Scan(&l.Balance, &l.Reserved, &l.TopupLocked)
 	if err != nil {
 		return Layers{}, err
 	}
 	l.Available = l.Balance - l.Reserved
+	l.Withdrawable = WithdrawableOf(l.Balance, l.Reserved, l.TopupLocked)
 	return l, nil
+}
+
+// WithdrawableOf **ما بينسحب**: الرصيد − المحجوز − رصيد الشحن، وما بينزل تحت الصفر.
+func WithdrawableOf(balance, reserved, locked int64) int64 {
+	return max(balance-reserved-locked, 0)
 }
 
 // AvailableTx **ما يجوز إنفاقُه الآن.**

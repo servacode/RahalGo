@@ -70,7 +70,7 @@ function StatusBadge({ r }: { r: ShamcashRequest }) {
   );
 }
 
-function TopUpForm({ info, onSent }: { info: ShamcashInfo; onSent: () => void }) {
+function TopUpForm({ info, onSent, as }: { info: ShamcashInfo; onSent: () => void; as?: "merchant" }) {
   const [amount, setAmount] = useState("");
   const [txn, setTxn] = useState("");
   const [photo, setPhoto] = useState<UploadedPhoto | null>(null);
@@ -109,7 +109,12 @@ function TopUpForm({ info, onSent }: { info: ShamcashInfo; onSent: () => void })
       await api("/api/v1/my/shamcash/topups", {
         method: "POST",
         headers: { "Idempotency-Key": attemptKey(SLOT) },
-        body: JSON.stringify({ amount: value, txn_ref: txn.trim(), ...(photo ? { receipt_id: photo.id } : {}) }),
+        body: JSON.stringify({
+          amount: value,
+          txn_ref: txn.trim(),
+          ...(photo ? { receipt_id: photo.id } : {}),
+          ...(as ? { as } : {}),
+        }),
       });
       clearAttempt(SLOT);
       setDone(true);
@@ -180,8 +185,19 @@ function TopUpForm({ info, onSent }: { info: ShamcashInfo; onSent: () => void })
 /**
  * **زرُّ الشحن + اللوحةُ + قائمةُ الطلبات** — لا يظهر شيءٌ حتّى يردّ الخادمُ ويكون الشحنُ مفعَّلاً
  * (والأبناءُ يُرسَمون دائماً، وزرُّهم وقائمتُهم `null` حتّى ذلك).
+ *
+ * **والمتجرُ يستعمله كما هو** (٢٠٢٦-١١-٢٦): `as="merchant"` يُرسَل مع الطلب فيُكتب بصفة المتجر،
+ * و`panelHint` يقول إنّ المشحونَ رصيدُ شحنٍ للتوصيل والديون ما بينسحب.
  */
-export function ShamcashTopUp({ children }: { children: (parts: { action: ReactNode; requests: ReactNode }) => ReactNode }) {
+export function ShamcashTopUp({
+  children,
+  as,
+  panelHint,
+}: {
+  children: (parts: { action: ReactNode; requests: ReactNode }) => ReactNode;
+  as?: "merchant";
+  panelHint?: string;
+}) {
   const { info, requests, reload } = useShamcash();
   const [open, setOpen] = useState(false);
   const enabled = !!info && info.topup_enabled;
@@ -221,10 +237,10 @@ export function ShamcashTopUp({ children }: { children: (parts: { action: ReactN
         <Modal open={open} onClose={() => setOpen(false)} title={S.panelTitle}>
           <div className="flex flex-col">
             <Step n={1} title={S.step1}>
-              <p className="text-sm text-ink-muted">{S.panelHint}</p>
+              <p className="text-sm text-ink-muted">{panelHint ?? S.panelHint}</p>
               <ShamcashAccountCard info={info} hero />
             </Step>
-            <TopUpForm info={info} onSent={reload} />
+            <TopUpForm info={info} onSent={reload} as={as} />
           </div>
         </Modal>
       )}

@@ -61,6 +61,12 @@ data class WalletStatement(
      */
     val reserved: Long? = null,
     val available: Long? = null,
+    /**
+     * **رصيدُ شحن شام كاش وحدُّ السحب** (قرارُ المالك ٢٠٢٦-١١-٢٦) — المشحونُ بشام كاش بينصرف عالتوصيل
+     * والديون وما بينسحب، فحدُّ السحب `withdrawable` = المتاح − رصيد الشحن. **محرّكٌ أقدم بلاهم ⇒ المتاح.**
+     */
+    @SerialName("topup_locked") val topupLocked: Long = 0,
+    val withdrawable: Long? = null,
 )
 
 /** **دينٌ مفتوحٌ بسببه** — والسببُ رمزٌ يُترجَم في الشاشة. */

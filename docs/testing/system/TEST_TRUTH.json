@@ -33,8 +33,8 @@
     "setting_defs": 326,
     "behaviour_settings": 279,
     "order_fields": 153,
-    "test_files": 874,
-    "test_funcs": 3329
+    "test_files": 875,
+    "test_funcs": 3334
   },
   "flows": [
     {
@@ -28382,6 +28382,36 @@
     {
       "name": "TestSWR02_MigrationFlipsWalletStoresBalanceStaysAndNewOrderIsCash",
       "file": "internal/qa/settlement_wallet_removed_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcashMerchant_DebtConsumesLocked",
+      "file": "internal/qa/shamcash_merchant_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcashMerchant_DeliveryFeeConsumesLocked",
+      "file": "internal/qa/shamcash_merchant_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcashMerchant_LockedNotWithdrawable",
+      "file": "internal/qa/shamcash_merchant_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcashMerchant_RepAndDriverForbidden",
+      "file": "internal/qa/shamcash_merchant_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcashMerchant_RoleChoiceAndCustomerUnchanged",
+      "file": "internal/qa/shamcash_merchant_test.go",
       "package": "qa",
       "orphan": true
     },

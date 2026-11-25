@@ -371,6 +371,10 @@
     <string name="wal_k_settlement">تسليم نقد</string>
     <string name="wal_max">المتاح للسحب: %1$s</string>
     <string name="wal_reserved">محجوز لطلب سحب: %1$s</string>
+    <string name="wal_topup_locked">رصيد شحن (للتوصيل والديون، ما بينسحب): %1$s</string>
+    <string name="wal_withdrawable">بينسحب: %1$s</string>
+    <string name="sham_merchant_hint">رصيد الشحن بشام كاش بينصرف على أجرة التوصيل والديون بس، وما بينسحب.</string>
+    <string name="sham_step_hint_merchant">حوّل المبلغ لهالحساب من تطبيق شام كاش، وبعدين اكتب رقم العملية تحت. المبلغ بينضاف لرصيد الشحن: للتوصيل والديون بس، وما بينسحب.</string>
     <string name="wal_payout_pending">لديك طلب سحب بانتظار القرار</string>
     <string name="wal_no_txs">لا حركات بعد</string>
     <string name="wal_note">ملاحظة (اختيارية)</string>

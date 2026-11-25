@@ -19,6 +19,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/officecash"
+	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
 // طلبات سحب الرصيد — تُغلق دورة المال: يطلب صاحب الرصيد، وتصرف المالية بقيد
@@ -48,11 +49,13 @@ type payout struct {
 	Decision  string `json:"decision"`
 	// **والطبقاتُ الثلاثُ تُعرَض ولا يُسمّى المجموعُ متاحاً** —
 	// `XG-12`: **الماليّةُ تقرّر على ما يجوز صرفُه لا على ما تراه.**
-	Balance   int64      `json:"balance"`   // المُقيَّد
-	Reserved  int64      `json:"reserved"`  // المحجوزُ لطلباتٍ جارية
-	Available int64      `json:"available"` // = المُقيَّد − المحجوز
-	CreatedAt time.Time  `json:"created_at"`
-	DecidedAt *time.Time `json:"decided_at"`
+	Balance   int64 `json:"balance"`   // المُقيَّد
+	Reserved  int64 `json:"reserved"`  // المحجوزُ لطلباتٍ جارية
+	Available int64 `json:"available"` // = المُقيَّد − المحجوز
+	// TopupLocked **رصيد شحن شام كاش** — ما بينسحب (٢٠٢٦-١١-٢٦)؛ الحدّ = المتاح − هاد.
+	TopupLocked int64      `json:"topup_locked"`
+	CreatedAt   time.Time  `json:"created_at"`
+	DecidedAt   *time.Time `json:"decided_at"`
 	// **قسمُ طلبات السحب** (قراراتُ المالك ٢٠٢٦-١٠-٠٤): دورُ الطالب ·
 	// مين قرّر · وطريقةُ الصرف (نقداً من المكتب أو حوالة).
 	UserRole      string `json:"user_role"`
@@ -74,6 +77,7 @@ const payoutSelect = `
 	       COALESCE((SELECT w.balance  FROM wallets w WHERE w.user_id = p.user_id), 0),
 	       COALESCE((SELECT w.reserved FROM wallets w WHERE w.user_id = p.user_id), 0),
 	       COALESCE((SELECT w.balance - w.reserved FROM wallets w WHERE w.user_id = p.user_id), 0),
+	       COALESCE((SELECT w.topup_locked FROM wallets w WHERE w.user_id = p.user_id), 0),
 	       p.created_at, p.decided_at,
 	       ` + payoutRoleSQL + `,
 	       COALESCE((SELECT COALESCE(NULLIF(d.full_name,''), d.phone::text) FROM users d
@@ -90,7 +94,7 @@ func scanPayouts(rows interface {
 		var p payout
 		if err := rows.Scan(&p.ID, &p.UserID, &p.UserName, &p.UserPhone, &p.Amount,
 			&p.Status, &p.Note, &p.Decision, &p.Balance, &p.Reserved, &p.Available,
-			&p.CreatedAt, &p.DecidedAt, &p.UserRole, &p.DecidedByName, &p.PaidVia); err != nil {
+			&p.TopupLocked, &p.CreatedAt, &p.DecidedAt, &p.UserRole, &p.DecidedByName, &p.PaidVia); err != nil {
 			return nil, err
 		}
 		out = append(out, p)
@@ -178,11 +182,13 @@ func (s *Server) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والرصيدُ يشمل ما حُجز لطلبٍ آخرَ جارٍ** — **ومن سُئل عن
 	// رصيده أُجيب بمالٍ ليس له أن ينفقه.**
-	balance, err := s.wallet.Available(r.Context(), uid)
+	// **ورصيد الشحن (شام كاش) ما بينسحب** (قرار المالك ٢٠٢٦-١١-٢٦) — الحدّ هو `Withdrawable`.
+	layers, err := s.wallet.LayersOf(r.Context(), uid)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	balance := layers.Withdrawable
 	// حدٌّ أدنى: طلبٌ بليرةٍ واحدة يمرّ بدورة الموافقة كاملةً ويشغل المالية،
 	// وقيمة القرار أكبر من قيمة المبلغ. **ويُستثنى من يسحب رصيده كلَّه** —
 	// من بقي له ألفٌ لا يُحبس عنه لأن الألف دون الحدّ.
@@ -224,10 +230,10 @@ func (s *Server) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 			ON CONFLICT (user_id) DO NOTHING`, uid); e != nil {
 			return IdempotentBody{}, e
 		}
-		var bal, res int64
+		var bal, res, locked int64
 		if e := q.QueryRow(ctx,
-			`SELECT balance, reserved FROM wallets WHERE user_id = $1 FOR UPDATE`,
-			uid).Scan(&bal, &res); e != nil {
+			`SELECT balance, reserved, topup_locked FROM wallets WHERE user_id = $1 FOR UPDATE`,
+			uid).Scan(&bal, &res, &locked); e != nil {
 			return IdempotentBody{}, e
 		}
 		// ══════════════════════════════════════════════════════════
@@ -248,7 +254,7 @@ func (s *Server) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 		if open {
 			return IdempotentBody{}, errPayoutPending
 		}
-		if req.Amount > bal-res {
+		if req.Amount > wallet.WithdrawableOf(bal, res, locked) {
 			return IdempotentBody{}, errPayoutOver
 		}
 		var id string

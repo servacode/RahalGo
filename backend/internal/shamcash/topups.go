@@ -107,10 +107,14 @@ func (ManualVerifier) Verify(context.Context, Topup) (Verification, error) {
 
 // Topup **طلب شحن** كما بينعرض.
 type Topup struct {
-	ID             string     `json:"id"`
-	UserID         string     `json:"user_id"`
-	UserName       string     `json:"user_name"`
-	UserPhone      string     `json:"user_phone,omitempty"`
+	ID        string `json:"id"`
+	UserID    string `json:"user_id"`
+	UserName  string `json:"user_name"`
+	UserPhone string `json:"user_phone,omitempty"`
+	// Role **مين طلب**: `customer` أو `merchant` (٢٠٢٦-١١-٢٦) — شحن المتجر ما بينسحب.
+	Role string `json:"role"`
+	// StoreName **أسماء متاجر الطالب** — للمتجر بس (لجدول اللوحة).
+	StoreName      *string    `json:"store_name"`
 	Currency       string     `json:"currency"`
 	Amount         int64      `json:"amount"`
 	TxnRef         string     `json:"txn_ref"`
@@ -153,8 +157,22 @@ func NormalizeTxn(v string) string {
 	return out
 }
 
-// CreateTopup **طلب شحن جديد** — المبلغ والحدّ الأدنى انفحصوا عند المستدعي.
+// Roles **مين بيقدر يشحن بشام كاش** — الزبون والمتجر (قرار المالك ٢٠٢٦-١١-٢٦).
+const (
+	RoleCustomer = "customer"
+	RoleMerchant = "merchant"
+)
+
+// CreateTopup **طلب شحن جديد لزبون** — المبلغ والحدّ الأدنى انفحصوا عند المستدعي.
 func CreateTopup(ctx context.Context, q dbtx.Querier, userID string, amount int64, txnRef, receiptID string) (string, error) {
+	return CreateTopupAs(ctx, q, userID, RoleCustomer, amount, txnRef, receiptID)
+}
+
+// CreateTopupAs **طلب شحن جديد بدور طالبه** (`customer` أو `merchant`).
+func CreateTopupAs(ctx context.Context, q dbtx.Querier, userID, role string, amount int64, txnRef, receiptID string) (string, error) {
+	if role != RoleCustomer && role != RoleMerchant {
+		role = RoleCustomer
+	}
 	if amount <= 0 {
 		return "", ErrTopupMin
 	}
@@ -188,9 +206,9 @@ func CreateTopup(ctx context.Context, q dbtx.Querier, userID string, amount int6
 	}
 	var id string
 	err := q.QueryRow(ctx, `
-		INSERT INTO shamcash_topups (user_id, amount, txn_ref, receipt_media_id)
-		VALUES ($1::uuid, $2, $3, NULLIF($4, '')::uuid) RETURNING id::text`,
-		userID, amount, txnRef, receiptID).Scan(&id)
+		INSERT INTO shamcash_topups (user_id, amount, txn_ref, receipt_media_id, role)
+		VALUES ($1::uuid, $2, $3, NULLIF($4, '')::uuid, $5) RETURNING id::text`,
+		userID, amount, txnRef, receiptID, role).Scan(&id)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 		return "", ErrTxnDuplicate
@@ -204,6 +222,7 @@ type TopupFilter struct {
 	Search   string // رقم العملية أو اسم الزبون أو رقمه
 	From, To string // YYYY-MM-DD بيوم دمشق
 	UserID   string
+	Role     string // customer | merchant — والفارغ الكل
 }
 
 func (f TopupFilter) where() (string, []any) {
@@ -219,6 +238,9 @@ func (f TopupFilter) where() (string, []any) {
 	if f.UserID != "" {
 		add("t.user_id = $?::uuid", f.UserID)
 	}
+	if f.Role != "" {
+		add("t.role = $?", f.Role)
+	}
 	if s := strings.TrimSpace(f.Search); s != "" {
 		// **والعلامة نفسها تلات مرّات** — `add` بيبدّل كل `$?` بنفس الرقم.
 		add("(t.txn_ref ILIKE '%' || $? || '%' OR u.full_name ILIKE '%' || $? || '%' OR u.phone ILIKE '%' || $? || '%')", s)
@@ -233,7 +255,9 @@ func (f TopupFilter) where() (string, []any) {
 }
 
 const topupCols = `
-	t.id::text, t.user_id::text, COALESCE(NULLIF(u.full_name, ''), u.phone, ''), COALESCE(u.phone, ''),
+	t.id::text, t.user_id::text, COALESCE(NULLIF(u.full_name, ''), u.phone, ''), COALESCE(u.phone, ''), t.role,
+	CASE WHEN t.role = 'merchant' THEN (SELECT string_agg(m.name, '، ' ORDER BY m.created_at)
+	                                      FROM merchants m WHERE m.owner_user_id = t.user_id) END,
 	t.currency, t.amount, t.txn_ref, t.receipt_media_id::text, rm.path,
 	t.status, t.reject_reason, t.verifier, NULLIF(COALESCE(NULLIF(d.full_name, ''), d.phone, ''), ''),
 	t.decided_at, t.movement_id::text, t.created_at,
@@ -247,7 +271,7 @@ const topupFrom = `
 
 func scanTopup(row pgx.Row) (Topup, error) {
 	var t Topup
-	err := row.Scan(&t.ID, &t.UserID, &t.UserName, &t.UserPhone, &t.Currency, &t.Amount, &t.TxnRef,
+	err := row.Scan(&t.ID, &t.UserID, &t.UserName, &t.UserPhone, &t.Role, &t.StoreName, &t.Currency, &t.Amount, &t.TxnRef,
 		&t.ReceiptMediaID, &t.ReceiptPath, &t.Status, &t.RejectReason, &t.Verifier, &t.DecidedByName,
 		&t.DecidedAt, &t.MovementID, &t.CreatedAt, &t.RejectedBefore)
 	return t, err
@@ -311,7 +335,10 @@ func RecordTopupMovement(ctx context.Context, q dbtx.Querier, topupID string, am
 	var id string
 	err := q.QueryRow(ctx, `
 		INSERT INTO shamcash_movements (kind, topup_id, currency, amount, note, created_by)
-		VALUES ('customer_topup', $1::uuid, 'SYP', $2, 'شحن محفظة زبون', NULLIF($3, '')::uuid)
+		SELECT 'customer_topup', $1::uuid, 'SYP', $2,
+		       CASE WHEN t.role = 'merchant' THEN 'شحن محفظة متجر' ELSE 'شحن محفظة زبون' END,
+		       NULLIF($3, '')::uuid
+		  FROM shamcash_topups t WHERE t.id = $1::uuid
 		RETURNING id::text`, topupID, amount, actor).Scan(&id)
 	return id, err
 }

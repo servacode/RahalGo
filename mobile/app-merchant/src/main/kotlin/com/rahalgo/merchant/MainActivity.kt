@@ -710,7 +710,13 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     }
 
                     // **والمحفظةُ ترسم رأسَها بسهمه** (`onBack`) — فلا تُلفّ بـ`OverlayPage`.
-                    over == Overlay.Wallet -> WalletScreen(vm = walletVm, payouts = true, onBack = { overlay.clear() })
+                    // **وشحنُ شام كاش للمتجر** (٢٠٢٦-١١-٢٦) — رصيد شحن للتوصيل والديون ما بينسحب.
+                    over == Overlay.Wallet -> WalletScreen(
+                        vm = walletVm,
+                        payouts = true,
+                        onBack = { overlay.clear() },
+                        shamcashTopup = true,
+                    )
 
                     over == Overlay.Inbox -> InboxSheet(
                         items = shell.inbox.orEmpty(),

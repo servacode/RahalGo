@@ -2040,4 +2040,65 @@ var All = []Check{
 			    OR payment_method <> 'wallet' OR wallet_scope NOT IN ('full', 'delivery')
 			    OR tip_paid_at IS NOT NULL)`,
 	},
+	// ═══════════════════════════════════════════════════════════════════
+	// FI-16 — رصيدُ شحنِ شام كاش ما بينسحب (قرارُ المالك ٢٠٢٦-١١-٢٦)
+	// ═══════════════════════════════════════════════════════════════════
+	//
+	// **المتجر بيشحن بشام كاش، ومحفظته بتنسحب** — فالمشحون بيدخل `wallets.topup_locked`:
+	// جزء من الرصيد بينصرف عالتوصيل والديون بس، وطلب السحب ما بيتجاوز (الرصيد − المحجوز − هوّي).
+	{
+		ID: "FI-16.a", Family: FI16, Status: ProvableNow, Ops: true,
+		Name: "رصيدُ الشحن بين الصفر والرصيد",
+		Why: "**رصيد الشحن جزء من الرصيد مو فوقه** — أكتر من الرصيد يعني قفل على مال مو موجود، " +
+			"وسالب يعني سحبٌ من مال ما بينسحب. (يحرسه القيد `wallets_topup_locked_check`، **والثابت يقيس النتيجة.**)",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12"},
+		Kinds:     []string{"topup", "payout"},
+		SQL: `SELECT user_id::text, balance, topup_locked
+		        FROM wallets
+		       WHERE topup_locked < 0 OR topup_locked > GREATEST(balance, 0)`,
+	},
+	{
+		ID: "FI-16.b", Family: FI16, Status: ProvableNow, Ops: true,
+		Name: "رصيدُ الشحن = مجموعُ أثرِ القيود عليه",
+		Why: "**`topup_locked` صورة محفوظة** لمجموع `locked_delta` بقيود الدفتر — افتراقهم يعني رقم " +
+			"انقفل أو انفتح بلا قيد، فبينسحب مال شحن أو بينحبس مال شغل.",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12"},
+		Kinds:     []string{"topup", "order_payment", "adjustment", "refund"},
+		SQL: `SELECT w.user_id::text, w.topup_locked, COALESCE(t.total, 0)
+		        FROM wallets w
+		        LEFT JOIN (SELECT user_id, sum(locked_delta) AS total
+		                     FROM wallet_transactions WHERE locked_delta <> 0
+		                    GROUP BY user_id) t ON t.user_id = w.user_id
+		       WHERE w.topup_locked <> COALESCE(t.total, 0)`,
+	},
+	{
+		ID: "FI-16.c", Family: FI16, Status: ProvableNow, Ops: true,
+		Name: "رصيدُ الشحن ما بيتجاوز شحنات شام كاش المقبولة",
+		Why: "**رصيد الشحن مصدره الوحيد شحن شام كاش مقبول** — أكتر منه يعني قفلاً من مصدر تاني " +
+			"(وقيد `topup` نقديّ بالغلط صار ما بينسحب).",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12"},
+		Kinds:     []string{"topup"},
+		SQL: `SELECT w.user_id::text, w.topup_locked, COALESCE(a.total, 0)
+		        FROM wallets w
+		        LEFT JOIN (SELECT user_id, sum(amount) AS total FROM shamcash_topups
+		                    WHERE status = 'approved' GROUP BY user_id) a ON a.user_id = w.user_id
+		       WHERE w.topup_locked > COALESCE(a.total, 0)`,
+	},
+	{
+		ID: "FI-16.d", Family: FI16, Status: ProvableNow, Ops: true,
+		Name: "طلبُ سحبٍ مفتوح ما بيحجز من رصيد الشحن",
+		Why: "**المحجوز لسحب + رصيد الشحن ≤ الرصيد** — وإلّا طلب السحب ماشي على مال شام كاش، " +
+			"وهاد بالضبط اللي بيخلّي المنصّة قناة تصريف.",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12"},
+		Kinds:     []string{"payout"},
+		SQL: `SELECT w.user_id::text, w.balance, w.topup_locked, p.total
+		        FROM wallets w
+		        JOIN (SELECT user_id, sum(amount) AS total FROM payout_requests
+		               WHERE status IN ('pending', 'processing') GROUP BY user_id) p ON p.user_id = w.user_id
+		       WHERE w.topup_locked > 0 AND p.total + w.topup_locked > w.balance`,
+	},
 }
