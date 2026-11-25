@@ -174,9 +174,17 @@ func (s *Server) handleSendOrderMessage(w http.ResponseWriter, r *http.Request) 
 func (s *Server) notifyChatPeer(ctx context.Context, p *comms.Permission, body string) {
 	title := notifTitles.messageFromDriver
 	app := notifications.AppCustomer
-	if p.Me == comms.RoleCustomer {
+	switch {
+	case p.Me == comms.RoleCustomer:
 		title = notifTitles.messageFromCustomer
 		app = notifications.AppDriver
+	case p.Me == comms.RoleMerchant:
+		// **المتجرُ يكتب لكابتن توصيلته** (قرارُ المالك ٢٠٢٦-١١-٢٦) — في تطبيق الكابتن.
+		title = notifTitles.messageFromStore
+		app = notifications.AppDriver
+	case p.PeerRole == comms.RoleMerchant:
+		// **والكابتنُ يكتب للمتجر** — ترنّ في تطبيق المتجر لا في تطبيق الزبون الذي يحمله صاحبُه.
+		app = notifications.AppMerchant
 	}
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: p.PeerID, Kind: notifications.KindChat,

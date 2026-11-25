@@ -56,7 +56,7 @@ type UserThread struct {
 // **والمعرّفُ يُقارن بطرفَي الطلب لا بمرسِل الرسائل**: من فُتح له حديثٌ
 // فلم يكتب فيه حرفاً **له فيه سطورُ الآخر** — وهي ما يُحتجّ به عليه أو له.
 //
-// **والمتجرُ لا طرفَ له هنا**: القناةُ بين الزبون والسائق وحدَهما.
+// **والمتجرُ طرفٌ في «لدي توصيلة» وحدَها** (قرارُ المالك ٢٠٢٦-١١-٢٦) — مكانَ الزبون الغائب.
 func (s *Service) UserThreads(ctx context.Context, userID string, limit, offset int) ([]UserThread, int, error) {
 	// **والعدُّ بشرط القائمة نفسِه** — نصّان يفترقان يوماً **فيقول العنوانُ
 	// عشرين وتعرض القائمةُ خمسةَ عشر.**
@@ -64,7 +64,8 @@ func (s *Service) UserThreads(ctx context.Context, userID string, limit, offset 
 		FROM orders o
 		LEFT JOIN users cu ON cu.id = o.customer_id
 		LEFT JOIN users dr ON dr.id = o.driver_id
-		WHERE (o.customer_id = $1 OR o.driver_id = $1)
+		LEFT JOIN merchants sm ON sm.id = o.merchant_id AND o.kind = 'merchant_delivery'
+		WHERE (o.customer_id = $1 OR o.driver_id = $1 OR sm.owner_user_id = $1)
 		  AND EXISTS (SELECT 1 FROM order_messages m WHERE m.order_id = o.id)`
 
 	var total int
@@ -77,10 +78,13 @@ func (s *Service) UserThreads(ctx context.Context, userID string, limit, offset 
 	// اسمُه على سطوره**، لكنّ رأسَ الحديث يقول حاملَه اليوم.
 	rows, err := s.db.Query(ctx, `
 		SELECT o.id::text, o.number,
-		       CASE WHEN o.customer_id = $1
+		       -- **وفي «لدي توصيلة» المتجرُ مكانَ الزبون** (٢٠٢٦-١١-٢٦).
+		       CASE WHEN o.customer_id = $1 OR sm.owner_user_id = $1
 		            THEN COALESCE(dr.full_name, dr.phone::text, '')
+		            WHEN sm.id IS NOT NULL THEN COALESCE(sm.name, '')
 		            ELSE COALESCE(cu.full_name, cu.phone::text, '') END,
-		       CASE WHEN o.customer_id = $1 THEN 'driver' ELSE 'customer' END,
+		       CASE WHEN o.customer_id = $1 OR sm.owner_user_id = $1 THEN 'driver'
+		            WHEN sm.id IS NOT NULL THEN 'merchant' ELSE 'customer' END,
 		       (SELECT count(*) FROM order_messages m WHERE m.order_id = o.id),
 		       (SELECT count(*) FROM order_messages m WHERE m.order_id = o.id AND m.flagged),
 		       COALESCE((SELECT m.body FROM order_messages m WHERE m.order_id = o.id

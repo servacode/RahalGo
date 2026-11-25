@@ -183,6 +183,11 @@ func (s *Server) handleMerchantDeliveries(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, err)
 		return
 	}
+	// **وما ينتظره من الكابتن في حديثها** (قرارُ المالك ٢٠٢٦-١١-٢٦) — شارةٌ على كلّ توصيلة.
+	if err := s.attachStoreChats(r.Context(), views); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"deliveries": views})
 }
 
@@ -251,6 +256,10 @@ func (s *Server) handleMerchantDelivery(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
+	if err := s.attachStoreChats(r.Context(), []map[string]any{view}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, view)
 }
 
@@ -310,4 +319,28 @@ func (s *Server) handleAdminSetMerchantDeliveryCredit(w http.ResponseWriter, r *
 	s.audit(r, "admin.merchant_delivery_credit", "merchant", id,
 		map[string]any{"from": before, "to": *req.Limit})
 	httpx.JSON(w, http.StatusOK, map[string]any{"limit": *req.Limit})
+}
+
+// attachStoreChats **عدُّ حديث كلّ توصيلةٍ مع الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٦) — `chat_unread`
+// ما لم يقرأه المتجرُ بعد، و`chat_lines` كم سطراً فيه (فيُعرض البابُ لتوصيلةٍ انتهت وفيها كلام).
+//
+// **ومع التوصيلة لا من «محادثاتي»** — انظر `comms.StoreChats`.
+func (s *Server) attachStoreChats(ctx context.Context, views []map[string]any) error {
+	ids := make([]string, 0, len(views))
+	for _, v := range views {
+		if id, ok := v["id"].(string); ok {
+			ids = append(ids, id)
+		}
+	}
+	counts, err := s.comms.StoreChats(ctx, ids)
+	if err != nil {
+		return err
+	}
+	for _, v := range views {
+		id, _ := v["id"].(string)
+		c := counts[id]
+		v["chat_unread"] = c.Unread
+		v["chat_lines"] = c.Lines
+	}
+	return nil
 }

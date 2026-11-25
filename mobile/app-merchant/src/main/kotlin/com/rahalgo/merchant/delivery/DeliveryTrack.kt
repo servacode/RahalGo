@@ -30,6 +30,7 @@ import com.rahalgo.design.Rahal
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.DeliveriesApi
 import com.rahalgo.shared.merchant.Delivery
+import com.rahalgo.shared.merchant.hasChat
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.CardVariant
 import com.rahalgo.ui.RahalCard
@@ -133,6 +134,17 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
         }
     }
     val d = vm.d
+    // **ولوحُ الحديث نفسُه الذي عند الزبون** (`OrderChatSheet`) — والمحرّكُ يعرف أنّك المتجر من جلستك.
+    var chatOpen by androidx.compose.runtime.saveable.rememberSaveable(id) { mutableStateOf(false) }
+    if (chatOpen) {
+        val chatVm: com.rahalgo.ui.OrderChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+        com.rahalgo.ui.OrderChatSheet(
+            vm = chatVm,
+            orderId = id,
+            // **وما قُرئ يسقط من الشارة** — فتحُ الحديث يَسِمه في المحرّك.
+            onLoaded = { vm.load(id) },
+        ) { chatOpen = false }
+    }
     Screen {
         ScreenTitle(
             stringResource(R.string.md_track_title, d?.number?.toString() ?: ""),
@@ -283,6 +295,13 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                     },
                 )
             }
+        }
+        // ══════════════════════════════════════════════════════════════
+        // **راسل الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٦) — من الإسناد حتّى التسليم، ويبقى يُقرأ بعده.
+        // ══════════════════════════════════════════════════════════════
+        if (d.hasChat()) {
+            Spacer(Modifier.height(Rahal.space.lg))
+            DeliveryChatButton(unread = d.chatUnread) { chatOpen = true }
         }
         if (d.status in cancellable) {
             Spacer(Modifier.height(Rahal.space.lg))

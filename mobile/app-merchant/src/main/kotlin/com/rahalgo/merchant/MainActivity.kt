@@ -305,6 +305,22 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
         }
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **ونقرةُ «رسالة من الكابتن» تفتح حديثَ تلك التوصيلة** (قرارُ المالك ٢٠٢٦-١١-٢٦)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **اللوحُ نفسُه** (`OrderChatSheet`) فوق ما هو مفتوح — ولا يُبحث عن التوصيلة في السجلّ.
+    var chatOrder by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(waiting) {
+        if (waiting.type == com.rahalgo.ui.Engagement.DEST_ORDER_CHAT) {
+            chatOrder = com.rahalgo.ui.Opened.take().id
+        }
+    }
+    chatOrder?.let { id ->
+        val chatVm: com.rahalgo.ui.OrderChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+        com.rahalgo.ui.OrderChatSheet(vm = chatVm, orderId = id) { chatOrder = null }
+    }
+
     // **وإشعارُ «أصناف بانتظار قسم» يفتح شاشتَها** (قرارُ المالك ٢٠٢٦-١١-٠٧) — تبويبُ الأصناف
     // ثمّ الشاشةُ فوقه. والوجهةُ تُستهلَك مرّةً كوجهة الطلب.
     LaunchedEffect(waiting) {

@@ -333,6 +333,9 @@ export interface Delivery {
   delivered_at: string | null;
   cancel_reason: string | null;
   created_at: string;
+  /** **حديثُها مع الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٦) — ما لم يُقرأ بعد، وكم سطراً فيه. */
+  chat_unread?: number;
+  chat_lines?: number;
 }
 
 /**

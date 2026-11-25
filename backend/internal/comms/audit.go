@@ -63,9 +63,11 @@ type AuditLine struct {
 
 // AuditThread **حديثُ طلبٍ كاملاً — للمراجعة عند الخلاف.**
 type AuditThread struct {
-	Customer string      `json:"customer"`
-	Driver   string      `json:"driver"`
-	Lines    []AuditLine `json:"lines"`
+	Customer string `json:"customer"`
+	Driver   string `json:"driver"`
+	// Store **المتجرُ طرفاً في «لدي توصيلة»** (قرارُ المالك ٢٠٢٦-١١-٢٦) — وفارغٌ في غيرها.
+	Store string      `json:"store,omitempty"`
+	Lines []AuditLine `json:"lines"`
 }
 
 // Audit **يقرأ حديثَ الطلب لمن يراجع.**
@@ -75,16 +77,19 @@ func (s *Service) Audit(ctx context.Context, orderID string) (*AuditThread, erro
 	// **والطرفان يُقرآن ولو أُغلق الطلب** — ومن سُحب منه الطلبُ يبقى اسمُه
 	// على سطره، **فالسطرُ يحمل قائلَه لا حاملَ الطلب اليوم.**
 	if err := s.db.QueryRow(ctx, `
-		SELECT COALESCE(cu.full_name, ''), COALESCE(dr.full_name, '')
+		SELECT COALESCE(cu.full_name, ''), COALESCE(dr.full_name, ''), COALESCE(sm.name, '')
 		FROM orders o
 		LEFT JOIN users cu ON cu.id = o.customer_id
 		LEFT JOIN users dr ON dr.id = o.driver_id
-		WHERE o.id = $1`, orderID).Scan(&out.Customer, &out.Driver); err != nil {
+		LEFT JOIN merchants sm ON sm.id = o.merchant_id AND o.kind = 'merchant_delivery'
+		WHERE o.id = $1`, orderID).Scan(&out.Customer, &out.Driver, &out.Store); err != nil {
 		return nil, err
 	}
 
 	rows, err := s.db.Query(ctx, `
-		SELECT x.id::text, x.body, x.sender_role, COALESCE(u.full_name, ''),
+		-- **وسطرُ المتجر يُقال باسم المتجر** لا باسم صاحبه (٢٠٢٦-١١-٢٦) — والموظّفُ يكتب باسمه.
+		SELECT x.id::text, x.body, x.sender_role,
+		       CASE WHEN x.sender_role = 'merchant' AND $2 <> '' THEN $2 ELSE COALESCE(u.full_name, '') END,
 		       x.created_at, x.read_at, x.flagged, COALESCE(x.flag_word, ''),
 		       COALESCE(x.driver_id::text, ''), COALESCE(td.full_name, ''), x.contact_leak,
 		       COALESCE(x.attachment_kind, ''), COALESCE(m.path, ''), COALESCE(m.thumb_path, ''),
@@ -95,7 +100,7 @@ func (s *Service) Audit(ctx context.Context, orderID string) (*AuditThread, erro
 		LEFT JOIN users u ON u.id = x.sender_id
 		LEFT JOIN users td ON td.id = x.driver_id
 		WHERE x.order_id = $1
-		ORDER BY x.created_at`, orderID)
+		ORDER BY x.created_at`, orderID, out.Store)
 	if err != nil {
 		return nil, err
 	}

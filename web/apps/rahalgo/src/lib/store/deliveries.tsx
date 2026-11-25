@@ -45,6 +45,14 @@ export function amountText(units: number, currency?: string | null): string {
 
 export const CANCELLABLE = new Set(["pending", "accepted", "dispatching", "assigned", "at_pickup"]);
 
+/** **حالاتُ الطريق التي يُكتب فيها حديثُ الكابتن** — نسخةُ `openStatuses` في المحرّك (`comms.go`). */
+export const CHAT_OPEN = new Set(["assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff"]);
+
+/** **أيُعرض بابُ الحديث؟** (قرارُ المالك ٢٠٢٦-١١-٢٦) — والكابتنُ معها، أو انتهت وفي حديثها كلام. */
+export function hasChat(d: { status: string; chat_lines?: number }): boolean {
+  return CHAT_OPEN.has(d.status) || (d.chat_lines ?? 0) > 0;
+}
+
 interface DeliveriesCtx {
   list: Delivery[] | null;
   error: unknown;

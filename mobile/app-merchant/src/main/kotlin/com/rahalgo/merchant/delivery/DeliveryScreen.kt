@@ -1353,6 +1353,17 @@ fun DeliveryRow(d: Delivery, cancelling: Boolean, onOpen: () -> Unit = {}, onCan
                 color = Rahal.colors.ink,
                 modifier = Modifier.weight(1f),
             )
+            // **رسائلُ الكابتن التي لم تُقرأ** (قرارُ المالك ٢٠٢٦-١١-٢٦) — شارةٌ قبل الحال.
+            if (d.chatUnread > 0) {
+                androidx.compose.material3.Icon(
+                    androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_chat),
+                    contentDescription = stringResource(R.string.md_chat),
+                    tint = Rahal.colors.brand,
+                    modifier = Modifier.size(Rahal.icon.sm),
+                )
+                androidx.compose.material3.Badge { Text(if (d.chatUnread > 99) "99+" else "${d.chatUnread}") }
+                Spacer(Modifier.width(Rahal.space.sm))
+            }
             StatusPill(d.status)
         }
         Spacer(Modifier.height(Rahal.space.xs))

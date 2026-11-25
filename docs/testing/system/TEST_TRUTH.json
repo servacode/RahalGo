@@ -33,8 +33,8 @@
     "setting_defs": 326,
     "behaviour_settings": 279,
     "order_fields": 153,
-    "test_files": 874,
-    "test_funcs": 3329
+    "test_files": 875,
+    "test_funcs": 3336
   },
   "flows": [
     {
@@ -33704,6 +33704,48 @@
     {
       "name": "TestPagedMenu_Merchant",
       "file": "internal/server/menu_page_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestStoreCaptainChat_BothPartiesTalk",
+      "file": "internal/server/merchant_captain_chat_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestStoreCaptainChat_ClosesAtDelivery",
+      "file": "internal/server/merchant_captain_chat_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestStoreCaptainChat_ContactMasked",
+      "file": "internal/server/merchant_captain_chat_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestStoreCaptainChat_CustomerOrdersUnchanged",
+      "file": "internal/server/merchant_captain_chat_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestStoreCaptainChat_NotBeforeAssignment",
+      "file": "internal/server/merchant_captain_chat_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestStoreCaptainChat_StrangerDenied",
+      "file": "internal/server/merchant_captain_chat_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestStoreCaptainChat_UnreadOnDelivery",
+      "file": "internal/server/merchant_captain_chat_test.go",
       "package": "server",
       "orphan": true
     },

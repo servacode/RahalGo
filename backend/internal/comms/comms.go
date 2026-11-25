@@ -95,7 +95,15 @@ type Role string
 const (
 	RoleCustomer Role = "customer"
 	RoleDriver   Role = "driver"
+	// RoleMerchant **المتجرُ طرفاً في «لدي توصيلة»** (قرارُ المالك ٢٠٢٦-١١-٢٦) — التوصيلةُ
+	// لا زبونَ لها بحساب (المستلِمُ اسمٌ ورقم)، **فالحديثُ بين المتجر الذي طلبها وكابتنها.**
+	// **والطرفان اثنان كما كانا**: متجرٌ وكابتن، لا ثالث.
+	RoleMerchant Role = "merchant"
 )
+
+// kindMerchantDelivery **نوعُ «لدي توصيلة»** — نسخةُ `orders.KindMerchantDelivery` (لا تستورد
+// هذه الحزمةُ الطلبات).
+const kindMerchantDelivery = "merchant_delivery"
 
 // **ولا مهلةَ بعد الانتهاء — تُغلق لحظتَه.**
 //
@@ -129,6 +137,9 @@ type Permission struct {
 	PeerID string
 	// PeerName اسمُه — **ولا رقمَ معه أبداً.**
 	PeerName string
+	// PeerRole **دورُ الطرف الآخر** — زبونٌ أو كابتنٌ أو متجر؛ **يُقرأ منه عنوانُ الإشعار
+	// وتطبيقُه** (`notifyChatPeer`): رسالةُ الكابتن للمتجر ترنّ في تطبيق المتجر لا الزبون.
+	PeerRole Role
 	// Number **رقمُ الطلب كما يعرفه صاحبُه** — **لا معرّفُه.**
 	//
 	// **ويُقال في إشعار الرسالة** — **فمن وصلته رسالتان من طلبين
@@ -179,25 +190,38 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 	var (
 		customerID            string
 		driverID              *string
-		status                string
+		status, kind          string
 		deliveredAt, closedAt *time.Time
 		customerName          string
+		storeOwner, storeName string
 	)
 	var number int64
+	// **و`LEFT JOIN` لا `JOIN`** (٢٠٢٦-١١-٢٦): «لدي توصيلة» لا زبونَ لها (`customer_id` فارغ)
+	// **فكان الضمُّ يُسقط صفَّها فيردّ «لستَ طرفاً» للمتجر والكابتن معاً.** **والطلبُ العاديُّ
+	// بلا زبونٍ يبقى «لستَ طرفاً»** كما كان — يُفحص أدناه.
 	err := s.db.QueryRow(ctx, `
-		SELECT o.customer_id::text, o.driver_id::text, o.status,
+		SELECT COALESCE(o.customer_id::text, ''), o.driver_id::text, o.status, o.kind,
 		       o.delivered_at, o.closed_at, o.number,
-		       COALESCE(cu.full_name, '')
+		       COALESCE(cu.full_name, ''),
+		       COALESCE(m.owner_user_id::text, ''), COALESCE(m.name, '')
 		FROM orders o
-		JOIN users cu ON cu.id = o.customer_id
-		WHERE o.id = $1`, orderID).
-		Scan(&customerID, &driverID, &status, &deliveredAt, &closedAt, &number,
-			&customerName)
+		LEFT JOIN users cu ON cu.id = o.customer_id
+		LEFT JOIN merchants m ON m.id = o.merchant_id AND o.kind = $2
+		WHERE o.id = $1`, orderID, kindMerchantDelivery).
+		Scan(&customerID, &driverID, &status, &kind, &deliveredAt, &closedAt, &number,
+			&customerName, &storeOwner, &storeName)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotParty
 	}
 	if err != nil {
 		return nil, err
+	}
+	if kind == kindMerchantDelivery {
+		return s.permitStore(ctx, orderID, userID, number, status, driverID, storeOwner, storeName)
+	}
+	if customerID == "" {
+		// **طلبٌ بلا زبونٍ وليس توصيلةَ متجر** — لا طرفَ ثانيَ له، كما كان قبل التوسعة.
+		return nil, ErrNotParty
 	}
 	// **والسائقُ يرى الاسمَ الأوّلَ للزبون وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥) —
 	// والاسمُ هنا لا يُقرأ إلّا للسائق (الزبونُ يرى «كابتن رحال غو»).
@@ -210,6 +234,7 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 	switch {
 	case userID == customerID:
 		p.Me = RoleCustomer
+		p.PeerRole = RoleDriver
 		if driverID == nil {
 			// **ولا سائقَ الآن** — وقد يكون سائقٌ كتب ثمّ سُحب منه الطلب.
 			// **فحديثٌ وقع فعلاً يبقى مقروءاً** — و«لا سائقَ بعد» تُقال
@@ -232,6 +257,7 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 		p.DriverID = *driverID
 	case driverID != nil && userID == *driverID:
 		p.Me = RoleDriver
+		p.PeerRole = RoleCustomer
 		p.PeerID, p.PeerName = customerID, customerName
 		p.DriverID = userID
 	default:
@@ -252,6 +278,7 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 			return nil, ErrNotParty
 		}
 		p.Me = RoleDriver
+		p.PeerRole = RoleCustomer
 		p.PeerID, p.PeerName = customerID, customerName
 		p.DriverID = userID
 		p.Former = true
@@ -270,6 +297,70 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 	// **كان يقرأ أحاديثَ طلباته المنتهية أبداً** — وفيها الزبونُ وما قاله، **فيعود إليه
 	// برّا المنصّة.** والزبونُ يبقى له حديثُه (حجّتُه عند الشكوى)، **والإدارةُ تقرأ كلَّ
 	// شيءٍ من بابها** (`Audit`) لا من هذا.
+	if p.Me == RoleDriver && orderEnded(status) {
+		return nil, ErrDriverChatEnded
+	}
+	return p, nil
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **حديثُ «لدي توصيلة» — بين المتجر وكابتنه** (قرارُ المالك ٢٠٢٦-١١-٢٦)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **المتجرُ مكانَ الزبون والقواعدُ نفسُها**: يُفتح من الإسناد ويُغلق بالتسليم (`channelOpen`)،
+// **وحديثٌ لكلّ كابتن** (`driver_id`)، **ومن ترك التوصيلةَ يقرأ ولايتَه ولا يكتب**، **والكابتنُ
+// لا يقرأ توصيلةً انتهت.** **والمتجرُ يبقى له حديثُه بعدها** — حجّتُه عند شكوى، كالزبون.
+//
+// **ومن يتكلّم باسم المتجر صاحبُه** (`merchants.owner_user_id`) — **والموظّفُ يدخل باسم صاحبه**
+// (جلستُه تحمل معرّفَه) **فيحكمه الشرطُ نفسُه** الذي يحكم بابَ التوصيلة (`ownsMerchant`).
+// **والكابتنُ يرى اسمَ المتجر لا «الزبون»**، **والمتجرُ يرى «كابتن رحال غو»** كما يراه الزبون.
+func (s *Service) permitStore(ctx context.Context, orderID, userID string, number int64, status string,
+	driverID *string, storeOwner, storeName string) (*Permission, error) {
+	if storeOwner == "" {
+		// **متجرٌ بلا صاحبِ حساب** — لا طرفَ يُكتب إليه.
+		return nil, ErrNotParty
+	}
+	p := &Permission{OrderID: orderID, SelfID: userID, Number: number}
+	switch {
+	case userID == storeOwner:
+		p.Me = RoleMerchant
+		p.PeerRole = RoleDriver
+		if driverID == nil {
+			// **ولا كابتنَ الآن** — حديثُ من تركها يبقى مقروءاً، و«لا كابتنَ بعد» لمن لا حديثَ له.
+			peerID, _, err := s.formerPeer(ctx, orderID, userID)
+			if err != nil {
+				return nil, err
+			}
+			if peerID == "" {
+				return p, ErrNoDriverYet
+			}
+			p.PeerID, p.PeerName, p.DriverID = peerID, CustomerDriverLabel, peerID
+			return p, nil // **مقفلةٌ للكتابة.**
+		}
+		p.PeerID, p.PeerName, p.DriverID = *driverID, CustomerDriverLabel, *driverID
+	case driverID != nil && userID == *driverID:
+		p.Me = RoleDriver
+		p.PeerRole = RoleMerchant
+		p.PeerID, p.PeerName, p.DriverID = storeOwner, storeName, userID
+	default:
+		// **كابتنٌ ترك التوصيلة** — يقرأ ولايتَه ولا يكتب، **ولا يقرأ توصيلةً انتهت.**
+		had, err := s.hadTenure(ctx, orderID, userID)
+		if err != nil {
+			return nil, err
+		}
+		if !had {
+			return nil, ErrNotParty
+		}
+		if orderEnded(status) {
+			return nil, ErrDriverChatEnded
+		}
+		p.Me = RoleDriver
+		p.PeerRole = RoleMerchant
+		p.PeerID, p.PeerName, p.DriverID = storeOwner, storeName, userID
+		p.Former = true
+		return p, nil
+	}
+	p.Open, p.ClosesAt = channelOpen(status, nil, nil)
 	if p.Me == RoleDriver && orderEnded(status) {
 		return nil, ErrDriverChatEnded
 	}

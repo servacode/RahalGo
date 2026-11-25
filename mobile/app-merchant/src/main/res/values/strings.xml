@@ -346,6 +346,8 @@
     <string name="md_step_to_recipient">في الطريق إلى المستلم</string>
     <string name="md_step_delivered">تم التسليم</string>
     <string name="md_cancel">إلغاء التوصيلة</string>
+    <!-- **حديثُ التوصيلة مع الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٦) -->
+    <string name="md_chat">راسل الكابتن</string>
     <string name="ok_settlement_saved">تمام — أموالك نقداً عند الاستلام</string>
     <string name="settlement_cash_only">السائق بيدفعلك حق البضاعة نقداً عند الاستلام، ناقص العمولة.</string>
     <string name="settlement_confirm_cash">تمام، فهمت</string>

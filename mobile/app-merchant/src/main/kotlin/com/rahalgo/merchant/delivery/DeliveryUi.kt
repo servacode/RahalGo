@@ -254,6 +254,26 @@ internal fun CancelDeliveryButton(busy: Boolean, onConfirm: () -> Unit) {
     }
 }
 
+/**
+ * **«راسل الكابتن»** (قرارُ المالك ٢٠٢٦-١١-٢٦) — وعليه ما لم تقرأه بعد.
+ */
+@Composable
+internal fun DeliveryChatButton(unread: Int, onClick: () -> Unit) {
+    com.rahalgo.ui.RahalOutlineButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Icon(
+            painterResource(com.rahalgo.ui.R.drawable.ic_chat),
+            contentDescription = null,
+            modifier = Modifier.size(Rahal.icon.sm),
+        )
+        Spacer(Modifier.width(Rahal.space.sm))
+        Text(stringResource(R.string.md_chat))
+        if (unread > 0) {
+            Spacer(Modifier.width(Rahal.space.sm))
+            androidx.compose.material3.Badge { Text(if (unread > 99) "99+" else "$unread") }
+        }
+    }
+}
+
 /** **فاصلٌ رفيع** بين رأس البطاقة وتفاصيلها. */
 @Composable
 internal fun Hairline() {

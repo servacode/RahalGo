@@ -823,6 +823,9 @@
     <string name="why_suspended">حسابك موقوف — أكمل طلبك الحالي وتواصل مع المكتب</string>
     <string name="card_out_of_pocket">تدفع عنه ثم تقبضه</string>
     <string name="chat_empty_driver">راسل الزبون إذا احتجت شيئاً</string>
+    <!-- **حديثُ «لدي توصيلة» مع المتجر** (قرارُ المالك ٢٠٢٦-١١-٢٦) -->
+    <string name="chat_empty_driver_store">راسل المتجر إذا احتجت شي عن التوصيلة</string>
+    <string name="chat_peer_store">المتجر</string>
     <string name="chat_quick_arrived">وصلت</string>
     <string name="chat_quick_downstairs">أنا عند مدخل البناية</string>
     <string name="chat_quick_searching">أبحث عن العنوان</string>

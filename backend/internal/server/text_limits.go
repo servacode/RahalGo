@@ -103,8 +103,11 @@ func (s *Server) alertContactLeak(ctx context.Context, p *comms.Permission) {
 		return
 	}
 	who := notifTitles.contactLeakByCustomer
-	if p.Me == comms.RoleDriver {
+	switch p.Me {
+	case comms.RoleDriver:
 		who = notifTitles.contactLeakByDriver
+	case comms.RoleMerchant:
+		who = notifTitles.contactLeakByStore
 	}
 	s.notify.NotifyOps(ctx, notifications.Input{
 		Kind: notifications.KindTicket, Title: notifTitles.contactLeak,
