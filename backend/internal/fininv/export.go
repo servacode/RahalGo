@@ -137,6 +137,10 @@ var FinancialSettings = []string{
 	// **حدّا ما يضبطه المندوبُ من عمولة متجره** (قرارُ المالك ٢٠٢٦-١١-٠٤) — rep_commission_handlers.go.
 	"sales.rep_commission_min",
 	"sales.rep_commission_max",
+	// **شحن المحفظة وشام كاش عند الاستلام** (قرار المالك ٢٠٢٦-١١-٢٥) — shamcash_topup_handlers.go وorders/wallet_scope.go.
+	"shamcash.topup_enabled",
+	"shamcash.pay_on_delivery_enabled",
+	"shamcash.min_topup",
 }
 
 // Snapshot يبني الصورة.

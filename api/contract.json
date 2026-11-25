@@ -12315,15 +12315,6 @@
           "name": "receipt_id",
           "type": "string"
         }
-      ],
-      "response": [
-        {
-          "name": "request",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusCreated"
       ]
     },
     {

@@ -1219,14 +1219,14 @@
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 598,
+      "line": 601,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": true
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 770,
+      "line": 773,
       "call": "Notify",
       "kind": "Account",
       "entity": "user",
@@ -1253,7 +1253,7 @@
     },
     {
       "file": "internal/server/shamcash_topup_handlers.go",
-      "line": 369,
+      "line": 374,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": false
@@ -2179,14 +2179,14 @@
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 598,
+      "line": 601,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": true
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 770,
+      "line": 773,
       "call": "Notify",
       "kind": "Account",
       "entity": "user",
@@ -2204,7 +2204,7 @@
     },
     {
       "file": "internal/server/shamcash_topup_handlers.go",
-      "line": 369,
+      "line": 374,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": false

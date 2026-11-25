@@ -194,27 +194,32 @@ func (s *Server) handleCreateShamcashTopup(w http.ResponseWriter, r *http.Reques
 		s.respondErr(w, shamcash.ErrTxnInvalid)
 		return
 	}
-	var t shamcash.Topup
-	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+	// **والطلب وعلامة منع التكرار بمعاملة وحدة** (`XG-33`) — إعادة الإرسال بنفس المفتاح بترجّع
+	// نفس الردّ وما بتنبّه المالك مرّتين.
+	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
 		id, err := shamcash.CreateTopup(ctx, q, uid, amount, txn, strings.TrimSpace(req.ReceiptID))
 		if err != nil {
-			return err
+			return IdempotentBody{}, err
 		}
 		if err := s.auditTx(ctx, q, r, "finance.shamcash_topup_requested", "shamcash_topup", id,
 			map[string]any{"amount": amount, "txn_ref": txn, "receipt": req.ReceiptID != ""}); err != nil {
-			return err
+			return IdempotentBody{}, err
 		}
-		t, err = shamcash.GetTopup(ctx, q, id)
-		return err
-	}); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	s.touch("wallet", "ops")
-	s.touchUser(uid, "wallet")
-	s.alertShamcashTopup(t)
-	s.autoVerifyShamcash(t)
-	httpx.JSON(w, http.StatusCreated, map[string]any{"request": toMyTopups([]shamcash.Topup{t})[0]})
+		t, err := shamcash.GetTopup(ctx, q, id)
+		if err != nil {
+			return IdempotentBody{}, err
+		}
+		return IdempotentBody{
+			Status:  http.StatusCreated,
+			Payload: map[string]any{"request": toMyTopups([]shamcash.Topup{t})[0]},
+			AfterCommit: func() {
+				s.touch("wallet", "ops")
+				s.touchUser(uid, "wallet")
+				s.alertShamcashTopup(t)
+				s.autoVerifyShamcash(t)
+			},
+		}, nil
+	})
 }
 
 // amountSYP **مبلغ بالليرة الجديدة** — صحيح موجب.

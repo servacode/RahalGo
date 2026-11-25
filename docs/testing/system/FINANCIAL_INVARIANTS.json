@@ -1934,6 +1934,9 @@
     "compensations.cap_complaint",
     "finance.expense_approval_threshold",
     "sales.rep_commission_min",
-    "sales.rep_commission_max"
+    "sales.rep_commission_max",
+    "shamcash.topup_enabled",
+    "shamcash.pay_on_delivery_enabled",
+    "shamcash.min_topup"
   ]
 }
