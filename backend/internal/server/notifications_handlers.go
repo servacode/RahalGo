@@ -91,6 +91,8 @@ var notifTitles = struct {
 	// **ولا رقمَ ولا اسمَ شخصٍ في العنوان**: يُقرأ الإشعارُ على شاشةٍ مقفلة،
 	// **واسمٌ يظهر هناك يُعرّف بمن لا يُراد تعريفُه.**
 	messageFromDriver, messageFromCustomer string
+	// messageFromStore **رسالةٌ من المتجر لكابتن «لدي توصيلة»** (قرارُ المالك ٢٠٢٦-١١-٢٦).
+	messageFromStore string
 	// **إنذارٌ عليك** — لأيّ دور.
 	//
 	// **و`warningIssued` القديمُ للمتاجر وحدَه** ونصُّه «إنذارٌ على متجرك»
@@ -110,6 +112,8 @@ var notifTitles = struct {
 	// contactLeak **رقمٌ أو واتساب أُخفي في حديث طلب** — للإدارة، ومن كتبه في المتن
 	// (قرارُ المالك ٢٠٢٦-١١-٠٥). **ولا رقمَ في النصّ.**
 	contactLeak, contactLeakByDriver, contactLeakByCustomer string
+	// contactLeakByStore **من كتبه المتجرُ في حديث توصيلته** (٢٠٢٦-١١-٢٦).
+	contactLeakByStore string
 	// offPlatformComplaint **بلاغُ «السائق طلب رقمي»** — للإدارة فوراً بعنوانه هو،
 	// **ولا يصل السائقَ شيء** (قرارُ المالك ٢٠٢٦-١١-٠٥).
 	offPlatformComplaint string
@@ -169,12 +173,14 @@ var notifTitles = struct {
 	contactLeak:                 "رقم أو واتساب بمحادثة طلب — انخفى عن الطرف التاني",
 	contactLeakByDriver:         "من السائق",
 	contactLeakByCustomer:       "من الزبون",
+	contactLeakByStore:          "من المتجر",
 	offPlatformComplaint:        "بلاغ: سائق طلب رقم زبون أو عرض يوصّله برّا التطبيق",
 	warningOnYou:                "إنذار على حسابك",
 	emergencyResolved:           "تابعنا بلاغَ الطوارئ الخاصّ بك",
 	complaintOnYou:              "شكوى على خدمتك",
 	messageFromDriver:           "رسالة من السائق",
 	messageFromCustomer:         "رسالة من الزبون",
+	messageFromStore:            "رسالة من المتجر",
 	warningIssued:               "إنذارٌ على متجرك",
 	driverEmergency:             "طارئٌ لدى سائق",
 	driverReleased:              "سائقٌ ترك طلباً قبل الاستلام — ودوامُه أُغلق",

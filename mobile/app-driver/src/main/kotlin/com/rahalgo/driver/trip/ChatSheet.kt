@@ -64,7 +64,13 @@ import com.rahalgo.shared.model.ChatMessage
  * المنصّة.
  */
 @Composable
-fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modifier) {
+fun ChatSheet(
+    state: ChatState,
+    actions: ChatActions,
+    modifier: Modifier = Modifier,
+    /** **حديثُ «لدي توصيلة» مع المتجر** (قرارُ المالك ٢٠٢٦-١١-٢٦) — فيُقال «المتجر» لا «الزبون». */
+    withStore: Boolean = false,
+) {
     var draft by remember { mutableStateOf("") }
     // **ونحوُ ثلثَي الشاشة** (تجربةُ المالك ٢٠٢٦-١١-١٢: «صغيرة ما بتنشاف الصور ولا الرسائل»).
     val tall = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * CHAT_SHEET_SCREEN_SHARE).dp
@@ -89,7 +95,9 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = state.peerName.ifBlank { stringResource(R.string.detail_customer) },
+                text = state.peerName.ifBlank {
+                    stringResource(if (withStore) R.string.chat_peer_store else R.string.detail_customer)
+                },
                 style = Rahal.type.sectionTitle,
                 color = Rahal.colors.ink,
             )
@@ -109,7 +117,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
         // **والفارغُ يقول ماذا يفعل** — لا نافذةٌ بيضاء بلا كلمة.
         if (state.messages.isEmpty()) {
             Text(
-                text = stringResource(R.string.chat_empty_driver),
+                text = stringResource(if (withStore) R.string.chat_empty_driver_store else R.string.chat_empty_driver),
                 color = Rahal.colors.inkMuted,
                 style = Rahal.type.body,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),

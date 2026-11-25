@@ -17,9 +17,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtClockTime, fmtNum } from "@rahalgo/i18n";
-import { Alert, LoadingState, useLiveRefresh } from "@rahalgo/ui";
+import { Alert, Badge, Button, IconChat, LoadingState, OrderChat, Sheet, useLiveRefresh } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { CANCELLABLE, amountText, useStoreDeliveries } from "@/lib/store/deliveries";
+import { CANCELLABLE, amountText, hasChat, useStoreDeliveries } from "@/lib/store/deliveries";
 import type { Delivery } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
 import { CancelDeliveryButton, DeliveryLines, SearchingBanner, StatusPill } from "@/components/store/DeliveryParts";
@@ -60,6 +60,8 @@ export default function DeliveryTrack() {
   const [d, setD] = useState<Delivery | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // **حديثُ الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٦) — اللوحُ نفسُه الذي عند الزبون (`OrderChat`).
+  const [chat, setChat] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -173,10 +175,23 @@ export default function DeliveryTrack() {
               )}
             </Alert>
           )}
+          {hasChat(d) && (
+            <Button variant="secondary" className="flex min-h-12 items-center justify-center gap-2" onClick={() => setChat(true)}>
+              <IconChat size={16} />
+              {D.chat}
+              {(d.chat_unread ?? 0) > 0 && <Badge variant="primary">{fmtNum(d.chat_unread ?? 0)}</Badge>}
+            </Button>
+          )}
           {CANCELLABLE.has(d.status) && <CancelDeliveryButton busy={busy} onConfirm={() => void cancel()} />}
           </div>
           </div>
         </>
+      )}
+      {chat && d && (
+        <Sheet open onClose={() => setChat(false)} title={D.chat}>
+          {/* **ووصولُ الحديث وسمُ القراءة في المحرّك** — فتُقرأ التوصيلةُ بعده لتسقط شارتُها. */}
+          <OrderChat api={api} orderId={d.id} bare streamClass="min-h-60 max-h-[55vh]" onLoaded={() => void load()} />
+        </Sheet>
       )}
     </div>
   );

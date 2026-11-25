@@ -786,7 +786,7 @@
     },
     {
       "file": "internal/server/comms_handlers.go",
-      "line": 181,
+      "line": 189,
       "call": "Notify",
       "kind": "Chat",
       "has_app_targeting": true,
@@ -1285,7 +1285,7 @@
     },
     {
       "file": "internal/server/text_limits.go",
-      "line": 109,
+      "line": 112,
       "call": "NotifyOps",
       "kind": "Ticket",
       "entity": "order",

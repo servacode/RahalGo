@@ -283,7 +283,9 @@ func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) 
 		       -- **ومن سُحب الطلبُ من يده يبقى اسمُه على ولايته.**
 		       -- **والزبونُ يرى «كابتن رحال غو» لا اسمَ السائق** (قرارُ المالك
 		       -- مساءَ ٢٠٢٦-١٠-٠٢).
+		       -- **وكابتنُ «لدي توصيلة» يرى اسمَ المتجر** (قرارُ المالك ٢٠٢٦-١١-٢٦) — لا زبونَ لها.
 		       COALESCE(CASE WHEN o.customer_id = $1 THEN $2
+		                     WHEN o.kind = 'merchant_delivery' THEN sm.name
 		                     ELSE cu.full_name END, ''),
 		       -- **وطرفٌ الآن أم خرج** — سائقٌ ترك الطلبَ لا تُفتح له
 		       -- القناةُ ولو كان الطلبُ في الطريق مع غيره.
@@ -295,10 +297,13 @@ func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) 
 		            THEN t.unread ELSE 0 END,
 		       COALESCE(t.last_body, ''), t.last_at, o.created_at,
 		       -- **أأنا الزبون؟** — وإلّا فالطرفُ الآخرُ زبونٌ يُقرأ اسمُه الأوّل وحده.
-		       o.customer_id = $1
+		       -- **واسمُ المتجر يُقرأ كاملاً** — ليس اسمَ إنسان.
+		       COALESCE(o.customer_id = $1, false) OR o.kind = 'merchant_delivery'
 		FROM t
 		JOIN orders o ON o.id = t.order_id
-		JOIN users cu ON cu.id = o.customer_id
+		-- **ولا زبونَ لـ«لدي توصيلة»** (٢٠٢٦-١١-٢٦) — فالضمُّ يسار، والطرفُ متجرُها.
+		LEFT JOIN users cu ON cu.id = o.customer_id
+		LEFT JOIN merchants sm ON sm.id = o.merchant_id AND o.kind = 'merchant_delivery'
 		LEFT JOIN users dr ON dr.id = t.tenure
 		-- **والسائقُ لا يرى حديثَ طلبٍ انتهى** (قرارُ المالك ٢٠٢٦-١١-٠٦) — والزبونُ يرى حديثَه.
 		WHERE o.customer_id = $1 OR NOT (o.status = ANY($3::text[]))

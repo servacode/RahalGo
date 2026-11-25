@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { getMessages, defaultLocale, fmtMoney, fmtNum, fmtRelStamp } from "@rahalgo/i18n";
-import { Badge, Button, Confirm, IconChevronDown, IconClose, IconLocation, IconMoto, IconNote, IconPhone, IconUser, IconWallet } from "@rahalgo/ui";
+import { Badge, Button, Confirm, IconChat, IconChevronDown, IconClose, IconLocation, IconMoto, IconNote, IconPhone, IconUser, IconWallet } from "@rahalgo/ui";
 import type { Delivery } from "@/lib/store/types";
 import { CANCELLABLE, amountText } from "@/lib/store/deliveries";
 import { fill } from "@/lib/customer/texts";
@@ -166,7 +166,18 @@ export function DeliveryRow({ d, cancelling, onCancel }: { d: Delivery; cancelli
             {/* **ويومُها وساعتُها** (مرآةُ `Dates.stamp`، تدقيقُ ٢٠٢٦-١٠-٢٧). */}
             {d.created_at && <span className="truncate text-caption text-ink-muted">{fmtRelStamp(d.created_at)}</span>}
           </span>
-          <StatusPill status={d.status} />
+          <span className="flex shrink-0 items-center gap-rg-xs">
+            {/* **رسائلُ الكابتن التي لم تُقرأ** (قرارُ المالك ٢٠٢٦-١١-٢٦). */}
+            {(d.chat_unread ?? 0) > 0 && (
+              <Badge variant="primary">
+                <span className="flex items-center gap-1" aria-label={D.chatUnread}>
+                  <IconChat size={14} />
+                  {fmtNum(d.chat_unread ?? 0)}
+                </span>
+              </Badge>
+            )}
+            <StatusPill status={d.status} />
+          </span>
         </span>
         <span className="flex w-full items-center justify-between gap-rg-sm text-body">
           <span className="min-w-0 truncate">{d.customer_name}</span>

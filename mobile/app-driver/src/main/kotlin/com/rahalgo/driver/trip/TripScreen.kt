@@ -1075,7 +1075,8 @@ fun TripScreen(
                     }
                 },
                 onChat = actions.chat,
-                showChat = state.order?.kind != "merchant_delivery",
+                // **وحديثُ «لدي توصيلة» مع المتجر** (قرارُ المالك ٢٠٢٦-١١-٢٦) — كان مخفيّاً لأنّ
+                // المستلِمَ لا تطبيقَ له؛ **والطرفُ الآن المتجرُ الذي طلبها**، فالزرُّ لكلّ طلب.
                 chatting = chat != null,
                 chatUnread = chatUnread,
                 voiceMuted = voiceMuted,
@@ -1106,7 +1107,12 @@ fun TripScreen(
             // **والأزرارُ فوقه تبقى** — أيقونةُ الحديث هي البابُ نفسُه:
             // **تُضغط فيُفتح وتُضغط فيُطوى.**
             if (chat != null) {
-                ChatSheet(state = chat, actions = chatActions, modifier = Modifier.weight(1f, fill = false))
+                ChatSheet(
+                    state = chat,
+                    actions = chatActions,
+                    modifier = Modifier.weight(1f, fill = false),
+                    withStore = state.order?.kind == "merchant_delivery",
+                )
             } else {
                 TripCard(order = order, state = state, actions = actions, modifier = Modifier.weight(1f, fill = false))
             }

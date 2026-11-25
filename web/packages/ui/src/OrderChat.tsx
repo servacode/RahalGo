@@ -54,7 +54,8 @@ type ApiFn = <T = unknown>(path: string, init?: RequestInit) => Promise<T>;
 interface ChatMessage {
   id: string;
   body: string;
-  role: "customer" | "driver";
+  /** **`merchant`**: المتجرُ في حديث «لدي توصيلة» مع كابتنها (قرارُ المالك ٢٠٢٦-١١-٢٦). */
+  role: "customer" | "driver" | "merchant";
   mine: boolean;
   created_at: string;
   read_at: string | null;

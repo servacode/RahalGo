@@ -102,7 +102,19 @@ data class Delivery(
     /** **أحُدّدت نقطةُ التسليم؟** — وإلّا فالسائقُ يتّصل بالمستلِم. */
     @SerialName("dropoff_known") val dropoffKnown: Boolean = true,
     @SerialName("created_at") val createdAt: String = "",
+    /**
+     * **حديثُ التوصيلة مع الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٦) — ما لم تقرأه بعد، وكم سطراً فيه
+     * (فيُعرض بابُه لتوصيلةٍ انتهت وفيها كلام).
+     */
+    @SerialName("chat_unread") val chatUnread: Int = 0,
+    @SerialName("chat_lines") val chatLines: Int = 0,
 )
+
+/** **حالاتُ الطريق التي يُكتب فيها الحديث** — نسخةُ `openStatuses` في المحرّك (`comms.go`). */
+val DELIVERY_CHAT_OPEN = setOf("assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff")
+
+/** **أيُعرض بابُ الحديث؟** — والكابتنُ معها، أو انتهت وفي حديثها كلام. */
+fun Delivery.hasChat(): Boolean = status in DELIVERY_CHAT_OPEN || chatLines > 0
 
 @Serializable
 data class DeliveriesPage(val deliveries: List<Delivery> = emptyList())
