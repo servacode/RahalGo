@@ -308,7 +308,8 @@ class ChatMultiOrderTest {
     fun `لا قرصَ حين لا حديثَ جارياً`() {
         assertTrue(
             "**سقط شرطُ وجودِ حديث**",
-            read(mainActivity).contains("if (liveChat.chats.isNotEmpty()) {"),
+            // **ولا قرصَ فوق شريط السلّة** (مراجعةُ المحاكي ٢٠٢٦-١١-٢٥).
+            read(mainActivity).contains("if (liveChat.chats.isNotEmpty() && !(tab == Tab.Cart && over == Overlay.None)) {"),
         )
     }
 

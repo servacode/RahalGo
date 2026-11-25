@@ -6399,6 +6399,7 @@ html[data-console-theme="dark"] .console-root .seg-item[aria-pressed="true"] {
   filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.25));
 }
 .prize-fab .shop-prize-badge {
+  box-shadow: 0 0 0 2px var(--color-surface);
   inset-block-start: -4px;
   inset-inline-start: -4px;
   inset-inline-end: auto;

@@ -5,6 +5,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.defaultMinSize
@@ -78,8 +79,11 @@ fun FloatingGift(badge: String?, onClick: () -> Unit, modifier: Modifier = Modif
             Box(
                 Modifier
                     .align(Alignment.TopStart)
+                    // **برتقاليٌّ بإطارٍ أبيض** (مراجعةُ المحاكي ٢٠٢٦-١١-٢٥) — كان بلون العلامة فيذوب فوق
+                    // زرّ «اطلب» الأزرق تحته ولا تُقرأ النقاط.
+                    .border(androidx.compose.foundation.BorderStroke(2.dp, Rahal.colors.surface), CircleShape)
                     .clip(CircleShape)
-                    .background(Rahal.colors.brand)
+                    .background(Rahal.colors.accent)
                     .defaultMinSize(minWidth = Rahal.size.count)
                     .padding(horizontal = Rahal.space.xs),
                 contentAlignment = Alignment.Center,

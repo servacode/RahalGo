@@ -51,7 +51,8 @@ class CustWalletUxTest {
         )
         assertTrue(
             "**المحفظةُ لا تغيب حين لا تكفي** — يجب سطرُ «نقداً عند الاستلام» بدل الخيارين",
-            s.contains("if (walletBlocked) {") && s.contains("R.string.ord_pay_cash_only"),
+            // **وشام كاش عند الاستلام يبقى خياراً ولو المحفظةُ لا تكفي** (٢٠٢٦-١١-٢٥).
+            s.contains("if (walletBlocked && !shamOn) {") && s.contains("R.string.ord_pay_cash_only"),
         )
     }
 

@@ -825,7 +825,7 @@
     <string name="err_custom_photos_invalid">إحدى الصور غير صالحة، أزلها وأضفها من جديد</string>
     <string name="custom_photos_label">صور الطلب</string>
     <string name="wal_topup_title">كيف بشحن محفظتي؟</string>
-    <string name="wal_topup_body">فيك تشحن محفظتك بطريقتين: نقداً بمكتب رحّال غو، أو بتحويل شام كاش من زر «اشحن بشام كاش» (إذا كان متاح). المحفظة بتدفع أجرة التوصيل بس، وثمن الأغراض بيبقى كاش للكابتن. والدفع كاش عند الاستلام متاح دائماً.</string>
+    <string name="wal_topup_body">فيك تشحن محفظتك بطريقتين: نقداً بمكتب رحّال غو، أو بتحويل شام كاش من زر «اشحن بشام كاش» (إذا كان متاح). وبالمحفظة بتقدر تدفع الطلب كلّه أو أجرة التوصيل بس. والدفع كاش عند الاستلام متاح دائماً.</string>
     <string name="sham_back">تمام</string>
     <string name="sham_topup_btn">اشحن بشام كاش</string>
     <string name="sham_topup_title">الشحن بشام كاش</string>

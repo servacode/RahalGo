@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -87,6 +88,7 @@ fun TipChooser(tip: Long, onTip: (Long) -> Unit, modifier: Modifier = Modifier) 
                         onTip(p)
                     },
                     label = { Text(money(p)) },
+                    colors = tipChipColors(),
                 )
             }
             FilterChip(
@@ -96,6 +98,7 @@ fun TipChooser(tip: Long, onTip: (Long) -> Unit, modifier: Modifier = Modifier) 
                     onTip(text.toLongOrNull()?.takeIf { it in 1..cfg.max } ?: 0L)
                 },
                 label = { Text(stringResource(R.string.tip_other)) },
+                colors = tipChipColors(),
             )
             FilterChip(
                 selected = !customOpen && tip == 0L,
@@ -104,6 +107,7 @@ fun TipChooser(tip: Long, onTip: (Long) -> Unit, modifier: Modifier = Modifier) 
                     onTip(0L)
                 },
                 label = { Text(stringResource(R.string.tip_none)) },
+                colors = tipChipColors(),
             )
         }
         if (customOpen) {
@@ -136,3 +140,10 @@ fun TipChooser(tip: Long, onTip: (Long) -> Unit, modifier: Modifier = Modifier) 
         )
     }
 }
+
+/** **المختارُ ممتلئٌ بلون العلامة** (مراجعةُ المحاكي ٢٠٢٦-١١-٢٥) — كان رماديّاً باهتاً لا يُميَّز. */
+@Composable
+private fun tipChipColors() = FilterChipDefaults.filterChipColors(
+    selectedContainerColor = Rahal.colors.brand,
+    selectedLabelColor = Rahal.colors.onBrand,
+)
