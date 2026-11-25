@@ -209,7 +209,7 @@
     <string name="tip_none">لا شكراً</string>
     <string name="tip_hint">بتنحجز من محفظتك وبتوصل للكابتن لما يسلّمك الطلب، وإذا انلغى الطلب بترجعلك.</string>
     <string name="tip_custom_label">مبلغ الإكرامية</string>
-    <string name="tip_custom_error">اكتب مبلغ من ١ لـ %1$s</string>
+    <string name="tip_custom_error">اكتب مبلغ صحيح</string>
     <string name="tip_order_line">إكرامية للكابتن</string>
     <string name="tip_confirm">تأكيد</string>
     <string name="tip_cancel">إلغاء</string>

@@ -493,7 +493,7 @@
     },
     {
       "file": "internal/orders/tip.go",
-      "line": 321,
+      "line": 322,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",

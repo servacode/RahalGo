@@ -123,7 +123,7 @@ fun TipChooser(tip: Long, onTip: (Long) -> Unit, modifier: Modifier = Modifier) 
                 label = { Text(stringResource(R.string.tip_custom_label)) },
                 isError = bad,
                 supportingText = if (bad) {
-                    { Text(stringResource(R.string.tip_custom_error, money(cfg.max))) }
+                    { Text(stringResource(R.string.tip_custom_error)) }
                 } else {
                     null
                 },

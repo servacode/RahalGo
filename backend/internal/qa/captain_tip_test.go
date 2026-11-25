@@ -140,8 +140,9 @@ func TestTIP02_Rejections(t *testing.T) {
 	if _, r := tipWalletOrder(t, h, cust, item, "delivery", -5); r.Err() != "tip_invalid" {
 		t.Fatalf("سالب: %s — والمنتظَر tip_invalid", r)
 	}
-	if _, r := tipWalletOrder(t, h, cust, item, "delivery", 100000); r.Err() != "tip_invalid" {
-		t.Fatalf("فوق السقف: %s — والمنتظَر tip_invalid", r)
+	// **ولا سقفَ إلّا الرصيد** (قرارُ المالك ٢٠٢٦-١١-٢٥) — إكراميةٌ كبيرةٌ تُردّ لأنّ المحفظة ما بتكفّي، لا لسقف.
+	if _, r := tipWalletOrder(t, h, cust, item, "delivery", 100000); r.Err() != "insufficient_balance" {
+		t.Fatalf("أكبر من الرصيد: %s — والمنتظَر insufficient_balance", r)
 	}
 	// **أجرةٌ ٥٠٠ من ٥٦٠ وإكراميةُ ١٠٠ ما بتكفّي.**
 	if _, r := tipWalletOrder(t, h, cust, item, "delivery", 100); r.Err() != "insufficient_balance" {

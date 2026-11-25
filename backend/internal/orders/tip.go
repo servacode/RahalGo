@@ -35,8 +35,9 @@ const (
 	// KeyTipsEnabled · KeyTipsPlatformPercent — بـ`settings/catalog.go`.
 	KeyTipsEnabled         = "tips.enabled"
 	KeyTipsPlatformPercent = "tips.platform_percent"
-	// MaxTip **سقفُ الإكرامية الواحدة** بالليرة الجديدة — حارسُ غلطة إصبع لا قرارُ سعر.
-	MaxTip int64 = 1000
+	// MaxTip **حارسٌ تقنيٌّ فقط** — **الإكراميةُ حسب ما بدّه الزبون بلا سقف** (قرارُ المالك ٢٠٢٦-١١-٢٥:
+	// «الاكرامية حسب مابدو مانقدر نحط حد»)؛ والحدُّ الفعليُّ رصيدُ محفظته (`insufficient_balance`).
+	MaxTip int64 = 1_000_000_000
 	// tipKind نوعُ القيد بالدفتر.
 	tipKind = "tip"
 )
