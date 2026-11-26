@@ -300,6 +300,7 @@
     <string name="emg_send">بلغ الآن</string>
     <string name="emg_failed">لم يصل البلاغ إلى العمليات. أعد المحاولة، أو اتصل بهم مباشرة.</string>
     <string name="trip_chat">دردشة الزبون</string>
+    <string name="trip_chat_store">دردشة المتجر</string>
     <string name="chat_hint">اكتب رسالة…</string>
     <string name="chat_closed">انتهى الطلب — أغلق الحديث</string>
     <!-- الطلب الخاصّ -->

@@ -98,6 +98,8 @@ internal fun MapButtons(
     showChat: Boolean = true,
     chatting: Boolean,
     chatUnread: Int,
+    /** **مع مَن الحديث** — «دردشة المتجر» في «لدي توصيلة» (قرارُ المالك ٢٠٢٦-١١-٢٦)، وغيرُها «دردشة الزبون». */
+    chatWithStore: Boolean = false,
     /** **أالصوتُ مكتوم؟** — (طلبُ المالك ٢٠٢٦-٠٨-٢٤). */
     voiceMuted: Boolean = false,
     /** **زرٌّ واحدٌ يقلبه** — «إمّا الصوتُ يعمل أو لا يعمل». */
@@ -133,7 +135,7 @@ internal fun MapButtons(
             if (showChat) {
                 MapButton(
                     icon = R.drawable.ic_chat,
-                    label = R.string.trip_chat,
+                    label = if (chatWithStore) R.string.trip_chat_store else R.string.trip_chat,
                     onClick = onChat,
                     on = chatting,
                     badge = chatUnread,

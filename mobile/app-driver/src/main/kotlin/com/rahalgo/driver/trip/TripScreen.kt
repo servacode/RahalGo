@@ -1079,6 +1079,7 @@ fun TripScreen(
                 // المستلِمَ لا تطبيقَ له؛ **والطرفُ الآن المتجرُ الذي طلبها**، فالزرُّ لكلّ طلب.
                 chatting = chat != null,
                 chatUnread = chatUnread,
+                chatWithStore = state.order?.kind == "merchant_delivery",
                 voiceMuted = voiceMuted,
                 onVoice = { actions.toggleVoice() },
                 start = state.order?.let { o -> { TripFloatActions(o, state, actions) } },
