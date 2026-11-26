@@ -34,7 +34,7 @@
     "behaviour_settings": 279,
     "order_fields": 153,
     "test_files": 876,
-    "test_funcs": 3341
+    "test_funcs": 3342
   },
   "flows": [
     {
@@ -13707,6 +13707,12 @@
     },
     {
       "name": "TestCanTransition",
+      "file": "internal/orders/statuses_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantDeliveryCancel_BeforeCaptainArrives",
       "file": "internal/orders/statuses_test.go",
       "package": "orders",
       "orphan": true

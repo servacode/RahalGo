@@ -58,11 +58,11 @@ import com.rahalgo.ui.StatusTone
  */
 
 /**
- * **ما يُلغى من المتجر** — ما دام الغرضُ عنده (الخادمُ يحكم أيضاً).
+ * **ما يُلغى من المتجر** — قبل أن يصل الكابتنُ إليه (قرارُ المالك ٢٠٢٦-١١-٢٦؛ الخادمُ يحكم أيضاً).
  *
  * **ومنها ما ينتظر موافقةَ المنصّة** (قرارُ المالك ٢٠٢٦-١٠-٠٥): `pending` و`accepted`.
  */
-internal val cancellable = setOf("pending", "accepted", "dispatching", "assigned", "at_pickup")
+internal val cancellable = setOf("pending", "accepted", "dispatching", "assigned")
 
 internal enum class Tone { Waiting, Moving, Done, Ended }
 
@@ -251,26 +251,6 @@ internal fun CancelDeliveryButton(busy: Boolean, onConfirm: () -> Unit) {
             onConfirm = onConfirm,
             onDismiss = { asking = false },
         )
-    }
-}
-
-/**
- * **«راسل الكابتن»** (قرارُ المالك ٢٠٢٦-١١-٢٦) — وعليه ما لم تقرأه بعد.
- */
-@Composable
-internal fun DeliveryChatButton(unread: Int, onClick: () -> Unit) {
-    com.rahalgo.ui.RahalOutlineButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Icon(
-            painterResource(com.rahalgo.ui.R.drawable.ic_chat),
-            contentDescription = null,
-            modifier = Modifier.size(Rahal.icon.sm),
-        )
-        Spacer(Modifier.width(Rahal.space.sm))
-        Text(stringResource(R.string.md_chat))
-        if (unread > 0) {
-            Spacer(Modifier.width(Rahal.space.sm))
-            androidx.compose.material3.Badge { Text(if (unread > 99) "99+" else "$unread") }
-        }
     }
 }
 

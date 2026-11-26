@@ -106,3 +106,30 @@ func TestPlatformDoesNotCancelAfterAccept(t *testing.T) {
 		}
 	}
 }
+
+// TestMerchantDeliveryCancel_BeforeCaptainArrives **المتجرُ يُلغي توصيلتَه قبل أن يصل
+// الكابتنُ إليه فقط** (قرارُ المالك ٢٠٢٦-١١-٢٦) — وبعد وصوله فالمكتبُ وحدَه.
+func TestMerchantDeliveryCancel_BeforeCaptainArrives(t *testing.T) {
+	m := []string{"merchant"}
+	cases := []struct {
+		from string
+		want bool
+	}{
+		{StPending, true},
+		{StAccepted, true},
+		{StDispatching, true},
+		{StAssigned, true},  // الكابتنُ في الطريق — يُلغى
+		{StAtPickup, false}, // الكابتنُ عند المتجر — لا
+		{StPickedUp, false}, // الغرضُ معه — لا
+		{StOnTheWay, false},
+	}
+	for _, c := range cases {
+		if got := canTransition(KindMerchantDelivery, c.from, StCancelled, m); got != c.want {
+			t.Errorf("merchant cancel from %s = %v, want %v", c.from, got, c.want)
+		}
+	}
+	// **والمكتبُ يبقى يُلغي عند المتجر** — الطريقُ الوحيدُ بعد وصول الكابتن.
+	if !canTransition(KindMerchantDelivery, StAtPickup, StCancelled, []string{"ops"}) {
+		t.Error("ops must still cancel at_pickup")
+	}
+}

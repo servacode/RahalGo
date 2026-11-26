@@ -175,17 +175,29 @@ export default function DeliveryTrack() {
               )}
             </Alert>
           )}
-          {hasChat(d) && (
-            <Button variant="secondary" className="flex min-h-12 items-center justify-center gap-2" onClick={() => setChat(true)}>
-              <IconChat size={16} />
-              {D.chat}
-              {(d.chat_unread ?? 0) > 0 && <Badge variant="primary">{fmtNum(d.chat_unread ?? 0)}</Badge>}
-            </Button>
-          )}
           {CANCELLABLE.has(d.status) && <CancelDeliveryButton busy={busy} onConfirm={() => void cancel()} />}
           </div>
           </div>
         </>
+      )}
+      {/* **راسل الكابتن — قرصٌ طافٍ** (قرارُ المالك ٢٠٢٦-١١-٢٦: «عائم متل الزبون») فوق شريط التنقّل، وعليه عدّادُ الجديد. */}
+      {d && hasChat(d) && !chat && (
+        <button
+          type="button"
+          aria-label={D.chat}
+          title={D.chat}
+          onClick={() => setChat(true)}
+          data-testid="delivery-chat-fab"
+          className="fixed start-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary-solid text-on-solid shadow-e3"
+          style={{ bottom: "calc(5rem + env(safe-area-inset-bottom))" }}
+        >
+          <IconChat size={24} />
+          {(d.chat_unread ?? 0) > 0 && (
+            <span className="absolute -top-1 -end-1">
+              <Badge variant="danger">{fmtNum(d.chat_unread ?? 0)}</Badge>
+            </span>
+          )}
+        </button>
       )}
       {chat && d && (
         <Sheet open onClose={() => setChat(false)} title={D.chat}>

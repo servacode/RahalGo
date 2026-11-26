@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -24,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
@@ -145,6 +147,8 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
             onLoaded = { vm.load(id) },
         ) { chatOpen = false }
     }
+    // **والحديثُ قرصٌ طافٍ فوق الشاشة** (قرارُ المالك ٢٠٢٦-١١-٢٦: «عائم متل الزبون») — لا زرٌّ في آخرها.
+    Box(Modifier.fillMaxSize()) {
     Screen {
         ScreenTitle(
             stringResource(R.string.md_track_title, d?.number?.toString() ?: ""),
@@ -296,18 +300,20 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                 )
             }
         }
-        // ══════════════════════════════════════════════════════════════
-        // **راسل الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٦) — من الإسناد حتّى التسليم، ويبقى يُقرأ بعده.
-        // ══════════════════════════════════════════════════════════════
-        if (d.hasChat()) {
-            Spacer(Modifier.height(Rahal.space.lg))
-            DeliveryChatButton(unread = d.chatUnread) { chatOpen = true }
-        }
         if (d.status in cancellable) {
             Spacer(Modifier.height(Rahal.space.lg))
             CancelDeliveryButton(busy = vm.busy) { vm.cancel(id) }
         }
-        Spacer(Modifier.height(Rahal.space.xl))
+        // **ومتّسعٌ تحت آخر زرّ** كي لا يغطّيه القرصُ الطافي.
+        Spacer(Modifier.height(if (d.hasChat()) 96.dp else Rahal.space.xl))
+    }
+    // ══════════════════════════════════════════════════════════════
+    // **راسل الكابتن** (قرارُ المالك ٢٠٢٦-١١-٢٦) — من الإسناد حتّى التسليم، ويبقى يُقرأ بعده.
+    // **قرصٌ طافٍ بعدّاد الجديد** كما عند الزبون (`ChatFab`).
+    // ══════════════════════════════════════════════════════════════
+    if (d?.hasChat() == true && !chatOpen) {
+        com.rahalgo.ui.ChatFab(unread = d.chatUnread) { chatOpen = true }
+    }
     }
 }
 
