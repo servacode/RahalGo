@@ -259,6 +259,58 @@ var customStepLines = map[string]string{
 	StDelivered: "سُلّم الطلب — شكراً لك.",
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// **وسطورُ «لدي توصيلة» للمتجر** (قرارُ المالك ٢٠٢٦-١١-٢٧)
+// ══════════════════════════════════════════════════════════════════════
+//
+// المتجرُ صار طرفَ الحديث (٢٠٢٦-١١-٢٦)، **فيعرف ما يجري في كلّ مرحلةٍ كما يعرف
+// الزبون** — **وبلغةٍ رسميّةٍ لا عاميّة** («مافي شي اسمو جاي لعندك هلق، لازم في
+// طريقي إليك»). **وفي «الإحضار» تنقلب الوقفتان**: الاستلامُ من عند المستلِم،
+// والوجهةُ المتجرُ نفسُه — فيُقال له «إليك».
+var storeSendLines = map[string]string{
+	StAssigned:  "استلمتُ التوصيلة — في طريقي إلى المتجر.",
+	StAtPickup:  "وصلتُ إلى المتجر.",
+	StPickedUp:  "استلمتُ الغرض — في طريقي إلى المستلم.",
+	StAtDropoff: "وصلتُ إلى المستلم.",
+	StDelivered: "سُلّمت التوصيلة إلى المستلم.",
+}
+
+var storeFetchLines = map[string]string{
+	StAssigned:  "استلمتُ طلب الإحضار — في طريقي إلى عنوان الاستلام.",
+	StAtPickup:  "وصلتُ إلى عنوان الاستلام.",
+	StPickedUp:  "استلمتُ الغرض — في طريقي إليك.",
+	StAtDropoff: "وصلتُ إليك.",
+	StDelivered: "سُلّم الغرض إليك.",
+}
+
+// storeStepLine **سطرُ المرحلة في حديث المتجر والكابتن** — مرّةً لكلّ كابتنٍ وخطوة،
+// **ولا يُفشل الانتقال** كأخيه `stepLine`.
+func (s *Service) storeStepLine(ctx context.Context, orderID, driverID, to string) {
+	if driverID == "" {
+		return
+	}
+	var mode string
+	if err := s.db.QueryRow(ctx, `SELECT COALESCE(delivery_mode, '') FROM orders WHERE id = $1`, orderID).Scan(&mode); err != nil {
+		return
+	}
+	table := storeSendLines
+	if mode == DeliveryModeFetch {
+		table = storeFetchLines
+	}
+	line, ok := table[to]
+	if !ok {
+		return
+	}
+	if _, err := s.db.Exec(ctx, `
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, auto)
+		SELECT $1, $2, 'driver', $3, $2, true
+		WHERE NOT EXISTS (SELECT 1 FROM order_messages
+		                  WHERE order_id = $1 AND driver_id = $2 AND body = $3)`,
+		orderID, driverID, line); err != nil {
+		s.logger.Error("تعذّر كتبُ سطر خطوة التوصيلة", "order", orderID, "error", err)
+	}
+}
+
 // stepLine يكتب سطرَ الخطوة في حديث الطلب — **مرّةً واحدةً لكلّ خطوة.**
 //
 // **ولا يُفشل الانتقال**: الطلبُ تحرّك فعلاً، **ومعاملةٌ تسقط لأجل سطرِ

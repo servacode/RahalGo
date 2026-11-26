@@ -11987,7 +11987,7 @@
       "orphan": true
     },
     {
-      "name": "TestMerchantDelivery_NoChatLines",
+      "name": "TestMerchantDelivery_StoreStepLines",
       "file": "internal/orders/custom_steps_test.go",
       "package": "orders_test",
       "orphan": true

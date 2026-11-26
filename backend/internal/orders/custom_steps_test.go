@@ -170,23 +170,33 @@ func TestStoreProblem_OfficeSaysCollect(t *testing.T) {
 	}
 }
 
-// TestMerchantDelivery_NoChatLines **ولا رسائلَ تلقائيّةً في «لدي توصيلة»** (٢٠٢٦-١٠-٠٣) —
-// المستلمُ ليس على التطبيق. **قِيس**: ثلاثُ رسائلَ لزبونٍ لا وجودَ له (#1342).
-func TestMerchantDelivery_NoChatLines(t *testing.T) {
-	f := setup(t, "at_pickup", 0, 10_000, 0)
-	ctx := context.Background()
-	f.armTreasury(t)
-	if _, err := f.pool.Exec(ctx, `
-		UPDATE orders SET kind = 'merchant_delivery', recipient_name = 'مستلم',
-		       recipient_phone = '0999000000', fee_payer = 'merchant'
-		WHERE id = $1`, f.orderID); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "picked_up", ""); err != nil {
-		t.Fatalf("الاستلام: %v", err)
-	}
-	if lines := chatLines(t, f.orderID); len(lines) != 0 {
-		t.Fatalf("رسائلُ في توصيلة: %q", lines)
+// TestMerchantDelivery_StoreStepLines **«لدي توصيلة»: سطورٌ رسميّةٌ للمتجر لا للمستلِم**
+// (قرارُ المالك ٢٠٢٦-١١-٢٧) — كانت لا شيء (٢٠٢٦-١٠-٠٣: المستلمُ ليس على التطبيق)؛
+// **والمتجرُ صار طرفَ الحديث**، فيُقال له ما يجري. **ولا سطرَ من سطور الزبون** («طلبك»).
+func TestMerchantDelivery_StoreStepLines(t *testing.T) {
+	for _, tc := range []struct {
+		mode string
+		want []string
+	}{
+		{"send", []string{"استلمتُ الغرض — في طريقي إلى المستلم."}},
+		{"fetch", []string{"استلمتُ الغرض — في طريقي إليك."}},
+	} {
+		f := setup(t, "at_pickup", 0, 10_000, 0)
+		ctx := context.Background()
+		f.armTreasury(t)
+		if _, err := f.pool.Exec(ctx, `
+			UPDATE orders SET kind = 'merchant_delivery', recipient_name = 'مستلم',
+			       recipient_phone = '0999000000', fee_payer = 'merchant', delivery_mode = $2
+			WHERE id = $1`, f.orderID, tc.mode); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "picked_up", ""); err != nil {
+			t.Fatalf("الاستلام (%s): %v", tc.mode, err)
+		}
+		lines := chatLines(t, f.orderID)
+		if len(lines) != len(tc.want) || lines[0] != tc.want[0] {
+			t.Fatalf("%s: got %q, want %q", tc.mode, lines, tc.want)
+		}
 	}
 }
 

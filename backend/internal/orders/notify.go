@@ -74,6 +74,9 @@ var t = struct {
 	// **«لدي توصيلة» تمرّ بالمكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — **والمتجرُ
 	// يُخبَر بقرار المكتب** فيها، والمكتبُ بوصولها.
 	mdNewOps, mdAccepted, mdRejected, mdCancelled, mdAssigned, mdPickedUp string
+	// **ووصولُ الكابتن إلى المستلم والتسليمُ** (قرارُ المالك ٢٠٢٦-١١-٢٧) — وفي «الإحضار»
+	// الوجهةُ المتجرُ نفسُه، فيُقال له «إليك».
+	mdAtDropoff, mdDelivered, mdAtDropoffFetch, mdDeliveredFetch string
 	// **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — الطلبُ صار مشتريات.
 	extStoreCustomer, extStoreDriver, extStoreMerchant string
 	// **طلبُ الواتساب يُقال باسمه للسائق** (قرارُ المالك ٢٠٢٦-١١-٠٥).
@@ -149,6 +152,10 @@ var t = struct {
 	mdCancelled:                "أُلغيت توصيلتك",
 	mdAssigned:                 "سائق في طريقه لاستلام توصيلتك",
 	mdPickedUp:                 "استلم السائق التوصيلة",
+	mdAtDropoff:                "وصل الكابتن إلى المستلم",
+	mdDelivered:                "سُلّمت التوصيلة إلى المستلم",
+	mdAtDropoffFetch:           "وصل الكابتن إليك بالغرض",
+	mdDeliveredFetch:           "سُلّم الغرض إليك",
 	extStoreCustomer:           "سيُشترى طلبك من متجرٍ آخر",
 	extStoreDriver:             "صار الطلب مشتريات",
 	extStoreMerchant:           "طلبٌ لم يعد من متجرك",
@@ -505,14 +512,23 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 			// **وإسنادُ السائق واستلامُه** (قرارُ المالك ٢٠٢٦-١٠-٠٥: «نعم») — كان لا
 			// يُرى إلّا في شاشة التتبّع.
 			StAssigned: t.mdAssigned, StPickedUp: t.mdPickedUp,
+			StAtDropoff: t.mdAtDropoff, StDelivered: t.mdDelivered,
 		}[to]
+		// **والإحضارُ وجهتُه المتجر** — فيُقال له «إليك» لا «إلى المستلم».
+		if to == StAtDropoff || to == StDelivered {
+			var mode string
+			_ = s.db.QueryRow(ctx, `SELECT COALESCE(delivery_mode, '') FROM orders WHERE id = $1`, orderID).Scan(&mode)
+			if mode == DeliveryModeFetch {
+				mdTitle = map[string]string{StAtDropoff: t.mdAtDropoffFetch, StDelivered: t.mdDeliveredFetch}[to]
+			}
+		}
 		if mdTitle != "" && endedBy != "merchant" {
 			s.notify.Notify(ctx, notifications.Input{
 				UserID: *p.merchantOwner, Kind: notifications.KindOrder,
 				Title: mdTitle, Body: body,
 				Entity: "order", EntityID: orderID, Href: "/portal",
 				Apps:      []string{notifications.AppMerchant},
-				Transient: to == StAccepted || to == StAssigned || to == StPickedUp,
+				Transient: to == StAccepted || to == StAssigned || to == StPickedUp || to == StAtDropoff,
 			})
 		}
 	}

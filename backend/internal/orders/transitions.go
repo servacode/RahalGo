@@ -700,6 +700,10 @@ func (s *Service) afterTransition(ctx context.Context, ap *appliedTransition) (*
 	if chatty && driverID != nil {
 		s.stepLine(ctx, orderID, *driverID, kind, to)
 	}
+	// **وفي «لدي توصيلة» الحديثُ مع المتجر** (قرارُ المالك ٢٠٢٦-١١-٢٧) — سطرٌ رسميٌّ لكلّ مرحلة.
+	if kind == KindMerchantDelivery && driverID != nil {
+		s.storeStepLine(ctx, orderID, *driverID, to)
+	}
 
 	// ══════════════════════════════════════════════════════════════════
 	// **وزمنُ الطريق يُسأل عنه هنا لأنّ هنا وقعت اللحظة**

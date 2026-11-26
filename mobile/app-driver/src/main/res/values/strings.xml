@@ -825,12 +825,15 @@
     <string name="card_out_of_pocket">تدفع عنه ثم تقبضه</string>
     <string name="chat_empty_driver">راسل الزبون إذا احتجت شيئاً</string>
     <!-- **حديثُ «لدي توصيلة» مع المتجر** (قرارُ المالك ٢٠٢٦-١١-٢٦) -->
-    <string name="chat_empty_driver_store">راسل المتجر إذا احتجت شي عن التوصيلة</string>
+    <string name="chat_empty_driver_store">راسل المتجر إذا احتجت شيئاً عن التوصيلة</string>
     <string name="chat_peer_store">المتجر</string>
     <string name="chat_quick_arrived">وصلت</string>
     <string name="chat_quick_downstairs">أنا عند مدخل البناية</string>
     <string name="chat_quick_searching">أبحث عن العنوان</string>
     <string name="chat_quick_five_min">أصل بعد 5 دقائق</string>
+    <string name="chat_quick_store_arrived">وصلتُ إلى المتجر</string>
+    <string name="chat_quick_store_ready">هل الغرض جاهز؟</string>
+    <string name="chat_quick_store_door">أنتظرك عند الباب</string>
     <string name="setup_progress">أنجزت %1$d من %2$d</string>
     <string name="rate_title">تقييمي</string>
     <!-- الرحلة بلا إنترنت (قرار المالك 2026-10-30) -->

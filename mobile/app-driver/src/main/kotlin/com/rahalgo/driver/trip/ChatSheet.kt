@@ -172,12 +172,22 @@ fun ChatSheet(
             // ══════════════════════════════════════════════════════════
             // **وردودٌ جاهزةٌ بضغطة** (تدقيق ٢٠٢٦-١٠-٢٧) — وهو يقود، والكتابةُ خطر.
             // ══════════════════════════════════════════════════════════
-            val quick = listOf(
-                stringResource(R.string.chat_quick_arrived),
-                stringResource(R.string.chat_quick_downstairs),
-                stringResource(R.string.chat_quick_searching),
-                stringResource(R.string.chat_quick_five_min),
-            )
+            // **وللمتجر ردودُه** (قرارُ المالك ٢٠٢٦-١١-٢٧) — رسميّةٌ، لا ردودُ باب الزبون.
+            val quick = if (withStore) {
+                listOf(
+                    stringResource(R.string.chat_quick_store_arrived),
+                    stringResource(R.string.chat_quick_store_ready),
+                    stringResource(R.string.chat_quick_store_door),
+                    stringResource(R.string.chat_quick_five_min),
+                )
+            } else {
+                listOf(
+                    stringResource(R.string.chat_quick_arrived),
+                    stringResource(R.string.chat_quick_downstairs),
+                    stringResource(R.string.chat_quick_searching),
+                    stringResource(R.string.chat_quick_five_min),
+                )
+            }
             Row(
                 Modifier
                     .fillMaxWidth()
