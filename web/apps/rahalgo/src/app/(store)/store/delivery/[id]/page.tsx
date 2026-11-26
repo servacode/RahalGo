@@ -17,12 +17,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtClockTime, fmtNum } from "@rahalgo/i18n";
-import { Alert, Badge, Button, IconChat, LoadingState, OrderChat, Sheet, useLiveRefresh } from "@rahalgo/ui";
+import { Alert, Badge, IconCheck, IconChat, LoadingState, OrderChat, Sheet, useLiveRefresh } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { CANCELLABLE, amountText, hasChat, useStoreDeliveries } from "@/lib/store/deliveries";
 import type { Delivery } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
-import { CancelDeliveryButton, DeliveryLines, SearchingBanner, StatusPill } from "@/components/store/DeliveryParts";
+import { CancelDeliveryButton, DeliveryDetails, StatusPill, statusText } from "@/components/store/DeliveryParts";
 import { PageHeader } from "@/components/store/SetupParts";
 
 const m = getMessages(defaultLocale);
@@ -104,81 +104,122 @@ export default function DeliveryTrack() {
   const at = d ? stepOf(d.status) : -1;
   const ST = D.status as Record<string, string>;
 
+  const ended = at < 0;
+  const progress = Math.min(100, Math.max(8, Math.round((Math.max(at, 0) / LAST) * 100)));
+  const mode = d?.delivery_mode;
+
   return (
-    <div className="console-page" data-testid="store-delivery-track">
+    <div className={`console-page ${d && hasChat(d) ? "pb-36" : ""}`} data-testid="store-delivery-track">
       <PageHeader title={fill(D.trackTitle, { n: d?.number ?? "" })} href="/store/delivery" />
       {error && <Alert>{error}</Alert>}
       {!d ? (
         !error && <LoadingState variant="list" rows={2} />
       ) : (
-        <>
-          {fetchMode && d.delivery_code?.trim() && (
-            <section className="rounded-card border border-success-edge bg-success-tint p-rg-lg text-center">
-              <p className="font-bold">{D.codeTitle}</p>
-              <p className="my-rg-sm text-4xl font-bold tracking-widest text-success" dir="ltr">
-                {d.delivery_code}
-              </p>
-              <p className="text-caption text-ink-muted">{D.codeHint}</p>
-            </section>
-          )}
-          <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-2 md:items-start md:gap-5">
-          {at < 0 ? (
-            /* **المنتهيةُ رماديّة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الإلغاءُ ليس خطأً. */
-            <p className="panel p-rg-md text-body text-ink-muted">
-              {(d.status === "failed" ? ST.failed : d.status === "rejected" ? ST.rejected : ST.cancelled) +
-                (d.cancel_reason?.trim() ? ` — ${d.cancel_reason}` : "")}
-            </p>
-          ) : (
-            <div className="flex min-w-0 flex-col gap-rg-md">
-              {d.status === "dispatching" && <SearchingBanner />}
-              <ol className="panel flex flex-col gap-rg-xs p-rg-lg">
+        <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-2 md:items-start md:gap-5">
+          <div className="flex min-w-0 flex-col gap-rg-md">
+            {/* ── بطاقةُ الحالة الكبيرة وشريطُ التقدّم ── */}
+            {ended ? (
+              /* **المنتهيةُ رماديّة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الإلغاءُ ليس خطأً. */
+              <section className="panel flex flex-col gap-rg-sm p-rg-lg">
+                <StatusPill status={d.status} mode={mode} />
+                <p className="text-body text-ink-muted">
+                  {(d.status === "failed" ? ST.failed : d.status === "rejected" ? ST.rejected : ST.cancelled) +
+                    (d.cancel_reason?.trim() ? ` — ${d.cancel_reason}` : "")}
+                </p>
+              </section>
+            ) : (
+              <section className="flex flex-col gap-rg-sm rounded-card bg-primary-solid p-rg-lg text-on-solid" data-testid="delivery-hero">
+                <p className="text-caption opacity-90">{D.trackNow}</p>
+                <p className="heading-card leading-snug">{statusText(d.status, mode)}</p>
+                {d.status === "dispatching" && <p className="text-caption opacity-90">{D.searchingHint}</p>}
+                <div
+                  className="h-1.5 overflow-hidden rounded-badge bg-on-solid-tint"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={progress}
+                >
+                  <div className="h-full rounded-badge bg-on-solid" style={{ width: `${progress}%` }} />
+                </div>
+              </section>
+            )}
+
+            {/* ── كودُ الاستلام في «إحضار» — بارزٌ ── */}
+            {fetchMode && d.delivery_code?.trim() && !ended && (
+              <section className="rounded-card border-2 border-dashed border-success-edge bg-success-tint p-rg-lg text-center" data-testid="delivery-code">
+                <p className="text-caption text-ink-muted">{D.codeTitle}</p>
+                <p className="my-rg-sm text-5xl font-bold tracking-[0.3em] text-success" dir="ltr">
+                  {d.delivery_code}
+                </p>
+                <p className="text-caption text-ink-muted">{D.codeHint}</p>
+              </section>
+            )}
+
+            {fetchMode && ["pending", "approved", "rejected"].includes(d.fetch_amount_status ?? "") && d.fetch_amount != null && (
+              <Alert tone={d.fetch_amount_status === "approved" ? "success" : d.fetch_amount_status === "rejected" ? "error" : "warning"}>
+                {fill(
+                  d.fetch_amount_status === "approved"
+                    ? D.amountRowApproved
+                    : d.fetch_amount_status === "rejected"
+                      ? D.amountRowRejected
+                      : D.amountRowPending,
+                  { amount: amountText(d.fetch_amount, d.amount_currency) },
+                )}
+              </Alert>
+            )}
+
+            {/* ── خطٌّ زمنيٌّ رأسيٌّ متّصل ── */}
+            {!ended && (
+              <ol className="panel flex flex-col p-rg-lg" data-testid="delivery-timeline">
                 {steps.map((label, i) => {
                   const done = i < at || (i === at && at === LAST);
                   const now = i === at && at < LAST;
+                  const last = i === steps.length - 1;
                   const time = i === 0 ? d.created_at : i === 4 ? d.picked_up_at : i === LAST ? d.delivered_at : null;
                   return (
-                    <li key={label} className="flex items-center gap-rg-md py-rg-sm">
-                      <span
-                        className={`h-3.5 w-3.5 shrink-0 rounded-badge ${
-                          now
-                            ? `${at === 0 ? "bg-warning" : "bg-accent"} motion-safe:animate-pulse`
-                            : done
-                              ? "bg-success"
-                              : "bg-ink-faint"
-                        }`}
-                      />
-                      <span className={`flex-1 text-body ${now ? "font-bold" : done ? "" : "text-ink-muted"}`}>{label}</span>
-                      {(done || now) && time && <span className="text-caption text-ink-muted">{fmtClockTime(time)}</span>}
+                    <li key={label} className={`flex gap-rg-md ${last ? "" : "pb-rg-lg"}`}>
+                      <span className="flex w-6 shrink-0 flex-col items-center">
+                        <span
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-badge border-2 ${
+                            done
+                              ? "border-success bg-success text-on-bright"
+                              : now
+                                ? "border-primary bg-primary-tint motion-safe:animate-pulse"
+                                : "border-line bg-paper"
+                          }`}
+                        >
+                          {done ? <IconCheck size={14} /> : now ? <span className="h-2.5 w-2.5 rounded-badge bg-primary" /> : null}
+                        </span>
+                        {!last && <span className={`mt-rg-xs w-0.5 flex-1 rounded-badge ${done ? "bg-success" : "bg-line"}`} />}
+                      </span>
+                      <span className={`min-w-0 flex-1 pt-px text-body ${now ? "font-bold" : done ? "" : "text-ink-muted"}`}>{label}</span>
+                      {(done || now) && time && <span className="pt-0.5 text-caption text-ink-muted">{fmtClockTime(time)}</span>}
                     </li>
                   );
                 })}
               </ol>
-            </div>
-          )}
+            )}
+          </div>
+
           <div className="flex min-w-0 flex-col gap-rg-lg">
-          <section className="panel flex flex-col gap-rg-sm p-rg-lg">
-            <header className="flex items-center justify-between gap-rg-sm">
-              <h2 className="console-h2">{D.trackDetails}</h2>
-              <StatusPill status={d.status} />
-            </header>
-            <DeliveryLines d={d} />
-          </section>
-          {fetchMode && ["pending", "approved", "rejected"].includes(d.fetch_amount_status ?? "") && d.fetch_amount != null && (
-            <Alert tone={d.fetch_amount_status === "approved" ? "success" : d.fetch_amount_status === "rejected" ? "error" : "warning"}>
-              {fill(
-                d.fetch_amount_status === "approved"
-                  ? D.amountRowApproved
-                  : d.fetch_amount_status === "rejected"
-                    ? D.amountRowRejected
-                    : D.amountRowPending,
-                { amount: amountText(d.fetch_amount, d.amount_currency) },
-              )}
-            </Alert>
-          )}
-          {CANCELLABLE.has(d.status) && <CancelDeliveryButton busy={busy} onConfirm={() => void cancel()} />}
+            <section className="panel flex flex-col gap-rg-md p-rg-lg">
+              <header className="flex items-center justify-between gap-rg-sm">
+                <h2 className="console-h2">{D.trackDetails}</h2>
+                <StatusPill status={d.status} mode={mode} />
+              </header>
+              <DeliveryDetails d={d} />
+            </section>
+            {/* ── الإلغاءُ ما دام الكابتنُ لم يصل — وإلّا سطرٌ يشرح ── */}
+            {CANCELLABLE.has(d.status) ? (
+              <div className="flex flex-col gap-rg-xs">
+                <CancelDeliveryButton busy={busy} onConfirm={() => void cancel()} />
+                <p className="text-center text-caption text-ink-muted">{D.canCancelUntil}</p>
+              </div>
+            ) : (
+              OPEN.has(d.status) && <p className="text-center text-caption text-ink-muted">{fetchMode ? D.noCancelFetch : D.noCancelNow}</p>
+            )}
           </div>
-          </div>
-        </>
+        </div>
       )}
       {/* **راسل الكابتن — قرصٌ طافٍ** (قرارُ المالك ٢٠٢٦-١١-٢٦: «عائم متل الزبون») فوق شريط التنقّل، وعليه عدّادُ الجديد. */}
       {d && hasChat(d) && !chat && (

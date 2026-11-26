@@ -83,18 +83,19 @@ internal fun toneColor(t: Tone): Color = when (t) {
 }
 
 @Composable
-internal fun deliveryStatusText(status: String): String = stringResource(
+internal fun deliveryStatusText(status: String, fetch: Boolean = false): String = stringResource(
     when (status) {
         // **بانتظار موافقة المنصّة** — تمرّ بالمكتب كأيّ طلب (٢٠٢٦-١٠-٠٥).
         "pending" -> com.rahalgo.ui.R.string.ord_st_awaiting_platform
         "accepted" -> R.string.md_platform_accepted
         "rejected" -> R.string.md_platform_rejected
         "dispatching" -> R.string.md_searching
-        "assigned" -> R.string.os_assigned
-        "at_pickup" -> R.string.os_at_pickup
-        "picked_up" -> R.string.os_picked_up
-        "on_the_way" -> R.string.os_on_way
-        "at_dropoff" -> R.string.os_at_dropoff
+        // **والحالُ بنصّ الخطوة نفسِه** (التصميمُ المعتمد ٢٠٢٦-١١-٢٧): «الكابتن في الطريق إليك»…
+        // **وفي «إحضار» الكابتنُ يذهب إلى مكان الاستلام أوّلاً.**
+        "assigned" -> if (fetch) R.string.md_step_to_pickup_fetch else R.string.md_step_to_you
+        "at_pickup" -> if (fetch) R.string.md_step_at_pickup_fetch else R.string.md_step_at_you
+        "picked_up", "on_the_way" -> if (fetch) R.string.md_step_to_you_fetch else R.string.md_step_to_recipient
+        "at_dropoff" -> if (fetch) R.string.md_step_at_you else R.string.md_st_at_dropoff
         "delivered" -> com.rahalgo.ui.R.string.ord_st_delivered
         "cancelled" -> R.string.os_cancelled
         "failed" -> R.string.os_failed
@@ -117,7 +118,7 @@ internal fun PulseDot(color: Color, size: Dp = Rahal.size.dot) {
 
 /** **شارةُ الحال** — والانتظارُ نقطتُه تنبض. */
 @Composable
-internal fun StatusPill(status: String) {
+internal fun StatusPill(status: String, fetch: Boolean = false) {
     val tone = toneOf(status)
     Row(verticalAlignment = Alignment.CenterVertically) {
         // **والانتظارُ نقطتُه تنبض** (طلبُ المالك ٢٠٢٦-١٠-٠١) — قبل الرقاقة.
@@ -126,12 +127,13 @@ internal fun StatusPill(status: String) {
             Spacer(Modifier.width(Rahal.space.xs))
         }
         StatusChip(
-            text = deliveryStatusText(status),
+            text = deliveryStatusText(status, fetch),
+            // **والملغاةُ والمرفوضةُ حمراء** (التصميمُ المعتمد ٢٠٢٦-١١-٢٧) — تُقرأ من بعيد.
             tone = when (tone) {
                 Tone.Waiting -> StatusTone.Warning
                 Tone.Moving -> StatusTone.Info
                 Tone.Done -> StatusTone.Success
-                Tone.Ended -> StatusTone.Neutral
+                Tone.Ended -> StatusTone.Danger
             },
         )
     }
@@ -258,4 +260,75 @@ internal fun CancelDeliveryButton(busy: Boolean, onConfirm: () -> Unit) {
 @Composable
 internal fun Hairline() {
     RahalDivider(Modifier.padding(vertical = Rahal.space.sm))
+}
+
+/**
+ * **عنوانُ قسمٍ مرقَّم** في نموذج الطلب (التصميمُ المعتمد ٢٠٢٦-١١-٢٧) — دائرةٌ برقمٍ ثمّ الاسم،
+ * و«اختياري» إن لم يكن لازماً. **والرقمُ بالأرقام العربيّة كما في النموذج المعتمد.**
+ */
+@Composable
+internal fun FormSection(number: Int?, title: String, optional: Boolean = false, danger: Boolean = false) {
+    Row(
+        Modifier.fillMaxWidth().padding(top = Rahal.space.lg, bottom = Rahal.space.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (number != null) {
+            Box(
+                Modifier.size(Rahal.icon.sm).clip(CircleShape).background(Rahal.colors.brand),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "١٢٣٤٥٦٧٨٩"[(number - 1).coerceIn(0, 8)].toString(),
+                    color = Rahal.colors.onBrand,
+                    style = Rahal.type.badge,
+                )
+            }
+            Spacer(Modifier.width(Rahal.space.sm))
+        }
+        Text(
+            title,
+            style = Rahal.type.cardTitle,
+            color = if (danger) Rahal.colors.danger else Rahal.colors.ink,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (optional) {
+            Spacer(Modifier.width(Rahal.space.sm))
+            Text(stringResource(R.string.md_optional), color = Rahal.colors.inkMuted, style = Rahal.type.meta)
+        }
+    }
+}
+
+/**
+ * **سطرُ تفصيلٍ بأيقونةٍ في مربّعٍ وعنوانٍ صغيرٍ فوق القيمة** — صفحةُ المتابعة (التصميمُ المعتمد
+ * ٢٠٢٦-١١-٢٧). **وبلا عنوانٍ** لسطرٍ يقول نفسَه («الأجرة 100 ل.س — من محفظتك»).
+ */
+@Composable
+internal fun DetailRow(icon: Int, label: String?, value: String, strong: Boolean = false, muted: Boolean = false) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = Rahal.space.sm),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(
+            Modifier.size(Rahal.icon.lg).clip(Rahal.shape.sm).background(Rahal.colors.surface),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painterResource(icon),
+                contentDescription = null,
+                tint = Rahal.colors.inkMuted,
+                modifier = Modifier.size(Rahal.icon.xs),
+            )
+        }
+        Spacer(Modifier.width(Rahal.space.md))
+        Column(Modifier.weight(1f)) {
+            if (label != null) {
+                Text(label, color = Rahal.colors.inkMuted, style = Rahal.type.meta)
+            }
+            Text(
+                value,
+                color = if (muted) Rahal.colors.inkMuted else Rahal.colors.ink,
+                style = if (strong) Rahal.type.bodyStrong else Rahal.type.body,
+            )
+        }
+    }
 }

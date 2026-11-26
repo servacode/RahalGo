@@ -7,8 +7,7 @@
  */
 
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { IconClose, IconLocation, IconUser } from "@rahalgo/ui";
-import { fill } from "@/lib/customer/texts";
+import { IconClose, IconLocation } from "@rahalgo/ui";
 import { localPhone } from "@/lib/store/recipientSuggest";
 import type { DeliveryRecipient } from "@/lib/store/types";
 
@@ -33,27 +32,28 @@ export function RecipientSuggestions({
 }) {
   if (items.length === 0) return null;
   return (
-    <div className="surface-inset -mt-rg-xs overflow-hidden" data-testid="delivery-recipients">
-      <p className="px-rg-md pt-rg-sm text-caption text-ink-muted">{D.savedTitle}</p>
-      <ul className="flex flex-col">
+    <div data-testid="delivery-recipients">
+      <p className="mb-rg-xs text-caption font-bold text-ink-muted">{D.savedTitle}</p>
+      {/* **بطاقاتٌ تُمرَّر أفقيّاً** (التصميمُ المعتمد ٢٠٢٦-١١-٢٧) — اللمسةُ تملأ النموذج، و✕ تُخفي المستلم. */}
+      <ul className="-mx-rg-xs flex gap-rg-sm overflow-x-auto px-rg-xs pb-rg-xs [scrollbar-width:none]">
         {items.map((r) => (
-          <li key={r.phone} className="flex items-center gap-rg-xs">
+          <li key={r.phone} className="relative shrink-0">
             <button
               type="button"
               disabled={disabled}
               onMouseDown={keepFocus}
               onClick={() => onPick(r)}
-              className="flex min-w-0 flex-1 items-center gap-rg-sm px-rg-md py-rg-sm text-start transition-colors hover:bg-row-hover disabled:opacity-60"
+              className="flex min-h-14 w-44 flex-col items-start gap-0.5 rounded-card border border-line bg-paper py-rg-sm ps-rg-md pe-10 text-start transition-colors hover:bg-row-hover focus-visible:border-primary disabled:opacity-60"
             >
-              <IconUser size={18} className="shrink-0 text-accent-text" />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-body font-bold text-ink">{r.name}</span>
-                <span className="block truncate text-caption text-ink-muted">
-                  {fill(D.savedLine, { phone: localPhone(r.phone), address: r.address_text })}
-                </span>
+              <span className="block max-w-full truncate text-body font-bold text-ink">{r.name}</span>
+              <span className="block max-w-full truncate text-caption text-ink-muted" dir="ltr">
+                {localPhone(r.phone)}
               </span>
               {r.lat != null && r.lng != null && (
-                <IconLocation size={16} className="shrink-0 text-success" aria-label={D.savedHasPoint} />
+                <span className="flex items-center gap-1 text-caption font-bold text-success">
+                  <IconLocation size={12} aria-hidden />
+                  {D.savedHasPoint}
+                </span>
               )}
             </button>
             <button
@@ -63,9 +63,9 @@ export function RecipientSuggestions({
               onClick={() => onHide(r)}
               aria-label={D.savedHide}
               title={D.savedHide}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-row-hover disabled:opacity-60"
+              className="absolute end-1 top-1 flex h-8 w-8 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-row-hover disabled:opacity-60"
             >
-              <IconClose size={16} />
+              <IconClose size={14} />
             </button>
           </li>
         ))}

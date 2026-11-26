@@ -24,7 +24,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FocusEvent as ReactFocusEvent } from "react";
 import { getMessages, defaultLocale, errorText, fmtNum, westernDigits } from "@rahalgo/i18n";
-import { Alert, Button, ButtonLink, Checkbox, PageHead, EmptyState, IconLink, IconLocation, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
+import { Alert, Button, ButtonLink, PageHead, EmptyState, IconLink, IconLocation, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { useStoreDeliveries } from "@/lib/store/deliveries";
@@ -86,33 +86,67 @@ function CurrencyDots({ value, disabled, onPick }: { value: "SYP" | "USD"; disab
   );
 }
 
-function ModeButton({ on, title, onClick, disabled }: { on: boolean; title: string; onClick: () => void; disabled: boolean }) {
+/** **مفتاحُ «توصيل / إحضار»** — قطعةٌ واحدةٌ كبيرةٌ بخيارين، وتحتها سطرٌ يشرح المختار. */
+function ModeSwitch({ mode, disabled, onPick }: { mode: Mode; disabled: boolean; onPick: (m: Mode) => void }) {
+  const items: { key: Exclude<Mode, "">; title: string }[] = [
+    { key: "send", title: D.modeSend },
+    { key: "fetch", title: D.modeFetch },
+  ];
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-pressed={on}
-      data-testid="delivery-mode"
-      className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-rg-xs rounded-card border p-rg-lg text-center transition-colors ${
-        on ? "border-2 border-accent bg-accent-tint" : "border-line bg-surface hover:bg-row-hover"
-      }`}
-    >
-      <span className="heading-card">{title}</span>
-    </button>
+    <div className="flex flex-col gap-rg-xs">
+      <div className="grid grid-cols-2 gap-rg-xs rounded-card bg-field p-rg-xs" role="group" aria-label={D.title}>
+        {items.map((i) => (
+          <button
+            key={i.key}
+            type="button"
+            onClick={() => onPick(i.key)}
+            disabled={disabled}
+            aria-pressed={mode === i.key}
+            data-testid="delivery-mode"
+            className={`flex min-h-12 items-center justify-center rounded-control text-body font-bold transition-colors disabled:opacity-60 ${
+              mode === i.key ? "bg-paper text-primary shadow-e1" : "text-ink-muted hover:bg-row-hover"
+            }`}
+          >
+            {i.title}
+          </button>
+        ))}
+      </div>
+      <p className="min-h-5 px-rg-xs text-caption text-ink-muted">{mode === "send" ? D.modeSendSub : mode === "fetch" ? D.modeFetchSub : D.modePick}</p>
+    </div>
   );
 }
 
+/** **قسمٌ مرقَّم** في النموذج — دائرةٌ برقمه وعنوانٌ، وتحتهما بطاقتُه. */
+function Section({ n, title, optional, children }: { n?: number; title: string; optional?: boolean; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-rg-sm">
+      <h3 className="flex items-center gap-rg-sm px-rg-xs text-body font-bold">
+        {n != null && (
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-badge bg-primary-solid text-caption text-on-solid" aria-hidden>
+            {fmtNum(n)}
+          </span>
+        )}
+        <span className="min-w-0">{title}</span>
+        {optional && <span className="text-caption font-normal text-ink-muted">{D.optional}</span>}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+/** **خيارُ من يدفع** — بطاقةٌ كبيرةٌ بدائرةِ اختيارٍ وشرحٍ تحت العنوان. */
 function PayerOption({
   on,
   title,
   sub,
+  warn,
   disabled,
   onPick,
 }: {
   on: boolean;
   title: string;
   sub?: string;
+  warn?: string;
   disabled: boolean;
   onPick: () => void;
 }) {
@@ -123,18 +157,17 @@ function PayerOption({
       aria-checked={on}
       disabled={disabled}
       onClick={onPick}
-      className={`flex w-full items-center gap-rg-md rounded-control border p-rg-md text-start transition-colors disabled:opacity-60 ${
-        on ? "border-2 border-accent bg-accent-tint" : "border-line bg-surface hover:bg-row-hover"
+      className={`flex min-h-16 w-full items-center gap-rg-md rounded-card border p-rg-md text-start transition-colors disabled:opacity-60 ${
+        on ? "border-2 border-primary bg-primary-tint" : "border-line bg-paper hover:bg-row-hover"
       }`}
     >
-      <span
-        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border ${on ? "border-accent" : "border-line"}`}
-      >
-        {on && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}
+      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${on ? "border-primary" : "border-line"}`}>
+        {on && <span className="h-2.5 w-2.5 rounded-full bg-primary" />}
       </span>
       <span className="min-w-0">
         <span className="block text-body font-bold">{title}</span>
-        {sub && <span className="block text-caption text-danger">{sub}</span>}
+        {sub && <span className="block text-caption text-ink-muted">{sub}</span>}
+        {warn && <span className="block text-caption font-bold text-danger">{warn}</span>}
       </span>
     </button>
   );
@@ -175,8 +208,6 @@ export default function DeliveryPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
-  // **ضغطَ «اطلب سائقاً» والنموذجُ ناقص** — فتُعلَّم خاناتُه بالأحمر (مرآةُ `tried`، تدقيقُ ٢٠٢٦-١٠-٢٧).
-  const [tried, setTried] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState("");
   const [shown, setShown] = useState(5);
@@ -455,12 +486,8 @@ export default function DeliveryPage() {
 
   async function send() {
     if (busy || !storeId) return;
-    // **الزرُّ لا يقف صامتاً** — كان رماديّاً بلا كلمة؛ والضغطُ والنموذجُ ناقصٌ يُعلّم ولا يُرسل.
-    if (missing.length > 0) {
-      setTried(true);
-      return;
-    }
-    setTried(false);
+    // **والزرُّ معطّلٌ حتّى يكتمل** — وهذا حارسٌ ثانٍ لإرسالٍ بالإدخال (Enter).
+    if (missing.length > 0) return;
     setBusy(true);
     setError("");
     setSent(false);
@@ -538,10 +565,14 @@ export default function DeliveryPage() {
           : null;
 
   // **الخيارُ بكلمته وحدَها** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — والسطرُ تحته لـ«الرصيد لا يكفي» وحدَه.
-  const payers: { key: Payer; title: string }[] = [
-    { key: "merchant", title: D.payMe },
-    { key: "merchant_cash", title: D.payMeCash },
-    { key: "recipient", title: isFetch ? D.payRecipientFetch : D.payRecipient },
+  const payers: { key: Payer; title: string; sub: string }[] = [
+    {
+      key: "merchant",
+      title: D.payMe,
+      sub: quote ? fill(D.feeFromWallet, { balance: fmtNum(quote.available_balance ?? 0) }) : D.payMeSub,
+    },
+    { key: "merchant_cash", title: D.payMeCash, sub: isFetch ? D.payMeCashSubFetch : D.payMeCashSub },
+    { key: "recipient", title: isFetch ? D.payRecipientFetch : D.payRecipient, sub: isFetch ? D.payRecipientSubFetch : D.payRecipientSub },
   ];
 
   const feeSub =
@@ -564,6 +595,10 @@ export default function DeliveryPage() {
     return t === "waiting" || t === "moving";
   });
 
+  const ongoing = rows?.filter((d) => ["waiting", "moving"].includes(toneOf(d.status))) ?? [];
+  const finished = rows?.filter((d) => !["waiting", "moving"].includes(toneOf(d.status))) ?? [];
+  const ready = missing.length === 0 && !blocked && !!storeId;
+
   return (
     <div className="console-page" data-testid="store-delivery-page">
       <PageHead
@@ -579,11 +614,17 @@ export default function DeliveryPage() {
         <Link
           href={`/store/delivery/${live.id}`}
           data-testid="delivery-live"
-          className="flex items-center gap-rg-sm rounded-control bg-accent-tint px-rg-md py-rg-sm transition-opacity hover:opacity-90"
+          className="flex items-center gap-rg-md rounded-card bg-primary-solid px-rg-md py-rg-sm text-on-solid transition-opacity hover:opacity-90"
         >
-          <IconMoto size={20} className="shrink-0 text-accent-text" />
-          <span className="min-w-0 flex-1 text-body">{fill(D.active, { n: live.number, status: statusText(live.status) })}</span>
-          <span className="shrink-0 text-body font-bold text-accent-text">{D.follow}</span>
+          <span className="relative flex h-3 w-3 shrink-0" aria-hidden>
+            <span className="absolute inline-flex h-full w-full rounded-badge bg-accent opacity-60 motion-safe:animate-ping" />
+            <span className="relative inline-flex h-3 w-3 rounded-badge bg-accent" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">{fill(D.activeTitle, { n: live.number })}</span>
+            <span className="block text-caption opacity-90">{statusText(live.status, live.delivery_mode)}</span>
+          </span>
+          <span className="flex min-h-10 shrink-0 items-center rounded-badge bg-paper px-rg-md text-body font-bold text-primary">{D.follow}</span>
         </Link>
       )}
 
@@ -605,277 +646,321 @@ export default function DeliveryPage() {
       {/* ── عمودان على الحاسوب: الطلب | توصيلاتي. جوّالاً متتابعان بالترتيب نفسه. ── */}
       <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] md:items-start md:gap-5">
       <div className="flex min-w-0 flex-col gap-rg-md">
-      <div className="flex gap-rg-md">
-        <ModeButton on={mode === "send"} title={D.modeSend} disabled={busy} onClick={() => pickMode("send")} />
-        <ModeButton on={mode === "fetch"} title={D.modeFetch} disabled={busy} onClick={() => pickMode("fetch")} />
-      </div>
+      <ModeSwitch mode={mode} disabled={busy} onPick={pickMode} />
 
       {sent && <Alert tone="success">{D.sent}</Alert>}
 
       {mode && (
         <form
-          className="panel flex flex-col gap-rg-md p-rg-lg lg:p-5"
+          className="flex flex-col gap-rg-md"
           onSubmit={(e) => {
             e.preventDefault();
             void send();
           }}
         >
-          {/* **مستلموه السابقون تحت الحقل الذي يكتب فيه** (قرارُ المالك ٢٠٢٦-١١-٠٥) — حرفان
-              في الاسم أو الرقم، واللمسةُ تملأ النموذج. **وتُطوى حين يخرج من الحقل.** */}
-          <div className="flex flex-col gap-rg-sm" onBlur={closeOnLeave}>
-            <Input
-              label={isFetch ? D.nameFetch : D.name}
-              error={tried && !name.trim() ? D.required : undefined}
-              value={name}
-              disabled={busy}
-              autoComplete="off"
-              onChange={(e) => {
-                setName(e.target.value);
-                touched();
-                saved.type("name", e.target.value);
-              }}
-            />
-            {saved.field === "name" && (
-              <RecipientSuggestions items={saved.items} disabled={busy} onPick={pickRecipient} onHide={saved.hide} />
-            )}
-          </div>
-          <div className="flex flex-col gap-rg-sm" onBlur={closeOnLeave}>
-            <Input
-              label={isFetch ? D.phoneFetch : D.phone}
-              error={tried && !phone.trim() ? D.required : undefined}
-              value={phone}
-              disabled={busy}
-              type="tel"
-              inputMode="tel"
-              dir="ltr"
-              autoComplete="off"
-              onChange={(e) => {
-                // **والأرقامُ الهنديّةُ تُقرأ أرقاماً** — كانت تُمحى فلا يُكتب الرقمُ من لوحةٍ عربيّة.
-                const v = westernDigits(e.target.value)
-                  .replace(/[^\d+]/g, "")
-                  .slice(0, 16);
-                setPhone(v);
-                touched();
-                dropStaleSavedPoint(v, address);
-                saved.type("phone", v);
-              }}
-            />
-            {saved.field === "phone" && (
-              <RecipientSuggestions items={saved.items} disabled={busy} onPick={pickRecipient} onHide={saved.hide} />
-            )}
-          </div>
-          <Textarea
-            id="delivery-address"
-            label={isFetch ? D.addressFetch : D.address}
-            error={tried && !address.trim() ? D.required : undefined}
-            value={address}
-            disabled={busy}
-            rows={2}
-            onChange={(e) => {
-              setAddress(e.target.value);
-              dropStaleSavedPoint(phone, e.target.value);
-              touched();
-            }}
-          />
-          {/* **ونقطةُ آخر توصيلةٍ لمن اختير تُقال** — وتُزال بلمسة فتعود الأجرةُ بلا نقطة. */}
-          {pointFromSaved && (
-            <div className="-mt-rg-xs flex items-center gap-rg-sm rounded-control border border-success-edge bg-success-tint px-rg-md py-rg-sm" data-testid="delivery-saved-point">
-              <p className="min-w-0 flex-1 text-caption font-bold text-success">{isFetch ? D.savedPointFetch : D.savedPoint}</p>
-              <button type="button" className="shrink-0 inline-action" disabled={busy} onClick={clearSavedPoint}>
-                {D.savedPointRemove}
-              </button>
+          {/* ── ١ · المستلم ── */}
+          <Section n={1} title={isFetch ? D.secWhoFetch : D.secWho}>
+            {/* **مستلموه السابقون تحت الحقل الذي يكتب فيه** (قرارُ المالك ٢٠٢٦-١١-٠٥) — حرفان
+                في الاسم أو الرقم، واللمسةُ تملأ النموذج. **وتُطوى حين يخرج من الحقل.** */}
+            <div className="panel flex flex-col gap-rg-md p-rg-md">
+              <div className="flex flex-col gap-rg-sm" onBlur={closeOnLeave}>
+                <Input
+                  label={isFetch ? D.nameFetch : D.name}
+                  value={name}
+                  disabled={busy}
+                  autoComplete="off"
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    touched();
+                    saved.type("name", e.target.value);
+                  }}
+                />
+                {saved.field === "name" && (
+                  <RecipientSuggestions items={saved.items} disabled={busy} onPick={pickRecipient} onHide={saved.hide} />
+                )}
+              </div>
+              <div className="flex flex-col gap-rg-sm" onBlur={closeOnLeave}>
+                <Input
+                  label={isFetch ? D.phoneFetch : D.phone}
+                  value={phone}
+                  disabled={busy}
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                  autoComplete="off"
+                  onChange={(e) => {
+                    // **والأرقامُ الهنديّةُ تُقرأ أرقاماً** — كانت تُمحى فلا يُكتب الرقمُ من لوحةٍ عربيّة.
+                    const v = westernDigits(e.target.value)
+                      .replace(/[^\d+]/g, "")
+                      .slice(0, 16);
+                    setPhone(v);
+                    touched();
+                    dropStaleSavedPoint(v, address);
+                    saved.type("phone", v);
+                  }}
+                />
+                {saved.field === "phone" && (
+                  <RecipientSuggestions items={saved.items} disabled={busy} onPick={pickRecipient} onHide={saved.hide} />
+                )}
+              </div>
             </div>
-          )}
-          <div className="flex flex-col gap-rg-sm">
-            {/* **طريقا الموقع في صفٍّ واحد** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩): «اطلب الموقع» — الطريقُ
-                الأوّل (قرارُ المالك ٢٠٢٦-١٠-٢٩) — **وبجانبه «لصق رابط» يفتح خانةَ الرابط وقتَ الحاجة.** */}
-            <div className="flex gap-rg-sm">
-              <Button
-                type="button"
-                variant="secondary"
-                className="flex min-w-0 flex-1 items-center justify-center gap-rg-sm"
-                disabled={busy || ask === "sending" || ask === "waiting"}
-                onClick={() => void askLocation()}
-              >
-                <IconLocation size={18} />
-                <span className="truncate">{ask === "sending" ? D.askLocSending : isFetch ? D.askLocFetch : D.askLoc}</span>
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="flex shrink-0 items-center gap-rg-sm"
-                aria-expanded={linkOpen}
+          </Section>
+
+          {/* ── ٢ · العنوان والموقع ── */}
+          <Section n={2} title={isFetch ? D.addressFetch : D.address}>
+            <div className="panel flex flex-col gap-rg-md p-rg-md">
+              <Textarea
+                id="delivery-address"
+                value={address}
                 disabled={busy}
-                onClick={() => setLinkOpen((v) => !v)}
-                data-testid="delivery-link-toggle"
-              >
-                <IconLink size={18} />
-                {D.pasteLink}
-              </Button>
-            </div>
-            {ask === "waiting" && askReq && (
-              <div className="flex flex-col gap-rg-sm rounded-control border border-line bg-field p-rg-md">
-                <p className="text-caption text-ink-muted">{askReq.whatsapp_sent ? D.askLocWaiting : D.askLocNotSent}</p>
-                {/* **«انسخ الرابط» ظاهرٌ دائماً باسمه ومعه تأكيدٌ «انتسخ الرابط»** (قرارُ المالك ٢٠٢٦-١١-١١). */}
-                <div className="flex flex-wrap gap-rg-md">
-                  {!askReq.whatsapp_sent && (
-                    <a
-                      className="text-body font-bold text-accent-text"
-                      href={askReq.wa_url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {D.askLocShare}
-                    </a>
-                  )}
-                  <button type="button" className="inline-action" onClick={() => void copyLink()} data-testid="delivery-copy-link">
-                    {copied ? D.askLocCopied : D.askLocCopy}
+                rows={2}
+                aria-label={isFetch ? D.addressFetch : D.address}
+                onChange={(e) => {
+                  setAddress(e.target.value);
+                  dropStaleSavedPoint(phone, e.target.value);
+                  touched();
+                }}
+              />
+              {/* **ونقطةُ آخر توصيلةٍ لمن اختير تُقال** — وتُزال بلمسة فتعود الأجرةُ بلا نقطة. */}
+              {pointFromSaved && (
+                <div className="flex items-center gap-rg-sm rounded-control border border-success-edge bg-success-tint px-rg-md py-rg-sm" data-testid="delivery-saved-point">
+                  <p className="min-w-0 flex-1 text-caption font-bold text-success">{isFetch ? D.locSavedFetch : D.locSaved}</p>
+                  <button type="button" className="shrink-0 inline-action" disabled={busy} onClick={clearSavedPoint}>
+                    {D.savedPointRemove}
                   </button>
+                </div>
+              )}
+              <div className="flex flex-col gap-rg-sm">
+                {/* **طريقا الموقع**: «اطلب الموقع» الأساسيّ (قرارُ المالك ٢٠٢٦-١٠-٢٩) — **وبجانبه «لصق رابط»
+                    يفتح خانةَ الرابط وقتَ الحاجة.** */}
+                <div className="grid grid-cols-[1.4fr_1fr] gap-rg-sm">
+                  <Button
+                    type="button"
+                    className="flex min-h-12 min-w-0 items-center justify-center gap-rg-sm"
+                    disabled={busy || ask === "sending" || ask === "waiting"}
+                    onClick={() => void askLocation()}
+                  >
+                    <IconLocation size={18} />
+                    <span className="truncate">{ask === "sending" ? D.askLocSending : isFetch ? D.askLocFetch : D.askLoc}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="flex min-h-12 items-center justify-center gap-rg-sm"
+                    aria-expanded={linkOpen}
+                    disabled={busy}
+                    onClick={() => setLinkOpen((v) => !v)}
+                    data-testid="delivery-link-toggle"
+                  >
+                    <IconLink size={18} />
+                    {D.pasteLink}
+                  </Button>
+                </div>
+                {ask === "waiting" && askReq && (
+                  <div className="flex flex-col gap-rg-sm rounded-control border border-line bg-field p-rg-md">
+                    <p className="text-caption text-ink-muted">{askReq.whatsapp_sent ? D.askLocWaiting : D.askLocNotSent}</p>
+                    {/* **«انسخ الرابط» ظاهرٌ دائماً باسمه ومعه تأكيدٌ «انتسخ الرابط»** (قرارُ المالك ٢٠٢٦-١١-١١). */}
+                    <div className="flex flex-wrap gap-rg-md">
+                      {!askReq.whatsapp_sent && (
+                        <a className="text-body font-bold text-accent-text" href={askReq.wa_url} target="_blank" rel="noreferrer">
+                          {D.askLocShare}
+                        </a>
+                      )}
+                      <button type="button" className="inline-action" onClick={() => void copyLink()} data-testid="delivery-copy-link">
+                        {copied ? D.askLocCopied : D.askLocCopy}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {ask === "received" && (
+                  <div className="rounded-control border border-success-edge bg-success-tint p-rg-md">
+                    <p className="text-body font-bold text-success">{isFetch ? D.askLocReceivedFetch : D.askLocReceived}</p>
+                    {askAcc != null && <p className="text-caption">{fill(D.askLocAccuracy, { m: fmtNum(askAcc) })}</p>}
+                  </div>
+                )}
+                {ask === "expired" && <p className="text-caption text-danger">{D.askLocExpired}</p>}
+                {askError && <p className="text-caption text-danger">{askError}</p>}
+                {linkOpen && (
+                  <div className="flex items-end gap-rg-sm">
+                    <div className="min-w-0 flex-1">
+                      <Input
+                        label={isFetch ? D.linkFetch : D.link}
+                        placeholder={isFetch ? D.linkHintFetch : D.linkHint}
+                        value={link}
+                        disabled={busy}
+                        dir="ltr"
+                        inputMode="url"
+                        autoComplete="off"
+                        onChange={(e) => {
+                          if (ask === "received" && e.target.value.includes("http")) setAsk("idle");
+                          onLink(e.target.value);
+                        }}
+                      />
+                    </div>
+                    <Button type="button" variant="secondary" className="min-h-11" disabled={busy} onClick={() => void paste()}>
+                      {D.paste}
+                    </Button>
+                  </div>
+                )}
+                {/* **سطرُ حالة الموقع** — ما وصل أو ما ينقص، فلا يُترك المتجرُ يخمّن أنّ الأجرة أساسيّةٌ فقط. */}
+                {linkNote ? (
+                  <p className={`text-caption ${linkNote.cls}`} data-testid="delivery-loc-status">{linkNote.text}</p>
+                ) : !point && ask !== "waiting" ? (
+                  <p className="text-caption text-ink-muted" data-testid="delivery-loc-status">{isFetch ? D.locNoneFetch : D.locNone}</p>
+                ) : null}
+              </div>
+            </div>
+          </Section>
+
+          {/* ── ٣ · الغرض ── */}
+          <Section n={3} title={isFetch ? D.parcelFetch : D.parcel}>
+            <div className="panel flex flex-col gap-rg-md p-rg-md">
+              <Textarea
+                id="delivery-parcel"
+                maxLength={200}
+                aria-label={isFetch ? D.parcelFetch : D.parcel}
+                placeholder={isFetch ? D.parcelHintFetch : D.parcelHint}
+                value={parcel}
+                disabled={busy}
+                rows={2}
+                onChange={(e) => {
+                  setParcel(e.target.value.slice(0, 200));
+                  touched();
+                }}
+              />
+              <Textarea
+                id="delivery-driver-note"
+                maxLength={200}
+                label={D.driverNote}
+                value={driverNote}
+                disabled={busy}
+                rows={2}
+                onChange={(e) => {
+                  setDriverNote(e.target.value.slice(0, 200));
+                  touched();
+                }}
+              />
+            </div>
+          </Section>
+
+          {/* ── ٤ · من يدفع ── */}
+          <Section n={4} title={D.whoPays}>
+            <div className="flex flex-col gap-rg-sm" role="radiogroup" aria-label={D.whoPays}>
+              {payers.map((p) => {
+                const short = p.key === "merchant" && quote?.merchant_can_pay === false;
+                return (
+                  <PayerOption
+                    key={p.key}
+                    on={payer === p.key}
+                    title={p.title}
+                    sub={p.sub}
+                    warn={short ? D.walletShort : undefined}
+                    disabled={busy || short}
+                    onPick={() => {
+                      setPayer(p.key);
+                      touched();
+                    }}
+                  />
+                );
+              })}
+            </div>
+            {!quoteError && quote && (
+              /* **أرضٌ محايدة** — الأخضرُ يقول «تمّ/دُفع»، والأجرةُ لم تُدفع بعد. */
+              <div className="flex items-center justify-between gap-rg-md rounded-card bg-primary-tint p-rg-md">
+                <div className="min-w-0">
+                  <p className="text-caption text-ink-muted">{D.feeLabel}</p>
+                  <p className="figure text-primary">{fill(D.feeAmount, { fee: fmtNum(quote.fee) })}</p>
+                </div>
+                <div className="min-w-0 text-end text-caption text-ink-muted">
+                  {feeSub && <p>{feeSub}</p>}
+                  {quote.fee_basis === "no_point" ? (
+                    <p>{isFetch ? D.feeNoPointFetch : D.feeNoPoint}</p>
+                  ) : quote.fee_basis === "distance" && quote.distance_m > 0 ? (
+                    <p>{fill(D.feeDistance, { km: (quote.distance_m / 1000).toFixed(1) })}</p>
+                  ) : null}
                 </div>
               </div>
             )}
-            {ask === "received" && (
-              <div className="rounded-control border border-success-edge bg-success-tint p-rg-md">
-                <p className="text-body font-bold text-success">{isFetch ? D.askLocReceivedFetch : D.askLocReceived}</p>
-                {askAcc != null && <p className="text-caption">{fill(D.askLocAccuracy, { m: fmtNum(askAcc) })}</p>}
-              </div>
-            )}
-            {ask === "expired" && <p className="text-caption text-danger">{D.askLocExpired}</p>}
-            {askError && <p className="text-caption text-danger">{askError}</p>}
-            {linkOpen && (
-            <div className="flex items-end gap-rg-sm">
-              <div className="min-w-0 flex-1">
-                <Input
-                  label={isFetch ? D.linkFetch : D.link}
-                  placeholder={isFetch ? D.linkHintFetch : D.linkHint}
-                  value={link}
-                  disabled={busy}
-                  dir="ltr"
-                  inputMode="url"
-                  autoComplete="off"
-                  onChange={(e) => {
-                    if (ask === "received" && e.target.value.includes("http")) setAsk("idle");
-                    onLink(e.target.value);
-                  }}
-                />
-              </div>
-              <Button type="button" variant="secondary" disabled={busy} onClick={() => void paste()}>
-                {D.paste}
-              </Button>
-            </div>
-            )}
-            {linkNote && <p className={`text-caption ${linkNote.cls}`}>{linkNote.text}</p>}
-          </div>
-          <Textarea
-            id="delivery-parcel"
-            maxLength={200}
-            label={isFetch ? D.parcelFetch : D.parcel}
-            placeholder={isFetch ? D.parcelHintFetch : D.parcelHint}
-            value={parcel}
-            disabled={busy}
-            rows={2}
-            onChange={(e) => {
-              setParcel(e.target.value.slice(0, 200));
-              touched();
-            }}
-          />
-          <Textarea
-            id="delivery-driver-note"
-            maxLength={200}
-            label={D.driverNote}
-            value={driverNote}
-            disabled={busy}
-            rows={2}
-            onChange={(e) => {
-              setDriverNote(e.target.value.slice(0, 200));
-              touched();
-            }}
-          />
-          <Checkbox
-            id="delivery-collect"
-            label={isFetch ? D.collectQFetch : D.collectQ}
-            checked={collectOn}
-            disabled={busy}
-            onChange={(e) => {
-              setCollectOn(e.target.checked);
-              if (!e.target.checked) setCollectAmount("");
-              touched();
-            }}
-          />
-          {collectOn && (
-            <div className="flex items-end gap-rg-sm">
-              <div className="min-w-0 flex-1">
-              <Input
-                label={`${isFetch ? D.collectAmountFetch : D.collectAmount} (${currency === "USD" ? "$" : m.common.currency})`}
-                error={tried && collectValue == null ? D.required : undefined}
-                value={collectAmount}
-                disabled={busy}
-                inputMode={currency === "USD" ? "decimal" : "numeric"}
-                dir="ltr"
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  setCollectAmount(
-                    currency === "USD"
-                      ? raw.replace(/[^\d.,]/g, "").replace(",", ".").replace(/^(\d*\.?\d{0,2}).*$/, "$1").slice(0, 10)
-                      : raw.replace(/\D/g, "").slice(0, 12),
-                  );
-                  touched();
-                }}
-              />
-              </div>
-              <CurrencyDots
-                value={currency}
-                disabled={busy}
-                onPick={(c) => {
-                  if (c === currency) return;
-                  setCurrency(c);
-                  setCollectAmount("");
-                  touched();
-                }}
-              />
-            </div>
-          )}
+            {payer === "merchant" && quote && !quote.merchant_can_pay && <Alert>{D.cannotPay}</Alert>}
+          </Section>
 
-          <div className="flex flex-col gap-rg-sm" role="radiogroup" aria-label={D.whoPays}>
-            <p className={`text-body font-bold ${tried && !payer ? "text-danger" : ""}`}>{D.whoPaysQ}</p>
-            {payers.map((p) => {
-              const short = p.key === "merchant" && quote?.merchant_can_pay === false;
-              return (
-                <PayerOption
-                  key={p.key}
-                  on={payer === p.key}
-                  title={p.title}
-                  sub={short ? D.walletShort : undefined}
-                  disabled={busy || short}
-                  onPick={() => {
-                    setPayer(p.key);
+          {/* ── المبلغ على الكابتن — خلف مفتاح ── */}
+          <Section title={isFetch ? D.collectQFetch : D.collectQ} optional>
+            <div className="panel flex flex-col gap-rg-md p-rg-md">
+              <div className="flex min-h-12 items-center gap-rg-md">
+                <button
+                  id="delivery-collect"
+                  type="button"
+                  role="switch"
+                  aria-checked={collectOn}
+                  aria-label={isFetch ? D.collectQFetch : D.collectQ}
+                  disabled={busy}
+                  onClick={() => {
+                    const next = !collectOn;
+                    setCollectOn(next);
+                    if (!next) setCollectAmount("");
                     touched();
                   }}
-                />
-              );
-            })}
-          </div>
-
-          {!quoteError && quote && (
-            /* **أرضٌ محايدة** — الأخضرُ يقول «تمّ/دُفع»، والأجرةُ لم تُدفع بعد. */
-            <div className="rounded-control border border-line bg-field p-rg-md">
-              <p className="font-bold text-ink">{fill(D.fee, { fee: fmtNum(quote.fee) })}</p>
-              {feeSub && <p className="text-caption text-ink-muted">{feeSub}</p>}
-              {quote.fee_basis === "no_point" ? (
-                <p className="text-caption text-ink-muted">{isFetch ? D.feeNoPointFetch : D.feeNoPoint}</p>
-              ) : quote.fee_basis === "distance" && quote.distance_m > 0 ? (
-                <p className="text-caption text-ink-muted">{fill(D.feeDistance, { km: (quote.distance_m / 1000).toFixed(1) })}</p>
-              ) : null}
+                  className={`relative h-8 w-14 shrink-0 rounded-badge transition-colors disabled:opacity-60 ${collectOn ? "bg-primary-solid" : "bg-ink-faint"}`}
+                >
+                  <span className={`absolute top-1 h-6 w-6 rounded-badge bg-paper shadow-e1 transition-all ${collectOn ? "end-1" : "end-7"}`} />
+                </button>
+                <span className="text-body">{collectOn ? D.collectYes : D.collectNo}</span>
+              </div>
+              {collectOn && (
+                <div className="flex items-end gap-rg-sm">
+                  <div className="min-w-0 flex-1">
+                    <Input
+                      label={`${isFetch ? D.collectAmountFetch : D.collectAmount} (${currency === "USD" ? "$" : m.common.currency})`}
+                      value={collectAmount}
+                      disabled={busy}
+                      inputMode={currency === "USD" ? "decimal" : "numeric"}
+                      dir="ltr"
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        setCollectAmount(
+                          currency === "USD"
+                            ? raw.replace(/[^\d.,]/g, "").replace(",", ".").replace(/^(\d*\.?\d{0,2}).*$/, "$1").slice(0, 10)
+                            : raw.replace(/\D/g, "").slice(0, 12),
+                        );
+                        touched();
+                      }}
+                    />
+                  </div>
+                  <CurrencyDots
+                    value={currency}
+                    disabled={busy}
+                    onPick={(c) => {
+                      if (c === currency) return;
+                      setCurrency(c);
+                      setCollectAmount("");
+                      touched();
+                    }}
+                  />
+                </div>
+              )}
             </div>
-          )}
-          {payer === "merchant" && quote && !quote.merchant_can_pay && <Alert>{D.cannotPay}</Alert>}
-          {missing.length > 0 && (
-            <p className={`text-caption ${tried ? "font-bold text-danger" : "text-ink-muted"}`}>{fill(D.missing, { list: missing.join(m.common.listSep) })}</p>
-          )}
-          {error && <Alert>{error}</Alert>}
-          <Button type="submit" size="lg" className="w-full" disabled={busy || blocked || !storeId}>
-            {busy ? D.sending : D.send}
-          </Button>
+          </Section>
+
+          {/* ── شريطٌ ثابتٌ بأسفل الشاشة: ما ينقص أو «جاهز»، وزرُّ الطلب معطّلٌ حتّى يكتمل ── */}
+          <div
+            className="sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-10 -mx-rg-md flex flex-col gap-rg-sm border-t border-line-soft bg-paper px-rg-md py-rg-sm md:bottom-0 md:mx-0 md:rounded-card md:border"
+            data-testid="delivery-footer"
+          >
+            {error && <Alert>{error}</Alert>}
+            {missing.length > 0 ? (
+              <p className="rounded-control bg-warning-tint px-rg-md py-rg-xs text-caption text-warning" data-testid="delivery-hint">
+                {fill(D.missing, { list: missing.join(m.common.listSep) })}
+              </p>
+            ) : ready && quote ? (
+              <p className="rounded-control bg-success-tint px-rg-md py-rg-xs text-caption font-bold text-success" data-testid="delivery-hint">
+                {fill(D.hintReady, { fee: fmtNum(quote.fee) })}
+              </p>
+            ) : null}
+            <Button type="submit" size="lg" className="min-h-14 w-full text-lg" disabled={busy || !ready}>
+              {busy ? D.sending : D.send}
+            </Button>
+          </div>
         </form>
       )}
 
@@ -888,10 +973,15 @@ export default function DeliveryPage() {
         {rows != null && rows.length === 0 && (
           <EmptyState icon={IconMoto} title={D.none} />
         )}
-        {rows?.slice(0, shown).map((d) => (
+        {ongoing.length > 0 && <p className="px-rg-xs text-caption font-bold text-ink-muted">{fill(D.recent, { n: fmtNum(ongoing.length) })}</p>}
+        {ongoing.map((d) => (
           <DeliveryRow key={d.id} d={d} cancelling={cancelling === d.id} onCancel={() => void cancel(d.id)} />
         ))}
-        {rows != null && rows.length > shown && (
+        {finished.length > 0 && <p className="mt-rg-sm px-rg-xs text-caption font-bold text-ink-muted">{D.finished}</p>}
+        {finished.slice(0, shown).map((d) => (
+          <DeliveryRow key={d.id} d={d} cancelling={cancelling === d.id} onCancel={() => void cancel(d.id)} />
+        ))}
+        {finished.length > shown && (
           <Button variant="secondary" onClick={() => setShown((n) => n + 10)}>
             {D.more}
           </Button>
