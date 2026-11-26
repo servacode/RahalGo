@@ -35,6 +35,7 @@ import com.rahalgo.shared.merchant.Delivery
 import com.rahalgo.shared.merchant.hasChat
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.CardVariant
+import com.rahalgo.ui.ChatFab
 import com.rahalgo.ui.RahalCard
 import com.rahalgo.ui.StatusTone
 import com.rahalgo.ui.Note
@@ -312,7 +313,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
     // **قرصٌ طافٍ بعدّاد الجديد** كما عند الزبون (`ChatFab`).
     // ══════════════════════════════════════════════════════════════
     if (d?.hasChat() == true && !chatOpen) {
-        com.rahalgo.ui.ChatFab(unread = d.chatUnread) { chatOpen = true }
+        ChatFab(unread = d.chatUnread) { chatOpen = true }
     }
     }
 }
