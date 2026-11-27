@@ -22,7 +22,6 @@ import { EmptyState, LoadingState, Money, ReloadState, StatusChip, IconPromos, I
 import { api, mediaUrl } from "@/lib/api";
 import { useBrowseQuery, useCustomer } from "@/lib/customer/context";
 import { useAuth } from "@/lib/auth";
-import { LoyaltyCards, useStampCard } from "@/components/LoyaltyCards";
 import { fill, freeOfferLines } from "@/lib/customer/texts";
 import type { FreeDelivery, Item, Offer } from "@/lib/customer/types";
 import { ItemGrid, ItemSheet } from "@/components/customer/items";
@@ -92,9 +91,6 @@ export default function OffersPage() {
   const scopeAmp = useBrowseQuery("&");
   const { freeDelivery } = useCustomer();
   const { user } = useAuth();
-  // **بطاقة رحّال غو وكرت اليوم أوّلَ العروض** (قرارُ المالك ٢٠٢٦-١١-٢٧) — كصفحة العروض في التطبيق.
-  const loyalty = useStampCard(user ? "/api/v1/my/stamp-card" : null);
-  const hasLoyalty = !!loyalty && (loyalty.enabled || loyalty.daily?.enabled);
   const free = freeDelivery && (freeDelivery.standard || freeDelivery.purchase || freeDelivery.amanah) ? freeDelivery : null;
   const [offers, setOffers] = useState<Offer[] | null>(null);
   const [items, setItems] = useState<Item[]>([]);
@@ -123,14 +119,13 @@ export default function OffersPage() {
   return (
     <div className="flex flex-col gap-4">
       <ShopPageHeader title={F.title} />
-      <LoyaltyCards card={loyalty} seenKey="customer" />
       {free && <FreeOfferCard fd={free} />}
       {error && !offers ? (
         <ReloadState label={error} onRetry={load} />
       ) : offers === null ? (
         <LoadingState variant="list" rows={3} />
       ) : offers.length === 0 && items.length === 0 ? (
-        free || hasLoyalty ? null : <EmptyState icon={IconPromos} title={F.empty} line={F.emptyHint} />
+        free ? null : <EmptyState icon={IconPromos} title={F.empty} line={F.emptyHint} />
       ) : (
         <>
           {items.length > 0 && <ItemGrid items={items} onOpen={setOpen} />}

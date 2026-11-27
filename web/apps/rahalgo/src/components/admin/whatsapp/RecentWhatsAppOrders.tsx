@@ -339,7 +339,7 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
               }
               trailing={
                 <span className="flex flex-col items-end gap-1">
-                  <span className="font-bold">{fmtMoney(o.delivery_fee)}</span>
+                  <span className="font-bold">{fmtMoney(o.delivery_fee + (o.free_waived ?? 0))}</span>
                   {canEdit && ADDRESS_EDITABLE.has(o.status) && (
                     <Button size="sm" onClick={() => openEdit(o)}>
                       {W.editOrder}

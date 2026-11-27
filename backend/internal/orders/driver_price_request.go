@@ -219,6 +219,34 @@ func (s *Service) RequestDriverPriceCurrency(ctx context.Context, orderID, drive
 		return nil, err
 	}
 
+	// **والمفتاحُ مطفأ ⇒ يقع بلا موافقة الزبون** (قرارُ المالك ٢٠٢٦-١١-٢٧) — بمسار التأكيد نفسِه
+	// (`confirmQuote`) فيُغلق الطلبُ «موافَقاً» والحجزُ والنقدُ يُحسبان كما بيد الزبون؛ والزبونُ يُخبَر.
+	if !s.customQuoteNeedsCustomer(ctx) && s.autoConfirmCustomQuote(ctx, orderID) {
+		o, err := s.GetByID(ctx, orderID)
+		if err != nil {
+			return nil, err
+		}
+		s.publishOrder(o)
+		s.publishWalletsOf(ctx, orderID)
+		info := fmt.Sprintf("عدّلتُ ثمن البضاعة من %s إلى %s ل.س — السبب: %s. المجموع الجديد %s ل.س.",
+			groupDigits(row.goods), groupDigits(goods), reason, groupDigits(o.Total))
+		if newUSD != nil {
+			info = fmt.Sprintf("عدّلتُ ثمن البضاعة من %s إلى %s — السبب: %s. أجرة التوصيل %s ل.س.",
+				AmountText(curGoods, CurrencyUSD), AmountText(goods, CurrencyUSD), reason, groupDigits(o.Total))
+		}
+		s.quoteLine(ctx, orderID, driverID, "driver", info)
+		if s.notify != nil {
+			s.notify.Notify(ctx, notifications.Input{
+				UserID: o.CustomerID, Kind: notifications.KindOrder,
+				Title:  t.priceRequestApplied,
+				Body:   fmt.Sprintf("#%d — المجموع الجديد %s ل.س — السبب: %s", o.Number, groupDigits(o.Total), reason),
+				Entity: "order", EntityID: o.ID, Href: "/portal/orders",
+				Apps: []string{notifications.AppCustomer},
+			})
+		}
+		return o, nil
+	}
+
 	o, err := s.GetByID(ctx, orderID)
 	if err != nil {
 		return nil, err

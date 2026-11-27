@@ -66,6 +66,9 @@ type customQuoteRow struct {
 	pickedUpAt         *time.Time
 	// goodsUSD **ثمنُ البضاعة بالدولار بالسنتات** (٢٠٢٦-١١-٠٩) — ومعه `goods` صفر. وnil: ليرة.
 	goodsUSD *int64
+	// feeManual **أجرةٌ عدّلها المكتب** (هجرة ٠٥٦٩، قرارُ المالك ٢٠٢٦-١١-٢٧) — نهائيّةٌ لا يُعيدها
+	// تثبيتُ أجرة المنصّة ولا توثيقُ السائق.
+	feeManual bool
 }
 
 // lockCustomRow يقرأ صفَّ الطلب **بقفلٍ** (`FOR UPDATE`) — فلا يتبدّل تحته.
@@ -79,14 +82,14 @@ func (s *Service) lockCustomRow(ctx context.Context, q wallet.Querier, orderID s
 		       quote_confirmed_at, quote_confirmed_total, quote_confirmed_version,
 		       custom_reserved_amount, custom_fee_source, custom_fee_snapshot,
 		       custom_driver_may_change_fee, picked_up_at, promo_delivery_waived, custom_goods_usd,
-		       wallet_scope, cash_due, money_model
+		       wallet_scope, cash_due, money_model, fee_manual
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&r.customerID, &r.driverID, &r.kind, &r.status, &r.paymentMethod,
 			&goods, &fee, &r.quoteVersion,
 			&r.confirmedAt, &r.confirmedTotal, &r.confirmedVersion,
 			&r.reserved, &r.feeSource, &r.feeSnapshot,
 			&r.driverMayChangeFee, &r.pickedUpAt, &r.waived, &r.goodsUSD,
-			&r.scope, &r.cashDue, &r.moneyModel)
+			&r.scope, &r.cashDue, &r.moneyModel, &r.feeManual)
 	if err != nil {
 		return customQuoteRow{}, err
 	}
@@ -153,6 +156,9 @@ type quoteMutator struct {
 	// needApproval **كلُّ تغييرٍ بعد الاستلام ينتظر الزبون — نقصاً كان أو زيادة** (طلبُ
 	// الكابتن، قرارُ المالك ٢٠٢٦-١١-٠٦). **فلا يُفكّ حجزٌ ولا يُحدَّث المؤكَّد** حتّى يوافق.
 	needApproval bool
+	// officeFinal **«تعديل الأجرة» من المكتب يقع فوراً** (قرارُ المالك ٢٠٢٦-١١-٢٧): على تأكيدٍ حيٍّ
+	// للنسخة الحاليّة وتغييرٍ في الأجرة وحدَها — **يُحدَّث المؤكَّدُ والنقدُ والحجزُ بلا إعادة تأكيد.**
+	officeFinal bool
 }
 
 // applyCustomQuoteTx **جوهرُ تغييرِ العرض** — يشترك فيه السائقُ والأدمن.
@@ -196,7 +202,48 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	// ── سياسةُ التأكيد والحجز — لا تنطبق إلّا على تأكيدٍ حيّ ──────────────
 	invalidate := false
 	forceReconfirm := m.needApproval && row.confirmedAt != nil && row.pickedUpAt != nil
-	if row.confirmedAt != nil && !forceReconfirm {
+	// ══════════════════════════════════════════════════════════════════
+	// **وأجرةُ المكتب تقع فوراً** (قرارُ المالك ٢٠٢٦-١١-٢٧)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// «لمّا المكتب يعدّل أجرة التوصيل لازم تتغيّر بكلّ مكان». **على تأكيدٍ حيٍّ للنسخة الحاليّة
+	// والأجرةُ وحدَها تبدّلت**: المؤكَّدُ يصير الجديد، **والحجزُ حصّةُ المحفظة الجديدة** — نقصٌ يُفكّ،
+	// وزيادةٌ تُحجز بما يكفي المتاحُ **والباقي نقدٌ يقبضه الكابتن** (كما في العاديّ) — و`cash_due`
+	// المجموعُ ناقصَ المحجوز. **فلا تأكيدَ يُطلب ولا مبلغَ قديمٌ يبقى على شاشة الكابتن** — قبل الاستلام
+	// وبعده: «الأجرة إلنا» (توضيحُ المالك ٢٠٢٦-١١-٢٧)، وثمنُ البضاعة خارجَ حساب المنصّة.
+	officeApplied := false
+	officeReserved := row.reserved
+	if m.officeFinal && row.confirmedAt != nil && row.confirmedVersion != nil &&
+		*row.confirmedVersion == row.quoteVersion && !usdChanged && row.hasGoods &&
+		newGoods == row.goods && !forceReconfirm {
+		target := WalletPortion(row.scope, newTotal, newFee-waive)
+		switch {
+		case target < row.reserved:
+			if err := s.releaseCustomReservationTx(ctx, q, row.customerID, row.id, row.reserved-target); err != nil {
+				return false, err
+			}
+			officeReserved = target
+			officeApplied = true
+		case target > row.reserved:
+			avail, err := s.wallet.AvailableTx(ctx, q, row.customerID)
+			if err != nil {
+				return false, err
+			}
+			// **ورصيدٌ لا يكفي الزيادةَ كلَّها لا يوقف شيئاً** (توضيحُ المالك ٢٠٢٦-١١-٢٧: «الأجرة إلنا،
+			// ما بتنتظر الزبون») — الباقي نقدٌ يقبضه الكابتن، وتسويةُ المحفظة تقبضه مع الحجز (`settle`).
+			extra := min64(target-row.reserved, avail)
+			if extra > 0 {
+				if err := s.reserveCustomTx(ctx, q, row.customerID, row.id, extra); err != nil {
+					return false, err
+				}
+				officeReserved = row.reserved + extra
+			}
+			officeApplied = true
+		default:
+			officeApplied = true
+		}
+	}
+	if row.confirmedAt != nil && !forceReconfirm && !officeApplied {
 		confirmedTotal := int64(0)
 		if row.confirmedTotal != nil {
 			confirmedTotal = *row.confirmedTotal
@@ -281,6 +328,16 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 		shareKind = ShareAmanah
 	}
 	pct, fixed := s.platformShare(ctx, q, shareKind)
+	// **وتدخّلُ المكتب على أجرةٍ اتُّفق عليها لا يُعيد لقطةَ الحصّة** (٢٠٢٦-١١-٢٧) — كما في
+	// «تعديل الأجرة» للعاديّ والتوصيلة (`feeOrderRow.sharePct`): **الاتّفاقُ لُقط يومَ ثُبّت**،
+	// والمكتبُ يبدّل الأجرةَ لا النسبة. **والسائقُ إن أعاد الاتّفاقَ قبل الاستلام لُقطت من جديد.**
+	if m.role == "admin" && row.hasFee {
+		if err := q.QueryRow(ctx, `
+			SELECT snap_platform_delivery_percent, snap_platform_delivery_fixed
+			  FROM orders WHERE id = $1`, row.id).Scan(&pct, &fixed); err != nil {
+			return false, err
+		}
+	}
 	driverFee := DriverFeeWithShare(newFee, pct, fixed)
 
 	set := `custom_goods_amount = $2, custom_fee = $3,
@@ -294,6 +351,10 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	// يُنفَّذ أو لا يُنفَّذ يكتب قيمةً في عمودٍ آخر بصمت.**
 	args := []any{row.id, newGoods, newFee, newVersion, driverFee, pct, fixed, waive, newUSD}
 	switch {
+	case officeApplied:
+		// **أجرةُ المكتب نافذة** — المؤكَّدُ بنسخته الجديدة، والنقدُ ما لم يُحجز من المجموع.
+		set += `, quote_confirmed_total = $10, quote_confirmed_version = $4, cash_due = $11`
+		args = append(args, newTotal, newTotal-officeReserved)
 	case invalidate:
 		set += `, quote_confirmed_at = NULL, quote_confirmed_total = NULL, quote_confirmed_version = NULL`
 	case reconfirm:
@@ -320,10 +381,30 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 		"new_goods": newGoods, "new_fee": newFee, "new_total": newTotal,
 		"quote_version": newVersion, "actor_role": m.role, "source": m.source,
 		"reason": m.reason, "invalidated_confirmation": invalidate,
-		"reconfirm_pending": reconfirm,
+		"reconfirm_pending": reconfirm, "office_applied": officeApplied,
 		"old_goods_usd":     row.goodsUSD, "new_goods_usd": newUSD,
 	}); err != nil {
 		return false, err
+	}
+	// **وأجرةٌ تبدّلت بتوثيق الكابتن تُكتب في سجلّ الطلب** (٢٠٢٦-١١-٢٧) — كان التدقيقُ وحدَه يعرفها،
+	// والمكتبُ يقرأ السجلّ. (وتعديلُ المكتب يكتب سطرَه بنفسه: `feeEditTrailTx`.)
+	if m.source == "driver_agree" && row.hasFee && row.fee != newFee {
+		var status string
+		if err := q.QueryRow(ctx, `SELECT status FROM orders WHERE id = $1`, row.id).Scan(&status); err != nil {
+			return false, err
+		}
+		var actor any
+		if m.actorID != "" {
+			actor = m.actorID
+		}
+		if _, err := q.Exec(ctx, `
+			INSERT INTO order_events (order_id, from_status, to_status, actor_id, note, driver_id)
+			VALUES ($1, $2, $2, $3, $4, $5)`, row.id, status, actor,
+			fmt.Sprintf("توثيق الكابتن: أجرة التوصيل %s ← %s ل.س — المجموع %s ل.س",
+				groupDigits(row.fee), groupDigits(newFee), groupDigits(newTotal)),
+			row.driverID); err != nil {
+			return false, err
+		}
 	}
 	return true, nil
 }
@@ -568,7 +649,9 @@ func (s *Service) AdminOverrideCustomQuoteUSD(ctx context.Context, orderID, admi
 	if err != nil {
 		return nil, err
 	}
-	changed, err := s.adminOverrideCustomTx(ctx, tx, row, adminID, newGoods, newFee, newUSD, reason)
+	// **وتعديلُ الأجرة وحدَها هنا نافذٌ فوراً كذلك** (توضيحُ المالك ٢٠٢٦-١١-٢٧) — `officeFinal` لا يسري
+	// إلّا والثمنُ كما هو؛ وتبديلُ الثمن يبقى بقواعده.
+	changed, err := s.adminOverrideCustomTx(ctx, tx, row, adminID, newGoods, newFee, newUSD, reason, true)
 	if err != nil {
 		return nil, err
 	}
@@ -590,7 +673,7 @@ func (s *Service) AdminOverrideCustomQuoteUSD(ctx context.Context, orderID, admi
 // و«تعديل الأجرة» (`order_fee_edit.go`، قرارُ المالك ٢٠٢٦-١١-١٨) فلا نسختان من منطق المال.
 // **والمنادي قفل الصفَّ** (`lockCustomRow`) ويُثبّت أو يطوي.
 func (s *Service) adminOverrideCustomTx(ctx context.Context, tx pgx.Tx, row customQuoteRow,
-	adminID string, newGoods, newFee int64, newUSD *int64, reason string) (bool, error) {
+	adminID string, newGoods, newFee int64, newUSD *int64, reason string, officeFinal bool) (bool, error) {
 	if row.kind != KindCustom {
 		return false, ErrNotCustom
 	}
@@ -609,9 +692,26 @@ func (s *Service) adminOverrideCustomTx(ctx context.Context, tx pgx.Tx, row cust
 	}
 	changed, err := s.applyCustomQuoteTx(ctx, tx, row, newGoods, newFee, newUSD, quoteMutator{
 		actorID: adminID, role: "admin", source: "admin_override", reason: reason,
+		officeFinal: officeFinal,
 	})
 	if err != nil {
 		return false, err
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وأجرةُ المكتب نهائيّة** (قرارُ المالك ٢٠٢٦-١١-٢٧)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// كانت خطوةُ ثمن البضاعة أو إسنادٌ جديدٌ (`autoAgreeFixedFee`) يُرجعان «أجرةَ المنصّة» إلى
+	// لقطتها القديمة بصمت. **فالعلامةُ تقفلها** (`fee_manual`)، **واللقطةُ تتبعها** — فكلُّ قارئٍ
+	// لـ`custom_fee_snapshot` (الكابتن قبل القبول، اللوحة) يرى ما حدّده المكتب.
+	if newFee != row.fee {
+		if _, err := tx.Exec(ctx, `
+			UPDATE orders SET fee_manual = true,
+			       custom_fee_snapshot = CASE WHEN custom_fee_source = 'admin_defined'
+			                                  THEN $2::bigint ELSE custom_fee_snapshot END
+			 WHERE id = $1`, row.id, newFee); err != nil {
+			return false, err
+		}
 	}
 	// **والمكتبُ يبقى يعدّل** (قرارُ المالك ٢٠٢٦-١١-٠٦) — وتعديلُه يحلّ محلّ طلب الكابتن المعلّق.
 	if changed {

@@ -27,7 +27,7 @@ import { getMessages, defaultLocale, errorText, fmtNum, westernDigits } from "@r
 import { Alert, Button, ButtonLink, PageHead, EmptyState, IconLink, IconLocation, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
-import { LoyaltyCards, freeSourceText, useStampCard } from "@/components/LoyaltyCards";
+import { freeSourceText } from "@/components/LoyaltyCards";
 import { useStoreDeliveries } from "@/lib/store/deliveries";
 import type { DeliveryQuote, DeliveryRecipient } from "@/lib/store/types";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
@@ -177,7 +177,6 @@ function PayerOption({
 export default function DeliveryPage() {
   const { store } = useStore();
   const storeId = store?.id ?? "";
-  const loyalty = useStampCard(storeId ? `/api/v1/merchant/stores/${storeId}/stamp-card` : null);
   const { list, error: listError, reload } = useStoreDeliveries();
 
   const [mode, setMode] = useState<Mode>("");
@@ -648,8 +647,6 @@ export default function DeliveryPage() {
       {/* ── عمودان على الحاسوب: الطلب | توصيلاتي. جوّالاً متتابعان بالترتيب نفسه. ── */}
       <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] md:items-start md:gap-5">
       <div className="flex min-w-0 flex-col gap-rg-md">
-      {/* **بطاقة رحّال غو وكرت اليوم للمتجر** (قرارُ المالك ٢٠٢٦-١١-٢٧) — فوق النموذج كالتطبيق. */}
-      <LoyaltyCards card={loyalty} seenKey={`store.${storeId}`} />
       <ModeSwitch mode={mode} disabled={busy} onPick={pickMode} />
 
       {sent && <Alert tone="success">{D.sent}</Alert>}

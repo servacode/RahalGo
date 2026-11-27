@@ -364,3 +364,38 @@ func TestDriverPriceRequest_ClosedWithOrder(t *testing.T) {
 		t.Fatalf("حالة الطلب=%v — المنتظَر closed", st)
 	}
 }
+
+// ── المفتاحُ مطفأ: طلبُ الكابتن يقع فوراً بلا موافقة الزبون (قرارُ المالك ٢٠٢٦-١١-٢٧) ──
+func TestDriverPriceRequest_SwitchOffAppliesNow(t *testing.T) {
+	svc, w, customer, driver, _ := cqSetup(t)
+	ctx := context.Background()
+	pool := testdb.Pool(t)
+	if _, err := pool.Exec(ctx, `INSERT INTO app_settings (key, value)
+		VALUES ('delivery.custom_quote_customer_confirm', 'false'::jsonb)
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(),
+			`DELETE FROM app_settings WHERE key = 'delivery.custom_quote_customer_confirm'`)
+	})
+	base := prBase(t, pool)
+	orderID := apPickedUp(t, svc, w, customer, driver, "cash", 1_000, 1_500)
+
+	o, err := svc.RequestDriverPrice(ctx, orderID, driver, 1_400, "price changed")
+	if err != nil {
+		t.Fatalf("driver request: %v", err)
+	}
+	if o.QuotePending() || o.Total != 2_900 {
+		t.Fatalf("after request: pending=%v total=%d, want applied and 2900", o.QuotePending(), o.Total)
+	}
+	if due := prCashDue(t, pool, orderID); due != 2_900 {
+		t.Fatalf("cash_due=%d, want 2900", due)
+	}
+	if st := prStatus(t, pool, orderID); len(st) != 1 || st[0] != "approved" {
+		t.Fatalf("request status=%v, want approved", st)
+	}
+	prFI(t, pool, base, "after auto-apply")
+	apDrive(t, svc, driver, orderID, "delivered")
+	prFI(t, pool, base, "after delivery")
+}

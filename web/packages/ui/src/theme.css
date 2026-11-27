@@ -1152,6 +1152,29 @@ html[data-shop] .surface-inset {
     animation: none;
   }
 }
+/* **شارةُ تقدّم «بطاقاتي» «٧/١٠»** تحت أيقونة التذكرة — مطلقةٌ فلا تُغيّر ارتفاعَ الشريط (قرارُ المالك ٢٠٢٦-١١-٢٧). */
+.loyalty-badge {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 1px;
+  margin-inline: auto;
+  width: fit-content;
+  min-width: 22px;
+  padding-inline: 4px;
+  border-radius: 999px;
+  background-color: var(--color-primary-solid);
+  color: var(--color-on-solid);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.icon-btn:has(.loyalty-badge) {
+  position: relative;
+}
 .shop-iconbtn[data-round="true"] {
   border: 1px solid var(--color-line);
   border-radius: 999px;
@@ -6446,3 +6469,260 @@ html[data-console-theme="dark"] .console-root .seg-item[aria-pressed="true"] {
 /* شحن شام كاش: تذكرة الباركود (أرضٌ بيضاء ثابتة للمسح) ورقاقة الرقم */
 .sham-ticket { background-color: #fff; box-shadow: 0 6px 18px rgb(10 63 97 / 0.28); }
 .sham-number { font-family: var(--font-mono); letter-spacing: 0.06em; overflow-wrap: anywhere; word-break: break-all; }
+
+/* **دائرةُ «اربح مجاناً» النابضة** (اختيارُ المالك ٢٠٢٦-١١-٢٧) — تفتح «بطاقاتي». */
+.loyalty-win {
+  display: grid;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #ffb547, var(--color-accent));
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  padding: 2px;
+  animation: loyalty-win-pulse 1.6s ease-out infinite;
+}
+.loyalty-win span {
+  max-width: 36px;
+}
+@keyframes loyalty-win-pulse {
+  0% { box-shadow: 0 0 0 0 rgb(254 149 1 / 0.55); transform: scale(1); }
+  50% { transform: scale(1.06); }
+  70% { box-shadow: 0 0 0 10px rgb(254 149 1 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(254 149 1 / 0); transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loyalty-win { animation: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   بطاقة رحّال غو وكرت اليوم (قرار المالك ٢٠٢٦-١١-٢٧، النموذج ١ «بطاقة عضوية فاخرة») —
+   components/LoyaltyCards.tsx، مرآةُ `LoyaltyCards.kt`. الأولى كحليّةٌ بنقشةٍ وشعارٍ باهت،
+   والثانية تذكرةٌ برتقاليّة بخطّ قصٍّ ونتوءين. **ألوانُهما ثابتةٌ بالوضعين** (لونُهما من العلامة).
+   ══════════════════════════════════════════════════════════════════════ */
+.loyalty-card,
+.loyalty-daily {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 22px;
+  overflow: hidden;
+}
+.loyalty-card {
+  gap: 0;
+  padding: 18px 16px 16px;
+  color: #fff;
+  background: radial-gradient(120% 90% at 100% 0%, #0a8fc4 0%, #02678f 38%, #033a52 100%);
+  box-shadow: 0 14px 30px rgb(3 58 82 / 0.35);
+}
+.loyalty-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.045) 0 2px, transparent 2px 14px);
+  pointer-events: none;
+}
+.loyalty-card > * {
+  position: relative;
+}
+.loyalty-card.is-full {
+  box-shadow: 0 0 0 2px var(--color-cta-orange), 0 14px 30px rgb(3 58 82 / 0.35);
+}
+.loyalty-wm {
+  position: absolute !important;
+  left: -30px;
+  bottom: -34px;
+  width: 170px;
+  height: auto;
+  opacity: 0.1;
+  filter: brightness(0) invert(1);
+  pointer-events: none;
+}
+.loyalty-title {
+  font-size: 19px;
+  font-weight: 900;
+}
+.loyalty-sub {
+  font-size: 12px;
+  opacity: 0.8;
+}
+.loyalty-count {
+  direction: ltr;
+  unicode-bidi: isolate;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  background-color: rgb(255 255 255 / 0.16);
+  border: 1px solid rgb(255 255 255 / 0.25);
+  backdrop-filter: blur(4px);
+}
+.loyalty-daily {
+  gap: 0;
+  color: #3b2200;
+  background: radial-gradient(120% 100% at 0% 0%, #ffd38a 0%, #ffb547 35%, #fe9501 100%);
+  box-shadow: 0 14px 28px rgb(254 149 1 / 0.32);
+}
+.loyalty-daily.is-full {
+  box-shadow: 0 0 0 2px var(--color-success-solid), 0 14px 28px rgb(254 149 1 / 0.32);
+}
+.loyalty-daily-top {
+  padding: 16px 16px 4px;
+}
+.loyalty-daily-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+.loyalty-daily .loyalty-title {
+  font-size: 18px;
+}
+.loyalty-timer {
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  background-color: rgb(59 34 0 / 0.12);
+}
+/* خطُّ القصّ المنقَّط ونتوءاه — النتوءان بلون خلفيّة الصفحة. */
+.loyalty-tear {
+  position: relative;
+  height: 24px;
+}
+.loyalty-tear::before {
+  content: "";
+  position: absolute;
+  inset-inline: 11px;
+  top: 50%;
+  border-top: 2px dashed rgb(59 34 0 / 0.18);
+}
+.loyalty-tear i {
+  position: absolute;
+  top: 1px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background-color: var(--color-page);
+}
+.loyalty-tear i:first-child {
+  left: -11px;
+}
+.loyalty-tear i:last-child {
+  right: -11px;
+}
+.loyalty-grid {
+  display: grid;
+  gap: 10px;
+}
+.loyalty-grid.is-daily {
+  gap: 8px;
+}
+.loyalty-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  max-width: 52px;
+  width: 100%;
+  justify-self: center;
+  border-radius: 999px;
+  border: 2px dashed rgb(255 255 255 / 0.38);
+  color: rgb(255 255 255 / 0.55);
+  font-size: 12px;
+  font-weight: 800;
+}
+.loyalty-dot.is-stamped {
+  border: 0;
+  background-color: #fff;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.25), inset 0 0 0 3px rgb(2 103 143 / 0.12);
+}
+.loyalty-dot.is-gift {
+  border: 2px solid #f4c766;
+  background: radial-gradient(circle, rgb(244 199 102 / 0.35), transparent 70%);
+  color: #f4c766;
+  font-size: 18px;
+}
+.loyalty-dot.is-daily {
+  max-width: 48px;
+  border-radius: 14px;
+  border-color: rgb(59 34 0 / 0.3);
+  color: rgb(59 34 0 / 0.45);
+  font-weight: 900;
+}
+.loyalty-dot.is-daily.is-stamped {
+  border: 0;
+  background-color: #fff;
+  box-shadow: 0 3px 8px rgb(120 60 0 / 0.25);
+}
+.loyalty-dot.is-daily.is-gift {
+  border: 2px solid #fff;
+  background: rgb(255 255 255 / 0.35);
+  color: #fff;
+  font-size: 20px;
+}
+.loyalty-dot img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  transform: rotate(-14deg);
+}
+.loyalty-dot.is-daily img {
+  transform: rotate(-12deg);
+}
+.loyalty-prog {
+  position: relative;
+  height: 8px;
+  margin-top: 14px;
+  border-radius: 99px;
+  background-color: rgb(255 255 255 / 0.18);
+  overflow: hidden;
+}
+.loyalty-prog i {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #f4c766, #fff);
+}
+.loyalty-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.loyalty-foot b {
+  color: #f4c766;
+}
+.loyalty-highlight {
+  border-radius: 14px;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+.loyalty-highlight.is-accent {
+  background-color: var(--color-cta-orange);
+  color: var(--color-on-solid);
+}
+.loyalty-highlight.is-success {
+  background-color: var(--color-success-solid);
+  color: var(--color-on-solid);
+}
+
+/* الختمُ الجديد منذ آخر نظرة: يهبط من فوق ويستقرّ — نبضةٌ واحدة لا حركةٌ دائمة. */
+@keyframes loyalty-stamp {
+  0%   { transform: scale(1.6); opacity: 0; }
+  60%  { transform: scale(0.92); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.loyalty-dot.is-fresh {
+  animation: loyalty-stamp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .loyalty-dot.is-fresh { animation: none; }
+}

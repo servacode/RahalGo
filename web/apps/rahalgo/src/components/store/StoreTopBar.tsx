@@ -31,6 +31,7 @@ import { useAuth } from "@/lib/auth";
 import { useStore } from "@/lib/store/context";
 import { initials } from "./StoreSidebar";
 import { MENU_SEARCH_EVENT } from "@/lib/store/menuSearch";
+import { LoyaltyCardsButton } from "@/components/LoyaltyCards";
 
 const m = getMessages(defaultLocale);
 const N = m.store.nav;
@@ -152,6 +153,8 @@ export default function StoreTopBar({
           testId="store-theme-toggle"
         />
         <IconButton icon={IconHelp} label={SH.help} href="/help" Link={Link} />
+        {/* **«بطاقاتي»** (قرارُ المالك ٢٠٢٦-١١-٢٧) — قبل الجرس، ولا تُرسم إن أُطفئت البطاقتان. */}
+        {store && <LoyaltyCardsButton path={`/api/v1/merchant/stores/${store.id}/stamp-card`} href="/store/cards" className="icon-btn" size={18} />}
         <IconButton icon={IconBell} label={SH.notifications} href="/store/notifications" Link={Link} dot={unread > 0} testId="store-bell" />
         <span className="mx-rg-sm h-5 w-px bg-line-soft" aria-hidden />
         <ButtonLink Link={Link} href="/shop" variant="ghost" size="sm">

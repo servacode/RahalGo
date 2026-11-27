@@ -649,6 +649,16 @@ func (s *Service) agreeCustomStep(ctx context.Context, orderID, driverID, step s
 		}
 	}
 	// ══════════════════════════════════════════════════════════════════
+	// **وأجرةٌ عدّلها المكتبُ لا يُرجعها شيء** (قرارُ المالك ٢٠٢٦-١١-٢٧)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// كانت خطوةُ ثمن البضاعة وكلُّ إسنادٍ جديد (`autoAgreeFixedFee`) تُعيد اللقطةَ القديمة بصمت:
+	// المكتبُ يكتب ٢٠٠ فترجع ١٠٠. **فالأجرةُ الموثَّقةُ نفسُها تبقى** — والسائقُ يوثّق البضاعةَ وحدَها.
+	if row.feeManual && row.hasFee {
+		effFee = row.fee
+		forced = true
+	}
+	// ══════════════════════════════════════════════════════════════════
 	// **والأجرةُ بين حدَّين والثمنُ تحت سقف** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً)
 	// ══════════════════════════════════════════════════════════════════
 	//
@@ -704,9 +714,49 @@ func (s *Service) agreeCustomStep(ctx context.Context, orderID, driverID, step s
 	// **فمن أغلق التطبيقَ ينتظر ما لن يأتي** — ويظنّ أنّه طلب وأنّ المنصّةَ
 	// تعمل. (بلاغُ المالك ٢٠٢٦-٠٩-٢٩.)
 	if !quiet {
+		// **«توثيق السعر وموافقة الزبون» مطفأ** (قرارُ المالك ٢٠٢٦-١١-٢٧) — يُؤكَّد ما وثّقه الكابتن
+		// تلقائيّاً ويمضي الطلب، والزبونُ يُخبَر خبراً. **وإن رُدّ التأكيدُ** (رصيدٌ لا يكفي، سقفُ نقد)
+		// عاد البابُ إلى يده كما كان.
+		if !s.customQuoteNeedsCustomer(ctx) && s.autoConfirmCustomQuote(ctx, orderID) {
+			s.notifyCustomQuotedTitle(ctx, orderID, effGoods+effFee, effUSD, t.customQuotedInfo)
+			return nil
+		}
 		s.notifyCustomQuoted(ctx, orderID, effGoods+effFee, effUSD)
 	}
 	return nil
+}
+
+// customQuoteNeedsCustomer **أيؤكّد الزبونُ ما وثّقه الكابتن؟** — مفتاحُ «توثيق السعر وموافقة الزبون»،
+// مشتعلٌ افتراضاً (حالُ اليوم).
+func (s *Service) customQuoteNeedsCustomer(ctx context.Context) bool {
+	if s.settings == nil {
+		return true
+	}
+	return s.settings.GetBool(ctx, "delivery.custom_quote_customer_confirm")
+}
+
+// autoConfirmCustomQuote **يؤكّد العرضَ الحاليَّ بطريقة دفع الطلب** — بالمسار نفسِه (`confirmQuote`)،
+// فالحجزُ وحارسا النقد يُفحصان كما بيد الزبون. ويردّ أوقع التأكيد.
+func (s *Service) autoConfirmCustomQuote(ctx context.Context, orderID string) bool {
+	var customerID, pay, scope string
+	if err := s.db.QueryRow(ctx, `
+		SELECT customer_id::text, payment_method, wallet_scope FROM orders WHERE id = $1`, orderID).
+		Scan(&customerID, &pay, &scope); err != nil {
+		s.logger.Error("التأكيدُ التلقائيّ: تعذّرت قراءةُ الطلب", "order", orderID, "error", err)
+		return false
+	}
+	o, err := s.GetByID(ctx, orderID)
+	if err != nil {
+		return false
+	}
+	if pay != "wallet" {
+		pay, scope = "cash", ""
+	}
+	if _, err := s.confirmQuote(ctx, orderID, customerID, pay, scope, nil, o.Total, o.QuoteVersion, true); err != nil {
+		s.logger.Warn("التأكيدُ التلقائيّ رُدّ — يؤكّده الزبون بيده", "order", orderID, "error", err)
+		return false
+	}
+	return true
 }
 
 // ══════════════════════════════════════════════════════════════════════

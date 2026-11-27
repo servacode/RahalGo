@@ -775,12 +775,16 @@ function MoneySection({ o }: { o: Detail }) {
             <Money value={amount} small />
           </Row>
         ))}
+        {/* **الأجرةُ كاملةً كما حدّدها المكتب** (قرارُ المالك ٢٠٢٦-١١-٢٧) — الخادمُ يرسلها صافيةً بعد
+            الإعفاء، فتُجمع معه ويُطرح الإعفاءُ سطراً تحتها كما في قائمة الطلبات. */}
         <Row label={F.deliveryFee}>
-          <Money value={o.delivery_fee} small />
+          <Money value={o.delivery_fee + (o.free_waived ?? 0)} small />
         </Row>
         {(o.free_waived ?? 0) > 0 && (
           <Row label={F.freeWaived}>
-            <Money value={o.free_waived ?? 0} small />
+            <span className="flex items-center gap-1">
+              −<Money value={o.free_waived ?? 0} small />
+            </span>
           </Row>
         )}
       </div>

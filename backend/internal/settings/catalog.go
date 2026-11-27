@@ -1586,6 +1586,11 @@ var Catalog = []Def{
 	{Key: "delivery.custom_driver_may_change_fee", Group: GroupDrivers, Kind: KindBool, Default: false,
 		ShowWhen: &Condition{Key: "delivery.custom_fee_source", Equals: []string{"admin_defined"}}},
 
+	// **«توثيق السعر وموافقة الزبون»** (قرارُ المالك ٢٠٢٦-١١-٢٧) — مشتعلٌ افتراضاً (حالُ اليوم):
+	// الزبونُ يؤكّد ما وثّقه الكابتن قبل أن يتقدّم الطلب. **ومطفأً يُؤكَّد التوثيقُ تلقائيّاً** ويمضي
+	// الطلبُ ويُخبَر الزبونُ فقط. **وتعديلُ المكتب للأجرة لا ينتظر الزبونَ أصلاً** أيّاً كان المفتاح.
+	{Key: "delivery.custom_quote_customer_confirm", Group: GroupDrivers, Kind: KindBool, Default: true},
+
 	// **وحدّا أجرة الطلب الخاصّ التي يكتبها السائق** (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً) — قِيس
 	// صفرٌ وألفُ مليارٍ مقبولَين. **وأجرةُ المنصّة المفروضةُ لا تُحدّ بهما** — قرارُ الإدارة.
 	{Key: "delivery.custom_fee_min", Group: GroupDrivers, Kind: KindMoney,

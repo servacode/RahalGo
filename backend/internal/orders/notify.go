@@ -29,6 +29,8 @@ var t = struct {
 	// **مفصلا الطلب الخاصّ** — كلٌّ منهما يوقف الطلبَ على فعلِ طرفٍ بعينه،
 	// **فمن عليه الدورُ يُخبَر أنّ الدورَ عليه.**
 	customQuoted, customConfirmed, driverAssignedToCustomer string
+	// customQuotedInfo **«توثيق السعر وموافقة الزبون» مطفأ** (٢٠٢٦-١١-٢٧) — خبرٌ لا طلبُ موافقة.
+	customQuotedInfo string
 	// customConfirmedAmanah **والأمانةُ تُستلم لا تُشترى** (فحصُ جهاز المالك ٢٠٢٦-١٠-٠٣).
 	customConfirmedAmanah string
 	// **تعديلُ المكتب لسعر الخاصّ** (قرارُ المالك ٢٠٢٦-١٠-١٥) — نقصٌ يقع فوراً، وزيادةٌ
@@ -42,6 +44,7 @@ var t = struct {
 	// والرفض والتأخير يوصلوا المكتب، والرفض يوصل الكابتن.
 	priceRequestCustomer, priceRequestRejectedOps   string
 	priceRequestRejectedDriver, priceRequestLateOps string
+	priceRequestApplied                             string
 	// liveLocationRequested **السائقُ طلب موقعَ الزبون المباشر** (٢٠٢٦-١٠-٢١).
 	liveLocationRequested string
 	// liveNudge **المحرّكُ يذكّر الزبونَ بالمشاركة** (٢٠٢٦-١١-١٨) — بلا موقعٍ بعد دقيقةٍ بالطريق.
@@ -102,6 +105,7 @@ var t = struct {
 	// **ونصٌّ يقول الفعلَ المطلوبَ لا الخبرَ وحدَه** — «سعرٌ جاهز» تُقرأ
 	// خبراً فيُؤجَّل، **و«أكّده ليبدأ» تُقرأ طلباً فيُفتح التطبيق.**
 	customQuoted:               "سعر طلبك جاهز — أكّده ليبدأ الشراء",
+	customQuotedInfo:           "وثّق الكابتن سعر طلبك",
 	customConfirmed:            "أكّد الزبون السعر — ابدأ الشراء",
 	customConfirmedAmanah:      "أكّد الزبون الأجرة — استلم الأمانة",
 	customPriceLowered:         "عدّل المكتب سعر طلبك",
@@ -111,6 +115,7 @@ var t = struct {
 	customQuoteRejected:        "رفض الزبون السعر الجديد",
 	customQuoteRejectedDriver:  "رفض الزبون السعر — تواصل معه بالدردشة وعدّل السعر",
 	priceRequestCustomer:       "الكابتن طلب تعديل سعر البضاعة — وافق أو ارفض",
+	priceRequestApplied:        "عدّل الكابتن سعر البضاعة — المجموع الجديد مطبّق",
 	priceRequestRejectedOps:    "رفض الزبون سعر الكابتن — تدخّل",
 	priceRequestRejectedDriver: "رفض الزبون السعر الجديد — رجع السعر القديم، والمكتب رح يتواصل",
 	priceRequestLateOps:        "تعديل سعر الكابتن ما انردّ عليه — تدخّل",
@@ -399,6 +404,11 @@ var passingTitles = map[string]bool{
 //
 //	يحصل شي».)
 func (s *Service) notifyCustomQuoted(ctx context.Context, orderID string, total int64, usd *int64) {
+	s.notifyCustomQuotedTitle(ctx, orderID, total, usd, t.customQuoted)
+}
+
+// notifyCustomQuotedTitle **إشعارُ التوثيق بعنوانه** — طلبُ موافقةٍ أو خبرٌ (المفتاحُ مطفأ).
+func (s *Service) notifyCustomQuotedTitle(ctx context.Context, orderID string, total int64, usd *int64, title string) {
 	if s.notify == nil {
 		return
 	}
@@ -408,7 +418,7 @@ func (s *Service) notifyCustomQuoted(ctx context.Context, orderID string, total 
 	}
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: p.customerID, Kind: notifications.KindOrder,
-		Title: t.customQuoted,
+		Title: title,
 		// **والمبلغُ في النصّ** — من قرأه عرف على ماذا يوافق قبل أن يفتح.
 		Body:   fmt.Sprintf("#%d — %s", p.number, customAmountText(total, usd)),
 		Entity: "order", EntityID: orderID, Href: "/portal/orders",

@@ -15,6 +15,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { IconAdd, IconBell, IconButton, IconCart, IconList, IconOrder, IconStore, IconUser } from "@rahalgo/ui";
 import { useStore } from "@/lib/store/context";
 import { useStoreOrders } from "@/lib/store/orders";
+import { LoyaltyCardsButton } from "@/components/LoyaltyCards";
 
 const m = getMessages(defaultLocale);
 const S = m.store;
@@ -32,6 +33,7 @@ export function PhoneNavBar({
   setEndEl: (el: HTMLElement | null) => void;
 }) {
   const bar = useRef<HTMLDivElement>(null);
+  const { store } = useStore();
   useEffect(() => {
     const f = () => bar.current?.style.setProperty("--p", String(Math.max(0, Math.min(1, (window.scrollY - 24) / 30))));
     f();
@@ -47,6 +49,8 @@ export function PhoneNavBar({
       <span ref={setStartEl} className="flex items-center gap-rg-lg text-body-lg" />
       <span className="flex items-center gap-rg-md">
         <span ref={setEndEl} className="contents" />
+        {/* **«بطاقاتي»** (قرارُ المالك ٢٠٢٦-١١-٢٧) — قبل التبديل والجرس، ولا تُرسم إن أُطفئت البطاقتان. */}
+        {store && <LoyaltyCardsButton path={`/api/v1/merchant/stores/${store.id}/stamp-card`} href="/store/cards" className="icon-btn" size={24} />}
         {/* التبديلُ للتسوّق كزبون بلمسة (طلبُ المالك ٢٠٢٦-١١-٠٩) */}
         <IconButton icon={IconCart} label={S.nav.shopAsCustomer} href="/shop" Link={Link} size={24} testId="phone-shop" />
         <IconButton icon={IconBell} label={S.shell.notifications} href="/store/notifications" Link={Link} dot={unread > 0} size={24} testId="phone-bell" />

@@ -258,16 +258,26 @@ func TestFeeEdit_CustomDecrease(t *testing.T) {
 	f.green(t, "الخاصّ بعد التسليم")
 }
 
-// ── الخاصّ زيادةً: يُعاد التأكيد (بابُ «تعديل العرض» نفسُه) ثمّ يُسلَّم بها ─────────────────
-func TestFeeEdit_CustomIncreaseReconfirm(t *testing.T) {
+// ── الخاصّ زيادةً: تقع فوراً (قرارُ المالك ٢٠٢٦-١١-٢٧) — النقدُ وإشعارُ الكابتن بالمبلغ الجديد ──
+func TestFeeEdit_CustomIncreaseAppliesNow(t *testing.T) {
 	f := newCashFixture(t)
 	oid := f.customFeeOrder(t, 5_000, 500)
 	res, err := f.feeEdit(t, oid, 700, false)
-	if err != nil || !res.Reconfirm || res.NewTotal != 5_700 || res.DriverFee != 630 {
-		t.Fatalf("الزيادة: %v %+v", err, res)
+	if err != nil || res.Reconfirm || res.NewTotal != 5_700 || res.DriverFee != 630 || res.CashDue != 5_700 {
+		t.Fatalf("الزيادة: %v %+v — المنتظَر نافذةً ونقداً 5700", err, res)
 	}
-	if _, err := f.svc.ConfirmQuote(context.Background(), oid, f.customer, "cash", 5_700, 2); err != nil {
-		t.Fatalf("إعادةُ التأكيد: %v", err)
+	if st := cqRead(t, oid); st.confirmedVersion == nil || *st.confirmedVersion != 2 ||
+		st.confirmedTotal == nil || *st.confirmedTotal != 5_700 {
+		t.Fatalf("المؤكَّد: %+v", st)
+	}
+	if _, _, _, _, cash, _ := f.feeRow(t, oid); cash != 5_700 {
+		t.Fatalf("النقدُ %d — المنتظَر 5700", cash)
+	}
+	var drvNotes int
+	_ = f.pool.QueryRow(context.Background(), `SELECT count(*) FROM notifications WHERE entity_id = $1
+		AND user_id = $2 AND body LIKE '%5,700%' AND body LIKE '%630%'`, oid, f.driver).Scan(&drvNotes)
+	if drvNotes != 1 {
+		t.Fatalf("إشعارُ الكابتن بالمبلغ الجديد=%d", drvNotes)
 	}
 	apDrive(t, f.svc, f.driver, oid, "picked_up", "on_the_way", "at_dropoff", "delivered")
 	if got := f.sumKind(t, oid, "driver_earning"); got != 630 {

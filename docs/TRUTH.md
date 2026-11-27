@@ -1345,6 +1345,7 @@ kosom` |
 | `delivery.custom_fee` | السائقون | money | `0` |
 | `delivery.custom_fee_amanah` | السائقون | money | `0` |
 | `delivery.custom_driver_may_change_fee` | السائقون | bool | `false` |
+| `delivery.custom_quote_customer_confirm` | السائقون | bool | `true` |
 | `delivery.custom_fee_min` | السائقون | money | `10` |
 | `delivery.custom_fee_max` | السائقون | money | `1000` |
 | `delivery.driver_price_edit_max_percent` | السائقون | percent | `50` |

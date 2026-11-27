@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 154,
-    "notify_targeted": 80,
+    "notify_sites": 155,
+    "notify_targeted": 81,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 334,
-    "behaviour_settings": 287,
+    "setting_defs": 335,
+    "behaviour_settings": 288,
     "order_fields": 153,
-    "test_files": 881,
-    "test_funcs": 3361
+    "test_files": 882,
+    "test_funcs": 3371
   },
   "flows": [
     {
@@ -3961,6 +3961,27 @@
       "kind": "choice",
       "sensitive": false,
       "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.custom_quote_customer_confirm",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
       "flows": [
         "F-07",
         "F-08",
@@ -12477,6 +12498,12 @@
       "orphan": true
     },
     {
+      "name": "TestDriverPriceRequest_SwitchOffAppliesNow",
+      "file": "internal/orders/driver_price_request_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestDriverPriceRequest_TimeoutAndOfficeSupersedes",
       "file": "internal/orders/driver_price_request_test.go",
       "package": "orders_test",
@@ -13353,7 +13380,7 @@
       "orphan": true
     },
     {
-      "name": "TestFeeEdit_CustomIncreaseReconfirm",
+      "name": "TestFeeEdit_CustomIncreaseAppliesNow",
       "file": "internal/orders/order_fee_edit_test.go",
       "package": "orders_test",
       "orphan": true
@@ -13385,6 +13412,48 @@
     {
       "name": "TestFeeEdit_StandardWallet",
       "file": "internal/orders/order_fee_edit_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomerConfirmSwitch_OffAutoConfirms",
+      "file": "internal/orders/order_fee_final_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomerConfirmSwitch_OnBlocksUntilConfirm",
+      "file": "internal/orders/order_fee_final_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFeeFinal_AdminDefinedCustom",
+      "file": "internal/orders/order_fee_final_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFeeFinal_CustomAfterPickupNoWait",
+      "file": "internal/orders/order_fee_final_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFeeFinal_CustomWalletIncrease",
+      "file": "internal/orders/order_fee_final_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFeeFinal_CustomWalletShortRemainderCash",
+      "file": "internal/orders/order_fee_final_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFeeFinal_StandardKeptAfterItemEdits",
+      "file": "internal/orders/order_fee_final_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -30182,6 +30251,18 @@
     },
     {
       "name": "TestWABOT11_AmanahSendUSD",
+      "file": "internal/qa/wa_bot_amanah_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOT12_AmanahSendSenderPaysAtPickup",
+      "file": "internal/qa/wa_bot_amanah_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOT13_AmanahReceiveOtherPaysAtPickup",
       "file": "internal/qa/wa_bot_amanah_test.go",
       "package": "qa",
       "orphan": true

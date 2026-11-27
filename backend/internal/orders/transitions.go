@@ -1144,7 +1144,8 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 			// وحجزٌ معاً — **مسارُ المحفظة يسوّي الحجزَ ويقبض النقدَ معاً**، ومسارُ النقد
 			// وحدَه كان يقصر السائقَ على المقبوض فيخسر أجرتَه ويبقى الحجزُ مجمَّداً
 			// (FI-11.l). **وحجزٌ صفرٌ** (أجرةٌ معفاةٌ كلُّها) نقدٌ محض.
-			if in.walletScope == ScopeDelivery && in.customReserved > 0 {
+			// **و«الكل من المحفظة» مثلُه** حين رفع المكتبُ الأجرةَ فوق الرصيد (٢٠٢٦-١١-٢٧): الباقي نقد.
+			if (in.walletScope == ScopeDelivery || in.walletScope == ScopeFull) && in.customReserved > 0 {
 				return s.settleCustomWallet(ctx, q, in, out)
 			}
 			if in.cashDue > 0 {

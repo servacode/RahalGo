@@ -256,17 +256,20 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 		cashDue, waived, sourcesFee, driverFee                  int64
 		sharePct, shareFixed                                    int64
 		driverID                                                *string
+		feeManual                                               bool
 	}
 	err = tx.QueryRow(ctx, `
 		SELECT status, kind, COALESCE(customer_id::text, ''), payment_method,
 		       COALESCE(promo_code, ''), COALESCE(merchant_id::text, ''), number,
 		       subtotal, delivery_fee, discount, total, wallet_paid, cash_due,
 		       promo_delivery_waived, sources_fee, driver_fee,
-		       snap_platform_delivery_percent, snap_platform_delivery_fixed, driver_id::text, wallet_scope
+		       snap_platform_delivery_percent, snap_platform_delivery_fixed, driver_id::text, wallet_scope,
+		       fee_manual
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&o.status, &o.kind, &o.customerID, &o.method, &o.promoCode, &o.merchantID, &o.number,
 			&o.subtotal, &o.deliveryFee, &o.discount, &o.total, &o.walletPaid, &o.cashDue,
-			&o.waived, &o.sourcesFee, &o.driverFee, &o.sharePct, &o.shareFixed, &o.driverID, &o.scope)
+			&o.waived, &o.sourcesFee, &o.driverFee, &o.sharePct, &o.shareFixed, &o.driverID, &o.scope,
+			&o.feeManual)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, res, httpx.ErrNotFound
 	}
@@ -542,7 +545,8 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 		if !storesAfter[o.merchantID] && len(remaining.merchants) > 0 {
 			merchantID = remaining.merchants[0]
 		}
-		if o.sourcesFee > 0 {
+		// **وأجرةٌ عدّلها المكتبُ لا يُنزلها حذفُ متجر** (قرارُ المالك ٢٠٢٦-١١-٢٧، `fee_manual`).
+		if o.sourcesFee > 0 && !o.feeManual {
 			base := feeBeforePromo - o.sourcesFee
 			var extra int64
 			if len(remaining.items) > 0 {

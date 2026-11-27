@@ -37,15 +37,17 @@ func (s *Service) recomputeAfterRemovalTx(ctx context.Context, tx pgx.Tx, orderI
 		customerID, promoCode, merchantID, scope       string
 		deliveryFee, discount, total, walletPaid       int64
 		waived, sourcesFee, driverFee, sharePct, share int64
+		feeManual                                      bool
 	}
 	if err := tx.QueryRow(ctx, `
 		SELECT COALESCE(customer_id::text, ''), COALESCE(promo_code, ''), COALESCE(merchant_id::text, ''),
 		       delivery_fee, discount, total, wallet_paid,
 		       promo_delivery_waived, sources_fee, driver_fee,
-		       snap_platform_delivery_percent, snap_platform_delivery_fixed, wallet_scope
+		       snap_platform_delivery_percent, snap_platform_delivery_fixed, wallet_scope, fee_manual
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&o.customerID, &o.promoCode, &o.merchantID, &o.deliveryFee, &o.discount, &o.total,
-			&o.walletPaid, &o.waived, &o.sourcesFee, &o.driverFee, &o.sharePct, &o.share, &o.scope); err != nil {
+			&o.walletPaid, &o.waived, &o.sourcesFee, &o.driverFee, &o.sharePct, &o.share, &o.scope,
+			&o.feeManual); err != nil {
 		return res, err
 	}
 
@@ -80,7 +82,8 @@ func (s *Service) recomputeAfterRemovalTx(ctx context.Context, tx pgx.Tx, orderI
 		}
 		// **ورسمُ المصادر يُعاد بالمعادلة نفسِها** (`extraSourceFee`) على ما بقي،
 		// **ولا يرتفع أبداً** — إعداداتُ اليوم لا تُحمَّل على طلب الأمس.
-		if o.sourcesFee > 0 {
+		// **وأجرةٌ عدّلها المكتبُ لا يُنزلها خروجُ متجر** (قرارُ المالك ٢٠٢٦-١١-٢٧، `fee_manual`).
+		if o.sourcesFee > 0 && !o.feeManual {
 			base := feeBeforePromo - o.sourcesFee
 			var extra int64
 			if len(remaining.items) > 0 {

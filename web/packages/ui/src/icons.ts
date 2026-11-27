@@ -10,6 +10,8 @@ export {
   Store as IconStore,
   Map as IconZones,
   TicketPercent as IconPromos,
+  // **بطاقاتي** — أيقونةُ شريط الزبون والمتجر (مرآةُ `ic_ticket`).
+  Ticket as IconTicket,
   // **تبديلُ المتجر — سهمان متبادلان.**
   //
   // **والصورةُ تسبق اللفظ**: من يرى سهمين متبادلين يعرف أنّ شيئاً يحلّ محلَّ

@@ -19,10 +19,13 @@ package orders
 //
 //	العاديّ      ⇐ الكودُ والتوصيلُ المجانيُّ يُعاد تطبيقُهما على الأجرة الجديدة، والمحفظةُ بحصّتها
 //	              (`WalletPortion`): نقصٌ يُردّ، وزيادةٌ تُخصم بما يكفي الرصيدُ والباقي نقد.
-//	              **ورسمُ المصدر الإضافيّ** (`sources_fee`) يبقى جزءاً منها لا يزيد عليها — فحذفُ
-//	              متجرٍ بعدها (`EditOrder`) يُنزل الأجرةَ به ولا يُنزلها تحت الصفر.
-//	الخاصّ       ⇐ **بابُ «تعديل العرض» نفسُه** (`adminOverrideCustomTx`) والثمنُ كما هو — فإعادةُ
-//	              التأكيد والحجزُ وحصّةُ المنصّة بقواعده هو، لا نسخةٌ ثانية.
+//	              **ورسمُ المصدر الإضافيّ** (`sources_fee`) يبقى جزءاً منها لا يزيد عليها — **وحذفُ
+//	              متجرٍ بعدها لا يُنزلها** (قرارُ المالك ٢٠٢٦-١١-٢٧: `fee_manual`، هجرة ٠٥٦٩).
+//	الخاصّ       ⇐ **بابُ «تعديل العرض» نفسُه** (`adminOverrideCustomTx`) والثمنُ كما هو — **ويقع فوراً**
+//	              (`officeFinal`): المؤكَّدُ والنقدُ والحجزُ بالأجرة الجديدة، **ولا يُعيدها توثيقٌ أو إسناد.**
+//
+// **وكلُّ أجرةٍ عدّلها المكتبُ نهائيّة** (قرارُ المالك ٢٠٢٦-١١-٢٧): «لازم تتغيّر بكلّ مكان وتبقى
+// بالضبط السعر اللي حطّيته» — العلامةُ `fee_manual` يقرؤها كلُّ حسابٍ لاحق.
 //	التوصيلة     ⇐ المتجرُ «محفظة»: بعد القبول يُردّ له الفرقُ أو يُخصم (ولا يكفي ⇒ يُردّ التعديل).
 //	              «أنا نقداً» قبل الاستلام والمستلِمُ عند التسليم: يتبدّل ما يقبضه السائق.
 //	              **ونقدٌ قُبض فعلاً** (عند الاستلام) **يُردّ تعديلُه** — صندوقُ السائق قبض المبلغَ
@@ -184,6 +187,10 @@ func (s *Service) EditDeliveryFee(ctx context.Context, actorID, orderID string, 
 	if err != nil {
 		return nil, res, err
 	}
+	// **والأجرةُ صارت نهائيّة** (قرارُ المالك ٢٠٢٦-١١-٢٧، هجرة ٠٥٦٩) — لا يُعيدها حسابٌ لاحق.
+	if _, err := tx.Exec(ctx, `UPDATE orders SET fee_manual = true WHERE id = $1`, orderID); err != nil {
+		return nil, res, err
+	}
 
 	// ── ما صار: من الصفّ نفسِه لا من الحساب — فالمعاينةُ هي ما يقع ────────
 	var quotePending bool
@@ -335,7 +342,8 @@ func (s *Service) feeEditCustomTx(ctx context.Context, tx pgx.Tx, actorID, order
 	if req.Fee == row.fee {
 		return ErrOrderEditNoChange
 	}
-	_, err = s.adminOverrideCustomTx(ctx, tx, row, actorID, row.goods, req.Fee, row.goodsUSD, req.Reason)
+	// **وتقع فوراً** (قرارُ المالك ٢٠٢٦-١١-٢٧، `officeFinal`) — المؤكَّدُ والنقدُ والحجزُ بالأجرة الجديدة.
+	_, err = s.adminOverrideCustomTx(ctx, tx, row, actorID, row.goods, req.Fee, row.goodsUSD, req.Reason, true)
 	return err
 }
 
@@ -477,6 +485,11 @@ func (s *Service) feeEditTrailTx(ctx context.Context, q dbtx.Querier, actorID, o
 	if o.driverID != nil && *o.driverID != "" && !skipDriver {
 		body := fmt.Sprintf("طلب #%d: %s. أجرتك صارت %s ل.س، والمبلغ المطلوب قبضه صار %s ل.س",
 			o.number, change, groupDigits(res.DriverFee), groupDigits(res.CashDue))
+		// **وخاصٌّ لم يؤكّده الزبونُ بعد** — المبلغُ الجديدُ ينتظر موافقتَه، فلا يُقال رقمٌ قديم.
+		if o.kind == KindCustom && res.Reconfirm {
+			body = fmt.Sprintf("طلب #%d: %s. أجرتك صارت %s ل.س، والمجموع الجديد %s ل.س بانتظار موافقة الزبون",
+				o.number, change, groupDigits(res.DriverFee), groupDigits(res.NewTotal))
+		}
 		if err := notifications.NotifyUserTx(ctx, q, notifications.Input{
 			UserID: *o.driverID, Kind: notifications.KindOrder,
 			Title: t.feeEditedDriver, Body: body,

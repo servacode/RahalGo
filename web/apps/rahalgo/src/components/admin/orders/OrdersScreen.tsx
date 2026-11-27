@@ -4810,7 +4810,7 @@ function InvoiceList({
         </li>
         <li className="flex items-center justify-between gap-2">
           <span className="text-ink-muted">{OP.mdFee}</span>
-          <Money value={o.delivery_fee} small />
+          <Money value={o.delivery_fee + (o.free_waived ?? 0)} small />
         </li>
         {/* **وما يقبضه من المستلِم للمتجر** — خارجَ الحساب، يُعرض وحدَه. **وفي «إحضار» تقديرُ
             المتجر** (٢٠٢٦-١٠-١٦) والمبلغُ الحقيقيُّ تحته بحال موافقته. */}

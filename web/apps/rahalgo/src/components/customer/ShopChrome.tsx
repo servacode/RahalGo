@@ -38,6 +38,7 @@ import { useActiveOrders } from "@/lib/customer/active";
 import { useCart } from "@/lib/customer/cart";
 import { useCustomer } from "@/lib/customer/context";
 import { statusLabel } from "@/lib/customer/texts";
+import { LoyaltyCardsButton } from "@/components/LoyaltyCards";
 import { AddressSheet } from "./AddressSheet";
 import { PrizesButton } from "./PrizesButton";
 import { ThemeToggle } from "./ShopTheme";
@@ -110,7 +111,8 @@ export function ShopTopBar({
               <IconLocation size={18} />
             </span>
             <span className="flex min-w-0 items-center gap-1">
-              <small>{H.deliverTo}</small>
+              {/* **«التوصيل إلى» لما ما في عنوان بس** (ملاحظةُ المالك ٢٠٢٦-١١-٢٧) — وبعنوانٍ مختار يكفي اسمُه. */}
+              {!address && <small>{H.deliverTo}</small>}
               <b className="flex items-center gap-1">
                 <span className={address ? "min-w-0 truncate" : "min-w-0 line-clamp-2 text-xs leading-snug"}>{address ? address.address_text : A.none}</span>
                 <IconChevronDown size={14} className="shrink-0 text-ink-muted" />
@@ -167,6 +169,8 @@ export function ShopTopBar({
           </span>
         )}
         <ThemeToggle theme={theme} onToggle={onTheme} />
+        {/* **«بطاقاتي»** (قرارُ المالك ٢٠٢٦-١١-٢٧) — أيقونةٌ صغيرةٌ قبل الجرس، لا للضيف، ولا إن أُطفئت البطاقتان. */}
+        {user && <LoyaltyCardsButton path="/api/v1/my/stamp-card" href="/cards" />}
         {user && bell}
 
         {user && (
