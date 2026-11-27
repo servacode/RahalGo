@@ -21,6 +21,9 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -164,21 +167,26 @@ fun TopBar(
         // **ولا تحتاج اسماً** — ومن رآها في أيّ تطبيقٍ عرف ما تفتح.
         // **وهي أصوبُ من تبويبٍ خامس**: الشريطُ السفليُّ أربعةٌ الآن،
         // وخامسٌ بأسماءٍ عربيّةٍ يضغطه حتّى تُقصّ الكلمات.
-        if (onMenu != null) {
-            Box(
-                Modifier
-                    // **ولمسةٌ بـ٤٨** — والشكلُ كما كان (مراجعةُ ٢٠٢٦-١٠-٢٩).
-                    .minimumInteractiveComponentSize()
-                    .clip(CircleShape)
-                    .clickable(onClick = onMenu)
-                    .padding(6.dp),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_menu),
-                    contentDescription = stringResource(R.string.menu_open),
-                    tint = Rahal.colors.inkMuted,
-                    modifier = Modifier.size(22.dp),
-                )
+        if (onMenu != null || onCards != null) {
+            // **دائرةُ «اربح مجاناً» فوق والقائمةُ تحتها** (اختيارُ المالك ٢٠٢٦-١١-٢٧، النموذج ١) —
+            // فيبقى «التوصيل إلى» واضحاً. والدائرةُ تنبض أبداً وتفتح «بطاقاتي».
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (onCards != null) WinFreeCircle(onCards)
+                if (onMenu != null) {
+                    Box(
+                        Modifier
+                            .clip(CircleShape)
+                            .clickable(onClick = onMenu)
+                            .padding(horizontal = 8.dp, vertical = if (onCards != null) 3.dp else 13.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_menu),
+                            contentDescription = stringResource(R.string.menu_open),
+                            tint = Rahal.colors.inkMuted,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                }
             }
         } else {
             // **وفراغٌ بمقاسه** — وإلّا انزاح الرصيدُ والجرسُ إلى اليمين
@@ -336,42 +344,6 @@ fun TopBar(
 
             Spacer(Modifier.size(10.dp))
 
-            // **وأيقونةُ «بطاقاتي» قبل المحفظة** — صغيرةٌ بارتفاع الشريط نفسِه، وشارتُها تقدّمُ الختم.
-            if (onCards != null) {
-                val cardsCd = stringResource(R.string.loyalty_cards_title)
-                Box(
-                    Modifier
-                        .minimumInteractiveComponentSize()
-                        .clip(CircleShape)
-                        .clickable(onClick = onCards)
-                        .padding(horizontal = 6.dp)
-                        .semantics { contentDescription = cardsCd },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_ticket),
-                        contentDescription = null,
-                        tint = Rahal.colors.brand,
-                        modifier = Modifier.size(24.dp),
-                    )
-                    if (cardsBadge.isNotEmpty()) {
-                        Text(
-                            text = cardsBadge,
-                            color = Rahal.colors.onBrand,
-                            style = Rahal.type.badge,
-                            maxLines = 1,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .offset(y = 6.dp)
-                                .clip(CircleShape)
-                                .background(Rahal.colors.brand)
-                                .padding(horizontal = 4.dp, vertical = 1.dp),
-                        )
-                    }
-                }
-                Spacer(Modifier.size(Rahal.space.xs))
-            }
-
             // **والرصيد رقم لا أيقونة وحدها** — «محفظتك» بلا رقم لا تقول
             // شيئا.
             if (showBalance) {
@@ -414,7 +386,7 @@ fun TopBar(
                         }
                     }
                 }
-                Spacer(Modifier.size(Rahal.space.xs))
+                // **بلا فراغٍ بين المحفظة والجرس** (ملاحظةُ المالك ٢٠٢٦-١١-٢٧) — مساحةٌ للعنوان.
             }
 
             // ══════════════════════════════════════════════════════════
@@ -435,7 +407,7 @@ fun TopBar(
                     .minimumInteractiveComponentSize()
                     .clip(CircleShape)
                     .clickable(onClick = onNotifications)
-                    .padding(Rahal.space.sm),
+                    .padding(horizontal = Rahal.space.xs, vertical = Rahal.space.sm),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_bell),
@@ -472,3 +444,58 @@ fun TopBar(
         }
     }
 }
+
+/**
+ * **دائرةُ «اربح مجاناً» النابضة** (اختيارُ المالك ٢٠٢٦-١١-٢٧) — برتقاليّةٌ فوق زرّ القائمة،
+ * تنبض بلا توقّف (تكبر قليلاً وحولها هالةٌ تتّسع وتتلاشى)، وضغطُها يفتح «بطاقاتي».
+ */
+@Composable
+private fun WinFreeCircle(onClick: () -> Unit) {
+    val cd = androidx.compose.ui.res.stringResource(R.string.loyalty_cards_title)
+    val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label = "win")
+    val t by pulse.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            androidx.compose.animation.core.tween(1600, easing = androidx.compose.animation.core.LinearEasing),
+        ),
+        label = "t",
+    )
+    val scale = 1f + 0.06f * kotlin.math.sin(t * kotlin.math.PI.toFloat())
+    val accent = Rahal.colors.accent
+    Box(
+        Modifier.size(52.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        // الهالة
+        Box(
+            Modifier
+                .size(44.dp)
+                .scaled(1f + 0.35f * t)
+                .clip(CircleShape)
+                .background(accent.copy(alpha = 0.45f * (1f - t))),
+        )
+        Box(
+            Modifier
+                .size(44.dp)
+                .scaled(scale)
+                .clip(CircleShape)
+                .background(accent)
+                .clickable(onClick = onClick)
+                .semantics { contentDescription = cd },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = androidx.compose.ui.res.stringResource(R.string.loyalty_win_free),
+                color = Color.White,
+                style = Rahal.type.badge.copy(lineHeight = Rahal.type.badge.fontSize * 1.1f),
+                fontWeight = FontWeight.Bold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 2,
+            )
+        }
+    }
+}
+
+private fun Modifier.scaled(s: Float): Modifier =
+    this.graphicsLayer { scaleX = s; scaleY = s }
