@@ -50,6 +50,10 @@ export default function WhatsAppOrdersPage() {
         )
       }
     >
+      {/* **محلٌّ واحدٌ بالطلب** (قرارُ المالك ٢٠٢٦-١١-٢٧) — وكلُّ محلٍّ زائدٍ توصيلةٌ بأجرتها. */}
+      <div className="mb-4" data-testid="wa-one-store-rule">
+        <Alert tone="info">{W.oneStoreRule}</Alert>
+      </div>
       <div className="mb-4">
         <BotOrdersPending refresh={refresh} onChanged={() => setRefresh((n) => n + 1)} />
       </div>

@@ -90,6 +90,15 @@ func (s *Server) handleApproveWABotOrder(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	s.touch("orders", "ops")
+	// **والزبونُ يُقال له رقمُ طلبه وأجرتُه** (قرارُ المالك ٢٠٢٦-١١-٢٧) — وهو راسلنا للتوّ.
+	if phone := strings.TrimSpace(o.CustomerPhone); phone != "" {
+		num, fee := o.Number, o.DeliveryFee
+		go func() {
+			ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 20*time.Second)
+			defer cancel()
+			s.sendText(ctx, phone, fmt.Sprintf(waBotApprovedText, num, fee))
+		}()
+	}
 	view, err := orderView(orders.AudienceOps, o)
 	if err != nil {
 		s.respondErr(w, err)
@@ -97,6 +106,12 @@ func (s *Server) handleApproveWABotOrder(w http.ResponseWriter, r *http.Request)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"order": view})
 }
+
+// waBotApprovedText **رسالةُ الزبون حين يُوافَق على طلبه** — رقمُه وأجرةُ التوصيل.
+const waBotApprovedText = "تمت الموافقة على طلبك رقم #%d. أجرة التوصيل: %d ل.س. نبحث لك الآن عن كابتن."
+
+// waOrderFeeText **رسالةُ الزبون حين يُدخل الموظّفُ طلبَه من اللوحة** — رقمُه وأجرةُ التوصيل.
+const waOrderFeeText = "تم تسجيل طلبك رقم #%d. أجرة التوصيل: %d ل.س."
 
 // handleRejectWABotOrder `POST /admin/whatsapp-orders/{id}/reject` — `{"reason": "…"}`.
 func (s *Server) handleRejectWABotOrder(w http.ResponseWriter, r *http.Request) {

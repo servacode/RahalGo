@@ -21,6 +21,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
@@ -456,6 +457,11 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 				}
 				// **ورسالةُ الموقع والعنوان للزبون** — وإن لم تصل فالمكتبُ يرى «ما وصلت» في طلب الموقع.
 				// **والأمانةُ تقول «لديك أمانة» للطرفين** (`locReqText`).
+				// **ورقمُ الطلب وأجرتُه للزبون** (قرارُ المالك ٢٠٢٦-١١-٢٧) — قبل رسالة الموقع. والأمانةُ
+				// لها طرفان ورسالتُها الخاصّة، فلا تُرسل لها هنا.
+				if !c.Amanah && c.Fee > 0 && strings.TrimSpace(phone) != "" {
+					s.sendText(ctx, phone, fmt.Sprintf(waOrderFeeText, c.Number, c.Fee))
+				}
 				text := locReqModeWhatsApp
 				if c.Amanah {
 					text = "amanah"
