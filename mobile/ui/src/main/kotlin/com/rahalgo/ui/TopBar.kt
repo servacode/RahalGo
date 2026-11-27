@@ -246,7 +246,8 @@ fun TopBar(
                     LocalDensity.current.fontScale > 1.15f
                 // **«التوصيل إلى» والاسمُ بسطرٍ واحد** (قرارُ المالك ٢٠٢٦-١١-١٣) — فتصغر الدائرةُ وتصير بحجم المحفظة.
                 Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
-                    if (!tight) {
+                    // **«التوصيل إلى» لما ما في عنوان بس** (ملاحظةُ المالك ٢٠٢٦-١١-٢٧) — وبعنوانٍ مختار يكفي اسمُه.
+                    if (!tight && addressLabel.isEmpty()) {
                         Text(
                             text = stringResource(R.string.top_deliver_to),
                             color = Rahal.colors.inkMuted,
