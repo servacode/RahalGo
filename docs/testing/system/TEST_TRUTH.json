@@ -33,8 +33,8 @@
     "setting_defs": 334,
     "behaviour_settings": 287,
     "order_fields": 153,
-    "test_files": 880,
-    "test_funcs": 3359
+    "test_files": 881,
+    "test_funcs": 3361
   },
   "flows": [
     {
@@ -30171,6 +30171,18 @@
     {
       "name": "TestWAADV02_CancelAndChoice",
       "file": "internal/qa/wa_advance_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOT10_AmanahReceiveSYP",
+      "file": "internal/qa/wa_bot_amanah_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOT11_AmanahSendUSD",
+      "file": "internal/qa/wa_bot_amanah_test.go",
       "package": "qa",
       "orphan": true
     },

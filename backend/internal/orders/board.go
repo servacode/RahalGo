@@ -78,14 +78,14 @@ func NoAcceptSQL(l StuckLimits) string {
 // للمتجر» (`WaPickupWaitSQL`).
 func NotSentSQL(l StuckLimits) string {
 	return `(o.status = 'accepted' AND o.sent_to_merchant_at IS NULL
-		AND NOT (o.wa_amanah AND o.pickup_override IS NULL)
+		AND NOT ` + WAHeldSQL("o.") + `
 		AND COALESCE(o.accepted_at, o.created_at) < now() - ` + mins(l.AcceptMin) + `)`
 }
 
 // WaPickupWaitSQL **أمانةُ واتساب مقبولةٌ تنتظر موقعَ صاحب الأمانة** بعد المهلة نفسِها —
 // ليس لها متجرٌ تُرسَل إليه، وتنزل للسائقين وحدَها حين يصل الموقع (`wa_pickup_pending`).
 func WaPickupWaitSQL(l StuckLimits) string {
-	return `(o.status = 'accepted' AND o.wa_amanah AND o.pickup_override IS NULL
+	return `(o.status = 'accepted' AND ` + WAHeldSQL("o.") + `
 		AND COALESCE(o.accepted_at, o.created_at) < now() - ` + mins(l.AcceptMin) + `)`
 }
 

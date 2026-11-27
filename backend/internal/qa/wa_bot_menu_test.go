@@ -466,7 +466,7 @@ func TestWABOT08_UnclearNoLoop(t *testing.T) {
 	wbSay(h, p, "مرحبا")
 	for i := 0; i < 2; i++ {
 		if r := wbSay(h, p, "سلام"); !strings.HasPrefix(r, wbUnclear) ||
-			!strings.Contains(r, "يرجى إرسال رقم الخدمة من 1 إلى 6، أو 0 لعرض القائمة.") {
+			!strings.Contains(r, "يرجى إرسال رقم الخدمة من 1 إلى 7، أو 0 لعرض القائمة.") {
 			t.Fatalf("التوضيح %d: %q", i+1, r)
 		}
 	}
@@ -476,7 +476,7 @@ func TestWABOT08_UnclearNoLoop(t *testing.T) {
 	if r := wbSay(h, p, "مرحبا؟"); r != "" {
 		t.Fatalf("**البوت يدور**: %q", r)
 	}
-	if r := wbSay(h, p, "7"); r != "" {
+	if r := wbSay(h, p, "9"); r != "" {
 		t.Fatalf("**رقمٌ خارج القائمة بعد الصمت**: %q", r)
 	}
 	if r := wbSay(h, p, "2"); r != wbTrackAsk {

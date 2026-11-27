@@ -64,6 +64,9 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: WaSent) => void }) {
   const [senderLink, setSenderLink] = useState("");
   const [senderPoint, setSenderPoint] = useState<WaPoint | null>(null);
   const [linkState, setLinkState] = useState<"" | "busy" | "found" | "notFound">("");
+  // **مبلغُ الأمانة** (قرارُ المالك ٢٠٢٦-١١-٢٧) — يدفعه الكابتن عند الاستلام ويقبضه عند التسليم.
+  const [amountText, setAmountText] = useState("");
+  const [amountCur, setAmountCur] = useState<"SYP" | "USD">("SYP");
   const [storeKind, setStoreKind] = useState<"ours" | "notOurs">("ours");
   const [store, setStore] = useState<WaStore | null>(null);
   const [storeName, setStoreName] = useState("");
@@ -149,6 +152,12 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: WaSent) => void }) {
   const feeOk = feeValue != null && feeValue > 0;
   const hasStore = storeKind === "ours" ? !!store : !!storeName.trim();
   const samePhone = amanah && !!senderPhone.trim() && digits(senderPhone) === digits(phone);
+  // **فواصلُ الآلاف تُهمَل والفاصلةُ العشريّةُ العربيّة (U+066B) نقطة** — والأرقامُ تُكتب لاتينيّة.
+  const amountRaw = amountText.trim().replace(/[\s,\u066C]/g, "").replace(String.fromCharCode(0x066b), ".");
+  const amountValue = amountRaw === "" ? null : Number(amountRaw);
+  const amountOk =
+    amountValue == null ||
+    ((amountCur === "SYP" ? /^\d+$/.test(amountRaw) : /^\d+(\.\d{1,2})?$/.test(amountRaw)) && amountValue > 0);
   const missing = (
     amanah
       ? [!senderPhone.trim() && W.senderPhone, !phone.trim() && W.recipientPhone, !feeOk && W.fee]
@@ -166,12 +175,14 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: WaSent) => void }) {
     setPhone("");
     setDetails("");
     setFeeText("");
+    setAmountText("");
+    setAmountCur("SYP");
     setTried(false);
   }
 
   async function send() {
     if (busy) return;
-    if (missing.length > 0 || samePhone || linkState === "busy") {
+    if (missing.length > 0 || samePhone || linkState === "busy" || (amanah && !amountOk)) {
       setTried(true);
       return;
     }
@@ -190,6 +201,10 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: WaSent) => void }) {
         if (senderPoint) {
           body.sender_lat = senderPoint.lat;
           body.sender_lng = senderPoint.lng;
+        }
+        if (amountValue != null) {
+          body.goods_amount = amountValue;
+          body.amount_currency = amountCur;
         }
       } else if (storeKind === "ours" && store) body.store_id = store.id;
       else body.store_name = storeName.trim();
@@ -364,7 +379,40 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: WaSent) => void }) {
               </span>
             )}
           </div>
-          <p className="text-sm text-ink-muted">{amanah ? W.amanahNoGoods : W.goodsByDriver}</p>
+          {amanah ? (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-end gap-2">
+                <Input
+                  label={W.amanahAmount}
+                  inputMode="decimal"
+                  dir="ltr"
+                  value={amountText}
+                  disabled={busy}
+                  wrapperClassName="w-48"
+                  error={tried && !amountOk ? W.amanahAmountBad : undefined}
+                  onChange={(e) => setAmountText(e.target.value)}
+                />
+                <div className="flex gap-2 pb-1" role="radiogroup" aria-label={W.amanahCurrency}>
+                  {(["SYP", "USD"] as const).map((c) => (
+                    <Button
+                      key={c}
+                      size="sm"
+                      variant={amountCur === c ? "primary" : "secondary"}
+                      role="radio"
+                      aria-checked={amountCur === c}
+                      disabled={busy}
+                      onClick={() => setAmountCur(c)}
+                    >
+                      {c === "SYP" ? W.amanahSyp : W.amanahUsd}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-sm text-ink-muted">{W.amanahAmountHint}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-ink-muted">{W.goodsByDriver}</p>
+          )}
           {tried && missing.length > 0 && (
             <Alert tone="warning">{fill(W.missing, { fields: missing.join(m.common.listSep) })}</Alert>
           )}

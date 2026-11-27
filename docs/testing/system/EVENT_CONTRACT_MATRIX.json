@@ -547,7 +547,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 870,
+      "line": 896,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -556,7 +556,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 937,
+      "line": 965,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -565,7 +565,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 1148,
+      "line": 1176,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -1219,14 +1219,14 @@
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 601,
+      "line": 605,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": true
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 773,
+      "line": 777,
       "call": "Notify",
       "kind": "Account",
       "entity": "user",
@@ -1824,7 +1824,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 1154,
+      "line": 1182,
       "room": "driver:*"
     },
     {
@@ -2179,14 +2179,14 @@
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 601,
+      "line": 605,
       "call": "Notify",
       "has_app_targeting": false,
       "has_entity_id": true
     },
     {
       "file": "internal/server/qa_staging.go",
-      "line": 773,
+      "line": 777,
       "call": "Notify",
       "kind": "Account",
       "entity": "user",

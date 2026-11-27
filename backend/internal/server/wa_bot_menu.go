@@ -13,6 +13,8 @@ package server
 //	٤ استعادةُ كلمة المرور      ← رمزٌ بالمسار الحقيقيّ (`RequestPasswordReset`)
 //	٥ تحميلُ التطبيق           ← ملفُّ تطبيق الزبون (مسار «ارسل رحال غو»)
 //	٦ التسجيلُ ككابتن           ← تسعةُ أسئلةٍ واحداً واحداً ⇒ `captain_applications`
+//	٧ إرسالُ أو استلامُ أمانة    ← الاتّجاه ← اسمُ الطرف الآخر ورقمُه ← الوصف ← مبلغٌ؟ ← الموقع ⇒ أمانةٌ معلّقة
+//	                              ورابطُ موقعٍ للطرف الآخر (أُضيف ٢٠٢٦-١١-٢٧ رقماً سابعاً فلا تتبدّل الستّة)
 //
 // # متى تظهر القائمة
 //
@@ -55,10 +57,10 @@ import (
 const (
 	waBotMenuText = "أهلاً بك في رحّال غو 👋\nيرجى اختيار رقم الخدمة:\n" +
 		"1️⃣ طلب جديد عبر الواتساب\n2️⃣ متابعة طلبي\n3️⃣ محادثة مع الإدارة\n" +
-		"4️⃣ استعادة كلمة المرور\n5️⃣ تحميل تطبيق رحّال غو\n6️⃣ التسجيل ككابتن"
+		"4️⃣ استعادة كلمة المرور\n5️⃣ تحميل تطبيق رحّال غو\n6️⃣ التسجيل ككابتن\n7️⃣ إرسال أو استلام أمانة"
 
 	waBotUnclear     = "عذراً، لم أفهم ردّك. يرجى كتابة الجواب بشكل واضح لأتمكّن من مساعدتك."
-	waBotAskMenu     = "يرجى إرسال رقم الخدمة من 1 إلى 6، أو 0 لعرض القائمة."
+	waBotAskMenu     = "يرجى إرسال رقم الخدمة من 1 إلى 7، أو 0 لعرض القائمة."
 	waBotAskYesNo    = "يرجى الإجابة بـ: نعم أو لا."
 	waBotStuck       = "يمكنك كتابة 0 للعودة إلى القائمة، أو 3 للتحدّث مع الإدارة."
 	waBotReminder    = "هل ما زلت معنا؟ يرجى إكمال الإجابة لنتابع طلبك."
@@ -88,6 +90,21 @@ const (
 	waBotAppMissing = "عذراً، ملف التطبيق غير متاح حالياً. سيتواصل معك أحد موظفينا في أقرب وقت."
 
 	waBotSignupDone = "تم تسجيل جميع معلوماتك، وستتواصل معك الإدارة لاحقاً في الوقت المناسب."
+
+	waBotAmanahDirQ      = "هل تريد إرسال أمانة أم استلام أمانة؟\n1️⃣ إرسال أمانة\n2️⃣ استلام أمانة"
+	waBotAmanahNameSend  = "يرجى كتابة اسم الشخص الذي ستُرسَل إليه الأمانة."
+	waBotAmanahNameRecv  = "يرجى كتابة اسم الشخص الذي ستُستلَم منه الأمانة."
+	waBotAmanahPhoneAsk  = "يرجى كتابة رقم هاتف هذا الشخص (ويُفضَّل أن يكون عليه واتساب)، لنرسل إليه رابطاً يشارك به موقعه."
+	waBotAmanahPhoneBad  = "عذراً، رقم الهاتف غير صحيح. يرجى كتابته بالشكل 09XXXXXXXX."
+	waBotAmanahPhoneSame = "عذراً، هذا رقمك أنت. يرجى كتابة رقم الشخص الآخر."
+	waBotAmanahDescAsk   = "يرجى كتابة وصف مختصر للأمانة (مثلاً: ظرف أوراق، كيس ملابس)."
+	waBotAmanahPayQ      = "هل يحتاج الكابتن إلى دفع مبلغ عند استلام الأمانة، يستوفيه عند تسليمها؟ أجب بـ: نعم أو لا."
+	waBotAmanahAmountAsk = "يرجى كتابة المبلغ بالأرقام فقط."
+	waBotAmanahCurrencyQ = "ما عملة المبلغ؟\n1️⃣ ليرة سورية\n2️⃣ دولار"
+	waBotAmanahSYPWhole  = "عذراً، المبلغ بالليرة السورية يُكتب دون فواصل عشرية."
+	waBotAmanahLocSend   = "يرجى إرسال موقعك (العادي أو المباشر)، وهو مكان استلام الأمانة منك."
+	waBotAmanahLocRecv   = "يرجى إرسال موقعك (العادي أو المباشر)، وهو مكان تسليم الأمانة إليك."
+	waBotAmanahDone      = "شكراً لك، تم تسجيل طلب الأمانة برقم #%d.\nسيصل إلى الشخص الآخر رابط عبر الواتساب ليرسل موقعه، والطلب الآن بانتظار موافقة الإدارة."
 
 	waBotClosedPrefix = "أهلاً بك في رحّال غو 🌙\n"
 	waBotClosedLater  = "انتهى دوامنا لهذا اليوم، ونسعد بخدمتك %s من الساعة %s."
@@ -124,6 +141,15 @@ type waBotData struct {
 	Edits  []string          `json:"edits,omitempty"`
 	Store  string            `json:"store,omitempty"`
 	Signup map[string]string `json:"signup,omitempty"`
+
+	// **الأمانة** (الخيار ٧، قرارُ المالك ٢٠٢٦-١١-٢٧) — الاتّجاهُ والطرفُ الآخرُ والوصفُ والمبلغُ نصّاً حتّى
+	// تُختار عملتُه.
+	AmDir    string `json:"am_dir,omitempty"`
+	AmName   string `json:"am_name,omitempty"`
+	AmPhone  string `json:"am_phone,omitempty"`
+	AmDesc   string `json:"am_desc,omitempty"`
+	AmAmount string `json:"am_amount,omitempty"`
+	AmCur    string `json:"am_cur,omitempty"`
 }
 
 type waBotChat struct {
@@ -180,7 +206,7 @@ func (s *Server) WABotTakesMedia(ctx context.Context, from string) bool {
 	}
 	var in bool
 	_ = s.pg.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM wa_bot_chats
-		WHERE phone = $1 AND state IN ('order', 'signup', 'track', 'menu'))`, phone).Scan(&in)
+		WHERE phone = $1 AND state IN ('order', 'amanah', 'signup', 'track', 'menu'))`, phone).Scan(&in)
 	return in
 }
 
@@ -279,6 +305,8 @@ func (s *Server) waBotStep(ctx context.Context, tx pgx.Tx, c *waBotChat, in noti
 		return s.waBotMenuChoice(ctx, c, in, t, isText)
 	case "order":
 		return s.waBotOrderStep(c, in, t, isText)
+	case "amanah":
+		return s.waBotAmanahStep(c, in, t, isText)
 	case "track":
 		return s.waBotTrackStep(ctx, c, t, isText)
 	case "signup":
@@ -364,6 +392,9 @@ func (s *Server) waBotMenuChoice(ctx context.Context, c *waBotChat, in notify.Me
 	case "6":
 		c.data = waBotData{Signup: map[string]string{}}
 		return c.ask("signup", waBotSignupSteps[0].key, waBotSignupSteps[0].ask), nil
+	case "7":
+		c.data = waBotData{}
+		return c.ask("amanah", "dir", waBotAmanahDirQ), nil
 	}
 	return c.unclearReply(waBotUnclear, waBotAskMenu), nil
 }
@@ -450,6 +481,151 @@ func (s *Server) waBotCreateOrder(ctx context.Context, phone string, d waBotData
 	})
 	s.touch("orders", "ops")
 	return fmt.Sprintf(waBotOrderDone, c.Number)
+}
+
+// waBotAmanahStep **أمانةٌ** (الخيار ٧، قرارُ المالك ٢٠٢٦-١١-٢٧): الاتّجاه ← اسمُ الطرف الآخر ← رقمُه ← الوصف ←
+// مبلغٌ؟ (نعم/لا ← المبلغ ← العملة) ← موقعُ الزبون ⇒ طلبٌ معلّقٌ، ورابطُ موقعٍ للطرف الآخر.
+func (s *Server) waBotAmanahStep(c *waBotChat, in notify.MenuInbound, t string,
+	isText bool) (notify.MenuReply, []waBotEffect) {
+	raw := strings.TrimSpace(in.Text)
+	nameQ := waBotAmanahNameRecv
+	locQ := waBotAmanahLocRecv
+	if c.data.AmDir == orders.AmanahSend {
+		nameQ, locQ = waBotAmanahNameSend, waBotAmanahLocSend
+	}
+	switch c.step {
+	case "dir":
+		if !isText {
+			return c.unclearReply(waBotUnclear, waBotAmanahDirQ), nil
+		}
+		switch t {
+		case "1", "ارسال", "ارسال امانة":
+			c.data.AmDir = orders.AmanahSend
+			return c.ask("amanah", "name", waBotAmanahNameSend), nil
+		case "2", "استلام", "استلام امانة":
+			c.data.AmDir = orders.AmanahReceive
+			return c.ask("amanah", "name", waBotAmanahNameRecv), nil
+		}
+		return c.unclearReply(waBotUnclear, waBotAmanahDirQ), nil
+	case "name":
+		if !isText {
+			return c.unclearReply(waBotWriteAnswer, nameQ), nil
+		}
+		if waBotNoStore(t) {
+			c.data.AmName = ""
+		} else {
+			if !strings.ContainsFunc(raw, unicode.IsLetter) {
+				return c.unclearReply(waBotUnclear, nameQ), nil
+			}
+			if r := []rune(raw); len(r) > 120 {
+				raw = string(r[:120])
+			}
+			c.data.AmName = raw
+		}
+		return c.ask("amanah", "phone", waBotAmanahPhoneAsk), nil
+	case "phone":
+		if !isText {
+			return c.unclearReply(waBotWriteAnswer, waBotAmanahPhoneAsk), nil
+		}
+		p, ok := identity.NormalizePhone(strings.ReplaceAll(t, " ", ""))
+		if !ok {
+			return c.unclearReply(waBotAmanahPhoneBad, waBotAmanahPhoneAsk), nil
+		}
+		if p == c.phone {
+			return c.unclearReply(waBotAmanahPhoneSame, waBotAmanahPhoneAsk), nil
+		}
+		c.data.AmPhone = p
+		return c.ask("amanah", "desc", waBotAmanahDescAsk), nil
+	case "desc":
+		if !isText {
+			return c.unclearReply(waBotWriteAnswer, waBotAmanahDescAsk), nil
+		}
+		if r := []rune(raw); len(r) > orders.MaxWhatsAppDetails {
+			raw = string(r[:orders.MaxWhatsAppDetails])
+		}
+		c.data.AmDesc = raw
+		return c.ask("amanah", "pay_q", waBotAmanahPayQ), nil
+	case "pay_q":
+		switch waBotYesNo(t, isText) {
+		case 1:
+			return c.ask("amanah", "amount", waBotAmanahAmountAsk), nil
+		case 0:
+			c.data.AmAmount, c.data.AmCur = "", ""
+			return c.ask("amanah", "location", locQ), nil
+		}
+		return c.unclearReply(waBotUnclear, waBotAskYesNo), nil
+	case "amount":
+		a, ok := waBotAmount(t)
+		if !isText || !ok {
+			return c.unclearReply(waBotUnclear, waBotAmanahAmountAsk), nil
+		}
+		c.data.AmAmount = a
+		return c.ask("amanah", "currency", waBotAmanahCurrencyQ), nil
+	case "currency":
+		cur := waBotCurrency(t)
+		if !isText || cur == "" {
+			return c.unclearReply(waBotUnclear, waBotAmanahCurrencyQ), nil
+		}
+		if _, ok := waBotAmountUnits(c.data.AmAmount, cur); !ok {
+			// **ليرةٌ بكسرٍ عشريّ** — يُعاد سؤالُ المبلغ.
+			return c.ask("amanah", "amount", waBotAmanahSYPWhole+"\n"+waBotAmanahAmountAsk), nil
+		}
+		c.data.AmCur = cur
+		return c.ask("amanah", "location", locQ), nil
+	case "location":
+		if in.Kind != notify.MenuLocation || !orders.ValidPoint(in.Loc.Lat, in.Loc.Lng) {
+			return c.unclearReply(waBotUnclear, locQ), nil
+		}
+		data, phone, lat, lng := c.data, c.phone, in.Loc.Lat, in.Loc.Lng
+		r := c.ask("done", "", "")
+		c.data = waBotData{}
+		return r, []waBotEffect{func(ctx context.Context, reply *notify.MenuReply) {
+			reply.Text = s.waBotCreateAmanah(ctx, phone, data, lat, lng)
+		}}
+	}
+	// خطوةٌ مجهولة ⇒ من أوّل الأمانة.
+	c.data = waBotData{}
+	return c.ask("amanah", "dir", waBotAmanahDirQ), nil
+}
+
+// waBotCreateAmanah **ينشئ الأمانةَ المعلّقة ويطلب موقعَ الطرف الآخر ويُشعر الموظّفين** — ويردّ نصَّ الزبون.
+//
+// **وطلبُ الموقع في معاملة الإنشاء نفسِها** (`InTx`) — «استلام»: يملأ نقطةَ الاستلام (`whatsapp_pickup`)،
+// و«إرسال»: نقطةَ التسليم (`whatsapp`). **والرسالةُ بعد التثبيت** برسالة «لديك أمانة» نفسِها.
+func (s *Server) waBotCreateAmanah(ctx context.Context, phone string, d waBotData, lat, lng float64) string {
+	var amount *int64
+	if d.AmAmount != "" {
+		if u, ok := waBotAmountUnits(d.AmAmount, d.AmCur); ok && u > 0 {
+			amount = &u
+		}
+	}
+	mode := locReqModeWAPickup
+	if d.AmDir == orders.AmanahSend {
+		mode = locReqModeWhatsApp
+	}
+	var req waAutoLocReq
+	c, err := s.orders.CreateWABotOrder(ctx, orders.WABotOrderInput{
+		Phone: phone, Details: d.AmDesc, Lat: lat, Lng: lng,
+		Amanah: true, Direction: d.AmDir, OtherName: d.AmName, OtherPhone: d.AmPhone,
+		GoodsAmount: amount, Currency: d.AmCur,
+		InTx: func(ctx context.Context, tx pgx.Tx, orderID string) error {
+			a, err := newWALocReqTx(ctx, tx, "", d.AmPhone, "", orderID, mode)
+			req = a
+			return err
+		},
+	})
+	if err != nil {
+		s.logger.Error("قائمة البوت: إنشاءُ الأمانة سقط", "error", err)
+		return waBotOrderFailed
+	}
+	s.locReqSend(ctx, req.id, d.AmPhone, "amanah", req.token, req.expires)
+	s.notify.NotifyCaps(ctx, []string{string(authz.OrdersWhatsApp)}, notifications.Input{
+		Kind: notifications.KindOrder, Title: waBotNotifAmanahTitle,
+		Body:   fmt.Sprintf(waBotNotifOrderBody, c.Number, phone),
+		Entity: "order", EntityID: c.ID, Href: "/dashboard/whatsapp",
+	})
+	s.touch("orders", "ops")
+	return fmt.Sprintf(waBotAmanahDone, c.Number)
 }
 
 // waBotTrackStep **متابعةُ طلب** — برقمه، ولصاحبه وحدَه.
@@ -587,6 +763,7 @@ func (s *Server) waBotSaveApplication(ctx context.Context, phone string, a map[s
 
 const (
 	waBotNotifOrderTitle  = "طلب واتساب من البوت بانتظار الموافقة"
+	waBotNotifAmanahTitle = "أمانة واتساب من البوت بانتظار الموافقة"
 	waBotNotifOrderBody   = "الطلب #%d من الرقم %s ينتظر كتابة الأجرة والموافقة."
 	waBotNotifAdminTitle  = "زبون ينتظر الردّ على الواتساب"
 	waBotNotifAdminBody   = "الرقم %s اختار محادثة الإدارة من قائمة البوت."
@@ -709,6 +886,58 @@ func waBotValidAge(t string) bool {
 	return err == nil && len(d) <= 2 && n >= 14 && n <= 80
 }
 
+// waBotAmount **مبلغُ الأمانة نصّاً** — أرقامٌ (والهنديّةُ وُحّدت في `waBotNorm`) وفاصلةٌ عشريّةٌ واحدةٌ
+// بمنزلتين على الأكثر؛ وفواصلُ الآلاف والمسافاتُ وكلمةُ العملة تُهمَل. والصفرُ ليس مبلغاً.
+func waBotAmount(t string) (string, bool) {
+	var b strings.Builder
+	dot := false
+	for _, r := range t {
+		switch {
+		case r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == '.' || r == '٫':
+			if dot {
+				return "", false
+			}
+			dot = true
+			b.WriteRune('.')
+		}
+	}
+	out := strings.TrimSuffix(b.String(), ".")
+	if out == "" || strings.HasPrefix(out, ".") || len(out) > 15 {
+		return "", false
+	}
+	if i := strings.IndexByte(out, '.'); i >= 0 && len(out)-i-1 > 2 {
+		return "", false
+	}
+	v, err := strconv.ParseFloat(out, 64)
+	if err != nil || v <= 0 {
+		return "", false
+	}
+	return out, true
+}
+
+// waBotAmountUnits **المبلغُ بوحدته** — ليرةٌ صحيحة، ودولارٌ بالسنتات (`orders.AmountUnits`)، وبسقف الإحضار.
+func waBotAmountUnits(a, cur string) (int64, bool) {
+	v, err := strconv.ParseFloat(a, 64)
+	if err != nil {
+		return 0, false
+	}
+	u, ok := orders.AmountUnits(v, cur)
+	return u, ok && u > 0 && u <= orders.MaxFetchAmount
+}
+
+// waBotCurrency **العملة** — «1»/ليرة ⇒ SYP، «2»/دولار ⇒ USD، وغيرُهما فارغ.
+func waBotCurrency(t string) string {
+	switch t {
+	case "1", "ليرة", "ليرة سورية", "سوري", "ل.س", "ليرات", "syp":
+		return "SYP"
+	case "2", "دولار", "$", "usd", "دولار امريكي":
+		return orders.CurrencyUSD
+	}
+	return ""
+}
+
 // waBotOrderNumber **رقمُ الطلب** — أرقامٌ وحدَها، و«#» قبلها مقبولة.
 func waBotOrderNumber(t string) (int64, bool) {
 	t = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(t), "#"))
@@ -744,7 +973,7 @@ func (s *Server) SweepWABotMenuOnce(ctx context.Context) int {
 	secs := int(waBotFlowReminder.Seconds())
 	if _, err := s.pg.Exec(ctx, `
 		UPDATE wa_bot_chats SET state = 'idle', step = '', data = '{}'::jsonb, unclear = 0, updated_at = now()
-		 WHERE state IN ('order', 'signup') AND reminded_at IS NOT NULL
+		 WHERE state IN ('order', 'amanah', 'signup') AND reminded_at IS NOT NULL
 		   AND reminded_at <= now() - make_interval(secs => $1)`, secs); err != nil {
 		s.logger.Warn("قائمة البوت: الإسقاطُ سقط", "error", err)
 	}
@@ -754,7 +983,7 @@ func (s *Server) SweepWABotMenuOnce(ctx context.Context) int {
 	rows, err := s.pg.Query(ctx, `
 		UPDATE wa_bot_chats SET reminded_at = now(), last_activity_at = now(), updated_at = now()
 		 WHERE phone IN (SELECT phone FROM wa_bot_chats
-		                  WHERE state IN ('order', 'signup') AND reminded_at IS NULL
+		                  WHERE state IN ('order', 'amanah', 'signup') AND reminded_at IS NULL
 		                    AND step_at <= now() - make_interval(secs => $1)
 		                  ORDER BY step_at LIMIT 50)
 		   AND reminded_at IS NULL

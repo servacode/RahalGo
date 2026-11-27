@@ -103,7 +103,7 @@ func (s *Service) sweepNoWhatsAppDispatch(ctx context.Context) {
 		   AND sent_to_merchant_at IS NULL
 		   AND closed_at IS NULL
 		   -- **وأمانةُ واتسابٍ تنتظر موقعَ صاحبها لا تنزل** — الآلةُ تردّها (ErrWAPickupPending).
-		   AND NOT (wa_amanah AND pickup_override IS NULL)
+		   AND NOT `+WAHeldSQL("")+`
 		   AND created_at < now() - make_interval(mins => $1::int)
 		   AND created_at > now() - make_interval(mins => $2::int)
 		 ORDER BY created_at DESC

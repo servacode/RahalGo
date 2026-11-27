@@ -6,12 +6,13 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getMessages, defaultLocale, errorText, fmtDamascusTime, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText, fmtDamascusTime, fmtMoney, fmtNum, fmtUsd } from "@rahalgo/i18n";
 import {
   AdminCard,
   AdminLoading,
   AdminReload,
   Alert,
+  Badge,
   Button,
   FormActions,
   Input,
@@ -39,6 +40,22 @@ interface BotRow {
   dropoff_known?: boolean;
   lat?: number | null;
   lng?: number | null;
+  /** **أمانةُ البوت** (قرارُ المالك ٢٠٢٦-١١-٢٧) — الاتّجاهُ والطرفُ الآخرُ والمبلغُ وأوصل موقعُه. */
+  bot_amanah?: {
+    direction: "send" | "receive";
+    other_name: string;
+    other_phone: string;
+    amount: number | null;
+    currency: string;
+    other_located: boolean;
+    customer_located: boolean;
+    chat_phone: string;
+  };
+}
+
+/** **المبلغُ بعملته** — والدولارُ بالسنتات. */
+function amountText(units: number, currency: string): string {
+  return currency === "USD" ? fmtUsd(units) : fmtMoney(units);
 }
 
 interface WaQuote {
@@ -157,28 +174,71 @@ export function BotOrdersPending({ refresh, onChanged }: { refresh: number; onCh
       {failed && <AdminReload onRetry={() => void load()} />}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {rows?.map((o) => {
+          const am = o.bot_amanah;
+          const send = am?.direction === "send";
           const store = o.pickup_name || o.merchant_name || "";
-          const phone = o.recipient_phone || o.customer_phone || "";
-          const hasLoc = o.dropoff_known ?? (o.lat != null && o.lng != null);
+          // **في «إرسال أمانة» الزبونُ هو المرسِل** — والمستلِمُ على الطلب هو الطرفُ الآخر.
+          const phone = (am ? am.chat_phone : o.recipient_phone) || o.customer_phone || "";
+          const hasLoc = am ? am.customer_located : (o.dropoff_known ?? (o.lat != null && o.lng != null));
           return (
             <div key={o.id} className="flex flex-col gap-3 rounded-card border border-line p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-bold">#{o.number}</span>
+                <span className="font-bold">
+                  #{o.number}
+                  {am && (
+                    <Badge variant="info" className="ms-2">
+                      {B.amanahBadge}
+                    </Badge>
+                  )}
+                </span>
                 <span className="text-sm text-ink-muted">{fmtDamascusTime(o.created_at)}</span>
               </div>
               <div className="text-sm">
                 {B.customerPhone}: <span dir="ltr">{phone}</span>
               </div>
-              <div className="text-sm">
-                {B.storeName}: {store}
-              </div>
-              <div className="text-sm">
-                <div className="text-ink-muted">{B.text}</div>
-                <p className="whitespace-pre-wrap">{o.parcel_note}</p>
-              </div>
+              {am ? (
+                <>
+                  <div className="text-sm font-bold">{send ? B.amanahSend : B.amanahReceive}</div>
+                  <div className="text-sm">
+                    {send ? B.otherNameSend : B.otherNameReceive}: {am.other_name || B.noName}
+                  </div>
+                  <div className="text-sm">
+                    {B.otherPhone}: <span dir="ltr">{am.other_phone}</span>
+                  </div>
+                  <div className="text-sm">
+                    <div className="text-ink-muted">{B.parcel}</div>
+                    <p className="whitespace-pre-wrap">{o.parcel_note}</p>
+                  </div>
+                  <div className="text-sm">
+                    {B.amount}:{" "}
+                    {am.amount != null && am.amount > 0 ? (
+                      <span className="font-bold">{amountText(am.amount, am.currency)}</span>
+                    ) : (
+                      B.noAmount
+                    )}
+                  </div>
+                  <div className="text-sm">
+                    {am.other_located ? (
+                      <span className="text-success">{B.otherLocated}</span>
+                    ) : (
+                      <span className="text-warning">{B.otherNotLocated}</span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm">
+                    {B.storeName}: {store}
+                  </div>
+                  <div className="text-sm">
+                    <div className="text-ink-muted">{B.text}</div>
+                    <p className="whitespace-pre-wrap">{o.parcel_note}</p>
+                  </div>
+                </>
+              )}
               <div className="text-sm">
                 {hasLoc ? (
-                  o.lat != null && o.lng != null ? (
+                  !am && o.lat != null && o.lng != null ? (
                     <a
                       className="underline"
                       href={`https://www.google.com/maps?q=${o.lat},${o.lng}`}
@@ -194,12 +254,14 @@ export function BotOrdersPending({ refresh, onChanged }: { refresh: number; onCh
                   <span className="text-warning">{B.noLocation}</span>
                 )}
               </div>
-              <Input
-                label={B.storeNameEdit}
-                value={names[o.id] ?? ""}
-                maxLength={120}
-                onChange={(e) => setNames((s) => ({ ...s, [o.id]: e.target.value }))}
-              />
+              {!am && (
+                <Input
+                  label={B.storeNameEdit}
+                  value={names[o.id] ?? ""}
+                  maxLength={120}
+                  onChange={(e) => setNames((s) => ({ ...s, [o.id]: e.target.value }))}
+                />
+              )}
               <Input
                 label={B.fee}
                 value={fees[o.id] ?? ""}

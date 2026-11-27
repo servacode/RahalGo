@@ -4335,7 +4335,7 @@ function OrderActions({
       )}
       {/* **«عدّل ثمن الطلب» لطلب الواتساب** (قرارُ المالك ٢٠٢٦-١١-١٨) — الكابتن بيكتبه من المحل، والمكتب
           بيكتبه أو بيصحّحه من هون لحد التسليم، والزبون بتوصله رسالة المبالغ. */}
-      {canIntervene && o.origin === "whatsapp" && !o.wa_amanah && !CLOSED_STATUSES.has(o.status) && (
+      {canIntervene && o.origin === "whatsapp" && !CLOSED_STATUSES.has(o.status) && (
         <Button variant="secondary" disabled={busy !== ""} onClick={() => setGoodsEditing(true)}>
           <BtnLabel icon={IconEdit}>{m.admin.ordersPage.goodsEdit.button}</BtnLabel>
         </Button>

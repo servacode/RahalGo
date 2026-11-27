@@ -35,26 +35,73 @@ func (s *Server) markWABot(ctx context.Context, list []orders.Order, views []map
 	for i := range list {
 		ids[i] = list[i].ID
 	}
-	bot := map[string]bool{}
-	rows, err := s.pg.Query(ctx, `SELECT id::text FROM orders WHERE id = ANY($1::uuid[]) AND wa_bot`, ids)
+	// **وأمانةُ البوت بتفاصيلها** (قرارُ المالك ٢٠٢٦-١١-٢٧) — الاتّجاهُ والطرفُ الآخرُ والمبلغُ وأوصل موقعُه.
+	type botRow struct {
+		amanah                        bool
+		dir, otherName, otherPhone    string
+		amount                        *int64
+		currency                      string
+		otherLocated, customerLocated bool
+		chatPhone                     string
+	}
+	bot := map[string]botRow{}
+	// **والاسمُ الافتراضيُّ لا يُعرض اسماً** («زبون» و«صاحب الأمانة») — الزبونُ لم يكتب اسماً.
+	rows, err := s.pg.Query(ctx, `
+		SELECT id::text, wa_amanah, amanah_direction,
+		       COALESCE(NULLIF(NULLIF(CASE WHEN amanah_direction = 'send' THEN recipient_name ELSE pickup_name END,
+		                              $2), $3), ''),
+		       COALESCE(CASE WHEN amanah_direction = 'send' THEN recipient_phone ELSE pickup_phone END, ''),
+		       collect_amount, amount_currency,
+		       CASE WHEN amanah_direction = 'send' THEN dropoff_known ELSE pickup_override IS NOT NULL END,
+		       CASE WHEN amanah_direction = 'send' THEN pickup_override IS NOT NULL ELSE dropoff_known END,
+		       COALESCE(CASE WHEN amanah_direction = 'send' THEN pickup_phone ELSE recipient_phone END, '')
+		  FROM orders WHERE id = ANY($1::uuid[]) AND wa_bot`, ids,
+		orders.WhatsAppRecipientName, orders.WAAmanahSenderName)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var id string
-		if err := rows.Scan(&id); err != nil {
+		var b botRow
+		if err := rows.Scan(&id, &b.amanah, &b.dir, &b.otherName, &b.otherPhone, &b.amount, &b.currency,
+			&b.otherLocated, &b.customerLocated, &b.chatPhone); err != nil {
 			return err
 		}
-		bot[id] = true
+		bot[id] = b
 	}
 	if err := rows.Err(); err != nil {
 		return err
 	}
 	for i := range views {
-		views[i] = withExtra(views[i], map[string]any{"wa_bot": bot[list[i].ID]})
+		b, ok := bot[list[i].ID]
+		extra := map[string]any{"wa_bot": ok}
+		if ok && b.amanah {
+			extra["bot_amanah"] = map[string]any{
+				"direction":        b.dir,
+				"other_name":       b.otherName,
+				"other_phone":      b.otherPhone,
+				"amount":           b.amount,
+				"currency":         b.currency,
+				"other_located":    b.otherLocated,
+				"customer_located": b.customerLocated,
+				"chat_phone":       b.chatPhone,
+			}
+		}
+		views[i] = withExtra(views[i], extra)
 	}
 	return nil
+}
+
+// waBotChatPhone **رقمُ من راسل البوت** — في «إرسال أمانة» هو المرسِل (`pickup_phone`)، وفي غيرها المستلِم.
+func (s *Server) waBotChatPhone(ctx context.Context, o *orders.Order) string {
+	var p string
+	if err := s.pg.QueryRow(ctx, `
+		SELECT COALESCE(CASE WHEN wa_amanah AND amanah_direction = 'send' THEN pickup_phone ELSE recipient_phone END, '')
+		  FROM orders WHERE id = $1`, o.ID).Scan(&p); err != nil || strings.TrimSpace(p) == "" {
+		return strings.TrimSpace(o.CustomerPhone)
+	}
+	return strings.TrimSpace(p)
 }
 
 // waBotRejectedText **رسالةُ الزبون حين يُرفض طلبُه** — وهو راسلنا للتوّ، فالردُّ مسموح.
@@ -91,7 +138,7 @@ func (s *Server) handleApproveWABotOrder(w http.ResponseWriter, r *http.Request)
 	}
 	s.touch("orders", "ops")
 	// **والزبونُ يُقال له رقمُ طلبه وأجرتُه** (قرارُ المالك ٢٠٢٦-١١-٢٧) — وهو راسلنا للتوّ.
-	if phone := strings.TrimSpace(o.CustomerPhone); phone != "" {
+	if phone := s.waBotChatPhone(r.Context(), o); phone != "" {
 		num, fee := o.Number, o.DeliveryFee
 		go func() {
 			ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 20*time.Second)
@@ -143,7 +190,7 @@ func (s *Server) handleRejectWABotOrder(w http.ResponseWriter, r *http.Request) 
 	s.audit(r, "ops.whatsapp_bot_order_reject", "order", orderID, map[string]any{"reason": strings.TrimSpace(req.Reason)})
 	s.touch("orders", "ops")
 	// **والزبونُ يُقال له** — سطرٌ واحد، وإن لم يصل فالموظّفُ يراه مرفوضاً.
-	if phone := strings.TrimSpace(o.CustomerPhone); phone != "" {
+	if phone := s.waBotChatPhone(r.Context(), o); phone != "" {
 		num := o.Number
 		go func() {
 			ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 20*time.Second)

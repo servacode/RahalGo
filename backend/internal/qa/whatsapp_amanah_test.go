@@ -63,10 +63,21 @@ func TestWAAMN001_Validations(t *testing.T) {
 	if r := waPost(t, h, ops.Token, b); r.Err() != "wa_amanah_store" {
 		t.Fatalf("**متجرٌ مع الأمانة**: %d / %s", r.Code, r.Err())
 	}
-	b = waAmanahBody(sender, recipient, 600)
+	// **والمبلغُ في الأمانة مسموحٌ** (قرارُ المالك ٢٠٢٦-١١-٢٧، يلغي «لا ثمن» ٢٠٢٦-١١-١١) — موثَّقٌ من الإنشاء.
+	b = waAmanahBody(sender, uniqPhone(), 600)
 	b["goods_amount"] = 2400
-	if r := waPost(t, h, ops.Token, b); r.Err() != "validation" {
-		t.Fatalf("**ثمنُ بضاعةٍ في أمانة**: %d / %s", r.Code, r.Err())
+	if r := waPost(t, h, ops.Token, b); r.Code >= 400 {
+		t.Fatalf("**أمانةٌ بمبلغ رُدّت**: %d / %s", r.Code, r.Err())
+	} else {
+		var collect, fetch *int64
+		var fst string
+		if err := h.Pool.QueryRow(ctxBG(), `SELECT collect_amount, fetch_amount, COALESCE(fetch_amount_status, '')
+			FROM orders WHERE id = $1`, r.JSON()["id"]).Scan(&collect, &fetch, &fst); err != nil {
+			t.Fatal(err)
+		}
+		if collect == nil || *collect != 2400 || fetch == nil || *fetch != 2400 || fst != "approved" {
+			t.Fatalf("**مبلغُ الأمانة**: %v / %v / %q", collect, fetch, fst)
+		}
 	}
 	b = waAmanahBody(sender, recipient, 600)
 	delete(b, "fee")
@@ -175,12 +186,12 @@ func TestWAAMN002_WaitsForSenderThenDispatches(t *testing.T) {
 	if got["merchant_name"] != "أبو خالد" || got["merchant_phone"] != sender {
 		t.Fatalf("**السائقُ لا يرى صاحبَ الأمانة**: %v / %v", got["merchant_name"], got["merchant_phone"])
 	}
-	// **ولا ثمنَ يُكتب فوق الصفر في أمانة.**
+	// **والمبلغُ يُكتب في الأمانة كثمن البضاعة** (قرارُ المالك ٢٠٢٦-١١-٢٧، يلغي «لا ثمن» ٢٠٢٦-١١-١١).
 	if tr := h.POST("/api/v1/driver/orders/"+id+"/transition", d2.Token, map[string]any{"to": "at_pickup"}); tr.Code >= 400 {
 		t.Fatalf("وصل مكان الاستلام: %s", tr)
 	}
-	if fr := h.POST("/api/v1/driver/orders/"+id+"/fetch-amount", d2.Token, map[string]any{"amount": 2400}); fr.Err() != "fetch_amount_stage" {
-		t.Fatalf("**ثمنُ بضاعةٍ في أمانة**: %d / %s", fr.Code, fr.Err())
+	if fr := h.POST("/api/v1/driver/orders/"+id+"/fetch-amount", d2.Token, map[string]any{"amount": 2400}); fr.Code >= 400 {
+		t.Fatalf("**مبلغُ الأمانة رُدّ**: %d / %s", fr.Code, fr.Err())
 	}
 
 	// ── ٧ · وقائمةُ اللوحة تعرف الأمانة ──────────────────────────────────
@@ -248,7 +259,9 @@ func TestWAAMN004_StoreModeUnchanged(t *testing.T) {
 	if (status != "dispatching" && status != "assigned") || amanah || fetchStatus != nil || pickups != 0 {
 		t.Fatalf("**وضعُ المتجر تغيّر**: %s · أمانة %v · ثمن %v · طلباتُ استلام %d", status, amanah, fetchStatus, pickups)
 	}
-	if msgs := n.to(phone); len(msgs) != 1 || msgs[0].text != waLocTextWA() {
+	// **رقمُ الطلب وأجرتُه أوّلاً** (قرارُ المالك ٢٠٢٦-١١-٢٧) ثمّ رسالةُ الموقع.
+	if msgs := n.to(phone); len(msgs) != 2 || !strings.HasPrefix(msgs[0].text, "تم تسجيل طلبك رقم #") ||
+		msgs[1].text != waLocTextWA() {
 		t.Fatalf("**رسالةُ الزبون**: %+v", msgs)
 	}
 	if r.JSON()["pickup_pending"] != false {

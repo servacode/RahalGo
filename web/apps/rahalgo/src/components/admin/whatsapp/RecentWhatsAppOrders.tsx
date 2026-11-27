@@ -23,7 +23,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getMessages, defaultLocale, errorText, fmtDamascusTime, fmtMoney } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText, fmtDamascusTime, fmtMoney, fmtUsd } from "@rahalgo/i18n";
 import {
   AdminCard,
   AdminEmpty,
@@ -317,6 +317,10 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
                         live={ADDRESS_EDITABLE.has(o.status)}
                       />
                     </span>
+                    {/* **ومبلغُ الأمانة إن وُجد** (قرارُ المالك ٢٠٢٦-١١-٢٧) — يدفعه الكابتن ويقبضه. */}
+                    {o.fetch_amount != null && o.fetch_amount > 0 && (
+                      <span className="block font-bold">{fill(W.amanahAmountLine, { goods: o.amount_currency === "USD" ? fmtUsd(o.fetch_amount) : fmtMoney(o.fetch_amount) })}</span>
+                    )}
                   </>
                 ) : (
                 <>
@@ -328,7 +332,7 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
                     <span className="block text-warning">{W.noPoint}</span>
                   )}
                   {o.fetch_amount != null && (
-                    <span className="block font-bold">{fill(W.goodsLine, { goods: fmtMoney(o.fetch_amount) })}</span>
+                    <span className="block font-bold">{fill(W.goodsLine, { goods: o.amount_currency === "USD" ? fmtUsd(o.fetch_amount) : fmtMoney(o.fetch_amount) })}</span>
                   )}
                 </>
                 )
@@ -360,7 +364,7 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
                       {m.admin.ordersPage.feeEdit.button}
                     </Button>
                   )}
-                  {canGoods && ADDRESS_EDITABLE.has(o.status) && !o.wa_amanah && (
+                  {canGoods && ADDRESS_EDITABLE.has(o.status) && (
                     <Button size="sm" variant="secondary" onClick={() => setGoodsFor(o)}>
                       {m.admin.ordersPage.goodsEdit.button}
                     </Button>
