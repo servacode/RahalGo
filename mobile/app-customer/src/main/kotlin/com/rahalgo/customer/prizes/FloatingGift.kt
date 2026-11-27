@@ -78,17 +78,18 @@ fun FloatingGift(badge: String?, onClick: () -> Unit, modifier: Modifier = Modif
         if (badge != null) {
             Box(
                 Modifier
-                    .align(Alignment.TopStart)
+                    // **بنصّ الهديّة** (ملاحظةُ المالك ٢٠٢٦-١١-٢٧) — بالزاوية كانت تنقصّ «202».
+                    .align(Alignment.Center)
                     // **برتقاليٌّ بإطارٍ أبيض** (مراجعةُ المحاكي ٢٠٢٦-١١-٢٥) — كان بلون العلامة فيذوب فوق
                     // زرّ «اطلب» الأزرق تحته ولا تُقرأ النقاط.
                     .border(androidx.compose.foundation.BorderStroke(2.dp, Rahal.colors.surface), CircleShape)
                     .clip(CircleShape)
                     .background(Rahal.colors.accent)
                     .defaultMinSize(minWidth = Rahal.size.count)
-                    .padding(horizontal = Rahal.space.xs),
+                    .padding(horizontal = 7.dp, vertical = 1.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(badge, color = Rahal.colors.onBrand, style = Rahal.type.badge, maxLines = 1)
+                Text(badge, color = Rahal.colors.onBrand, style = Rahal.type.badge, maxLines = 1, softWrap = false)
             }
         }
     }

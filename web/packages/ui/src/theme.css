@@ -1117,15 +1117,19 @@ html[data-shop] .surface-inset {
 }
 /* **شارةُ الجوائز «٣/٥»** على أيقونة الهديّة، **ونبضةٌ قصيرةٌ** عند الظهور وعند تبدّل العدد — بضعُ مرّاتٍ لا للأبد. */
 .shop-prize-badge {
+  /* **بنصّ الهديّة** (ملاحظةُ المالك ٢٠٢٦-١١-٢٧) — كانت بالزاوية فتنقصّ الأرقامُ الثلاثة. */
   position: absolute;
-  inset-block-start: 1px;
-  inset-inline-end: -2px;
+  inset: 0;
+  margin: auto;
+  width: fit-content;
   display: grid;
   min-width: 26px;
-  height: 18px;
+  height: 20px;
   place-items: center;
-  border-radius: 9px;
-  padding-inline: 4px;
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  padding-inline: 6px;
+  white-space: nowrap;
   background-color: var(--color-accent);
   color: var(--color-on-bright);
   font-size: 11px;
