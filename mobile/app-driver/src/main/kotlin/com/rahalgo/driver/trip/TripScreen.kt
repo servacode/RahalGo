@@ -1965,7 +1965,7 @@ private fun TripCard(
                                     )
                                 }
                             } else {
-                                InfoBox(
+                                if (collectForStore(order) == null) InfoBox(
                                     icon = R.drawable.ic_check_circle,
                                     text = stringResource(R.string.trip_prepaid_note),
                                     tint = Rahal.colors.success,
@@ -2080,7 +2080,8 @@ private fun TripCard(
                                             bold = true,
                                         )
                                     }
-                                } else {
+                                } else if (collectForStore(order) == null) {
+                                    // **و«مدفوع مسبقاً» لا يُقال وفي الطلب مبلغٌ يُقبض** (٢٠٢٦-١١-٢٧، أمانة الواتساب).
                                     InfoBox(
                                         icon = R.drawable.ic_check_circle,
                                         text = stringResource(R.string.trip_prepaid_note),
@@ -2101,6 +2102,9 @@ private fun TripCard(
                                         R.string.trip_collect_from,
                                         customerShownName(order.customerName) ?: stringResource(R.string.detail_customer),
                                     )
+                                    // **أمانةُ الواتساب: من الشخص لا من متجر** (٢٠٢٦-١١-٢٧) — اسمُه في موضع المتجر.
+                                    order.origin == "whatsapp" && order.waAmanah ->
+                                        stringResource(R.string.trip_collect_from, order.merchantName)
                                     else -> stringResource(R.string.detail_fee_from_store)
                                 },
                                 amount = money(order.cashDue),
