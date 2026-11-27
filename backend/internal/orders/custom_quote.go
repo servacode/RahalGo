@@ -382,7 +382,7 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 		"quote_version": newVersion, "actor_role": m.role, "source": m.source,
 		"reason": m.reason, "invalidated_confirmation": invalidate,
 		"reconfirm_pending": reconfirm, "office_applied": officeApplied,
-		"old_goods_usd":     row.goodsUSD, "new_goods_usd": newUSD,
+		"old_goods_usd": row.goodsUSD, "new_goods_usd": newUSD,
 	}); err != nil {
 		return false, err
 	}

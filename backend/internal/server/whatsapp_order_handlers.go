@@ -21,10 +21,10 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
