@@ -33,8 +33,8 @@
     "setting_defs": 335,
     "behaviour_settings": 288,
     "order_fields": 153,
-    "test_files": 883,
-    "test_funcs": 3375
+    "test_files": 884,
+    "test_funcs": 3376
   },
   "flows": [
     {
@@ -11357,6 +11357,12 @@
     {
       "name": "TestResolveSenderPhone",
       "file": "internal/notify/wa_location_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestBotTypingDelay_Bounds",
+      "file": "internal/notify/wa_menu_delay_test.go",
       "package": "notify",
       "orphan": true
     },

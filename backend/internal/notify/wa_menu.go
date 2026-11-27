@@ -13,7 +13,9 @@ package notify
 
 import (
 	"context"
+	"math/rand/v2"
 	"strings"
+	"time"
 
 	"go.mau.fi/whatsmeow"
 	waE2E "go.mau.fi/whatsmeow/proto/waE2E"
@@ -95,6 +97,7 @@ func (s *WhatsAppSender) menuRun(ctx context.Context, c *whatsmeow.Client, jid t
 		return
 	}
 	if strings.TrimSpace(r.Text) != "" {
+		s.typeLikeHuman(ctx, c, jid, r.Text)
 		if _, err := c.SendMessage(ctx, jid, &waE2E.Message{Conversation: proto.String(r.Text)}); err != nil {
 			s.logger.Warn("whatsapp: تعذّر إرسالُ ردّ القائمة", "error", err)
 			return
@@ -122,4 +125,28 @@ func (s *WhatsAppSender) menuFrom(ctx context.Context, c *whatsmeow.Client, msg 
 		jid = msg.Info.Chat.ToNonAD()
 	}
 	s.menuDispatch(ctx, c, jid, in)
+}
+
+// typeLikeHuman **«يكتب…» ثمّ تأخيرٌ قصيرٌ قبل ردّ البوت** (قرارُ المالك ٢٠٢٦-١١-٢٧) — فلا يبدو الردُّ
+// آليّاً فوريّاً بالنصّ نفسِه في الثانية نفسِها؛ تخفيفٌ لخطر تقييد الرقم.
+//
+// **من ثانيةٍ إلى ثلاث** بحسب طول النصّ، مع تفاوتٍ عشوائيّ. ويقف إن أُلغي السياق.
+func (s *WhatsAppSender) typeLikeHuman(ctx context.Context, c *whatsmeow.Client, jid types.JID, text string) {
+	_ = c.SendChatPresence(ctx, jid, types.ChatPresenceComposing, types.ChatPresenceMediaText)
+	t := time.NewTimer(botTypingDelay(len([]rune(text)), rand.Float64()))
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+	case <-t.C:
+	}
+	_ = c.SendChatPresence(ctx, jid, types.ChatPresencePaused, types.ChatPresenceMediaText)
+}
+
+// botTypingDelay **مدّةُ «يكتب…»** — ثانيةٌ أساساً، وتزيد مع طول النصّ، وتفاوتٌ حتّى ٠٫٨ ثانية، وسقفُها ٣ ثوانٍ.
+func botTypingDelay(runes int, jitter float64) time.Duration {
+	d := time.Second + time.Duration(runes)*8*time.Millisecond + time.Duration(jitter*800)*time.Millisecond
+	if d > 3*time.Second {
+		d = 3 * time.Second
+	}
+	return d
 }
