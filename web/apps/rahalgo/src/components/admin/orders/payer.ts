@@ -17,12 +17,16 @@ export type PayerKey =
   | "deliveryWallet"
   | "merchantWallet"
   | "merchantCash"
+  | "senderCash"
   | "recipientCash"
   | "free";
 
 export interface PayerInput {
   kind?: string;
   fee_payer?: string;
+  /** **أمانةُ الواتساب بـ`merchant_cash`**: المرسِلُ دفع نقداً عند الاستلام (قرارُ المالك ٢٠٢٦-١١-٢٧). */
+  origin?: string;
+  wa_amanah?: boolean;
   payment_method?: string;
   /** **«التوصيل من المحفظة والباقي كاش»** (قرارُ المالك ٢٠٢٦-١١-٠٩). */
   wallet_scope?: string;
@@ -38,7 +42,7 @@ export function payerOf(o: PayerInput): PayerKey {
   if (o.kind === "merchant_delivery") {
     if (free && w === 0 && c === 0) return "free";
     if (o.fee_payer === "recipient") return "recipientCash";
-    if (o.fee_payer === "merchant_cash") return "merchantCash";
+    if (o.fee_payer === "merchant_cash") return o.origin === "whatsapp" && o.wa_amanah ? "senderCash" : "merchantCash";
     return "merchantWallet";
   }
   // **والخاصُّ قبل التسليم محفوظُه حجزٌ لا مدفوع** — فالنطاقُ يُقال باسمه لا بالأرقام وحدَها.

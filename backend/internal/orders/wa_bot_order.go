@@ -59,6 +59,11 @@ type WABotOrderInput struct {
 	// خارجَ الدفتر، والدولارُ بالسنتات. وnil: لا مبلغ.
 	GoodsAmount *int64
 	Currency    string
+	// FeeBy **من يدفع أجرةَ التوصيل** (قرارُ المالك ٢٠٢٦-١١-٢٧) — `WABotFeeCustomer` (راسلُ البوت) أو
+	// `WABotFeeOther` (الشخصُ الآخر). **ويدفعها نقداً للكابتن حيث يقف**: من عند نقطة الاستلام ⇒ عند الاستلام
+	// (`fee_payer = merchant_cash`، آليّةُ «أنا نقداً» نفسُها)، ومن عند نقطة التسليم ⇒ عند التسليم (`recipient`).
+	// والفارغُ: من عند التسليم كما كان.
+	FeeBy string
 	// InTx **ما يُكتب في معاملة الإنشاء نفسِها** — طلبُ موقع الشخص الآخر مربوطاً بالطلب.
 	InTx func(ctx context.Context, tx pgx.Tx, orderID string) error
 }
@@ -67,6 +72,28 @@ type WABotOrderInput struct {
 type WABotCreated struct {
 	ID     string
 	Number int64
+}
+
+// **دافعُ أجرة أمانة البوت** — كما اختاره الزبون (قرارُ المالك ٢٠٢٦-١١-٢٧).
+const (
+	WABotFeeCustomer = "customer"
+	WABotFeeOther    = "other"
+)
+
+// waBotAmanahFeePayer **`fee_payer` من الاتّجاه ومن يدفع** — الدافعُ يدفع حيث يقف:
+//
+//	send    الزبونُ عند الاستلام ⇒ `merchant_cash` · الآخرُ عند التسليم ⇒ `recipient`
+//	receive الزبونُ عند التسليم ⇒ `recipient`    · الآخرُ عند الاستلام ⇒ `merchant_cash`
+//
+// **و`merchant_cash` هنا «من يقف عند نقطة الاستلام يدفع نقداً عندها»** (`cashAtPickup`) — لا متجرَ في
+// طلب الواتساب (`merchant_id` فارغ)، فلا محفظةَ تُخصم ولا تُردّ؛ والنقدُ يُقيَّد في صندوق الكابتن عند الاستلام.
+func waBotAmanahFeePayer(direction, feeBy string) string {
+	atPickup := (direction == AmanahSend && feeBy == WABotFeeCustomer) ||
+		(direction == AmanahReceive && feeBy == WABotFeeOther)
+	if atPickup {
+		return FeePayerMerchantCash
+	}
+	return FeePayerRecipient
 }
 
 // waBotAmanahBirthNote **سطرُ ميلاد أمانة البوت في سجلّ الطلب.**
@@ -177,6 +204,10 @@ func (s *Service) createWABotAmanah(ctx context.Context, in WABotOrderInput) (*W
 	if in.Currency != "SYP" && in.Currency != CurrencyUSD {
 		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
+	if in.FeeBy != "" && in.FeeBy != WABotFeeCustomer && in.FeeBy != WABotFeeOther {
+		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+	}
+	feePayer := waBotAmanahFeePayer(in.Direction, in.FeeBy)
 	// **الطرفان على الطلب** — من يُستلَم منه ومن يُسلَّم إليه.
 	pickName, pickPhone := in.OtherName, in.OtherPhone
 	recName, recPhone := WhatsAppRecipientName, in.Phone
@@ -215,7 +246,7 @@ func (s *Service) createWABotAmanah(ctx context.Context, in WABotOrderInput) (*W
 			VALUES ('merchant_delivery', 'whatsapp', true, true, $1,
 			        $2, $3, CASE WHEN $1 = 'send' THEN ST_SetSRID(ST_MakePoint($5, $4), 4326)::geography END, '',
 			        ST_SetSRID(ST_MakePoint($5, $4), 4326)::geography, $6,
-			        $7, $8, $9, 'recipient',
+			        $7, $8, $9, $17,
 			        'pending', 'cash', 0, 0, 0, 0, 0,
 			        $10, $11, $12, $13,
 			        $1 <> 'send', 'send', $14,
@@ -225,7 +256,7 @@ func (s *Service) createWABotAmanah(ctx context.Context, in WABotOrderInput) (*W
 			in.Direction, pickName, pickPhone, in.Lat, in.Lng, zoneID,
 			recName, recPhone, in.Details,
 			snap.MerchantCommission, snap.RepCommissionPercent, snap.CommissionSource, snap.ActivationOrders,
-			s.newOrderMoneyModel(ctx, tx), in.GoodsAmount, in.Currency).Scan(&out.ID, &out.Number); err != nil {
+			s.newOrderMoneyModel(ctx, tx), in.GoodsAmount, in.Currency, feePayer).Scan(&out.ID, &out.Number); err != nil {
 			return err
 		}
 		// **ومبلغٌ بالدولار يُلقط سعرُه الآن** — كما في نموذج اللوحة (قرارُ المالك ٢٠٢٦-١١-٠٩).

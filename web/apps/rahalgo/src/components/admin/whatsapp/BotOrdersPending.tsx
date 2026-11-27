@@ -50,7 +50,14 @@ interface BotRow {
     other_located: boolean;
     customer_located: boolean;
     chat_phone: string;
+    /** **من يدفع الأجرة** (قرارُ المالك ٢٠٢٦-١١-٢٧) — الزبونُ أو الشخصُ الآخر، ويدفعها حيث يقف. */
+    fee_by?: "customer" | "other";
   };
+}
+
+/** **دافعُ الأجرة مرسلٌ أم مستلم** — الزبونُ مرسلٌ في «إرسال»، والآخرُ مرسلٌ في «استلام». */
+function senderPays(am: NonNullable<BotRow["bot_amanah"]>): boolean {
+  return (am.direction === "send") === (am.fee_by === "customer");
 }
 
 /** **المبلغُ بعملته** — والدولارُ بالسنتات. */
@@ -217,6 +224,11 @@ export function BotOrdersPending({ refresh, onChanged }: { refresh: number; onCh
                       B.noAmount
                     )}
                   </div>
+                  {am.fee_by && (
+                    <div className="text-sm">
+                      {B.feeBy}: <span className="font-bold">{senderPays(am) ? B.feeBySender : B.feeByRecipient}</span>
+                    </div>
+                  )}
                   <div className="text-sm">
                     {am.other_located ? (
                       <span className="text-success">{B.otherLocated}</span>

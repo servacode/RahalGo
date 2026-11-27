@@ -102,6 +102,7 @@ const (
 	waBotAmanahAmountAsk = "يرجى كتابة المبلغ بالأرقام فقط."
 	waBotAmanahCurrencyQ = "ما عملة المبلغ؟\n1️⃣ ليرة سورية\n2️⃣ دولار"
 	waBotAmanahSYPWhole  = "عذراً، المبلغ بالليرة السورية يُكتب دون فواصل عشرية."
+	waBotAmanahPayerQ    = "من سيدفع أجرة التوصيل؟\n1️⃣ أنا\n2️⃣ الشخص الآخر"
 	waBotAmanahLocSend   = "يرجى إرسال موقعك (العادي أو المباشر)، وهو مكان استلام الأمانة منك."
 	waBotAmanahLocRecv   = "يرجى إرسال موقعك (العادي أو المباشر)، وهو مكان تسليم الأمانة إليك."
 	waBotAmanahDone      = "شكراً لك، تم تسجيل طلب الأمانة برقم #%d.\nسيصل إلى الشخص الآخر رابط عبر الواتساب ليرسل موقعه، والطلب الآن بانتظار موافقة الإدارة."
@@ -150,6 +151,8 @@ type waBotData struct {
 	AmDesc   string `json:"am_desc,omitempty"`
 	AmAmount string `json:"am_amount,omitempty"`
 	AmCur    string `json:"am_cur,omitempty"`
+	// AmFeeBy **من يدفع الأجرة** — `customer` أو `other` (قرارُ المالك ٢٠٢٦-١١-٢٧).
+	AmFeeBy string `json:"am_fee_by,omitempty"`
 }
 
 type waBotChat struct {
@@ -484,7 +487,7 @@ func (s *Server) waBotCreateOrder(ctx context.Context, phone string, d waBotData
 }
 
 // waBotAmanahStep **أمانةٌ** (الخيار ٧، قرارُ المالك ٢٠٢٦-١١-٢٧): الاتّجاه ← اسمُ الطرف الآخر ← رقمُه ← الوصف ←
-// مبلغٌ؟ (نعم/لا ← المبلغ ← العملة) ← موقعُ الزبون ⇒ طلبٌ معلّقٌ، ورابطُ موقعٍ للطرف الآخر.
+// مبلغٌ؟ (نعم/لا ← المبلغ ← العملة) ← من يدفع الأجرة ← موقعُ الزبون ⇒ طلبٌ معلّقٌ، ورابطُ موقعٍ للطرف الآخر.
 func (s *Server) waBotAmanahStep(c *waBotChat, in notify.MenuInbound, t string,
 	isText bool) (notify.MenuReply, []waBotEffect) {
 	raw := strings.TrimSpace(in.Text)
@@ -551,7 +554,7 @@ func (s *Server) waBotAmanahStep(c *waBotChat, in notify.MenuInbound, t string,
 			return c.ask("amanah", "amount", waBotAmanahAmountAsk), nil
 		case 0:
 			c.data.AmAmount, c.data.AmCur = "", ""
-			return c.ask("amanah", "location", locQ), nil
+			return c.ask("amanah", "payer", waBotAmanahPayerQ), nil
 		}
 		return c.unclearReply(waBotUnclear, waBotAskYesNo), nil
 	case "amount":
@@ -571,6 +574,20 @@ func (s *Server) waBotAmanahStep(c *waBotChat, in notify.MenuInbound, t string,
 			return c.ask("amanah", "amount", waBotAmanahSYPWhole+"\n"+waBotAmanahAmountAsk), nil
 		}
 		c.data.AmCur = cur
+		return c.ask("amanah", "payer", waBotAmanahPayerQ), nil
+	case "payer":
+		// **من يدفع الأجرة** (قرارُ المالك ٢٠٢٦-١١-٢٧) — ويدفعها نقداً للكابتن حيث يقف.
+		if !isText {
+			return c.unclearReply(waBotUnclear, waBotAmanahPayerQ), nil
+		}
+		switch t {
+		case "1", "انا", "انا ادفع", "انا بدفع":
+			c.data.AmFeeBy = orders.WABotFeeCustomer
+		case "2", "الشخص الاخر", "الاخر", "الطرف الاخر", "هو", "هي":
+			c.data.AmFeeBy = orders.WABotFeeOther
+		default:
+			return c.unclearReply(waBotUnclear, waBotAmanahPayerQ), nil
+		}
 		return c.ask("amanah", "location", locQ), nil
 	case "location":
 		if in.Kind != notify.MenuLocation || !orders.ValidPoint(in.Loc.Lat, in.Loc.Lng) {
@@ -607,7 +624,7 @@ func (s *Server) waBotCreateAmanah(ctx context.Context, phone string, d waBotDat
 	c, err := s.orders.CreateWABotOrder(ctx, orders.WABotOrderInput{
 		Phone: phone, Details: d.AmDesc, Lat: lat, Lng: lng,
 		Amanah: true, Direction: d.AmDir, OtherName: d.AmName, OtherPhone: d.AmPhone,
-		GoodsAmount: amount, Currency: d.AmCur,
+		GoodsAmount: amount, Currency: d.AmCur, FeeBy: d.AmFeeBy,
 		InTx: func(ctx context.Context, tx pgx.Tx, orderID string) error {
 			a, err := newWALocReqTx(ctx, tx, "", d.AmPhone, "", orderID, mode)
 			req = a

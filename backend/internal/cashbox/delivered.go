@@ -10,12 +10,15 @@ import (
 // كشفُ الصندوق لا يرى إلّا ما قُبض نقداً، **فطلبٌ دفعه المتجرُ من محفظته لا قيدَ له**
 // فيظنّه المالكُ ضائعاً. هذه قراءةٌ للعرض وحدَه: لا تكتب شيئاً، ولا تدخل حساباً.
 type DeliveredOrder struct {
-	OrderID      string    `json:"order_id"`
-	Number       int64     `json:"number"`
-	Kind         string    `json:"kind"`
-	CustomMode   string    `json:"custom_mode"`
-	DeliveryMode string    `json:"delivery_mode"`
-	FeePayer     string    `json:"fee_payer"`
+	OrderID      string `json:"order_id"`
+	Number       int64  `json:"number"`
+	Kind         string `json:"kind"`
+	CustomMode   string `json:"custom_mode"`
+	DeliveryMode string `json:"delivery_mode"`
+	FeePayer     string `json:"fee_payer"`
+	// Origin/WAAmanah **أمانةُ واتساب بـ`merchant_cash`** — المرسِلُ دفع عند الاستلام لا متجر (٢٠٢٦-١١-٢٧).
+	Origin       string    `json:"origin"`
+	WAAmanah     bool      `json:"wa_amanah"`
 	Payment      string    `json:"payment_method"`
 	WalletPaid   int64     `json:"wallet_paid"`
 	CashDue      int64     `json:"cash_due"`
@@ -36,7 +39,7 @@ const MaxDelivered = 500
 func (s *Service) Delivered(ctx context.Context, driverID string, from, to time.Time) ([]DeliveredOrder, error) {
 	rows, err := s.db.Query(ctx, `
 		SELECT o.id::text, o.number, o.kind, COALESCE(o.custom_mode, ''), COALESCE(o.delivery_mode, ''),
-		       COALESCE(o.fee_payer, ''), o.payment_method, o.wallet_paid, o.cash_due,
+		       COALESCE(o.fee_payer, ''), o.origin, o.wa_amanah, o.payment_method, o.wallet_paid, o.cash_due,
 		       o.delivery_fee, o.platform_commission, o.commission_waived, o.promo_delivery_waived,
 		       COALESCE(
 		           (SELECT string_agg(DISTINCT m.name, ' · ' ORDER BY m.name)
@@ -64,7 +67,7 @@ func (s *Service) Delivered(ctx context.Context, driverID string, from, to time.
 	for rows.Next() {
 		var d DeliveredOrder
 		if err := rows.Scan(&d.OrderID, &d.Number, &d.Kind, &d.CustomMode, &d.DeliveryMode,
-			&d.FeePayer, &d.Payment, &d.WalletPaid, &d.CashDue,
+			&d.FeePayer, &d.Origin, &d.WAAmanah, &d.Payment, &d.WalletPaid, &d.CashDue,
 			&d.DeliveryFee, &d.Commission, &d.Waived, &d.FreeWaived,
 			&d.MerchantName, &d.DeliveredAt, &d.CashCollected); err != nil {
 			return nil, err

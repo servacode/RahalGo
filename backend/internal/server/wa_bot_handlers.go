@@ -42,7 +42,7 @@ func (s *Server) markWABot(ctx context.Context, list []orders.Order, views []map
 		amount                        *int64
 		currency                      string
 		otherLocated, customerLocated bool
-		chatPhone                     string
+		chatPhone, feePayer           string
 	}
 	bot := map[string]botRow{}
 	// **والاسمُ الافتراضيُّ لا يُعرض اسماً** («زبون» و«صاحب الأمانة») — الزبونُ لم يكتب اسماً.
@@ -54,7 +54,8 @@ func (s *Server) markWABot(ctx context.Context, list []orders.Order, views []map
 		       collect_amount, amount_currency,
 		       CASE WHEN amanah_direction = 'send' THEN dropoff_known ELSE pickup_override IS NOT NULL END,
 		       CASE WHEN amanah_direction = 'send' THEN pickup_override IS NOT NULL ELSE dropoff_known END,
-		       COALESCE(CASE WHEN amanah_direction = 'send' THEN pickup_phone ELSE recipient_phone END, '')
+		       COALESCE(CASE WHEN amanah_direction = 'send' THEN pickup_phone ELSE recipient_phone END, ''),
+		       COALESCE(fee_payer, '')
 		  FROM orders WHERE id = ANY($1::uuid[]) AND wa_bot`, ids,
 		orders.WhatsAppRecipientName, orders.WAAmanahSenderName)
 	if err != nil {
@@ -65,7 +66,7 @@ func (s *Server) markWABot(ctx context.Context, list []orders.Order, views []map
 		var id string
 		var b botRow
 		if err := rows.Scan(&id, &b.amanah, &b.dir, &b.otherName, &b.otherPhone, &b.amount, &b.currency,
-			&b.otherLocated, &b.customerLocated, &b.chatPhone); err != nil {
+			&b.otherLocated, &b.customerLocated, &b.chatPhone, &b.feePayer); err != nil {
 			return err
 		}
 		bot[id] = b
@@ -86,11 +87,22 @@ func (s *Server) markWABot(ctx context.Context, list []orders.Order, views []map
 				"other_located":    b.otherLocated,
 				"customer_located": b.customerLocated,
 				"chat_phone":       b.chatPhone,
+				"fee_by":           waBotAmanahFeeBy(b.dir, b.feePayer),
 			}
 		}
 		views[i] = withExtra(views[i], extra)
 	}
 	return nil
+}
+
+// waBotAmanahFeeBy **من يدفع أجرةَ أمانة البوت** (قرارُ المالك ٢٠٢٦-١١-٢٧) — `customer` أو `other`، من الاتّجاه
+// و`fee_payer`: `merchant_cash` يدفعها الواقفُ عند الاستلام، و`recipient` الواقفُ عند التسليم.
+func waBotAmanahFeeBy(dir, feePayer string) string {
+	atPickup := feePayer == orders.FeePayerMerchantCash
+	if (dir == orders.AmanahSend) == atPickup {
+		return orders.WABotFeeCustomer
+	}
+	return orders.WABotFeeOther
 }
 
 // waBotChatPhone **رقمُ من راسل البوت** — في «إرسال أمانة» هو المرسِل (`pickup_phone`)، وفي غيرها المستلِم.
@@ -139,11 +151,11 @@ func (s *Server) handleApproveWABotOrder(w http.ResponseWriter, r *http.Request)
 	s.touch("orders", "ops")
 	// **والزبونُ يُقال له رقمُ طلبه وأجرتُه** (قرارُ المالك ٢٠٢٦-١١-٢٧) — وهو راسلنا للتوّ.
 	if phone := s.waBotChatPhone(r.Context(), o); phone != "" {
-		num, fee := o.Number, o.DeliveryFee
+		text := waBotApprovedMsg(o)
 		go func() {
 			ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 20*time.Second)
 			defer cancel()
-			s.sendText(ctx, phone, fmt.Sprintf(waBotApprovedText, num, fee))
+			s.sendText(ctx, phone, text)
 		}()
 	}
 	view, err := orderView(orders.AudienceOps, o)
@@ -156,6 +168,29 @@ func (s *Server) handleApproveWABotOrder(w http.ResponseWriter, r *http.Request)
 
 // waBotApprovedText **رسالةُ الزبون حين يُوافَق على طلبه** — رقمُه وأجرةُ التوصيل.
 const waBotApprovedText = "تمت الموافقة على طلبك رقم #%d. أجرة التوصيل: %d ل.س. نبحث لك الآن عن كابتن."
+
+// waBotApprovedOtherPays **رسالةُ الموافقة حين يدفع الشخصُ الآخرُ أجرةَ الأمانة** (قرارُ المالك ٢٠٢٦-١١-٢٧) —
+// ويُقال متى: عند تسليمه الأمانةَ للكابتن (هو عند الاستلام) أو عند استلامه لها (هو عند التسليم).
+const (
+	waBotApprovedOtherAtPickup  = "تمت الموافقة على طلبك رقم #%d. أجرة التوصيل: %d ل.س، ويدفعها الشخص الآخر للكابتن عند تسليمه الأمانة. نبحث لك الآن عن كابتن."
+	waBotApprovedOtherAtDropoff = "تمت الموافقة على طلبك رقم #%d. أجرة التوصيل: %d ل.س، ويدفعها الشخص الآخر للكابتن عند استلامه الأمانة. نبحث لك الآن عن كابتن."
+)
+
+// waBotApprovedMsg **نصُّ الموافقة للزبون** — وفي أمانةٍ يدفع أجرتَها الشخصُ الآخرُ يُقال ذلك.
+//
+//	send    الآخرُ عند التسليم ⇒ `recipient`     · receive الآخرُ عند الاستلام ⇒ `merchant_cash`
+func waBotApprovedMsg(o *orders.Order) string {
+	if o.WAAmanah {
+		send := o.AmanahDirection == orders.AmanahSend
+		switch {
+		case send && o.FeePayer == orders.FeePayerRecipient:
+			return fmt.Sprintf(waBotApprovedOtherAtDropoff, o.Number, o.DeliveryFee)
+		case !send && o.FeePayer == orders.FeePayerMerchantCash:
+			return fmt.Sprintf(waBotApprovedOtherAtPickup, o.Number, o.DeliveryFee)
+		}
+	}
+	return fmt.Sprintf(waBotApprovedText, o.Number, o.DeliveryFee)
+}
 
 // waOrderFeeText **رسالةُ الزبون حين يُدخل الموظّفُ طلبَه من اللوحة** — رقمُه وأجرةُ التوصيل.
 const waOrderFeeText = "تم تسجيل طلبك رقم #%d. أجرة التوصيل: %d ل.س."

@@ -382,8 +382,8 @@ func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
 // عليه ديناً. **ولا يُخلَق قيد**: الخزينةُ تُحاسَب على ما قُبض فعلاً (صفرٌ هنا).
 func (s *Service) settleWhatsAppEnded(ctx context.Context, q wallet.Querier,
 	in settlement, out *settled, fault, reason string, collected int64, afterPickup bool) error {
-	// **ونقدٌ قُبض من المستلِم يُردّ له إن لم يكن الذنبُ ذنبَه** — لا يقع اليوم (يدفع عند
-	// التسليم)، **ويصمد إن وقع.**
+	// **ونقدٌ قُبض يُردّ لدافعه إن لم يكن الذنبُ ذنبَه** — يقع في أمانة البوت حين يدفع الواقفُ عند
+	// نقطة الاستلام (`merchant_cash`، قرارُ المالك ٢٠٢٦-١١-٢٧): قُبض عند الاستلام فيُردّ بالسطر نفسِه.
 	if fault != FaultCustomer && collected > 0 {
 		if err := s.returnRecipientCash(ctx, q, in.orderID, collected, in.actorID); err != nil {
 			return err
