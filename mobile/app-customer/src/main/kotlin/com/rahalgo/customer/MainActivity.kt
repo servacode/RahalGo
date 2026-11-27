@@ -631,6 +631,12 @@ private fun SignedIn(
         com.rahalgo.ui.Refresh.tick.collect { Serving.refresh(scope, force = true) }
     }
 
+    // **والختمُ يصل حيّاً** (قرارُ المالك ٢٠٢٦-١١-٢٧): كلُّ نبضةٍ (ومنها إشارةُ `loyalty` عند التسليم)
+    // تُعيد قراءةَ البطاقتين، فتتبدّل شارةُ «اربح مجاناً» وصفحةُ «بطاقاتي» المفتوحةُ بلا إعادة فتح.
+    LaunchedEffect(guest) {
+        if (!guest) com.rahalgo.ui.Refresh.tick.collect { Loyalty.refresh(scope) }
+    }
+
     // **مبلغُ «ادعُ صديقاً» لصاحب الحساب** — والضيفُ لا يُعرض له شيء (٢٠٢٦-١٠-٣٠).
     LaunchedEffect(guest) {
         InviteNudge.load(context)

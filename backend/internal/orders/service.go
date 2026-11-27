@@ -201,6 +201,20 @@ func (s *Service) publishOrder(o *Order) {
 	// نفسِه، **وصار في القائمة لا في محوٍ بعد البناء.**
 	s.publishTo("customer:"+o.CustomerID, AudienceCustomer, o)
 
+	// **والختمُ يصل حيّاً** (قرارُ المالك ٢٠٢٦-١١-٢٧) — مشغّلُ القاعدة يختم الطلبَ في معاملة
+	// التسليم، **وهذا البثُّ بعد تثبيتها**: إشارةٌ بلا حمولة `loyalty` للزبون وللمتجر (أو متاجر
+	// الطلب)، فيُعيد تطبيقُه قراءةَ بطاقته ويرى الختمَ الجديد بلا إعادةِ فتح.
+	if o.Status == StDelivered {
+		s.pub.Publish("customer:"+o.CustomerID, map[string]any{"type": "loyalty"})
+		stores := o.partStores
+		if len(stores) == 0 && o.MerchantID != "" {
+			stores = []string{o.MerchantID}
+		}
+		for _, mid := range stores {
+			s.pub.Publish("merchant:"+mid, map[string]any{"type": "loyalty"})
+		}
+	}
+
 	// **والسائقُ الذي يحمل الطلب يعلم بما يجري فيه.**
 	//
 	// كان يُستثنى من البثّ كلِّه: تُسند إليه العملياتُ طلباً فلا يعلم حتى

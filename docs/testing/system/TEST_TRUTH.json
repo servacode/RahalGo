@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 155,
-    "notify_targeted": 81,
+    "notify_sites": 156,
+    "notify_targeted": 82,
     "publish_rooms": [
       "customer",
       "driver",
@@ -33,8 +33,8 @@
     "setting_defs": 335,
     "behaviour_settings": 288,
     "order_fields": 153,
-    "test_files": 882,
-    "test_funcs": 3371
+    "test_files": 883,
+    "test_funcs": 3375
   },
   "flows": [
     {
@@ -13614,6 +13614,12 @@
       "orphan": true
     },
     {
+      "name": "TestPublishOrderDeliveredEmitsLoyaltyTouch",
+      "file": "internal/orders/publish_topics_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
       "name": "TestPublishOrderKeepsQueueQuiet",
       "file": "internal/orders/publish_topics_test.go",
       "package": "orders",
@@ -22629,6 +22635,24 @@
     {
       "name": "TestOFU01_NoOfferOnUnavailableItem",
       "file": "internal/qa/merchant_delivery_gate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDLOC01_SendLocationArrivesByWhatsAppAfterSubmit",
+      "file": "internal/qa/merchant_delivery_location_link_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDLOC02_FetchLocationArrivesByLinkAfterSubmit",
+      "file": "internal/qa/merchant_delivery_location_link_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDLOC03_LocationArrivedBeforeSubmit",
+      "file": "internal/qa/merchant_delivery_location_link_test.go",
       "package": "qa",
       "orphan": true
     },

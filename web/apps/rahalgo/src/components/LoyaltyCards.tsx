@@ -13,7 +13,8 @@
  */
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLiveRefresh } from "@rahalgo/ui";
 import { getMessages, defaultLocale, fmtDamascusTime, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import { api } from "@/lib/api";
 
@@ -62,6 +63,10 @@ export function freeSourceText(source?: string): string {
 /** **يقرأ البطاقتين** — من `path` (`/api/v1/my/stamp-card` أو بطاقةُ المتجر)، وخطأٌ يعني لا بطاقة. */
 export function useStampCard(path: string | null): StampCard | null {
   const [card, setCard] = useState<StampCard | null>(null);
+  const [tick, setTick] = useState(0);
+  // **والختمُ يصل حيّاً** (قرارُ المالك ٢٠٢٦-١١-٢٧): إشارةُ `loyalty` عند التسليم، وتحديثُ الطلب احتياطاً.
+  const bump = useCallback(() => setTick((n) => n + 1), []);
+  useLiveRefresh(["loyalty", "order"], bump);
   useEffect(() => {
     if (!path) {
       setCard(null);
@@ -70,11 +75,11 @@ export function useStampCard(path: string | null): StampCard | null {
     let live = true;
     api<StampCard>(path)
       .then((c) => live && setCard(c))
-      .catch(() => live && setCard(null));
+      .catch(() => live && setCard((old) => (tick > 0 ? old : null)));
     return () => {
       live = false;
     };
-  }, [path]);
+  }, [path, tick]);
   return card;
 }
 

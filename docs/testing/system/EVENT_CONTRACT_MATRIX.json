@@ -11,8 +11,8 @@
     "InApp": 8
   },
   "derived": {
-    "emit_sites": 150,
-    "realtime_publishers": 32,
+    "emit_sites": 151,
+    "realtime_publishers": 34,
     "rooms": 5,
     "untargeted_user_sites": 42
   },
@@ -266,6 +266,15 @@
       "kind": "Order",
       "entity": "order",
       "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/merchant_delivery_point.go",
+      "line": 67,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
       "has_entity_id": true
     },
     {
@@ -1808,17 +1817,27 @@
     },
     {
       "file": "internal/orders/service.go",
-      "line": 216,
+      "line": 208,
+      "room": "customer:*"
+    },
+    {
+      "file": "internal/orders/service.go",
+      "line": 214,
+      "room": "merchant:*"
+    },
+    {
+      "file": "internal/orders/service.go",
+      "line": 230,
       "room": "driver:*"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 219,
+      "line": 233,
       "room": "driver:*"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 1636,
+      "line": 1650,
       "room": "user:*"
     },
     {

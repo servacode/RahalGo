@@ -84,3 +84,50 @@ func TestPublishOrderKeepsQueueQuiet(t *testing.T) {
 		t.Error("ولم يصل الزبونَ شيء")
 	}
 }
+
+// **الختمُ يصل حيّاً** (قرارُ المالك ٢٠٢٦-١١-٢٧): تسليمُ الطلب يبثّ إشارةَ `loyalty`
+// للزبون وللمتجر، **وغيرُ التسليم لا يبثّها.**
+type typedPub struct {
+	mu  sync.Mutex
+	got map[string][]string
+}
+
+func (p *typedPub) Publish(topic string, ev any) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.got == nil {
+		p.got = map[string][]string{}
+	}
+	if m, ok := ev.(map[string]any); ok {
+		if ty, _ := m["type"].(string); ty != "" {
+			p.got[topic] = append(p.got[topic], ty)
+		}
+	}
+}
+
+func (p *typedPub) hasType(topic, ty string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for _, t := range p.got[topic] {
+		if t == ty {
+			return true
+		}
+	}
+	return false
+}
+
+func TestPublishOrderDeliveredEmitsLoyaltyTouch(t *testing.T) {
+	p := &typedPub{}
+	s := &Service{pub: p}
+	s.publishOrder(&Order{ID: "o1", CustomerID: "cus-1", MerchantID: "mer-1", Status: StDelivered})
+	for _, room := range []string{"customer:cus-1", "merchant:mer-1"} {
+		if !p.hasType(room, "loyalty") {
+			t.Errorf("لم تصل إشارةُ loyalty الغرفةَ %q", room)
+		}
+	}
+	q := &typedPub{}
+	(&Service{pub: q}).publishOrder(&Order{ID: "o2", CustomerID: "cus-1", MerchantID: "mer-1", Status: StAssigned})
+	if q.hasType("customer:cus-1", "loyalty") || q.hasType("merchant:mer-1", "loyalty") {
+		t.Error("إشارةُ loyalty خرجت قبل التسليم")
+	}
+}

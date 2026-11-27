@@ -205,6 +205,18 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             com.rahalgo.ui.Refresh.tick.collect { if (it > 0L) { if (active) load() else stale = true } }
         }
+        // **والختمُ يصل حيّاً** (قرارُ المالك ٢٠٢٦-١١-٢٧) — بطاقةُ المتجر وحدَها تُعاد قراءتُها عند كلّ نبضةٍ
+        // ولو لم يكن تبويبُ المتجر مفتوحاً، فتظهر الشارةُ في الشريط العلويّ وصفحةُ «بطاقاتي» بالختم الجديد.
+        viewModelScope.launch {
+            com.rahalgo.ui.Refresh.tick.collect {
+                val id = store?.id
+                if (it > 0L && id != null) {
+                    runCatching {
+                        loyalty = com.rahalgo.shared.merchant.DeliveriesApi(AppCore.get().api).stampCard(id)
+                    }
+                }
+            }
+        }
     }
 
     fun load() {
