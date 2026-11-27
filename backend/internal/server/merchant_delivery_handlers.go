@@ -15,6 +15,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -95,6 +96,8 @@ func (s *Server) handleMerchantCreateDelivery(w http.ResponseWriter, r *http.Req
 		CollectAmount *float64 `json:"collect_amount"`
 		// Currency **«SYP» أو «USD»** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — وفارغٌ ليرة لتطبيقٍ قديم.
 		Currency string `json:"amount_currency"`
+		// LocationRequestID **طلبُ «اطلب الموقع من المستلم»** — اختياريّ؛ وبلاه يُربط أحدثُ طلبٍ لرقمه.
+		LocationRequestID string `json:"location_request_id"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -140,6 +143,25 @@ func (s *Server) handleMerchantCreateDelivery(w http.ResponseWriter, r *http.Req
 		id, err := s.orders.CreateMerchantDeliveryIn(ctx, q, merchantID, actor, in)
 		if err != nil {
 			return IdempotentBody{}, err
+		}
+		// **وبلا نقطةٍ يُربط طلبُ موقع المستلِم** (بلاغُ المالك ٢٠٢٦-١١-٢٧) — وصل قبلها؟ تُكتب الآن،
+		// وإلّا حين يصل. **والأجرةُ كما حُسبت أعلاه.**
+		if !in.HasPoint {
+			lat, lng, linked, err := linkMerchantDeliveryLocationTx(ctx, q, merchantID, phone, req.LocationRequestID, id)
+			if err != nil {
+				return IdempotentBody{}, err
+			}
+			if linked && lat != nil && lng != nil {
+				if _, err := s.orders.SetMerchantDeliveryPointTx(ctx, q, id, *lat, *lng); err != nil {
+					// **نقطةٌ خارجَ التغطية لا تُسقط التوصيلة** — الكابتنُ يتّصل بالمستلِم كما كان.
+					// **وعطلُ القاعدة يُسقطها** — المعاملةُ نفسُها لم تعد صالحة.
+					var appErr *httpx.AppError
+					if !errors.As(err, &appErr) {
+						return IdempotentBody{}, err
+					}
+					s.logger.Warn("توصيلة المتجر: موقعُ المستلِم الواصلُ لم يُكتب", "order", id, "error", err)
+				}
+			}
 		}
 		return IdempotentBody{
 			Status:  http.StatusCreated,

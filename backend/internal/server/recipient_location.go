@@ -159,6 +159,13 @@ func (s *Server) locReqReceived(ctx context.Context, ownerID, customerID, orderI
 			if _, err := s.orders.ApplyWhatsAppPickup(ctx, orderID, lat, lng); err != nil {
 				s.logger.Warn("موقعُ صاحب أمانة الواتساب: تعذّرت كتابتُه في الطلب", "order", orderID, "error", err)
 			}
+		// **وتوصيلةُ المتجر أُرسلت قبل أن يصل موقعُ المستلِم** (بلاغُ المالك ٢٠٢٦-١١-٢٧) — تُكتب النقطةُ
+		// ويراها الكابتن، **والأجرةُ كما هي.**
+		case orders.DeliveryModeSend, orders.DeliveryModeFetch:
+			if _, err := s.orders.ApplyMerchantDeliveryShared(ctx, orderID, lat, lng); err != nil {
+				s.logger.Warn("موقعُ مستلِم توصيلة المتجر: تعذّرت كتابتُه في الطلب", "order", orderID, "error", err)
+			}
+			s.touch("orders", "ops")
 		default:
 			if _, err := s.orders.ApplyAmanahShared(ctx, orderID, lat, lng); err != nil {
 				s.logger.Warn("موقعُ الأمانة: تعذّرت كتابتُه في الطلب", "order", orderID, "error", err)
@@ -620,6 +627,46 @@ func linkAmanahLocationTx(ctx context.Context, q dbtx.Querier, reqID, customerID
 		return nil, nil, errAmanahLocReq
 	}
 	return lat, lng, err
+}
+
+// linkMerchantDeliveryLocationTx **يربط طلبَ موقع المتجر بتوصيلةٍ أُرسلت بلا نقطة** (بلاغُ المالك
+// ٢٠٢٦-١١-٢٧: «المستلم بعت موقعه وما وصل للكابتن»). في معاملة الإنشاء.
+//
+// **أيُّ طلب؟** المعرّفُ إن أرسله التطبيق (`location_request_id`)، وإلّا **أحدثُ طلبٍ لنفس المتجر
+// ونفس رقم المستلِم** لم يُربط بتوصيلةٍ ولم ينتهِ عمرُه (يومٌ من إرساله). **وصل موقعُه قبلها؟**
+// تُردّ النقطةُ فتُكتب الآن. **وإلّا** يُكتب حين يصل (`locReqReceived` ← `ApplyMerchantDeliveryShared`).
+// **ولا طلبَ ⇒ لا شيء** — التوصيلةُ كما كانت.
+func linkMerchantDeliveryLocationTx(ctx context.Context, q dbtx.Querier, merchantID, phone, reqID, orderID string) (lat, lng *float64, linked bool, err error) {
+	if isUUID(reqID) {
+		err = q.QueryRow(ctx, `
+			UPDATE recipient_location_requests
+			   SET order_id = $3
+			 WHERE id = $1 AND merchant_id = $2 AND mode IN ('send', 'fetch') AND order_id IS NULL
+			RETURNING lat, lng`, reqID, merchantID, orderID).Scan(&lat, &lng)
+		if err == nil {
+			return lat, lng, true, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil, false, err
+		}
+	}
+	err = q.QueryRow(ctx, `
+		UPDATE recipient_location_requests
+		   SET order_id = $3
+		 WHERE id = (SELECT id FROM recipient_location_requests
+		              WHERE merchant_id = $1 AND phone = $2 AND mode IN ('send', 'fetch')
+		                AND order_id IS NULL AND expires_at > now()
+		              ORDER BY created_at DESC LIMIT 1
+		              FOR UPDATE)
+		   AND order_id IS NULL
+		RETURNING lat, lng`, merchantID, phone, orderID).Scan(&lat, &lng)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, false, nil
+	}
+	if err != nil {
+		return nil, nil, false, err
+	}
+	return lat, lng, true, nil
 }
 
 // ══════════════════════════════════════════════════════════════════════

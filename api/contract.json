@@ -11098,6 +11098,10 @@
         {
           "name": "amount_currency",
           "type": "string"
+        },
+        {
+          "name": "location_request_id",
+          "type": "string"
         }
       ]
     },
