@@ -86,7 +86,7 @@ func TestM2Bridge_SettingAllowlistOneMoneyKey(t *testing.T) {
 	want := map[string]bool{
 		"launch.customer_signup": true, "launch.customer_browse": true, "launch.customer_orders": true,
 		"launch.customer_custom_orders": true, "launch.merchant_orders": true, "hours.platform_enforced": true,
-		"finance.goods_outside": true,
+		"finance.goods_outside": true, "stamp_card.enabled": true, "daily_card.enabled": true,
 	}
 	if len(qaFlagAllowlist) != len(want) {
 		t.Fatalf("qaFlagAllowlist size = %d, want %d — the flag allowlist must stay bounded", len(qaFlagAllowlist), len(want))
