@@ -394,8 +394,9 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// +2: tips.* (إكراميةُ الكابتن — قرارُ المالك ٢٠٢٦-١١-٢٥).
 	// +5: shamcash.* (شحن المحفظة وشام كاش عند الاستلام — قرارُ المالك ٢٠٢٦-١١-٢٥؛ ستّةُ مفاتيح، والمقيسُ منها خمسة).
 	// +8: whatsapp.bot_menu_* (قائمةُ بوت الواتساب) و stamp_card.* و daily_card.* (بطاقتا الختم — قرارُ المالك ٢٠٢٦-١١-٢٧).
-	if d.BehaviourSettings != 287 {
-		t.Errorf("إعداداتُ السلوك = %d لا 287 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// ٢٨٨ (٢٠٢٦-١١-٢٧): + `delivery.custom_quote_customer_confirm` (توثيق السعر وموافقة الزبون).
+	if d.BehaviourSettings != 288 {
+		t.Errorf("إعداداتُ السلوك = %d لا 288 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

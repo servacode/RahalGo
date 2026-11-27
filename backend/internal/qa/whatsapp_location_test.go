@@ -96,7 +96,7 @@ func TestWAORD023_LocationRequestFromForm(t *testing.T) {
 	if j["whatsapp_sent"] != true {
 		t.Fatalf("**الرسالةُ لم تُعلَّم مُرسَلة**: %v", j)
 	}
-	if msgs := n.to(phone); len(msgs) != 1 || msgs[0].text != waLocTextWA() {
+	if msgs := n.toNoFee(phone); len(msgs) != 1 || msgs[0].text != waLocTextWA() {
 		t.Fatalf("**رسالةُ المالك لم تصل الرقم**: %+v", msgs)
 	}
 	// **ضغطتان للرقم نفسِه في دقيقةٍ تُردّ.**
@@ -307,12 +307,12 @@ func TestWAORD025_FollowUpOnceForOfficeRequests(t *testing.T) {
 		t.Fatalf("**الجولةُ بعثت %d — والمنتظَر 1** (المنتظِرُ بعد ٣ دقائق وحدَه)", got)
 	}
 	want := "ما وصلنا موقعك لسّا 🌷 ردّ على هالرسالة بموقعك: اضغط 📎 ← الموقع ← أرسل موقعك الحالي أو المباشر"
-	if msgs := n.to(waiting); len(msgs) != 2 || msgs[1].text != want {
+	if msgs := n.toNoFee(waiting); len(msgs) != 2 || msgs[1].text != want {
 		t.Fatalf("**رسالةُ المتابعة**: %+v", msgs)
 	}
 	for name, p := range map[string]string{"الحديث": fresh, "من ردّ": answered, "طلب المتجر": store,
 		"طلبٌ بنقطة": pinned} {
-		if msgs := n.to(p); len(msgs) != 1 {
+		if msgs := n.toNoFee(p); len(msgs) != 1 {
 			t.Errorf("**وصلت المتابعةُ %s**: %d رسائل", name, len(msgs))
 		}
 	}

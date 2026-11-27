@@ -83,7 +83,7 @@ func TestWAORD040_StoreNameAndPhoneOnly(t *testing.T) {
 	if linked != 1 {
 		t.Fatalf("**طلبُ الموقع لم يُكتب تلقائيّاً مربوطاً بالطلب**: %d", linked)
 	}
-	if msgs := n.to(phone); len(msgs) != 1 || msgs[0].text != waLocTextWA() {
+	if msgs := n.toNoFee(phone); len(msgs) != 1 || msgs[0].text != waLocTextWA() {
 		t.Fatalf("**رسالةُ الموقع والعنوان**: %+v", msgs)
 	}
 	// **والسائقُ يراه** — بلا نقطة استلام، واسمُ المتجر وحدَه.
@@ -104,7 +104,7 @@ func TestWAORD040_StoreNameAndPhoneOnly(t *testing.T) {
 	if pm == nil || *pm != w.md.fx.M.ID || !pk {
 		t.Fatalf("**متجرُنا بمعرّفه**: %v / %v", pm, pk)
 	}
-	if msgs := n.to(p2); len(msgs) != 1 {
+	if msgs := n.toNoFee(p2); len(msgs) != 1 {
 		t.Fatalf("**رسالةُ متجرنا**: %+v", msgs)
 	}
 }
@@ -120,7 +120,7 @@ func TestWAORD041_LocationOnlyNoAddressLine(t *testing.T) {
 	ops := h.NewUser("operations")
 	phone := uniqPhone()
 	_ = waCreated(t, waPost(t, h, ops.Token, waSimpleBody(phone, 600)))
-	msgs := n.to(phone)
+	msgs := n.toNoFee(phone)
 	if len(msgs) == 0 {
 		t.Fatal("**لا رسالةَ للزبون**")
 	}

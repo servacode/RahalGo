@@ -298,3 +298,16 @@ func TestOrderFeedback_ExpiredAndAlreadyRated(t *testing.T) {
 		t.Fatalf("تقييمُ التطبيق تبدّل: %d / %v", ps, err)
 	}
 }
+
+// toNoFee **رسائلُ الرقم بلا رسالة «رقم الطلب وأجرته»** (قرارُ المالك ٢٠٢٦-١١-٢٧) — لاختبارات الموقع
+// التي تعدّ رسائلَ الموقع وحدَها؛ ورسالةُ الأجرة تُفحص في بابها.
+func (n *recNotifier) toNoFee(phone string) []recMsg {
+	var out []recMsg
+	for _, m := range n.to(phone) {
+		if strings.HasPrefix(m.text, "تم تسجيل طلبك رقم #") {
+			continue
+		}
+		out = append(out, m)
+	}
+	return out
+}
