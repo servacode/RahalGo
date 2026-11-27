@@ -1504,6 +1504,15 @@
     <string name="loyalty_cards_title">بطاقاتي</string>
     <string name="loyalty_win_free">اربح\nمجاناً</string>
     <string name="loyalty_count">%1$d من %2$d</string>
+    <string name="loyalty_foot_left_1">باقي توصيلة واحدة</string>
+    <string name="loyalty_foot_left_2">باقي توصيلتان</string>
+    <string name="loyalty_foot_left_few">باقي %1$d توصيلات</string>
+    <string name="loyalty_foot_left_many">باقي %1$d توصيلة</string>
+    <string name="loyalty_foot_next_free">التالية مجانية 🎁</string>
+    <string name="loyalty_daily_sub">%1$d توصيلات اليوم = التالية مجانية</string>
+    <string name="loyalty_daily_until">⏱ لحتى %1$s</string>
+    <string name="loyalty_time_am">%1$s ص</string>
+    <string name="loyalty_time_pm">%1$s م</string>
     <string name="loyalty_stamped">توصيلة مختومة</string>
     <string name="loyalty_empty">دائرة فارغة</string>
     <string name="loyalty_free_stamp">مجاناً — بطاقة رحّال غو</string>
