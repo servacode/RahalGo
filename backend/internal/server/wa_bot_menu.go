@@ -798,11 +798,22 @@ func (s *Server) waBotClosedText(ctx context.Context) (string, bool) {
 		return "", false
 	}
 	st, err := s.platform.State(ctx, s.pg)
-	if err != nil || st.OrderingAvailable || st.Reason != platform.ReasonPlatformClosedNow {
+	if err != nil || st.OrderingAvailable {
 		return "", false
 	}
-	return waBotClosedMessage(s.platform.Now(), st.NextAvailableAt), true
+	switch st.Reason {
+	case platform.ReasonPlatformClosedNow:
+		return waBotClosedMessage(s.platform.Now(), st.NextAvailableAt), true
+	// **والإيقافُ المؤقّتُ من اللوحة** (ضغطُ طلباتٍ أو طارئ — قرارُ المالك ٢٠٢٦-١١-٢٧) — يُقال للزبون
+	// إنّنا متوقّفون الآن وسنعود قريباً، لا «انتهى دوامنا».
+	case platform.ReasonTemporarilyUnavailable:
+		return waBotPausedText, true
+	}
+	return "", false
 }
+
+// waBotPausedText **رسالةُ الإيقاف المؤقّت** (قرارُ المالك ٢٠٢٦-١١-٢٧).
+const waBotPausedText = "أهلاً بك في رحّال غو 🌷\nنعتذر منك، الخدمة متوقفة مؤقتاً في الوقت الحالي، وسنعود إليكم في أقرب وقت ممكن."
 
 // waBotClosedMessage **نصُّ «انتهى دوامنا» بيوم الفتح وساعته بتوقيت دمشق** — دالّةٌ خالصة.
 func waBotClosedMessage(now time.Time, next *time.Time) string {
