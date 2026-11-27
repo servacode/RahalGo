@@ -377,10 +377,10 @@
     <string name="live_note_text">لا توقفها: بلاها الكابتن ما رح يقدر يوصلك. بتوقف لحالها لما يوصلك طلبك</string>
     <string name="live_stop">أوقف المشاركة</string>
     <!-- «إنت هلق بعنوان التوصيل؟» قبل الإرسال (قرار المالك ٢٠٢٦-١١-٢٤) -->
-    <string name="here_title">إنت هلق موجود بعنوان التوصيل؟</string>
-    <string name="here_body">إذا إنت هونيك، الكابتن بيوصل لموقعك بالضبط. وإذا عم تطلب لشخص تاني، الكابتن بيروح عالعنوان المكتوب.</string>
-    <string name="here_yes">نعم، أنا هونيك</string>
-    <string name="here_no">لا، لشخص تاني</string>
+    <string name="here_title">هل أنت موجود الآن في عنوان التوصيل؟</string>
+    <string name="here_body">إذا كنت هناك، يصل الكابتن إلى موقعك بدقّة. وإذا كنت تطلب لشخص آخر، يذهب الكابتن إلى العنوان المكتوب.</string>
+    <string name="here_yes">نعم، أنا هناك</string>
+    <string name="here_no">لا، الطلب لشخص آخر</string>
     <string name="live_cant_stop">ما فيك توقف مشاركة موقعك وطلبك بالطريق — بلاها الكابتن ما رح يقدر يوصلك. بتوقف لحالها لما يوصلك الطلب</string>
     <string name="live_channel">مشاركة الموقع مع السائق</string>
     <string name="live_card_sharing">أنت تشارك موقعك المباشر مع السائق</string>
