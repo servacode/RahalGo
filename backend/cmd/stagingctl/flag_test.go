@@ -37,6 +37,9 @@ func TestQAFlags_OnlyExpectedKeys(t *testing.T) {
 		"platform.instagram":            true,
 		"platform.telegram":             true,
 		"platform.address":              true,
+		"stamp_card.enabled":            true,
+		"daily_card.enabled":            true,
+		"whatsapp.bot_menu_enabled":     true,
 	}
 	for k := range qaFlags {
 		if !want[k] {

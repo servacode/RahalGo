@@ -521,6 +521,60 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/captain-applications",
+      "handler": "handleListCaptainApplications",
+      "auth": true,
+      "capability": "drivers.read",
+      "response": [
+        {
+          "name": "applications",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/captain-applications/count",
+      "handler": "handleCountCaptainApplications",
+      "auth": true,
+      "capability": "drivers.read",
+      "response": [
+        {
+          "name": "new",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/captain-applications/{id}/status",
+      "handler": "handleCaptainApplicationStatus",
+      "auth": true,
+      "capability": "drivers.manage",
+      "request": [
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "application",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/cash/merchant-dues",
       "handler": "handleMerchantCashDues",
       "auth": true,
@@ -8220,6 +8274,32 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/admin/whatsapp-orders/{id}/approve",
+      "handler": "handleApproveWABotOrder",
+      "auth": true,
+      "capability": "orders.whatsapp",
+      "request": [
+        {
+          "name": "fee",
+          "type": "int64"
+        },
+        {
+          "name": "store_name",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "order",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/admin/whatsapp-orders/{id}/cancel",
       "handler": "handleCancelWhatsAppOrder",
       "auth": true,
@@ -8255,6 +8335,28 @@
           "name": "currency",
           "type": "string"
         },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "order",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/whatsapp-orders/{id}/reject",
+      "handler": "handleRejectWABotOrder",
+      "auth": true,
+      "capability": "orders.whatsapp",
+      "request": [
         {
           "name": "reason",
           "type": "string"
@@ -11912,6 +12014,24 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/stamp-card",
+      "handler": "handleMerchantStampCard",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@v",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/merchant/stores/{id}/top-items",
       "handler": "handleMerchantTopItems",
       "auth": true,
@@ -12319,6 +12439,21 @@
           "name": "as",
           "type": "string"
         }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/stamp-card",
+      "handler": "handleMyStampCard",
+      "auth": true,
+      "response": [
+        {
+          "name": "@v",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
       ]
     },
     {

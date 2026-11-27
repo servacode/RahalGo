@@ -902,6 +902,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/my/shamcash/topups", s.idempotent(s.handleCreateShamcashTopup))
 			// **أله توصيلةٌ مجانيّةٌ الآن؟** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — لتقول الشاشةُ «مجانيّة» قبل الطلب.
 			r.Get("/my/free-delivery", s.handleMyFreeDelivery)
+			// **بطاقة رحّال غو وكرت اليوم** (قرارُ المالك ٢٠٢٦-١١-٢٧) — loyalty_handlers.go
+			r.Get("/my/stamp-card", s.handleMyStampCard)
 			// **«جوائز رحّال غو»** (قرارُ المالك ٢٠٢٦-١١-٢٣) — حالي وأصنافُ المتجر والرابحون.
 			r.Get("/prizes/me", s.handlePrizesMe)
 			r.Get("/prizes/items", s.handlePrizeItems)
@@ -1312,6 +1314,8 @@ func (s *Server) Router() http.Handler {
 			// **«لدي توصيلة»** (الخطوة ١٨) — المتجرُ يطلب سائقاً لغرضٍ جاهزٍ عنده.
 			// **والإنشاءُ بمفتاح منع التكرار** — لا توصيلتان ولا خصمان.
 			r.Get("/stores/{id}/delivery-quote", s.handleMerchantDeliveryQuote)
+			// **بطاقتا المتجر** (٢٠٢٦-١١-٢٧) — loyalty_handlers.go
+			r.Get("/stores/{id}/stamp-card", s.handleMerchantStampCard)
 			r.Get("/stores/{id}/deliveries", s.handleMerchantDeliveries)
 			r.Post("/stores/{id}/deliveries", s.idempotent(s.handleMerchantCreateDelivery))
 			// **مستلموه السابقون يُقترحون وقتَ الكتابة** (قرارُ المالك ٢٠٢٦-١١-٠٥) —
@@ -1780,6 +1784,13 @@ func (s *Server) Router() http.Handler {
 			r.Patch("/whatsapp-orders/{id}", s.handleWhatsAppOrderEdit)
 			r.Post("/whatsapp-orders/location-requests", s.handleWhatsAppRequestLocation)
 			r.Get("/whatsapp-orders/location-requests/{id}", s.handleWhatsAppLocationRequest)
+			// **قائمة بوت الواتساب** (قرارُ المالك ٢٠٢٦-١١-٢٧) — طلبُ البوت المعلّق يُوافَق عليه بأجرةٍ أو
+			// يُرفض، وطلباتُ التسجيل ككابتن. والقدرةُ في الجدول. انظر `wa_bot_handlers.go`.
+			r.Post("/whatsapp-orders/{id}/approve", s.handleApproveWABotOrder)
+			r.Post("/whatsapp-orders/{id}/reject", s.handleRejectWABotOrder)
+			r.Get("/captain-applications", s.handleListCaptainApplications)
+			r.Get("/captain-applications/count", s.handleCountCaptainApplications)
+			r.Post("/captain-applications/{id}/status", s.handleCaptainApplicationStatus)
 
 			// ══════════════════════════════════════════════════
 			// **وإدارةُ الأدوار بقدرتها لا بكونه `admin`** — `ADG-1`

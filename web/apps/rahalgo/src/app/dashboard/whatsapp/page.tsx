@@ -18,6 +18,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { AdminPage, Alert, IconWhatsApp } from "@rahalgo/ui";
 import { fill } from "@/lib/customer/texts";
 import { OpenOrderLink, WhatsAppOrderForm, type WaSent } from "@/components/admin/whatsapp/WhatsAppOrderForm";
+import { BotOrdersPending } from "@/components/admin/whatsapp/BotOrdersPending";
 import { RecentWhatsAppOrders } from "@/components/admin/whatsapp/RecentWhatsAppOrders";
 
 const m = getMessages(defaultLocale);
@@ -49,6 +50,9 @@ export default function WhatsAppOrdersPage() {
         )
       }
     >
+      <div className="mb-4">
+        <BotOrdersPending refresh={refresh} onChanged={() => setRefresh((n) => n + 1)} />
+      </div>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <WhatsAppOrderForm
           onSent={(o) => {

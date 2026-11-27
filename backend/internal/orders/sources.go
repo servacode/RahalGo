@@ -213,6 +213,8 @@ type QuoteResult struct {
 	Total      int64 `json:"total"`
 	// FreeWaived **ما أُعفي منه بعرض التوصيل المجانيّ** (٢٠٢٦-١٠-٢٣) — و`DeliveryFee` بعده.
 	FreeWaived int64 `json:"free_waived,omitempty"`
+	// FreeSource **مصدرُ الإعفاء** — `campaign` أو `stamp` (بطاقة رحّال غو) أو `daily` (كرت اليوم).
+	FreeSource string `json:"free_source,omitempty"`
 	// PrizeOrder **سلّةٌ من متجر الجوائز** — توصيلُها على المنصّة (`FreeWaived`) و`PrizeDiscount`
 	// ما يُدفع من رصيد الجوائز (`min(الرصيد، البضاعة)`)، و`Total` بعدهما.
 	PrizeOrder    bool  `json:"prize_order,omitempty"`

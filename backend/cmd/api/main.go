@@ -431,7 +431,10 @@ func run(logger *slog.Logger) error {
 				waBot.SetInboundImage(func(c context.Context, from string, img notify.InboundImage) string {
 					return waItems.HandleImage(c, from, img)
 				})
-				waBot.SetInboundImageGate(waItems.Accepts)
+				// **ومن هو وسطَ طلبٍ أو تسجيلٍ في قائمة البوت فصورتُه وصوتُه للقائمة** (٢٠٢٦-١١-٢٧).
+				waBot.SetInboundImageGate(func(c context.Context, from string) bool {
+					return waItems.Accepts(c, from) && !srv.WABotTakesMedia(c, from)
+				})
 				waBot.SetInboundReply(waItems.HandleText)
 				waBot.SetInbound(func(c context.Context, from, text string) string {
 					if r := srv.ReportForPhone(c, from, text); r != "" {
@@ -440,7 +443,11 @@ func run(logger *slog.Logger) error {
 					// **ولا يُلتقط عنوانٌ مكتوب** (قرارُ المالك ٢٠٢٦-١١-٠٨: «فقط الموقع وبس»).
 					return identitySvc.HandleWAInbound(c, from, text)
 				})
+				// **قائمة البوت لكلّ من يراسلنا** (قرارُ المالك ٢٠٢٦-١١-٢٧) — بعد المسارات القائمة كلّها.
+				waBot.SetMenu(srv.HandleWABotMenu)
 			}
+			// **وتذكيرُ «هل ما زلت معنا؟» ثمّ إسقاطُ الطلب الساكت** — wa_bot_menu.go.
+			go srv.RunWABotMenu(ctx, 30*time.Second)
 			return srv.Router()
 		}(),
 		ReadHeaderTimeout: 10 * time.Second,

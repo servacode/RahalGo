@@ -87,6 +87,9 @@ var FinancialSettings = []string{
 	"referral.reward_4",
 	"referral.reward_rest",
 	"referral.reward_on",
+	// **سقفُ إعفاء بطاقة رحّال غو وكرت اليوم** (orders/loyalty_cards.go، ٢٠٢٦-١١-٢٧) — المنصّةُ تتحمّل.
+	"stamp_card.max_free_fee",
+	"daily_card.max_free_fee",
 	// **جوائزُ السحب الشهريّ** (prizes/prizes.go) — رصيدٌ يُصرف خصماً على المنصّة (٢٠٢٦-١١-٢٣).
 	"prizes.amount_1",
 	"prizes.amount_2",

@@ -33,6 +33,10 @@ data class DeliveryQuote(
     @SerialName("fee_basis") val feeBasis: String = "",
     @SerialName("distance_m") val distanceM: Long = 0,
     val mode: String = "send",
+    /** **ما يُعفى منه** — والأجرةُ `fee` بعده (العرضُ أو جائزةُ البطاقة، ٢٠٢٦-١١-٢٧). */
+    @SerialName("free_waived") val freeWaived: Long = 0,
+    /** **مصدرُ الإعفاء** — `campaign` · `stamp` (بطاقة رحّال غو) · `daily` (كرت اليوم). */
+    @SerialName("free_source") val freeSource: String = "",
 )
 
 @Serializable
@@ -243,6 +247,11 @@ class DeliveriesApi(private val api: ApiClient) {
             HttpMethod.Delete,
             null,
         )
+
+    /** **بطاقتا المتجر** — بطاقة رحّال غو وكرت اليوم (٢٠٢٦-١١-٢٧). وخطأٌ يعني لا بطاقة. */
+    suspend fun stampCard(storeId: String): com.rahalgo.shared.model.StampCard =
+        runCatching { api.call<com.rahalgo.shared.model.StampCard>("/api/v1/merchant/stores/$storeId/stamp-card") }
+            .getOrDefault(com.rahalgo.shared.model.StampCard())
 
     /** **صفحةً صفحة** — خمسون في كلّ صفحة، الأحدثُ أوّلاً. */
     suspend fun list(storeId: String, page: Int = 1): DeliveriesPage =

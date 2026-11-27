@@ -629,6 +629,14 @@ fun CartScreen(
                     fee - extra,
                     if (!freeCode) q.freeWaived else 0L,
                 )
+                // **وجائزةُ البطاقة تُسمّى** (٢٠٢٦-١١-٢٧) — «مجاناً — بطاقة رحّال غو» أو «— كرت اليوم».
+                if (!freeCode && q.freeWaived > 0 && (q.freeSource == "stamp" || q.freeSource == "daily")) {
+                    Text(
+                        com.rahalgo.ui.freeSourceText(q.freeSource),
+                        color = Rahal.colors.success,
+                        style = Rahal.type.caption,
+                    )
+                }
                 if (extra > 0) {
                     KeyValue(stringResource(R.string.src_fee_line), money(extra))
                 }

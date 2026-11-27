@@ -137,10 +137,11 @@ func (s *Server) handleQuote(w http.ResponseWriter, r *http.Request) {
 				q.Total -= q.PrizeDiscount
 			}
 		}
-	} else if w := s.orders.FreeDeliveryPreview(r.Context(), s.optionalUser(r), orders.FreeKindStandard, q.DeliveryFee); w > 0 {
+	} else if w, src := s.orders.FreeDeliveryPreviewSource(r.Context(), s.optionalUser(r), orders.FreeKindStandard, q.DeliveryFee); w > 0 {
 		q.DeliveryFee -= w
 		q.Total -= w
 		q.FreeWaived = w
+		q.FreeSource = src
 	}
 	if exp.Has {
 		q.Changes = append(q.Changes, s.orders.CartChanges(r.Context(), s.pg, req.Items, exp)...)

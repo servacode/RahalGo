@@ -68,6 +68,9 @@ var waErrors = []struct {
 		"wa_amanah_store", "errors.wa_amanah_store")},
 	{orders.ErrWASamePhone, httpx.NewError(http.StatusBadRequest,
 		"wa_same_phone", "errors.wa_same_phone")},
+	// **طلبُ البوت** (قرارُ المالك ٢٠٢٦-١١-٢٧) — وُوفق عليه أو رُفض قبل هذه الضغطة.
+	{orders.ErrWABotNotPending, httpx.NewError(http.StatusConflict,
+		"wa_bot_not_pending", "errors.wa_bot_not_pending")},
 }
 
 // errWAPickupPending **أمانةٌ تنتظر موقعَ صاحبها** (قرارُ المالك ٢٠٢٦-١١-١١) — ردُّ `orders.ErrWAPickupPending`
@@ -114,6 +117,10 @@ func (s *Server) handleListWhatsAppOrders(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if err := s.markWAAmanah(r.Context(), list, views); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.markWABot(r.Context(), list, views); err != nil {
 		s.respondErr(w, err)
 		return
 	}

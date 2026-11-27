@@ -281,6 +281,19 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 			return nil, ErrWAPickupPending
 		}
 	}
+	// **وطلبُ البوت لا يُقبل ولا ينزل بلا أجرة** (قرارُ المالك ٢٠٢٦-١١-٢٧) — يولد معلّقاً بأجرة صفر، والموظّفُ
+	// يكتبها عند الموافقة (`ApproveWABotOrder`). فلا زرَّ قبولٍ عامٌّ ولا كنسةٌ تُرسل كابتناً بلا أجر.
+	if origin == OriginWhatsApp && from == StPending && (to == StAccepted || to == StDispatching) {
+		var bot bool
+		var fee int64
+		if err := tx.QueryRow(ctx,
+			`SELECT wa_bot, delivery_fee FROM orders WHERE id = $1`, orderID).Scan(&bot, &fee); err != nil {
+			return nil, err
+		}
+		if bot && fee <= 0 {
+			return nil, ErrWAFeeRequired
+		}
+	}
 
 	// **ولا يبدأ الخاصُّ قبل أن يُوثَّق ما اتُّفق عليه.**
 	//
@@ -1688,7 +1701,8 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 		-- طبيعي مثل السائق، المنصّة تتحمّل») — يُستثنى إعفاءُ الحملة (free_delivery_claims) ويبقى الكوبون.
 		SELECT o.platform_commission,
 		       o.discount + o.promo_delivery_waived
-		         - COALESCE((SELECT c.waived FROM free_delivery_claims c WHERE c.order_id = o.id), 0),
+		         - COALESCE((SELECT c.waived FROM free_delivery_claims c WHERE c.order_id = o.id), 0)
+		         - COALESCE((SELECT l.waived FROM loyalty_rewards l WHERE l.order_id = o.id), 0),
 		       m.sales_rep_user_id,
 		       COALESCE(m.sales_rep_user_id = o.customer_id, false), o.origin
 		FROM orders o

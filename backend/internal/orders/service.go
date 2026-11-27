@@ -735,7 +735,8 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	// **وطلبُ الجوائز لا يستهلك حقَّ العرض** — توصيلُه على المنصّة أصلاً.
 	var free freeOffer
 	if !prizeOrder {
-		free, err = s.freeDeliveryOffer(ctx, tx, FreeKindStandard, customerClaimant(ctx, tx, customerID), deliveryFee, true)
+		free, err = s.freeDeliveryOffer(ctx, tx, FreeKindStandard, customerClaimant(ctx, tx, customerID),
+			customerCard(customerID), deliveryFee, true)
 		if err != nil {
 			return nil, nil, err
 		}

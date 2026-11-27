@@ -46,6 +46,9 @@ var qaFlags = map[string]string{
 	"platform.instagram":            "CUST-ENG-011",
 	"platform.telegram":             "CUST-ENG-011",
 	"platform.address":              "CUST-ENG-011",
+	"stamp_card.enabled":            "بطاقة رحّال غو — تُشغَّل على التجهيز (٢٠٢٦-١١-٢٧)",
+	"daily_card.enabled":            "كرت اليوم — يُشغَّل على التجهيز (٢٠٢٦-١١-٢٧)",
+	"whatsapp.bot_menu_enabled":     "قائمة بوت الواتساب — تُشغَّل على التجهيز، ومطفأةٌ افتراضاً بالإنتاج (٢٠٢٦-١١-٢٧)",
 }
 
 // flagCmd ينفّذ `stagingctl flag get|set` — **بعد أن رضي الحارسُ.**

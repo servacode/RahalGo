@@ -308,6 +308,10 @@ export interface DeliveryQuote {
   fee_basis: string;
   distance_m: number;
   mode: string;
+  /** **ما يُعفى منه** — و`fee` بعده (العرضُ أو جائزةُ البطاقة، ٢٠٢٦-١١-٢٧). */
+  free_waived?: number;
+  /** **مصدرُ الإعفاء** — `campaign` · `stamp` (بطاقة رحّال غو) · `daily` (كرت اليوم). */
+  free_source?: string;
 }
 
 export interface Delivery {

@@ -102,6 +102,8 @@ type WhatsAppSender struct {
 	inboundReply func(ctx context.Context, from, text, quotedID string) (string, bool)
 	// appFile — «ارسل رحال غو» بمحادثة زبون: ملفُّ تطبيق الزبون (wa_send_app.go).
 	appFile func(ctx context.Context) (OutgoingFile, error)
+	// menu — قائمةُ البوت لكلّ رسالةٍ واردة (wa_menu.go، قرارُ المالك ٢٠٢٦-١١-٢٧).
+	menu    func(ctx context.Context, in MenuInbound) MenuReply
 	hooksMu sync.RWMutex
 
 	// ══════════════════════════════════════════════════════════════════
@@ -764,9 +766,22 @@ func (s *WhatsAppSender) onInbound(ctx context.Context, c *whatsmeow.Client, msg
 	if !msg.Info.IsFromMe {
 		// **«صورة + اسم وسعر»** — صورةٌ أو وسيطٌ يُسلَّم لمعالِج الأصناف (wa_image.go).
 		if s.mediaReply(ctx, c, msg) {
+			s.menuFrom(ctx, c, msg, MenuInbound{Kind: MenuMedia, Handled: true})
+			return
+		}
+		// **وسيطٌ لم يلتقطه معالِجُ الأصناف** (صوتٌ أو صورةٌ من زبون) ⇒ للقائمة (wa_menu.go).
+		if k, _ := ImageFromMessage(msg.Message); k != "" {
+			s.menuFrom(ctx, c, msg, MenuInbound{Kind: MenuMedia})
 			return
 		}
 		if reply, isLoc := s.locationReply(ctx, msg, c.Store.LIDs); isLoc {
+			// **موقعٌ لم يطلبه أحد** (لا طلبَ موقعٍ مفتوح) ⇒ للقائمة: طلبُ البوت ينتظره.
+			if strings.TrimSpace(reply) == "" {
+				loc, _ := LocationFromMessage(msg.Message)
+				s.menuFrom(ctx, c, msg, MenuInbound{Kind: MenuLocation, Loc: loc})
+				return
+			}
+			s.menuFrom(ctx, c, msg, MenuInbound{Kind: MenuLocation, Handled: true})
 			if strings.TrimSpace(reply) != "" {
 				jid := msg.Info.Sender.ToNonAD()
 				if msg.Info.Chat.User != "" {
@@ -792,6 +807,15 @@ func (s *WhatsAppSender) onInbound(ctx context.Context, c *whatsmeow.Client, msg
 	if msg.Info.IsFromMe && !selfChat {
 		if IsSendAppCommand(messageText(msg.Message)) {
 			go s.sendAppFile(ctx, c, msg.Info.Chat.ToNonAD())
+		}
+		// **وردُّ موظّفٍ من هاتف الرقم نشاطٌ في المحادثة** — القائمةُ تسكت ولا تقاطعه (wa_menu.go).
+		var lids lidResolver
+		if c.Store != nil {
+			lids = c.Store.LIDs
+		}
+		if p := chatPhone(ctx, msg.Info.Chat, lids); p != "" {
+			s.menuDispatch(ctx, c, msg.Info.Chat.ToNonAD(), MenuInbound{From: p, Kind: MenuText,
+				Text: messageText(msg.Message), Outgoing: true})
 		}
 		return
 	}
@@ -831,6 +855,17 @@ func (s *WhatsAppSender) onInbound(ctx context.Context, c *whatsmeow.Client, msg
 			reply = r
 		} else {
 			reply = inbound(ctx, from, text)
+		}
+		// **وما لم يعالجه مسارٌ قائمٌ فللقائمة** (wa_menu.go، قرارُ المالك ٢٠٢٦-١١-٢٧) — وما عالجه نشاطٌ وحسب.
+		if !selfChat {
+			if h := s.menuHook(); h != nil {
+				in := MenuInbound{From: from, Kind: MenuText, Text: text, Handled: strings.TrimSpace(reply) != ""}
+				if !in.Handled {
+					s.menuRun(ctx, c, jid, h, in)
+					return
+				}
+				go h(ctx, in)
+			}
 		}
 		if strings.TrimSpace(reply) == "" {
 			return

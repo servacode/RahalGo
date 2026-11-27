@@ -783,6 +783,12 @@ kosom` |
 | `referral.reward_rest` | المنصة | money | `0` |
 | `cart_reminder.enabled` | المنصة | bool | `false` |
 | `cart_reminder.after_minutes` | المنصة | int | `60` |
+| `stamp_card.enabled` | المنصة | bool | `false` |
+| `stamp_card.size` | المنصة | int | `10` |
+| `stamp_card.max_free_fee` | المنصة | money | `0` |
+| `daily_card.enabled` | المنصة | bool | `false` |
+| `daily_card.size` | المنصة | int | `5` |
+| `daily_card.max_free_fee` | المنصة | money | `0` |
 | `prizes.enabled` | المنصة | bool | `false` |
 | `prizes.launch_on` | المنصة | text | `2026-12-01` |
 | `prizes.min_points` | المنصة | int | `80` |
@@ -871,6 +877,8 @@ kosom` |
 {items}` |
 | `whatsapp.send_delay_ms` | المنصة | int | `6000` |
 | `whatsapp.live_location_only` | المنصة | bool | `false` |
+| `whatsapp.bot_menu_enabled` | المنصة | bool | `false` |
+| `whatsapp.bot_menu_silence_min` | المنصة | int | `60` |
 | `launch.customer_signup` |  | bool | `false` |
 | `launch.customer_browse` |  | bool | `false` |
 | `launch.customer_orders` |  | bool | `false` |

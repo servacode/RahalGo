@@ -43,6 +43,7 @@ import { ItemGrid, ItemSheet } from "@/components/customer/items";
 import { FeaturedStrip } from "@/components/customer/stores";
 import { InviteHomeCard } from "@/components/customer/InviteNudge";
 import { FreeDeliveryBanner } from "@/components/customer/ServiceNotices";
+import { LoyaltyCards, useStampCard } from "@/components/LoyaltyCards";
 import { SHOP_SEARCH_EVENT } from "@/components/customer/ShopChrome";
 
 const m = getMessages(defaultLocale);
@@ -94,6 +95,7 @@ function useSearch(scope: string) {
 
 export default function ShopPage() {
   const { user } = useAuth();
+  const loyalty = useStampCard(user ? "/api/v1/my/stamp-card" : null);
   const scopeQ = useBrowseQuery("?");
   const scopeA = useBrowseQuery("&");
   const [home, setHome] = useState<HomePage | null>(null);
@@ -166,6 +168,8 @@ export default function ShopPage() {
         <BannerSlider items={slides} Link={Link} everyMs={home.banner_auto ? home.banner_every_ms || 5000 : 0} />
       )}
       {!searching && home && <FreeDeliveryBanner hero />}
+      {/* **بطاقة رحّال غو وكرت اليوم** (قرارُ المالك ٢٠٢٦-١١-٢٧) — تحت لافتة العرض، كالتطبيق. */}
+      {!searching && home && <LoyaltyCards card={loyalty} seenKey="customer" />}
       {!searching && home && <FeaturedStrip stores={home.featured_stores ?? []} />}
 
       {/* **«ادعُ صديقك» تحت العروض** — تُخفى بـ✕ للأبد (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}

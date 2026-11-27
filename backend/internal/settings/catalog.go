@@ -1111,6 +1111,24 @@ var Catalog = []Def{
 		Min: 5, Max: 720, Unit: "minute", Default: 60},
 
 	// ══════════════════════════════════════════════════════════════════
+	// **بطاقة رحّال غو وكرت اليوم** (قرارُ المالك ٢٠٢٦-١١-٢٧، `orders/loyalty_cards.go`)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// كلُّ توصيلةٍ مسلَّمةٍ تختم دائرة؛ **بعد `size` تكون التاليةُ مجانيّةً على المنصّة** والكابتنُ
+	// بأجرته كاملة. **وكرتُ اليوم** يعدّ توصيلاتِ يوم شغل المنصّة وحدَه وتسقط جائزتُه بالإغلاق.
+	// **مطفأان افتراضاً.** والسقفُ صفرٌ = بلا سقف.
+	{Key: "stamp_card.enabled", Group: GroupPlatform, Kind: KindBool, Default: false},
+	{Key: "stamp_card.size", Group: GroupPlatform, Kind: KindInt,
+		Min: 2, Max: 50, Unit: "order", Default: 10},
+	{Key: "stamp_card.max_free_fee", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
+	{Key: "daily_card.enabled", Group: GroupPlatform, Kind: KindBool, Default: false},
+	{Key: "daily_card.size", Group: GroupPlatform, Kind: KindInt,
+		Min: 2, Max: 30, Unit: "order", Default: 5},
+	{Key: "daily_card.max_free_fee", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
+
+	// ══════════════════════════════════════════════════════════════════
 	// **«جوائز رحّال غو»** — مسابقةُ نقاطٍ شهريّة (قرارا المالك ٢٠٢٦-١١-٢٣ و٢٠٢٦-١١-٢٥، `internal/prizes`)
 	// ══════════════════════════════════════════════════════════════════
 	//
@@ -2855,6 +2873,13 @@ var Catalog = []Def{
 	// القديمة لا تتأثّر (تأخذ من الـGPS مباشرة).
 	// **وافتراضُه مطفأ** (قرارُ المالك ٢٠٢٦-١١-١٢: «خليه يقبل الموقع العادي او المباشر»).
 	{Key: "whatsapp.live_location_only", Group: GroupPlatform, Kind: KindBool, Default: false},
+
+	// **قائمة بوت الواتساب** (قرارُ المالك ٢٠٢٦-١١-٢٧) — كلُّ من يراسل رقمَ المنصّة (عدا الكباتن والمندوبين
+	// والمتاجر) تصله قائمةُ الخدمات الستّ. **مفتاحُ إطفاءٍ بيد المالك**، ومدّةُ السكوت التي تعود بعدها
+	// القائمة (قرارُه: ساعة). انظر `server/wa_bot_menu.go`.
+	{Key: "whatsapp.bot_menu_enabled", Group: GroupPlatform, Kind: KindBool, Default: false},
+	{Key: "whatsapp.bot_menu_silence_min", Group: GroupPlatform, Kind: KindInt,
+		Min: 5, Max: 1440, Unit: "minute", Default: 60},
 }
 
 // byKey فهرسٌ يُبنى مرّة — البحث الخطّي في كل كتابة إعداد ترفٌ لا داعي له.

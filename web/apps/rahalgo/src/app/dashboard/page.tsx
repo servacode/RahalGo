@@ -215,6 +215,7 @@ const PAGE_CAPS: [string, string[]][] = [
   ["/dashboard/profits", ["finance.read"]],
   ["/dashboard/leads", ["merchants.verify"]],
   ["/dashboard/branch-requests", ["merchants.verify"]],
+  ["/dashboard/captain-applications", ["drivers.read"]],
   ["/dashboard/users", ["users.read"]],
   ["/dashboard/sections", ["market.manage"]],
   ["/dashboard/promos", ["offers.manage"]],

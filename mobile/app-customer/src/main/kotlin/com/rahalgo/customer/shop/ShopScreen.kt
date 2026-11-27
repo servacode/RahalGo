@@ -146,7 +146,10 @@ fun ShopScreen(
     // تجديدٌ إجباريٌّ عند ON_RESUME يتجاوز عمرَ الدقيقتين — فالعائدُ لا يرى حظراً/سماحاً
     // شائخاً. (والعمرُ يبقى للاستطلاع الروتينيّ في تبدّل النقطة.)
     val freeScope = androidx.compose.runtime.rememberCoroutineScope()
-    androidx.compose.runtime.LaunchedEffect(Unit) { com.rahalgo.customer.FreeOffer.refresh(freeScope) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.rahalgo.customer.FreeOffer.refresh(freeScope)
+        com.rahalgo.customer.Loyalty.refresh(freeScope)
+    }
     // **«ادعُ صديقاً» تحت البحث** (٢٠٢٦-١٠-٣٠) — مبلغُها من المحرّك.
     androidx.compose.runtime.LaunchedEffect(Unit) {
         com.rahalgo.customer.InviteNudge.load(context)
@@ -160,6 +163,8 @@ fun ShopScreen(
                     serviceVm.refreshAt(point, ctx0, force = true)
                     // **وأهليّةُ عرض التوصيل المجاني معها** (٢٠٢٦-١٠-٢٦).
                     com.rahalgo.customer.FreeOffer.refresh(freeScope)
+                    // **وبطاقتا رحّال غو واليوم** (٢٠٢٦-١١-٢٧) — ختمٌ جديدٌ يُرى عند العودة.
+                    com.rahalgo.customer.Loyalty.refresh(freeScope)
                 }
             }
             shopOwner.lifecycle.addObserver(o)
@@ -505,6 +510,8 @@ fun ShopScreen(
             addNotice()
             // **لافتةُ عرض التوصيل المجاني** (٢٠٢٦-١٠-٢٦) — لمن يحقّ له وحدَه.
             if (!previewing) com.rahalgo.customer.FreeDeliveryBanner()
+            // **بطاقة رحّال غو وكرت اليوم** (قرارُ المالك ٢٠٢٦-١١-٢٧) — تحت لافتة العرض.
+            if (!previewing) com.rahalgo.customer.LoyaltyBlock(Modifier.padding(vertical = Rahal.space.xs))
 
             SectionRail(vm.visibleSections, vm.pick, media, vm::openSection)
         }

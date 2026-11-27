@@ -422,6 +422,8 @@ func (s *Service) sweepAutoAccept(ctx context.Context) {
 		SELECT id, kind FROM orders
 		WHERE status = 'pending'
 		  AND closed_at IS NULL
+		  -- **وطلبُ البوت ينتظر موافقةَ الإدارة وأجرتَها** (٢٠٢٦-١١-٢٧) — لا يُقبل وحدَه.
+		  AND NOT wa_bot
 		  AND created_at < now() - make_interval(mins => $1::int)
 		-- **الأحدثُ ممّا تجاوز المهلةَ أوّلاً** — طلبٌ قديمٌ يتعثّر قبولُه في كلّ
 		-- جولةٍ لا يحجز الخمسين عن طلباتٍ وصلت الليلة.

@@ -323,6 +323,8 @@ data class Quote(
     @SerialName("delivery_fee") val deliveryFee: Long = 0,
     /** **ما أسقطه عرضُ التوصيل المجاني** (٢٠٢٦-١٠-٢٦) — و`deliveryFee` بعده. */
     @SerialName("free_waived") val freeWaived: Long = 0,
+    /** **مصدرُ الإعفاء** — `campaign` · `stamp` (بطاقة رحّال غو) · `daily` (كرت اليوم) (٢٠٢٦-١١-٢٧). */
+    @SerialName("free_source") val freeSource: String = "",
     /** **ما يُدفع من رصيد الجوائز** (٢٠٢٦-١١-٢٣) — و`total` بعده. */
     @SerialName("prize_discount") val prizeDiscount: Long = 0,
     val total: Long = 0,

@@ -298,6 +298,7 @@ func (s *Service) repShareToReverse(ctx context.Context, q wallet.Querier,
 		SELECT m.sales_rep_user_id::text,
 		       o.discount + o.promo_delivery_waived
 		         - COALESCE((SELECT c.waived FROM free_delivery_claims c WHERE c.order_id = o.id), 0)
+		         - COALESCE((SELECT l.waived FROM loyalty_rewards l WHERE l.order_id = o.id), 0)
 		FROM orders o
 		JOIN merchants m ON m.id = COALESCE(o.merchant_id, o.partner_merchant_id)
 		WHERE o.id = $1`, orderID).Scan(&repID, &promoCost); err != nil {

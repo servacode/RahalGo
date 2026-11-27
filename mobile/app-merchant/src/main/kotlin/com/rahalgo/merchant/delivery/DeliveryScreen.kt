@@ -340,6 +340,10 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
 
     var quote by mutableStateOf<DeliveryQuote?>(null)
         private set
+
+    /** **بطاقة رحّال غو وكرت اليوم للمتجر** (قرارُ المالك ٢٠٢٦-١١-٢٧) — فوق النموذج. */
+    var loyalty by mutableStateOf(com.rahalgo.shared.model.StampCard())
+        private set
     var quoteError by mutableStateOf("")
         private set
 
@@ -475,6 +479,7 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 list = api.list(storeId).deliveries
                 listError = ""
+                loyalty = api.stampCard(storeId)
             } catch (e: Exception) {
                 listError = apiError(getApplication(), e)
             }
@@ -729,6 +734,12 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             }
         }
 
+        // ── بطاقة رحّال غو وكرت اليوم للمتجر (قرارُ المالك ٢٠٢٦-١١-٢٧) — فوق النموذج، والمطفأةُ لا تُرسم.
+        if (vm.loyalty.enabled || vm.loyalty.daily.enabled) {
+            Spacer(Modifier.height(Rahal.space.sm))
+            com.rahalgo.ui.LoyaltyCards(vm.loyalty, seenKey = "store.${vm.storeId}")
+        }
+
         // ── «توصيل» أو «إحضار» — خياران كبيران في مفتاحٍ واحد، ولا مختارَ افتراضاً (ملاحظةُ المالك
         // ٢٠٢٦-١٠-١٦): «لازم يكونن زرين واضحين لازم يختار وحدة منهن». **والنموذجُ لا يظهر قبل الاختيار.**
         Spacer(Modifier.height(Rahal.space.sm))
@@ -962,7 +973,24 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
         if (vm.quoteError.isEmpty() && q != null) {
             Spacer(Modifier.height(Rahal.space.sm))
             RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Info) {
-                Text(
+                // **والأجرةُ المُعفاةُ: الأصلُ مشطوباً وبجانبه «مجاناً» ومصدرُه** (٢٠٢٦-١١-٢٧).
+                if (q.freeWaived > 0) {
+                    Text(
+                        stringResource(R.string.md_fee, com.rahalgo.ui.grouped(q.fee + q.freeWaived)),
+                        style = Rahal.type.body,
+                        color = Rahal.colors.inkMuted,
+                        textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
+                    )
+                    Text(
+                        if (q.fee > 0) stringResource(R.string.md_fee, com.rahalgo.ui.grouped(q.fee))
+                        else com.rahalgo.ui.freeSourceText(q.freeSource),
+                        style = Rahal.type.priceLarge,
+                        color = Rahal.colors.success,
+                    )
+                    if (q.fee > 0) {
+                        Text(com.rahalgo.ui.freeSourceText(q.freeSource), style = Rahal.type.caption, color = Rahal.colors.success)
+                    }
+                } else Text(
                     stringResource(R.string.md_fee, com.rahalgo.ui.grouped(q.fee)),
                     style = Rahal.type.priceLarge,
                     color = Rahal.colors.brand,

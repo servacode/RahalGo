@@ -211,7 +211,8 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 
 	// **والتوصيلُ المجانيّ بعرضه** (قرارُ المالك ٢٠٢٦-١٠-٢٣) — مرّةً لكلّ متجرٍ بكلّ عرض.
 	// السائقُ أخذ أجرَه أعلاه من الأجرة كاملة، **ومن يدفع يدفع ما بقي** (`charge`).
-	free, err := s.freeDeliveryOffer(ctx, tx, FreeKindMerchant, merchantClaimant(merchantID), fee, true)
+	free, err := s.freeDeliveryOffer(ctx, tx, FreeKindMerchant, merchantClaimant(merchantID),
+		merchantCard(merchantID), fee, true)
 	if err != nil {
 		return "", err
 	}
@@ -445,6 +446,9 @@ type MerchantDeliveryQuote struct {
 	MerchantCanPay bool `json:"merchant_can_pay"`
 	// FreeWaived **ما يُعفى منه بعرض التوصيل المجانيّ** (٢٠٢٦-١٠-٢٣) — و`Fee` بعده.
 	FreeWaived int64 `json:"free_waived"`
+	// FreeSource **مصدرُ الإعفاء** — `campaign` (العرض) أو `stamp` (بطاقة رحّال غو) أو `daily` (كرت
+	// اليوم)، وفارغٌ إن لا إعفاء (٢٠٢٦-١١-٢٧).
+	FreeSource string `json:"free_source"`
 }
 
 // QuoteMerchantDelivery **أجرةُ النقطة ومقدرةُ المتجر** — بحرّاس الإنشاء نفسِها.
@@ -481,12 +485,13 @@ func (s *Service) QuoteMerchantDelivery(ctx context.Context, merchantID string,
 		return nil, err
 	}
 	// **والتوصيلُ المجانيّ يُرى قبل الطلب** — `Fee` ما سيُدفع فعلاً.
-	off, err := s.freeDeliveryOffer(ctx, s.db, FreeKindMerchant, merchantClaimant(merchantID), fee, false)
+	off, err := s.freeDeliveryOffer(ctx, s.db, FreeKindMerchant, merchantClaimant(merchantID),
+		merchantCard(merchantID), fee, false)
 	if err != nil {
 		return nil, err
 	}
 	q := &MerchantDeliveryQuote{Fee: fee - off.waive, ZoneName: zone.Name, FeeBasis: basis,
-		DistanceM: int64(dist), Mode: mode, FreeWaived: off.waive}
+		DistanceM: int64(dist), Mode: mode, FreeWaived: off.waive, FreeSource: off.Source()}
 	if q.WalletBalance, q.AvailableBalance, err = merchantWallet(ctx, s.db, merchantID, false); err != nil {
 		return nil, err
 	}

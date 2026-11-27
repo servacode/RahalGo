@@ -131,6 +131,9 @@ const ALL_NAV: NavItem[] = [
   // **طلباتُ الفروع** — «أضف فرع» من صاحب المتجر أو المندوب، بقدرة طلبات الانضمام نفسِها، وشارتُها عددُ المنتظر.
   { href: "/dashboard/branch-requests", label: m.admin.nav.branchRequests, icon: IconStore,
     caps: ["merchants.verify"] },
+  // **طلباتُ تسجيل الكباتن** — من قائمة بوت الواتساب، وشارتُها عددُ الجديد.
+  { href: "/dashboard/captain-applications", label: m.admin.nav.captainApplications, icon: IconSignup,
+    caps: ["drivers.read"] },
   // ══════════════════════════════════════════════════════════════════
   // **خريطةُ العمليات — «أين» لا «كم»**
   // ══════════════════════════════════════════════════════════════════
@@ -345,6 +348,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ["branch_request"],
     [canBranches],
   );
+  // **طلباتُ تسجيل الكباتن الجديدة** — شارةُ بندها.
+  const canCaptainApps = capabilities.includes("drivers.read");
+  const { data: captainAppCount } = useLiveData<{ new: number }>(
+    () =>
+      canCaptainApps
+        ? api("/api/v1/admin/captain-applications/count")
+        : Promise.resolve({ new: 0 }),
+    ["captain_application"],
+    [canCaptainApps],
+  );
   const navShown = useMemo(
     () =>
       nav.map((i) => {
@@ -352,6 +365,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           return { ...i, badge: inMarket ? 0 : (marketNew?.count ?? 0) };
         if (i.href === "/dashboard/map-learning") return { ...i, badge: landmarkCount?.pending ?? 0 };
         if (i.href === "/dashboard/branch-requests") return { ...i, badge: branchCount?.pending ?? 0 };
+        if (i.href === "/dashboard/captain-applications") return { ...i, badge: captainAppCount?.new ?? 0 };
         if (i.href === "/dashboard/emergencies")
           return {
             ...i,
@@ -360,7 +374,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           };
         return i;
       }),
-    [nav, marketNew, inMarket, emergencyCount, landmarkCount, branchCount],
+    [nav, marketNew, inMarket, emergencyCount, landmarkCount, branchCount, captainAppCount],
   );
 
   useEffect(() => {

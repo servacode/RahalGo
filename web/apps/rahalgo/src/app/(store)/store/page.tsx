@@ -87,6 +87,7 @@ import {
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
+import { LoyaltyCards, useStampCard } from "@/components/LoyaltyCards";
 import { useStoreOrders } from "@/lib/store/orders";
 import { pointSet, useStoreSections } from "@/lib/store/setup";
 import { pctChange, useSalesSeries, type SalesRange, type SalesRow } from "@/lib/store/sales";
@@ -615,6 +616,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
   const [logoOpen, setLogoOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const usesAmeen = store.uses_ameen === true;
+  const loyalty = useStampCard(`/api/v1/merchant/stores/${id}/stamp-card`);
   const wk = useSalesSeries(id, 7);
   const live = useLive();
   const active = useActiveOrders(id, selfManage, live.all);
@@ -810,6 +812,8 @@ function HomeBody({ store }: { store: MerchantStore }) {
         {suspended && <Alert tone="error">{S.suspendedBanner}</Alert>}
 
         <ActiveOrdersBanner orders={active} selfManage={selfManage} />
+        {/* **بطاقة رحّال غو وكرت اليوم** (قرارُ المالك ٢٠٢٦-١١-٢٧) — تحت الطلب الجاري كالتطبيق. */}
+        <LoyaltyCards card={loyalty} seenKey={`store.${id}`} />
 
         {/* **حالةُ برنامج الأمين قرب الأعلى** (ملاحظةُ المالك ٢٠٢٦-١١-٠٧) — لمتاجر الأمين وحدَها. */}
         <AmeenStatusTile />
@@ -946,6 +950,8 @@ function HomeBody({ store }: { store: MerchantStore }) {
 
       <div className="tab-span">
         <ActiveOrdersBanner orders={active} selfManage={selfManage} />
+        {/* **بطاقة رحّال غو وكرت اليوم** (قرارُ المالك ٢٠٢٦-١١-٢٧) — تحت الطلب الجاري كالتطبيق. */}
+        <LoyaltyCards card={loyalty} seenKey={`store.${id}`} />
       </div>
 
       <div className="tab-span">

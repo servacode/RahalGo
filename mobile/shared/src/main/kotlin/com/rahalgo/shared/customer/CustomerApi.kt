@@ -495,6 +495,11 @@ class CustomerApi(private val api: ApiClient) {
     suspend fun freeDelivery(): FreeDelivery =
         runCatching { api.call<FreeDelivery>("/api/v1/my/free-delivery") }.getOrDefault(FreeDelivery())
 
+    /** **بطاقة رحّال غو وكرت اليوم** (٢٠٢٦-١١-٢٧) — وخطأٌ يعني لا بطاقة، لا شاشةَ معطّلة. */
+    suspend fun stampCard(): com.rahalgo.shared.model.StampCard =
+        runCatching { api.call<com.rahalgo.shared.model.StampCard>("/api/v1/my/stamp-card") }
+            .getOrDefault(com.rahalgo.shared.model.StampCard())
+
     /** **مفضّلتُه** — أصنافٌ لا متاجر. */
     suspend fun favorites(): ItemsPage = api.call("/api/v1/my/favorites")
 

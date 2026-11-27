@@ -1481,4 +1481,30 @@
     <string name="err_chat_message_not_held">الصورة مو محجوزة أو انمرّرت قبل.</string>
     <string name="err_invalid_audio">الملف الصوتي غير صالح</string>
     <string name="err_audio_too_large">الرسالة الصوتية طويلة أو كبيرة كتير</string>
+
+    <!-- بطاقة رحّال غو وكرت اليوم (قرار المالك ٢٠٢٦-١١-٢٧) — النص نفسه في الويب: loyalty.* في ar.json -->
+    <string name="loyalty_stamp_title">بطاقة رحّال غو</string>
+    <string name="loyalty_stamp_sub">كل توصيلة تُسلَّم تُختم تلقائياً بشعار رحّال غو</string>
+    <string name="loyalty_stamp_left_1">باقي توصيلة واحدة وتوصيلتك القادمة مجانية</string>
+    <string name="loyalty_stamp_left_2">باقي توصيلتان وتوصيلتك القادمة مجانية</string>
+    <string name="loyalty_stamp_left_few">باقي %1$d توصيلات وتوصيلتك القادمة مجانية</string>
+    <string name="loyalty_stamp_left_many">باقي %1$d توصيلة وتوصيلتك القادمة مجانية</string>
+    <string name="loyalty_stamp_full">مبروك! توصيلتك القادمة مجانية 🎁</string>
+    <string name="loyalty_stamp_pending">توصيلتك المجانية في الطريق، وتبدأ بطاقة جديدة بعد تسليمها</string>
+    <string name="loyalty_daily_title">كرت اليوم</string>
+    <string name="loyalty_daily_left_1">باقي توصيلة واحدة اليوم وتوصيلتك التالية مجانية</string>
+    <string name="loyalty_daily_left_2">باقي توصيلتان اليوم وتوصيلتك التالية مجانية</string>
+    <string name="loyalty_daily_left_few">باقي %1$d توصيلات اليوم وتوصيلتك التالية مجانية</string>
+    <string name="loyalty_daily_left_many">باقي %1$d توصيلة اليوم وتوصيلتك التالية مجانية</string>
+    <string name="loyalty_daily_full">مبروك! توصيلتك التالية اليوم مجانية 🎁 — حتى نهاية الدوام</string>
+    <string name="loyalty_daily_pending">توصيلة اليوم المجانية في الطريق</string>
+    <string name="loyalty_daily_renews">يتجدّد مع بداية دوام الغد</string>
+    <string name="loyalty_daily_closed">انتهى دوام اليوم — يتجدّد مع بداية دوام الغد</string>
+    <string name="loyalty_cap">تتحمّل المنصة من أجرة التوصيلة المجانية حتى %1$s</string>
+    <string name="loyalty_count">%1$d من %2$d</string>
+    <string name="loyalty_stamped">توصيلة مختومة</string>
+    <string name="loyalty_empty">دائرة فارغة</string>
+    <string name="loyalty_free_stamp">مجاناً — بطاقة رحّال غو</string>
+    <string name="loyalty_free_daily">مجاناً — كرت اليوم</string>
+    <string name="loyalty_free_campaign">مجاناً — عرض التوصيل المجاني</string>
 </resources>

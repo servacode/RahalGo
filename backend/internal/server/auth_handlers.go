@@ -83,6 +83,13 @@ func (s *Server) respondErr(w http.ResponseWriter, err error) {
 		httpx.Error(w, errWAPickupPending)
 		return
 	}
+	// **وطلبُ البوت بلا أجرة** (٢٠٢٦-١١-٢٧) — زرُّ القبول العامّ قبل موافقة «طلبات الواتساب».
+	if errors.Is(err, orders.ErrWAFeeRequired) || errors.Is(err, orders.ErrWABotNotPending) {
+		if ae, ok := waReply(err).(*httpx.AppError); ok {
+			httpx.Error(w, ae)
+			return
+		}
+	}
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "22P02" {
 		httpx.Error(w, httpx.ErrNotFound)

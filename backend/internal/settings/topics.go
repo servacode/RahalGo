@@ -105,6 +105,9 @@ var placeRules = []placeRule{
 	{prefix: "customers.cod_limit", exact: true, topic: TopicMoney, section: "money.customer"},
 	{prefix: "referral.", topic: TopicMoney, section: "money.customer"},
 	{prefix: "prizes.", topic: TopicMoney, section: "money.customer"},
+	// **بطاقة رحّال غو وكرت اليوم** (٢٠٢٦-١١-٢٧) — للزبون والمتجر، مع مكافآت الزبون.
+	{prefix: "stamp_card.", topic: TopicMoney, section: "money.customer"},
+	{prefix: "daily_card.", topic: TopicMoney, section: "money.customer"},
 	{prefix: "tips.", topic: TopicMoney, section: "money.customer"},
 	// **ومفاتيحُ أقسام المال الأخرى تسكن هنا بأنفسها** — المصاريف والصندوق
 	// والتسويات والالتزامات والخسائر والحوافز.

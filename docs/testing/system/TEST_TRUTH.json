@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 755,
+    "routes": 762,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 326,
-    "behaviour_settings": 279,
+    "setting_defs": 334,
+    "behaviour_settings": 287,
     "order_fields": 153,
-    "test_files": 876,
-    "test_funcs": 3342
+    "test_files": 880,
+    "test_funcs": 3359
   },
   "flows": [
     {
@@ -3729,6 +3729,60 @@
         "customer",
         "driver",
         "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "daily_card.enabled",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "daily_card.max_free_fee",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "daily_card.size",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -8454,6 +8508,60 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "stamp_card.enabled",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "stamp_card.max_free_fee",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "stamp_card.size",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "store_message.auto_enabled",
       "group": "merchants",
       "kind": "bool",
@@ -8608,6 +8716,42 @@
       "kind": "percent",
       "sensitive": false,
       "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "whatsapp.bot_menu_enabled",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "whatsapp.bot_menu_silence_min",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
       "flows": [
         "F-33"
       ],
@@ -12659,6 +12803,36 @@
     {
       "name": "TestList_PagesThroughEveryOrder",
       "file": "internal/orders/list_paging_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestLoyalty_CampaignNoDoubleWaive",
+      "file": "internal/orders/loyalty_cards_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestLoyalty_CapAndCancelReturns",
+      "file": "internal/orders/loyalty_cards_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestLoyalty_DailyCard",
+      "file": "internal/orders/loyalty_cards_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestLoyalty_RewardCaptainPaidFull",
+      "file": "internal/orders/loyalty_cards_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestLoyalty_StampOnDeliveryOnly",
+      "file": "internal/orders/loyalty_cards_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -21836,6 +22010,12 @@
       "orphan": false
     },
     {
+      "name": "TestLoyalty_StoreCardSeparateAndGuarded",
+      "file": "internal/qa/loyalty_cards_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestAreas_HoodsApproveReadExport",
       "file": "internal/qa/map_areas_test.go",
       "package": "qa",
@@ -29995,6 +30175,60 @@
       "orphan": true
     },
     {
+      "name": "TestWABOT01_MenuTriggers",
+      "file": "internal/qa/wa_bot_menu_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOT02_RoleExclusions",
+      "file": "internal/qa/wa_bot_menu_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOT03_OffHours",
+      "file": "internal/qa/wa_bot_menu_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOT04_OrderFlowPendingNotDispatched",
+      "file": "internal/qa/wa_bot_menu_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOT05_TrackOwnership",
+      "file": "internal/qa/wa_bot_menu_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOT06_CaptainSignup",
+      "file": "internal/qa/wa_bot_menu_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOT07_ReminderThenSilentDrop",
+      "file": "internal/qa/wa_bot_menu_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOT08_UnclearNoLoop",
+      "file": "internal/qa/wa_bot_menu_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOT09_ResetAndApp",
+      "file": "internal/qa/wa_bot_menu_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestWALiveOnly_FixedRefusedLiveAccepted",
       "file": "internal/qa/wa_live_location_only_test.go",
       "package": "qa",
@@ -35468,6 +35702,18 @@
     {
       "name": "TestTREASURY_WalletKindsAddKeepsLiveKinds",
       "file": "internal/server/treasury_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOTU01_NormAndYesNo",
+      "file": "internal/server/wa_bot_menu_internal_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestWABOTU02_ClosedMessage",
+      "file": "internal/server/wa_bot_menu_internal_test.go",
       "package": "server",
       "orphan": true
     },

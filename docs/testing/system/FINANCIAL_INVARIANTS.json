@@ -1975,6 +1975,8 @@
     "referral.reward_4",
     "referral.reward_rest",
     "referral.reward_on",
+    "stamp_card.max_free_fee",
+    "daily_card.max_free_fee",
     "prizes.amount_1",
     "prizes.amount_2",
     "prizes.amount_3",

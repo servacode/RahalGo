@@ -211,6 +211,8 @@ export interface Quote {
   sources_fee: number;
   /** **ما أُعفي منه بعرض التوصيل المجانيّ** — و`delivery_fee` بعده (٢٠٢٦-١٠-٢٦). */
   free_waived?: number;
+  /** **مصدرُ الإعفاء** — `campaign` · `stamp` (بطاقة رحّال غو) · `daily` (كرت اليوم) (٢٠٢٦-١١-٢٧). */
+  free_source?: string;
   /** **ما سيُخصم من رصيد الجوائز** إن حمل الطلبُ صنفَ جوائز. */
   prize_discount?: number;
   out_of_zone: boolean;

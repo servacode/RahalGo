@@ -43,6 +43,10 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
 
     private val api = MerchantApi(AppCore.get().api)
 
+    /** **بطاقة رحّال غو وكرت اليوم للمتجر** (قرارُ المالك ٢٠٢٦-١١-٢٧) — زينةٌ تسقط وحدَها. */
+    var loyalty by mutableStateOf(com.rahalgo.shared.model.StampCard())
+        private set
+
     var store by mutableStateOf<Store?>(null)
         private set
 
@@ -239,6 +243,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 // **والأكثرُ مبيعاً زينةٌ كذلك** — يسقط وحدَه.
                 runCatching { top = api.topItems(mine.id) }
+                loyalty = com.rahalgo.shared.merchant.DeliveriesApi(AppCore.get().api).stampCard(mine.id)
                 error = ""
             }.onFailure { error = err(it) }
             loading = false

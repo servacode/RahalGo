@@ -27,6 +27,7 @@ import { getMessages, defaultLocale, errorText, fmtNum, westernDigits } from "@r
 import { Alert, Button, ButtonLink, PageHead, EmptyState, IconLink, IconLocation, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
+import { LoyaltyCards, freeSourceText, useStampCard } from "@/components/LoyaltyCards";
 import { useStoreDeliveries } from "@/lib/store/deliveries";
 import type { DeliveryQuote, DeliveryRecipient } from "@/lib/store/types";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
@@ -176,6 +177,7 @@ function PayerOption({
 export default function DeliveryPage() {
   const { store } = useStore();
   const storeId = store?.id ?? "";
+  const loyalty = useStampCard(storeId ? `/api/v1/merchant/stores/${storeId}/stamp-card` : null);
   const { list, error: listError, reload } = useStoreDeliveries();
 
   const [mode, setMode] = useState<Mode>("");
@@ -646,6 +648,8 @@ export default function DeliveryPage() {
       {/* ── عمودان على الحاسوب: الطلب | توصيلاتي. جوّالاً متتابعان بالترتيب نفسه. ── */}
       <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] md:items-start md:gap-5">
       <div className="flex min-w-0 flex-col gap-rg-md">
+      {/* **بطاقة رحّال غو وكرت اليوم للمتجر** (قرارُ المالك ٢٠٢٦-١١-٢٧) — فوق النموذج كالتطبيق. */}
+      <LoyaltyCards card={loyalty} seenKey={`store.${storeId}`} />
       <ModeSwitch mode={mode} disabled={busy} onPick={pickMode} />
 
       {sent && <Alert tone="success">{D.sent}</Alert>}
@@ -869,7 +873,18 @@ export default function DeliveryPage() {
               <div className="flex items-center justify-between gap-rg-md rounded-card bg-primary-tint p-rg-md">
                 <div className="min-w-0">
                   <p className="text-caption text-ink-muted">{D.feeLabel}</p>
-                  <p className="figure text-primary">{fill(D.feeAmount, { fee: fmtNum(quote.fee) })}</p>
+                  {/* **والأجرةُ المُعفاةُ: الأصلُ مشطوباً وبجانبه «مجاناً» ومصدرُه** (٢٠٢٦-١١-٢٧) — كالتطبيق. */}
+                  {(quote.free_waived ?? 0) > 0 ? (
+                    <>
+                      <s className="text-caption text-ink-muted">{fill(D.feeAmount, { fee: fmtNum(quote.fee + (quote.free_waived ?? 0)) })}</s>
+                      <p className="figure text-success">
+                        {quote.fee > 0 ? fill(D.feeAmount, { fee: fmtNum(quote.fee) }) : freeSourceText(quote.free_source)}
+                      </p>
+                      {quote.fee > 0 && <p className="text-caption font-bold text-success">{freeSourceText(quote.free_source)}</p>}
+                    </>
+                  ) : (
+                    <p className="figure text-primary">{fill(D.feeAmount, { fee: fmtNum(quote.fee) })}</p>
+                  )}
                 </div>
                 <div className="min-w-0 text-end text-caption text-ink-muted">
                   {feeSub && <p>{feeSub}</p>}

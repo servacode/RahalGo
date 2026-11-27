@@ -67,6 +67,7 @@ type repStoreShare struct {
 const repPromoCostSQL = `
 	SELECT o.discount + o.promo_delivery_waived
 	         - COALESCE((SELECT c.waived FROM free_delivery_claims c WHERE c.order_id = o.id), 0)
+	         - COALESCE((SELECT l.waived FROM loyalty_rewards l WHERE l.order_id = o.id), 0)
 	FROM orders o WHERE o.id = $1`
 
 // repStoreShares **R_s لكلّ متجرٍ حيٍّ في الطلب** — بترتيب المحطّات.

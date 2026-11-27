@@ -126,6 +126,13 @@ var adminPolicy = []Rule{
 	{"PATCH", "/whatsapp-orders/{id}", OrdersWhatsApp},
 	{"POST", "/whatsapp-orders/location-requests", OrdersWhatsApp},
 	{"GET", "/whatsapp-orders/location-requests/{id}", OrdersWhatsApp},
+	// **قائمة بوت الواتساب** (قرارُ المالك ٢٠٢٦-١١-٢٧) — موافقةُ طلب البوت ورفضُه بقدرة طلبات الواتساب،
+	// وطلباتُ التسجيل ككابتن بقدرة السائقين. `wa_bot_handlers.go`.
+	{"POST", "/whatsapp-orders/{id}/approve", OrdersWhatsApp},
+	{"POST", "/whatsapp-orders/{id}/reject", OrdersWhatsApp},
+	{"GET", "/captain-applications", DriversRead},
+	{"GET", "/captain-applications/count", DriversRead},
+	{"POST", "/captain-applications/{id}/status", DriversManage},
 
 	// ── الطلبات ─────────────────────────────────────────────────
 	{"POST", "/orders/{id}/transition", OrdersIntervene},

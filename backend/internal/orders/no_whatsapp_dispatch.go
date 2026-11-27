@@ -53,6 +53,8 @@ func (s *Service) sweepNoWhatsAppDispatch(ctx context.Context) {
 		SELECT id, kind FROM orders
 		 WHERE status = 'pending'
 		   AND closed_at IS NULL
+		   -- **وطلبُ البوت ينتظر موافقةَ الإدارة وأجرتَها** (٢٠٢٦-١١-٢٧) — لا يُقبل وحدَه.
+		   AND NOT wa_bot
 		   AND created_at < now() - make_interval(mins => $1::int)
 		   AND created_at > now() - make_interval(mins => $2::int)
 		 ORDER BY created_at DESC

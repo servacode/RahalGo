@@ -42,6 +42,21 @@ type freeOffer struct {
 	campaignID string
 	claimant   string
 	waive      int64
+	// **أو جائزةُ بطاقة** (بطاقة رحّال غو / كرت اليوم — `loyalty_cards.go`) إن كانت أكبر.
+	// إعفاءٌ واحدٌ للطلب: `cardOwner` غيرُ فارغ ⇒ الجائزةُ هي المطبَّقة والعرضُ لا يُستهلك.
+	cardOwner string
+	card      cardOffer
+}
+
+// Source **مصدرُ الإعفاء** — `campaign` أو `stamp` أو `daily`، وفارغٌ إن لا إعفاء.
+func (o freeOffer) Source() string {
+	switch {
+	case o.waive <= 0:
+		return ""
+	case o.cardOwner != "":
+		return o.card.card
+	}
+	return "campaign"
 }
 
 // customerClaimant **بصمةُ رقم الزبون** — ومعرّفُه إن لم يكن له رقم.
@@ -81,7 +96,30 @@ func waiveOf(fee int64, maxFee *int64) int64 {
 // — فطلبان متزامنان لا ينالانها معاً.
 //
 // `lock=false` للتسعيرة وحدَها (لا معاملةَ تُكتب بعدها).
+//
+// **و`card` صاحبُ بطاقة الولاء** (`c:`/`m:` — `loyalty_cards.go`): إن صلحت جائزةُ بطاقةٍ أكبرَ من
+// العرض طُبّقت هي وحدَها — **إعفاءٌ واحدٌ للطلب، والعرضُ عند التساوي.** وفارغٌ ⇒ العرضُ وحدَه.
 func (s *Service) freeDeliveryOffer(ctx context.Context, q wallet.Querier,
+	kind, claimant, card string, fee int64, lock bool) (freeOffer, error) {
+	camp, err := s.campaignOffer(ctx, q, kind, claimant, fee, lock)
+	if err != nil {
+		return freeOffer{}, err
+	}
+	if card == "" {
+		return camp, nil
+	}
+	co, err := s.loyaltyOffer(ctx, q, card, kind, fee, lock)
+	if err != nil {
+		return freeOffer{}, err
+	}
+	if co.waive > camp.waive {
+		return freeOffer{waive: co.waive, cardOwner: card, card: co}, nil
+	}
+	return camp, nil
+}
+
+// campaignOffer **عرضُ التوصيل المجانيّ وحدَه** — انظر `freeDeliveryOffer`.
+func (s *Service) campaignOffer(ctx context.Context, q wallet.Querier,
 	kind, claimant string, fee int64, lock bool) (freeOffer, error) {
 	if fee <= 0 || claimant == "" {
 		return freeOffer{}, nil
@@ -123,6 +161,9 @@ func (o freeOffer) claim(ctx context.Context, q wallet.Querier, orderID, kind st
 	if o.waive <= 0 {
 		return nil
 	}
+	if o.cardOwner != "" {
+		return o.card.claim(ctx, q, o.cardOwner, orderID)
+	}
 	if _, err := q.Exec(ctx, `
 		DELETE FROM free_delivery_claims c USING orders o
 		 WHERE o.id = c.order_id AND c.campaign_id = $1 AND c.claimant = $2
@@ -154,7 +195,9 @@ func (s *Service) freeDeliveryReapply(ctx context.Context, q wallet.Querier, ord
 		  JOIN free_delivery_campaigns f ON f.id = c.campaign_id
 		 WHERE c.order_id = $1`, orderID).Scan(&maxFee)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return 0, nil
+		// **وجائزةُ البطاقة بسقفها** (`loyalty_cards.go`).
+		w, _, err := loyaltyReapply(ctx, q, orderID, fee)
+		return w, err
 	}
 	if err != nil {
 		return 0, err
@@ -174,13 +217,15 @@ func (s *Service) freeDeliveryForQuote(ctx context.Context, q wallet.Querier,
 	orderID, customerID, kind string, fee int64) (int64, error) {
 	var has bool
 	if err := q.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM free_delivery_claims WHERE order_id = $1)`, orderID).Scan(&has); err != nil {
+		`SELECT EXISTS (SELECT 1 FROM free_delivery_claims WHERE order_id = $1)
+		     OR EXISTS (SELECT 1 FROM loyalty_rewards WHERE order_id = $1)`, orderID).Scan(&has); err != nil {
 		return 0, err
 	}
 	if has {
 		return s.freeDeliveryReapply(ctx, q, orderID, fee)
 	}
-	off, err := s.freeDeliveryOffer(ctx, q, kind, customerClaimant(ctx, q, customerID), fee, true)
+	off, err := s.freeDeliveryOffer(ctx, q, kind, customerClaimant(ctx, q, customerID),
+		customerCard(customerID), fee, true)
 	if err != nil {
 		return 0, err
 	}
@@ -190,11 +235,31 @@ func (s *Service) freeDeliveryForQuote(ctx context.Context, q wallet.Querier,
 // FreeDeliveryPreview **ما يُعفى منه الزبونُ لو طلب الآن** — للتسعيرة قبل الطلب.
 // زبونٌ مجهولٌ يرى العرضَ إن كان فعّالاً.
 func (s *Service) FreeDeliveryPreview(ctx context.Context, customerID, kind string, fee int64) int64 {
+	w, _ := s.FreeDeliveryPreviewSource(ctx, customerID, kind, fee)
+	return w
+}
+
+// FreeDeliveryPreviewSource **كـ`FreeDeliveryPreview` ومعه مصدرُ الإعفاء** — `campaign` أو `stamp`
+// أو `daily` (جائزةُ بطاقة الولاء)، لتقول الشاشةُ لماذا التوصيلُ مجانيّ.
+func (s *Service) FreeDeliveryPreviewSource(ctx context.Context, customerID, kind string, fee int64) (int64, string) {
 	claimant := customerClaimant(ctx, s.db, customerID)
 	if claimant == "" {
 		claimant = "anon"
 	}
-	off, err := s.freeDeliveryOffer(ctx, s.db, kind, claimant, fee, false)
+	off, err := s.freeDeliveryOffer(ctx, s.db, kind, claimant, customerCard(customerID), fee, false)
+	if err != nil {
+		return 0, ""
+	}
+	return off.waive, off.Source()
+}
+
+// campaignPreview **عرضُ التوصيل المجانيّ وحدَه** — لحال العرض (`FreeDeliveryStatus`) بلا جوائز البطاقات.
+func (s *Service) campaignPreview(ctx context.Context, customerID, kind string, fee int64) int64 {
+	claimant := customerClaimant(ctx, s.db, customerID)
+	if claimant == "" {
+		claimant = "anon"
+	}
+	off, err := s.campaignOffer(ctx, s.db, kind, claimant, fee, false)
 	if err != nil {
 		return 0
 	}
@@ -216,9 +281,9 @@ type FreeStatus struct {
 func (s *Service) FreeDeliveryStatus(ctx context.Context, customerID string) FreeStatus {
 	var st FreeStatus
 	const probe = 1_000_000 // أجرةٌ اسميّةٌ — السؤالُ «أيُعفى؟» لا «كم».
-	st.Standard = s.FreeDeliveryPreview(ctx, customerID, FreeKindStandard, probe) > 0
-	st.Purchase = s.FreeDeliveryPreview(ctx, customerID, FreeKindPurchase, probe) > 0
-	st.Amanah = s.FreeDeliveryPreview(ctx, customerID, FreeKindAmanah, probe) > 0
+	st.Standard = s.campaignPreview(ctx, customerID, FreeKindStandard, probe) > 0
+	st.Purchase = s.campaignPreview(ctx, customerID, FreeKindPurchase, probe) > 0
+	st.Amanah = s.campaignPreview(ctx, customerID, FreeKindAmanah, probe) > 0
 	if st.Standard || st.Purchase || st.Amanah {
 		_ = s.db.QueryRow(ctx, `
 			SELECT max_fee, ends_at FROM free_delivery_campaigns

@@ -17,6 +17,7 @@
  * (`Idempotency-Key`) يبقى ما دام لم ينجح.
  */
 
+import { freeSourceText } from "@/components/LoyaltyCards";
 import Link from "next/link";
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -661,6 +662,10 @@ export default function CartPage() {
                     <Money value={fee - extra} />
                   )}
                 </div>
+                {/* **وجائزةُ البطاقة تُسمّى** (٢٠٢٦-١١-٢٧) — كالتطبيق: «مجاناً — بطاقة رحّال غو» أو «— كرت اليوم». */}
+                {waived > 0 && (quote.free_source === "stamp" || quote.free_source === "daily") && (
+                  <p className="text-xs font-bold text-success">{freeSourceText(quote.free_source)}</p>
+                )}
                 {extra > 0 && (
                   <div className="flex justify-between">
                     <span className="text-ink-muted">{C.sourcesFee}</span>
