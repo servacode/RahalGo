@@ -203,7 +203,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                     Text(
                         code,
                         color = Rahal.colors.success,
-                        style = Rahal.type.display.copy(fontSize = 40.sp, letterSpacing = 10.sp),
+                        style = Rahal.type.display.copy(fontSize = Rahal.type.display.fontSize * 1.43f, letterSpacing = 10.sp),
                     )
                     Text(
                         stringResource(R.string.md_code_hint),

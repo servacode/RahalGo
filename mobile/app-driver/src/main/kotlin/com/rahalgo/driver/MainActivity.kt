@@ -1007,6 +1007,8 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         showAddresses = false,
                     )
                     Overlay.Rating -> RatingScreen(vm = ratingVm)
+                    // **«بطاقاتي» للزبون والمتجر وحدَهما** (٢٠٢٦-١١-٢٧) — ولا يفتحها السائق؛ `when` تُتمّ.
+                    Overlay.Cards -> Unit
                     // **وكلُّ صفحةٍ تُفتح من القائمة أو الشريط ترجع بسهم** (مراجعةُ المالك
                     // ٢٠٢٦-١٠-٣٠)، **والإشعاراتُ وحدَها بلا سهم** — بقرارِه.
                     Overlay.Wallet -> WalletScreen(vm = walletVm, neutralCompensation = true, onBack = { overlay.clear() })

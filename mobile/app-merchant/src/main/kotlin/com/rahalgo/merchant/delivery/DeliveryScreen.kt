@@ -341,9 +341,6 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
     var quote by mutableStateOf<DeliveryQuote?>(null)
         private set
 
-    /** **بطاقة رحّال غو وكرت اليوم للمتجر** (قرارُ المالك ٢٠٢٦-١١-٢٧) — فوق النموذج. */
-    var loyalty by mutableStateOf(com.rahalgo.shared.model.StampCard())
-        private set
     var quoteError by mutableStateOf("")
         private set
 
@@ -479,7 +476,6 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 list = api.list(storeId).deliveries
                 listError = ""
-                loyalty = api.stampCard(storeId)
             } catch (e: Exception) {
                 listError = apiError(getApplication(), e)
             }
@@ -732,12 +728,6 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
                     }
                 }
             }
-        }
-
-        // ── بطاقة رحّال غو وكرت اليوم للمتجر (قرارُ المالك ٢٠٢٦-١١-٢٧) — فوق النموذج، والمطفأةُ لا تُرسم.
-        if (vm.loyalty.enabled || vm.loyalty.daily.enabled) {
-            Spacer(Modifier.height(Rahal.space.sm))
-            com.rahalgo.ui.LoyaltyCards(vm.loyalty, seenKey = "store.${vm.storeId}")
         }
 
         // ── «توصيل» أو «إحضار» — خياران كبيران في مفتاحٍ واحد، ولا مختارَ افتراضاً (ملاحظةُ المالك

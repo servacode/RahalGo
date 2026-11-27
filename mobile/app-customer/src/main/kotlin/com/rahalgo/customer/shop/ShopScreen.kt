@@ -510,8 +510,6 @@ fun ShopScreen(
             addNotice()
             // **لافتةُ عرض التوصيل المجاني** (٢٠٢٦-١٠-٢٦) — لمن يحقّ له وحدَه.
             if (!previewing) com.rahalgo.customer.FreeDeliveryBanner()
-            // **بطاقة رحّال غو وكرت اليوم** (قرارُ المالك ٢٠٢٦-١١-٢٧) — تحت لافتة العرض.
-            if (!previewing) com.rahalgo.customer.LoyaltyBlock(Modifier.padding(vertical = Rahal.space.xs))
 
             SectionRail(vm.visibleSections, vm.pick, media, vm::openSection)
         }

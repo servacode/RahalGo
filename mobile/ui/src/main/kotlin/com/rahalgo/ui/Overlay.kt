@@ -51,6 +51,9 @@ sealed interface Overlay {
     /** **محفظتُه** — تُفتح من رقاقة رصيده. */
     data object Wallet : Overlay
 
+    /** **بطاقاتُه** — بطاقةُ رحّال غو وكرتُ اليوم؛ تُفتح من أيقونة الشريط بجانب المحفظة (٢٠٢٦-١١-٢٧). */
+    data object Cards : Overlay
+
     /**
      * **صندوقُ إشعاراته** — يُفتح من الجرس.
      *
@@ -143,6 +146,7 @@ private fun encode(o: Overlay): String = when (o) {
     Overlay.Account -> "account"
     Overlay.Rating -> "rating"
     Overlay.Wallet -> "wallet"
+    Overlay.Cards -> "cards"
     Overlay.Inbox -> "inbox"
     is Overlay.Menu -> "menu:" + o.key
 }
@@ -151,6 +155,7 @@ private fun decode(s: String, knows: (String) -> Boolean): Overlay = when {
     s == "account" -> Overlay.Account
     s == "rating" -> Overlay.Rating
     s == "wallet" -> Overlay.Wallet
+    s == "cards" -> Overlay.Cards
     s == "inbox" -> Overlay.Inbox
     s.startsWith("menu:") -> {
         // **وبندٌ لم يعد موجوداً يعود إلى لا شيء** — لا يُسقط التطبيق:

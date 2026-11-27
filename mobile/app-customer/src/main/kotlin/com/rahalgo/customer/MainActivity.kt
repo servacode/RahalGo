@@ -69,6 +69,8 @@ import com.rahalgo.ui.Avatar
 import com.rahalgo.ui.InboxSheet
 import com.rahalgo.ui.ThemeState
 import com.rahalgo.ui.TopBar
+import com.rahalgo.ui.anyCardEnabled
+import com.rahalgo.ui.cardsBadge
 import com.rahalgo.ui.WalletScreen
 import com.rahalgo.ui.WalletViewModel
 import com.rahalgo.ui.AccountScreen
@@ -812,6 +814,13 @@ private fun SignedIn(
                         if (overlay.current == Overlay.Inbox) shell.openInbox()
                     },
                     onWallet = { overlay.show(Overlay.Wallet) },
+                    // **أيقونةُ «بطاقاتي» بجانب المحفظة** (قرارُ المالك ٢٠٢٦-١١-٢٧) — لا للضيف، ولا إن أُطفئت البطاقتان.
+                    onCards = if (!guest && Loyalty.state.anyCardEnabled) {
+                        { overlay.show(Overlay.Cards) }
+                    } else {
+                        null
+                    },
+                    cardsBadge = Loyalty.state.cardsBadge(),
                     guest = guest,
                     // **ولا عنوانَ لضيف** — (قرارُ المالك ٢٠٢٦-٠٨-١٤:
                     // «لا يمكن أن يرى كلَّ المعلومات وهو لم يسجّل
@@ -1060,6 +1069,17 @@ private fun SignedIn(
                         // **وسهمُ رجوعٍ فوقها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
                         onBack = { overlay.clear() },
                     )
+
+                    // **«بطاقاتي»** (٢٠٢٦-١١-٢٧) — بطاقتا رحّال غو واليوم كبيرتين، وسهمُ رجوعٍ كالمحفظة.
+                    over == Overlay.Cards -> {
+                        val cardsScope = androidx.compose.runtime.rememberCoroutineScope()
+                        LaunchedEffect(Unit) { Loyalty.refresh(cardsScope) }
+                        com.rahalgo.ui.LoyaltyCardsScreen(
+                            card = Loyalty.state,
+                            seenKey = "customer",
+                            onBack = { overlay.clear() },
+                        )
+                    }
 
                     // **والصندوقُ يُقرأ ثمّ يُغلق** — وفارغٌ حتّى يصل،
                     // **فلا تُعرض قائمةٌ فارغةٌ على أنّها «لا
@@ -1581,7 +1601,7 @@ private fun needsAccount(tab: Tab, over: Overlay): Boolean = when {
     // عن ضيفٍ يحجب أقوى ما يجذبه**: (قِيس ٢٠٢٦-٠٨-١٤).
     over is Overlay.Menu ->
         !PlatformPages.has(over.key) && over.key != CustomerItems.OFFERS
-    over == Overlay.Wallet || over == Overlay.Inbox || over == Overlay.Account -> true
+    over == Overlay.Wallet || over == Overlay.Inbox || over == Overlay.Account || over == Overlay.Cards -> true
     else -> tab != Tab.Shop
 }
 

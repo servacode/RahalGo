@@ -329,3 +329,27 @@ fun freeSourceText(source: String): String = when (source) {
     "daily" -> stringResource(R.string.loyalty_free_daily)
     else -> stringResource(R.string.loyalty_free_campaign)
 }
+
+/**
+ * **صفحةُ «بطاقاتي»** (قرارُ المالك ٢٠٢٦-١١-٢٧) — البطاقتان كبيرتين بدل أن تُحشرا في الرئيسيّة؛ تُفتح من أيقونة
+ * الشريط العلويّ بجانب المحفظة. **والمطفأةُ لا تُرسم** (في `LoyaltyCards`)، وسهمُ الرجوع كالمحفظة.
+ */
+@Composable
+fun LoyaltyCardsScreen(card: StampCard, seenKey: String, onBack: () -> Unit) {
+    androidx.activity.compose.BackHandler(onBack = onBack)
+    Screen {
+        PageHeader(stringResource(R.string.loyalty_cards_title), onBack)
+        Spacer(Modifier.height(Rahal.space.md))
+        LoyaltyCards(card, seenKey)
+    }
+}
+
+/** **تقدّمُ الختم لشارة الأيقونة** («٧/١٠» بأرقام غربيّة كالرصيد) — وفارغٌ إن لم تُفعَّل بطاقةٌ بعدد. */
+fun StampCard.cardsBadge(): String = when {
+    enabled && size > 0 -> "%d/%d".format(java.util.Locale.US, stamps, size)
+    daily.enabled && daily.size > 0 -> "%d/%d".format(java.util.Locale.US, daily.stamps, daily.size)
+    else -> ""
+}
+
+/** **أيُّ بطاقةٍ مفعّلة** — شرطُ ظهور الأيقونة. */
+val StampCard.anyCardEnabled: Boolean get() = enabled || daily.enabled

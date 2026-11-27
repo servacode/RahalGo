@@ -32,6 +32,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 /** **أدنى هدف لمس** — ومكانُ زرّ القائمة إن غاب بمقاسه. */
 private val TouchMin = Rahal.size.touch
@@ -135,6 +137,12 @@ fun TopBar(
     onAddress: (() -> Unit)? = null,
     /** **العنوانُ المختار** — وفارغٌ يعني «اختر عنواناً». */
     addressLabel: String = "",
+    /**
+     * **أيقونةُ «بطاقاتي» بجانب المحفظة** (قرارُ المالك ٢٠٢٦-١١-٢٧) — تفتح صفحةَ بطاقة رحّال غو وكرت اليوم.
+     * **وفارغةٌ تعني لا تُرسم** (لا بطاقةَ مفعّلة، أو ضيف). و`cardsBadge` شارةُ التقدّم («٧/١٠») أو فارغة.
+     */
+    onCards: (() -> Unit)? = null,
+    cardsBadge: String = "",
 ) {
     Row(
         Modifier
@@ -327,6 +335,42 @@ fun TopBar(
 
 
             Spacer(Modifier.size(10.dp))
+
+            // **وأيقونةُ «بطاقاتي» قبل المحفظة** — صغيرةٌ بارتفاع الشريط نفسِه، وشارتُها تقدّمُ الختم.
+            if (onCards != null) {
+                val cardsCd = stringResource(R.string.loyalty_cards_title)
+                Box(
+                    Modifier
+                        .minimumInteractiveComponentSize()
+                        .clip(CircleShape)
+                        .clickable(onClick = onCards)
+                        .padding(horizontal = 6.dp)
+                        .semantics { contentDescription = cardsCd },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_ticket),
+                        contentDescription = null,
+                        tint = Rahal.colors.brand,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    if (cardsBadge.isNotEmpty()) {
+                        Text(
+                            text = cardsBadge,
+                            color = Rahal.colors.onBrand,
+                            style = Rahal.type.badge,
+                            maxLines = 1,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .offset(y = 6.dp)
+                                .clip(CircleShape)
+                                .background(Rahal.colors.brand)
+                                .padding(horizontal = 4.dp, vertical = 1.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.size(Rahal.space.xs))
+            }
 
             // **والرصيد رقم لا أيقونة وحدها** — «محفظتك» بلا رقم لا تقول
             // شيئا.

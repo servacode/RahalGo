@@ -187,11 +187,6 @@ fun StoreScreen(
                 // **في وضع المنصّة المكتبُ يقبل والمتجرُ يتفرّج** — فكان لا يعرف أنّ طلباً وصله.
                 if (activeOrders.isNotEmpty()) ActiveOrdersCard(activeOrders, onActiveOrders)
 
-                // ── (أ٣) بطاقة رحّال غو وكرت اليوم (قرارُ المالك ٢٠٢٦-١١-٢٧) — والمطفأةُ لا تُرسم ──
-                if (vm.loyalty.enabled || vm.loyalty.daily.enabled) {
-                    com.rahalgo.ui.LoyaltyCards(vm.loyalty, seenKey = "store.${store.id}")
-                }
-
                 // ── (ب) الأزرارُ السريعة — والموقوفُ لا يملكها (B6) ──
                 if (!suspended) {
                     Row(

@@ -330,12 +330,6 @@ private fun Offers(
             com.rahalgo.customer.FreeOffer.refresh(scopeFree)
             com.rahalgo.customer.Loyalty.refresh(scopeFree)
         }
-        // **بطاقة رحّال غو وكرت اليوم أوّلَ العروض** (قرارُ المالك ٢٠٢٦-١١-٢٧).
-        val loyalty = com.rahalgo.customer.Loyalty.state
-        if (loyalty.enabled || loyalty.daily.enabled) {
-            Spacer(Modifier.height(Rahal.space.md))
-            com.rahalgo.ui.LoyaltyCards(loyalty, seenKey = "customer")
-        }
         val free = com.rahalgo.customer.FreeOffer.state
         if (free.any) {
             Spacer(Modifier.height(Rahal.space.md))
@@ -363,7 +357,7 @@ private fun Offers(
         }
         val gridItems = vm.offerItems
         if (list.isEmpty() && gridItems.isEmpty()) {
-            if (!free.any && !loyalty.enabled && !loyalty.daily.enabled) {
+            if (!free.any) {
                 Empty(
                     text = stringResource(R.string.off_none),
                     hint = stringResource(R.string.off_none_hint),

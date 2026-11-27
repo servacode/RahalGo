@@ -75,6 +75,8 @@ import com.rahalgo.ui.PlatformPages
 import com.rahalgo.ui.PlatformScreen
 import com.rahalgo.ui.ThemeState
 import com.rahalgo.ui.TopBar
+import com.rahalgo.ui.anyCardEnabled
+import com.rahalgo.ui.cardsBadge
 import com.rahalgo.ui.WalletScreen
 import com.rahalgo.ui.WalletViewModel
 import com.rahalgo.ui.rememberOverlay
@@ -486,6 +488,13 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         if (overlay.current == Overlay.Inbox) shell.openInbox()
                     },
                     onWallet = { overlay.show(Overlay.Wallet) },
+                    // **أيقونةُ «بطاقاتي» بجانب المحفظة** (قرارُ المالك ٢٠٢٦-١١-٢٧) — لا إن أُطفئت البطاقتان.
+                    onCards = if (storeVm.loyalty.anyCardEnabled) {
+                        { overlay.show(Overlay.Cards) }
+                    } else {
+                        null
+                    },
+                    cardsBadge = storeVm.loyalty.cardsBadge(),
                 )
             },
             bottomBar = {
@@ -732,6 +741,13 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         payouts = true,
                         onBack = { overlay.clear() },
                         shamcashTopup = true,
+                    )
+
+                    // **«بطاقاتي»** (٢٠٢٦-١١-٢٧) — بطاقتا رحّال غو واليوم للمتجر كبيرتين.
+                    over == Overlay.Cards -> com.rahalgo.ui.LoyaltyCardsScreen(
+                        card = storeVm.loyalty,
+                        seenKey = "store.${storeVm.store?.id.orEmpty()}",
+                        onBack = { overlay.clear() },
                     )
 
                     over == Overlay.Inbox -> InboxSheet(
