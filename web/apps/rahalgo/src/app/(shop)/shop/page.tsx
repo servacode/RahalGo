@@ -41,6 +41,7 @@ import { useBrowseQuery } from "@/lib/customer/context";
 import type { FeaturedStore, HomePage, Item } from "@/lib/customer/types";
 import { ItemGrid, ItemSheet } from "@/components/customer/items";
 import { FeaturedStrip } from "@/components/customer/stores";
+import { PartyWaiting } from "@/components/customer/PartyLive";
 import { InviteHomeCard } from "@/components/customer/InviteNudge";
 import { FreeDeliveryBanner } from "@/components/customer/ServiceNotices";
 import { SHOP_SEARCH_EVENT } from "@/components/customer/ShopChrome";
@@ -169,6 +170,7 @@ export default function ShopPage() {
       {!searching && home && <FeaturedStrip stores={home.featured_stores ?? []} />}
 
       {/* **«ادعُ صديقك» تحت العروض** — تُخفى بـ✕ للأبد (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
+      {user && <PartyWaiting />}
       {user && !searching && <InviteHomeCard />}
 
       {searching ? (

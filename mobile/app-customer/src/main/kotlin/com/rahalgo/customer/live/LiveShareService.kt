@@ -60,6 +60,9 @@ class LiveShareService : Service() {
 
     private var orderId: String? = null
 
+    /** **مشاركةُ الطرف الآخر** (قرارُ المالك ٢٠٢٦-١١-٢٨) — نقاطٌ إلى `my/party-orders` وتبدأ دقيقةً بلا انتظار. */
+    private var party = false
+
     /** **الدقيقُ وحدَه يُرسَل، وأحسنُ ما وُجد بعد ثلاثين ثانية** (قرارُ المالك ٢٠٢٦-١٠-١٦). */
     private val filter = LiveSendFilter()
     private var stopping = false
@@ -79,22 +82,34 @@ class LiveShareService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             // **زرُّ الإشعار إيقافٌ بيده** — فلا تعود تلقائيّاً لهذا الطلب (٢٠٢٦-١١-٢٣).
-            orderId?.let { LiveStopped.add(this, it) }
+            orderId?.let { LiveStopped.add(this, if (party) PartyPolicy.stopKey(it) else it) }
             finish(clearServer = true)
             return START_NOT_STICKY
         }
         val id = intent?.getStringExtra(EXTRA_ORDER)
+        val isParty = intent?.getBooleanExtra(EXTRA_PARTY, false) == true
         // **ولا إذنَ فلا خدمة** — رفعُ خدمةٍ أماميّةٍ من نوع الموقع بلا إذنٍ يُسقط التطبيق.
-        if (id.isNullOrEmpty() || !com.rahalgo.map.Here.granted(this) || !startForegroundSafely()) {
+        if (id.isNullOrEmpty() || !com.rahalgo.map.Here.granted(this) ||
+            !startForegroundSafely(isParty, intent?.getBooleanExtra(EXTRA_PARTY_AMANAH, false) == true)
+        ) {
             LiveShare.activeOrderId = null
+            LiveShare.activePartyId = null
             stopSelf()
             return START_NOT_STICKY
         }
         // **وطلبٌ ثانٍ يحلّ محلّ الأوّل** — الخدمةُ واحدة، ومشاركةٌ واحدةٌ في كلّ لحظة.
-        if (orderId != id) filter.reset()
+        if (orderId != id || party != isParty) filter.reset()
         orderId = id
+        party = isParty
         stopping = false
-        LiveShare.activeOrderId = id
+        if (isParty) {
+            LiveShare.activeOrderId = null
+            LiveShare.activePartyId = id
+        } else {
+            LiveShare.activePartyId = null
+            LiveShare.activeOrderId = id
+        }
+        // **والطرفُ الآخر دقيقٌ كلَّ عشر ثوانٍ من أوّل لحظة** — لا إسنادَ ينتظره.
         waiting = false
         request()
         // **وتُعاد إن قتلها النظام** (قرارُ المالك ٢٠٢٦-١١-٢٣: «اذا فاتح او مسكر يظل
@@ -142,12 +157,22 @@ class LiveShareService : Service() {
         val pick = filter.offer(
             LiveSendFilter.Reading(lat, lng, accuracyM, SystemClock.elapsedRealtime()),
         ) ?: return
+        val asParty = party
         scope.launch {
             try {
                 // **والحدُّ يعود من اللوحة** — فيُرشَّح التالي برقمها.
-                api.shareLive(id, pick.lat, pick.lng, pick.accuracyM)
+                (if (asParty) api.shareParty(id, pick.lat, pick.lng, pick.accuracyM)
+                else api.shareLive(id, pick.lat, pick.lng, pick.accuracyM))
                     ?.let { filter.maxAccuracyM = it.toDouble() }
             } catch (e: ApiClient.ApiException) {
+                // **والطرفُ الآخر**: الطلبُ انتهى أو ليس له أو لم يوافق — تقف بلا محوٍ.
+                if (asParty) {
+                    if (PartyPolicy.shouldStop(e.body.code)) {
+                        Log.i(TAG, "طلبُ الطرف الآخر ليس في طريقه — تقف المشاركة")
+                        finish(clearServer = false)
+                    }
+                    return@launch
+                }
                 // **ولم يُسند بعد** (أُعيد للتوزيع مثلاً) — **تبقى وتنتظر بهدوء.**
                 if (e.body.code == "live_location_not_yet") {
                     withContext(Dispatchers.Main) {
@@ -207,11 +232,12 @@ class LiveShareService : Service() {
         if (stopping) return
         stopping = true
         val id = orderId
+        val asParty = party
         runCatching { client.removeLocationUpdates(callback) }
         scope.launch {
             if (clearServer && id != null) {
                 try {
-                    api.stopLive(id)
+                    if (asParty) api.stopParty(id) else api.stopLive(id)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -220,7 +246,9 @@ class LiveShareService : Service() {
             }
             withContext(Dispatchers.Main) {
                 LiveShare.activeOrderId = null
+                LiveShare.activePartyId = null
                 orderId = null
+                party = false
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
@@ -230,12 +258,13 @@ class LiveShareService : Service() {
     override fun onDestroy() {
         runCatching { client.removeLocationUpdates(callback) }
         if (LiveShare.activeOrderId == orderId) LiveShare.activeOrderId = null
+        if (LiveShare.activePartyId == orderId) LiveShare.activePartyId = null
         scope.cancel()
         super.onDestroy()
     }
 
     /** **يرفع الخدمةَ أماميّةً بإشعارٍ ظاهرٍ وزرّ إيقاف** — **ويردّ `false` إن ردّها النظام.** */
-    private fun startForegroundSafely(): Boolean {
+    private fun startForegroundSafely(forParty: Boolean = false, amanah: Boolean = false): Boolean {
         val manager = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
@@ -246,13 +275,26 @@ class LiveShareService : Service() {
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE,
         )
         runCatching { manager.deleteNotificationChannel("rahalgo_live_share") }
-        val note: Notification = NotificationCompat.Builder(this, CHANNEL)
+        val builder = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(com.rahalgo.ui.R.drawable.ic_notification)
-            .setContentTitle(getString(R.string.live_note_title))
-            .setContentText(getString(R.string.live_note_text))
             .setContentIntent(open)
             .setOngoing(true)
-            .build()
+        if (forParty) {
+            // **الطرفُ الآخر** (قرارُ المالك ٢٠٢٦-١١-٢٨): نصٌّ واحدٌ وزرُّ «إيقاف».
+            val stop = PendingIntent.getService(
+                this, 1,
+                Intent(this, LiveShareService::class.java).setAction(ACTION_STOP),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            builder
+                .setContentTitle(getString(if (amanah) R.string.party_note_amanah else R.string.party_note_order))
+                .addAction(0, getString(R.string.party_note_stop), stop)
+        } else {
+            builder
+                .setContentTitle(getString(R.string.live_note_title))
+                .setContentText(getString(R.string.live_note_text))
+        }
+        val note: Notification = builder.build()
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 startForeground(NOTE_ID, note, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
@@ -279,6 +321,10 @@ class LiveShareService : Service() {
         private const val CHANNEL = "rahalgo_live_share_min"
         private const val NOTE_ID = 2001
         const val EXTRA_ORDER = "order_id"
+
+        /** **مشاركةُ الطرف الآخر** — `EXTRA_ORDER` معرّفُ الطلب، والنقاطُ إلى `my/party-orders`. */
+        const val EXTRA_PARTY = "party"
+        const val EXTRA_PARTY_AMANAH = "party_amanah"
         const val ACTION_STOP = "com.rahalgo.customer.live.STOP"
 
         /** **كلَّ عشر ثوانٍ** — قرارُ المالك. */

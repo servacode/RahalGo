@@ -436,6 +436,32 @@ class CustomerApi(private val api: ApiClient) {
         api.call<Ack>("/api/v1/orders/$orderId/live-location", HttpMethod.Delete, null)
     }
 
+    // ══ الطرفُ الآخر يشارك موقعَه من تطبيقنا (قرارُ المالك ٢٠٢٦-١١-٢٨) ══
+
+    /** **طلباتٌ أنا فيها الطرفُ الآخر** — المفتوحةُ وحدَها. */
+    suspend fun partyOrders(): List<PartyView> =
+        api.call<PartyOrdersPage>("/api/v1/my/party-orders").orders
+
+    /** **بطاقةُ طلبٍ وحدَه** — وطلبُ غيري ٤٠٤. */
+    suspend fun partyOrder(orderId: String): PartyView = api.call("/api/v1/my/party-orders/$orderId")
+
+    /** **جوابُه «نعم/لا»** — `yes` تُجيز بدءَ المشاركة. */
+    suspend fun partyAnswer(orderId: String, answer: String): PartyView =
+        api.call("/api/v1/my/party-orders/$orderId/answer", HttpMethod.Post, PartyAnswerInput(answer))
+
+    /** **نقطةٌ من موقعه** — وتردّ حدَّ الدقّة كما `shareLive`. */
+    suspend fun shareParty(orderId: String, lat: Double, lng: Double, accuracyM: Double?): Int? =
+        api.call<LiveAck>(
+            "/api/v1/my/party-orders/$orderId/live-location",
+            HttpMethod.Post,
+            LiveInput(lat, lng, accuracyM),
+        ).maxAccuracyM
+
+    /** **«إيقاف»** — تُمحى نقطتُه. */
+    suspend fun stopParty(orderId: String) {
+        api.call<Ack>("/api/v1/my/party-orders/$orderId/live-location", HttpMethod.Delete, null)
+    }
+
     suspend fun cancel(orderId: String) {
         api.call<Ack>(
             "/api/v1/orders/$orderId/cancel",
@@ -847,6 +873,31 @@ data class LiveAck(
     val saved: Boolean = false,
     @SerialName("max_accuracy_m") val maxAccuracyM: Int? = null,
 )
+
+/** **بطاقةُ الطرف الآخر** — كما يردّها المحرّك (`party_live.go`): لا أسماءَ كباتن ولا مبالغ. */
+@Serializable
+data class PartyView(
+    @SerialName("order_id") val orderId: String = "",
+    /** `amanah` · `delivery` · `order`. */
+    val kind: String = "order",
+    /** `dropoff` · `pickup` · `fetch`. */
+    val role: String = "dropoff",
+    @SerialName("sender_phone") val senderPhone: String = "",
+    @SerialName("store_name") val storeName: String = "",
+    val status: String = "",
+    @SerialName("captain_assigned") val captainAssigned: Boolean = false,
+    val code: String = "",
+    /** فارغٌ: لم يجب · `yes` · `no`. */
+    val answer: String = "",
+    val shared: Boolean = false,
+    val open: Boolean = false,
+)
+
+@Serializable
+data class PartyOrdersPage(val orders: List<PartyView> = emptyList())
+
+@Serializable
+data class PartyAnswerInput(val answer: String)
 
 /** **جسمُ نقطة الموقع المباشر** — كما يقرؤه المحرّك (`live_location.go`). */
 @Serializable

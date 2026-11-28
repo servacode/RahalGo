@@ -376,6 +376,21 @@
     <string name="live_note_title">موقعك عم يوصل للكابتن ليوصلك عالباب</string>
     <string name="live_note_text">لا توقفها: بلاها الكابتن ما رح يقدر يوصلك. بتوقف لحالها لما يوصلك طلبك</string>
     <string name="live_stop">أوقف المشاركة</string>
+    <!-- **الطرف الآخر يشارك موقعه من تطبيقنا** (قرار المالك ٢٠٢٦-١١-٢٨) -->
+    <string name="party_q_amanah">لديك أمانة من صاحب الرقم %1$s — هل تريد استقبال الأمانة؟</string>
+    <string name="party_q_amanah_anon">لديك أمانة من رحّال غو — هل تريد استقبال الأمانة؟</string>
+    <string name="party_q_delivery">لديك توصيلة من %1$s — هل تريد استقبالها؟</string>
+    <string name="party_q_order">لديك طلب من رحّال غو — هل تريد استقباله؟</string>
+    <string name="party_yes">نعم</string>
+    <string name="party_no">لا</string>
+    <string name="party_status">حالة الطلب: %1$s</string>
+    <string name="party_captain">كابتن رحّال غو</string>
+    <string name="party_code">كود الاستلام: %1$s — أعطه للكابتن عند الاستلام</string>
+    <string name="party_banner_amanah">لديك أمانة بانتظار ردّك</string>
+    <string name="party_banner_order">لديك طلب بانتظار ردّك</string>
+    <string name="party_note_amanah">عم نشارك موقعك مع كابتن رحّال غو لتوصيل الأمانة</string>
+    <string name="party_note_order">عم نشارك موقعك مع كابتن رحّال غو لتوصيل الطلب</string>
+    <string name="party_note_stop">إيقاف</string>
     <!-- «إنت هلق بعنوان التوصيل؟» قبل الإرسال (قرار المالك ٢٠٢٦-١١-٢٤) -->
     <string name="here_title">هل أنت موجود الآن في عنوان التوصيل؟</string>
     <string name="here_body">إذا كنت هناك، يصل الكابتن إلى موقعك بدقّة. وإذا كنت تطلب لشخص آخر، يذهب الكابتن إلى العنوان المكتوب.</string>

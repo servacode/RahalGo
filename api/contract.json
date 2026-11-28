@@ -12365,6 +12365,105 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/my/party-orders",
+      "handler": "handlePartyOrders",
+      "auth": true,
+      "response": [
+        {
+          "name": "orders",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/party-orders/{id}",
+      "handler": "handlePartyOrder",
+      "auth": true,
+      "response": [
+        {
+          "name": "@view",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/my/party-orders/{id}/answer",
+      "handler": "handlePartyAnswer",
+      "auth": true,
+      "request": [
+        {
+          "name": "answer",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@view",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/my/party-orders/{id}/live-location",
+      "handler": "handleStopPartyLiveLocation",
+      "auth": true,
+      "response": [
+        {
+          "name": "stopped",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/my/party-orders/{id}/live-location",
+      "handler": "handlePartyLiveLocation",
+      "auth": true,
+      "request": [
+        {
+          "name": "lat",
+          "type": "float64"
+        },
+        {
+          "name": "lng",
+          "type": "float64"
+        },
+        {
+          "name": "accuracy_m",
+          "type": "?float64"
+        }
+      ],
+      "response": [
+        {
+          "name": "max_accuracy_m",
+          "type": "unknown"
+        },
+        {
+          "name": "saved",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/my/ratings",
       "handler": "handleMyRatings",
       "auth": true,

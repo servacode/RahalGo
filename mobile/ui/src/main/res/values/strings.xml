@@ -101,6 +101,7 @@
     <string name="err_rate_limited">محاولات كثيرة — انتظر قليلا</string>
     <string name="err_amanah_holder_required">ناقص: اسم صاحب الأمانة ورقمه</string>
     <string name="err_location_request_invalid">انتهى طلب الموقع — اطلب الموقع منه من جديد</string>
+    <string name="err_party_not_consented">اضغط «نعم» أولاً لنبدأ مشاركة موقعك</string>
     <string name="err_too_many_active">معك طلبات بعدد حدك</string>
     <string name="err_unauthorized">رقم الهاتف أو كلمة المرور غير صحيحة</string>
     <string name="err_unexpected">تعذر إتمام الطلب</string>

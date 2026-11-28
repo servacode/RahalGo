@@ -32,12 +32,14 @@ import { CartProvider } from "@/lib/customer/cart";
 import { CustomerProvider } from "@/lib/customer/context";
 import { FavoritesProvider } from "@/lib/customer/favorites";
 import { LiveShareProvider } from "@/lib/customer/live";
+import { PartyProvider } from "@/lib/customer/party";
 import { ShopToastProvider } from "./toast";
 import { OrderingBanner, ServiceBlockBanner, FreeDeliveryBanner } from "./ServiceNotices";
 import PwaHints from "./PwaHints";
 import QuoteWatcher from "./QuoteWatcher";
 import WebPushCard from "@/components/WebPushCard";
 import { LiveBanner } from "./LiveShare";
+import { PartyAsk, PartySharing } from "./PartyLive";
 import { RatingWatcher } from "./feedback";
 import { ShopFloat, ShopTabBar, ShopTopBar } from "./ShopChrome";
 import { useShopTheme } from "./ShopTheme";
@@ -134,6 +136,7 @@ function Shell({ children }: { children: ReactNode }) {
         <ServiceBlockBanner />
         {path !== "/shop" && <FreeDeliveryBanner />}
         {user && <LiveBanner />}
+        {user && <PartySharing />}
         {/* **«فعّل الإشعارات» قدّامه لا في «حسابي»** (ملاحظةُ المالك ٢٠٢٦-١٠-١٩) — **وصاحبُ
             الآيفون يُقال له كيف** (أضفه للشاشة الرئيسيّة)، فلا يدور على الإذن. */}
         {user && <WebPushCard app="customer" variant="banner" notes={path === "/shop"} />}
@@ -147,6 +150,7 @@ function Shell({ children }: { children: ReactNode }) {
           <QuoteWatcher />
           {/* **ولا نافذةَ «شارك موقعي»** (قرارُ المالك ٢٠٢٦-١١-٢٤) — تبدأ وحدَها، والمتصفّحُ يسأل الإذنَ بنفسه. */}
           <RatingWatcher />
+          <PartyAsk />
           <Chats />
         </>
       )}
@@ -160,7 +164,9 @@ function Signed({ children }: { children: ReactNode }) {
   if (!user) return <LiveShareProvider open={null}>{children}</LiveShareProvider>;
   return (
     <ActiveOrdersProvider key={user.id}>
-      <Live>{children}</Live>
+      <Live>
+        <PartyProvider>{children}</PartyProvider>
+      </Live>
     </ActiveOrdersProvider>
   );
 }

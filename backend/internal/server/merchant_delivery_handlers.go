@@ -173,6 +173,8 @@ func (s *Server) handleMerchantCreateDelivery(w http.ResponseWriter, r *http.Req
 					s.logger.Error("التوصيلة: بعد الإنشاء", "order", id, "error", err)
 				}
 				s.touch("orders", "ops")
+				// **ومستلمُ التوصيلة يوصله إشعارٌ بالتطبيق إن كان له حساب** (قرارُ المالك ٢٠٢٦-١١-٢٨).
+				s.partyInvite(context.WithoutCancel(r.Context()), id)
 			},
 		}, nil
 	})

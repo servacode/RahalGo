@@ -209,6 +209,10 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 			// **وطلبٌ ينتظر من لا يعلم أنّه ينتظره لا يُخدَم** —
 			// **وصاحبُه ينظر إلى شاشةٍ لا تتحرّك.**
 			after()
+			// **والطرفُ الآخر بالأمانة يوصله إشعارٌ بالتطبيق إن كان له حساب** (قرارُ المالك ٢٠٢٦-١١-٢٨).
+			if o.CustomMode == orders.CustomModeAmanah {
+				s.partyInvite(context.WithoutCancel(r.Context()), o.ID)
+			}
 		}}, nil
 	})
 }

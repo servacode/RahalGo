@@ -322,6 +322,9 @@ func (s *Server) locReqSend(ctx context.Context, id, phone, mode, token string, 
 			s.logger.Warn("طلبُ الموقع: تعليمُ الإرسال سقط", "error", err)
 		}
 	}
+	// **والطرفُ صاحبُ حسابٍ يوصله إشعارٌ بالتطبيق كمان** (قرارُ المالك ٢٠٢٦-١١-٢٨) — إن كان طلبُ الموقع
+	// مربوطاً بطلبٍ الآن (البوتُ والمكتب)؛ وطلبُ التطبيق يُربط عند الإنشاء ويُبلَّغ هناك.
+	s.partyInvite(context.WithoutCancel(ctx), id)
 	return map[string]any{
 		"id":            id,
 		"status":        "pending",

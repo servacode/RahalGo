@@ -114,6 +114,30 @@ object LiveShare {
     var activeOrderId by mutableStateOf<String?>(null)
         internal set
 
+    /**
+     * **طلبُ الطرف الآخر الذي يُشارَك موقعي له** (قرارُ المالك ٢٠٢٦-١١-٢٨) — **منفصلٌ عن `activeOrderId`**
+     * فلا يُخلط بطلبي أنا، **والخدمةُ الواحدةُ تحمل أحدَهما في كلّ لحظة.**
+     */
+    var activePartyId by mutableStateOf<String?>(null)
+        internal set
+
+    /** **يبدأ مشاركةَ الطرف الآخر** — بعد «نعم»، والإذنُ يُفحص قبله في الشاشة. */
+    fun startParty(context: Context, orderId: String, amanah: Boolean) {
+        val intent = Intent(context, LiveShareService::class.java)
+            .putExtra(LiveShareService.EXTRA_ORDER, orderId)
+            .putExtra(LiveShareService.EXTRA_PARTY, true)
+            .putExtra(LiveShareService.EXTRA_PARTY_AMANAH, amanah)
+        runCatching { context.startForegroundService(intent) }
+    }
+
+    /** **«إيقاف» بيده** — فلا تُستأنف تلقائيّاً لهذا الطلب، وتُمحى نقطتُه في المحرّك. */
+    fun stopParty(context: Context) {
+        if (activePartyId == null) return
+        val intent = Intent(context, LiveShareService::class.java)
+            .setAction(LiveShareService.ACTION_STOP)
+        runCatching { context.startService(intent) }
+    }
+
     /** **يبدأ المشاركةَ لطلب** — والإذنُ يُفحص قبله في الشاشة. */
     fun start(context: Context, orderId: String) {
         val intent = Intent(context, LiveShareService::class.java)
@@ -140,6 +164,7 @@ object LiveShare {
     /** **يُوقف بلا نداء** — للخروج من الحساب: الجلسةُ ذهبت فلا بابَ يُنادى. */
     fun stopLocal(context: Context) {
         activeOrderId = null
+        activePartyId = null
         runCatching { context.stopService(Intent(context, LiveShareService::class.java)) }
     }
 }
@@ -164,6 +189,15 @@ object LiveStopped {
         runCatching {
             context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
                 .edit().remove(KEY).apply()
+        }
+    }
+
+    /** **يُنسى إيقافُه بيده** — من أعاد «نعم» لطلبِ طرفٍ آخر أراد مشاركتَه. */
+    fun remove(context: Context, key: String) {
+        runCatching {
+            val next = load(context) - key
+            context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+                .edit().putString(KEY, LiveSharePolicy.encode(next)).apply()
         }
     }
 

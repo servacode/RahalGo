@@ -134,6 +134,9 @@ func (s *Server) repairWALocations(ctx context.Context) int {
 // تصل لا تُعاد** (كرسالة الرأي): المستلِمُ لا يُلاحَق.
 func (s *Server) SweepWALocationFollowUp(ctx context.Context) int {
 	s.repairWALocations(ctx)
+	// **وإشعارُ الطرف الآخر بالتطبيق وتذكيرُه الوحيد** (قرارُ المالك ٢٠٢٦-١١-٢٨) — `party_live.go`؛
+	// قبل الإعداد والبوت: الإشعارُ بالتطبيق ما بيحتاج واتساب.
+	s.SweepPartyInvites(ctx)
 	minutes := s.settings.GetInt(ctx, "orders.whatsapp_location_followup_min")
 	if minutes <= 0 {
 		return 0

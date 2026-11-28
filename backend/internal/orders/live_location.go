@@ -28,6 +28,11 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
 
+// liveAmanahSendSQL **«أبعت أمانة»** (قرارُ المالك ٢٠٢٦-١١-١٩) — صاحبُ الطلب هو المرسل وواقفٌ عند نقطة
+// الاستلام، **فموقعُه المباشر مو موقعُ الباب**: كان يُكتب موقعاً للزبون فيُقاد الكابتنُ إلى المرسل بدل
+// المستلم. **وموقعُ المستلم يصل من تطبيقه هو** (`SavePartyLive`، قرارُ المالك ٢٠٢٦-١١-٢٨).
+const liveAmanahSendSQL = `(kind = 'custom' AND custom_mode = 'amanah' AND amanah_direction = 'send')`
+
 // LiveFreshFor **بعدها تُعامَل النقطةُ كأنّها غيرُ موجودة** (قرارُ المالك: دقيقتان).
 //
 // **ونقطةٌ بلا وقتٍ كذبةٌ تشيخ** — زبونٌ أطفأ هاتفَه قبل ربع ساعةٍ يبقى موضعُه
@@ -169,6 +174,7 @@ func (s *Service) SaveLiveFrom(ctx context.Context, orderID, customerID string,
 			WHERE id = $1::uuid AND customer_id = $2::uuid AND closed_at IS NULL
 			  AND status = ANY($6::text[]) AND kind = ANY($7::text[])
 			  AND NOT customer_elsewhere
+			  AND NOT `+liveAmanahSendSQL+`
 		), up AS (
 			INSERT INTO order_live_locations (order_id, customer_id, point, accuracy_m, at)
 			SELECT o.id, o.customer_id, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5, now()
@@ -199,18 +205,22 @@ func (s *Service) SaveLiveFrom(ctx context.Context, orderID, customerID string,
 // liveRefusal **لماذا لم يُكتب** — **طلبُ غيره لا يُعرَف أنّه موجود** (٤٠٤)،
 // وطلبُه خارجَ طريقه «ليس في طريقه» (٤٠٩).
 func (s *Service) liveRefusal(ctx context.Context, orderID, customerID string) error {
-	var mine, early, elsewhere bool
+	var mine, early, elsewhere, amanahSend bool
 	err := s.db.QueryRow(ctx,
 		`SELECT customer_id = $2::uuid,
 		        closed_at IS NULL AND status = ANY($3::text[]) AND kind = ANY($4::text[]),
-		        customer_elsewhere
+		        customer_elsewhere, `+liveAmanahSendSQL+`
 		   FROM orders WHERE id = $1::uuid`,
-		orderID, customerID, liveEarlyStatuses, liveKinds).Scan(&mine, &early, &elsewhere)
+		orderID, customerID, liveEarlyStatuses, liveKinds).Scan(&mine, &early, &elsewhere, &amanahSend)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !mine) {
 		return httpx.ErrNotFound
 	}
 	if err != nil {
 		return err
+	}
+	// **مرسلُ «أبعت أمانة» مو عند الباب** — نقطةُ التسليم موقعُ المستلم، فمشاركتُه تقف من أوّلها.
+	if amanahSend {
+		return ErrLiveInactive
 	}
 	if elsewhere {
 		return ErrLiveElsewhere

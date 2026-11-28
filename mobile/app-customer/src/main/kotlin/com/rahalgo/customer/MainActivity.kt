@@ -637,6 +637,16 @@ private fun SignedIn(
         if (!guest) com.rahalgo.ui.Refresh.tick.collect { Loyalty.refresh(scope) }
     }
 
+    // **والطرفُ الآخر** (قرارُ المالك ٢٠٢٦-١١-٢٨): «لديك أمانة/طلب بانتظار ردّك» تُقرأ عند الفتح وكلَّ نبضةٍ
+    // (ومنها إشارةُ `party_orders` الحيّة)؛ والضيفُ لا شيءَ له.
+    LaunchedEffect(guest) {
+        if (guest) {
+            com.rahalgo.customer.live.Party.clear()
+        } else {
+            com.rahalgo.ui.Refresh.tick.collect { com.rahalgo.customer.live.Party.refresh(scope) }
+        }
+    }
+
     // **مبلغُ «ادعُ صديقاً» لصاحب الحساب** — والضيفُ لا يُعرض له شيء (٢٠٢٦-١٠-٣٠).
     LaunchedEffect(guest) {
         InviteNudge.load(context)
@@ -1324,6 +1334,73 @@ private fun SignedIn(
                 //
                 // **وتبدأ لحظةَ التأكيد وتعود كلّما فُتح التطبيق** (قرارُ المالك ٢٠٢٦-١١-٢٣: «اذا
                 // فاتح او مسكر يظل الموقع المباشر شغال») — **ما لم يوقفها بيده لهذا الطلب.**
+                // ══════════════════════════════════════════════════════
+                // **الطرفُ الآخر: «نعم» تبدأ المشاركةَ بلا زرٍّ ثانٍ** (قرارُ المالك ٢٠٢٦-١١-٢٨)
+                // ══════════════════════════════════════════════════════
+                //
+                // **إذنٌ أماميٌّ فقط** (لا خلفيّ) — يُطلب بعد «نعم» مباشرةً إن لم يكن ممنوحاً؛ ومن رفض أو أُطفئ
+                // موقعُه أُرسل عنوانُه المحفوظ الافتراضيّ مرّةً واحدة.
+                var partyAsking by remember { mutableStateOf<com.rahalgo.shared.customer.PartyView?>(null) }
+                val startParty: (com.rahalgo.shared.customer.PartyView) -> Unit = { v ->
+                    if (com.rahalgo.map.Here.granted(liveCtx) && com.rahalgo.ui.locationServiceEnabled(liveCtx)) {
+                        com.rahalgo.customer.live.LiveShare.startParty(
+                            liveCtx, v.orderId, com.rahalgo.customer.live.PartyPolicy.isAmanah(v.kind),
+                        )
+                    } else {
+                        com.rahalgo.customer.live.Party.sendSavedAddress(scope, v.orderId)
+                    }
+                }
+                val askParty = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestMultiplePermissions(),
+                ) { _ ->
+                    val v = partyAsking
+                    partyAsking = null
+                    if (v != null) startParty(v)
+                }
+                val beginParty: (com.rahalgo.shared.customer.PartyView) -> Unit = { v ->
+                    if (com.rahalgo.map.Here.granted(liveCtx)) {
+                        startParty(v)
+                    } else {
+                        partyAsking = v
+                        askParty.launch(
+                            arrayOf(
+                                android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                            ),
+                        )
+                    }
+                }
+                if (!guest) {
+                    com.rahalgo.customer.live.PartyPolicy.promptTarget(
+                        com.rahalgo.customer.live.Party.orders, com.rahalgo.customer.live.Party.promptId,
+                    )?.let { v ->
+                        com.rahalgo.customer.live.PartyDialog(
+                            view = v,
+                            busy = com.rahalgo.customer.live.Party.busy,
+                            onYes = {
+                                com.rahalgo.customer.live.Party.answer(liveCtx, scope, v, yes = true, onYes = beginParty)
+                            },
+                            onNo = {
+                                com.rahalgo.customer.live.Party.answer(liveCtx, scope, v, yes = false, onYes = {})
+                            },
+                            onDismiss = com.rahalgo.customer.live.Party::dismiss,
+                        )
+                    }
+                    // **ومن قال «نعم» تُستأنف مشاركتُه كلّما فُتح التطبيق** — بلا لمسةٍ، وبإذنٍ ممنوحٍ فقط.
+                    val resume = com.rahalgo.customer.live.PartyPolicy.resumeTarget(
+                        com.rahalgo.customer.live.Party.orders,
+                        com.rahalgo.customer.live.LiveStopped.load(liveCtx),
+                        com.rahalgo.customer.live.LiveShare.activePartyId,
+                        com.rahalgo.map.Here.granted(liveCtx) && com.rahalgo.ui.locationServiceEnabled(liveCtx),
+                    )
+                    if (resume != null) {
+                        LaunchedEffect(resume.orderId) {
+                            com.rahalgo.customer.live.LiveShare.startParty(
+                                liveCtx, resume.orderId, com.rahalgo.customer.live.PartyPolicy.isAmanah(resume.kind),
+                            )
+                        }
+                    }
+                }
                 val liveReady = !guest &&
                     com.rahalgo.customer.live.LiveAuto.load(liveCtx) &&
                     com.rahalgo.map.Here.granted(liveCtx) &&
@@ -1332,7 +1409,9 @@ private fun SignedIn(
                     com.rahalgo.customer.live.LiveSharePolicy.autoStart(
                         ordersVm.open,
                         com.rahalgo.customer.live.LiveStopped.load(liveCtx),
-                        com.rahalgo.customer.live.LiveShare.activeOrderId,
+                        // **ومشاركةُ الطرف الآخر القائمةُ لا يحلّ محلَّها تشغيلٌ تلقائيٌّ لطلبي.**
+                        com.rahalgo.customer.live.LiveShare.activeOrderId
+                            ?: com.rahalgo.customer.live.LiveShare.activePartyId,
                     )
                 } else {
                     null
@@ -1461,11 +1540,25 @@ private fun SignedIn(
                                 tab = Tab.Cart
                             }
 
+                            // **و«لديك أمانة/طلب» تفتح بطاقةَ «نعم/لا» لطلبها** (قرارُ المالك ٢٠٢٦-١١-٢٨).
+                            com.rahalgo.ui.Engagement.DEST_PARTY_ORDER ->
+                                com.rahalgo.customer.live.Party.open(scope, com.rahalgo.ui.Opened.take().id)
+
                             else -> Unit
                         }
                     }
                     // **ولا قرصَ فوق شريط السلّة والطلب الخاص** (مراجعةُ المحاكي ٢٠٢٦-١١-٢٥) — كان يغطّي الإجماليَّ وزرَّ الإرسال،
                     // والحديثُ يُفتح من «طلباتي» أو من الإشعار.
+                    // **لافتةُ «لديك أمانة بانتظار ردّك»** في البيت (قرارُ المالك ٢٠٢٦-١١-٢٨) — والضغطُ يفتح البطاقة.
+                    if (tab == Tab.Shop && over == Overlay.None) {
+                        com.rahalgo.customer.live.PartyPolicy.bannerTarget(com.rahalgo.customer.live.Party.orders)?.let { v ->
+                            com.rahalgo.customer.live.PartyBanner(
+                                view = v,
+                                modifier = Modifier.align(Alignment.TopCenter),
+                                onClick = { com.rahalgo.customer.live.Party.open(scope, v.orderId) },
+                            )
+                        }
+                    }
                     if (liveChat.chats.isNotEmpty() && !((tab == Tab.Cart || tab == Tab.Custom) && over == Overlay.None)) {
                         // ══════════════════════════════════════════════
                         // **وقرصٌ لا يقول أيَّ طلبٍ يفتح لا يختار عنه**

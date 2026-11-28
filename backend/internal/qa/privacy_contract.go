@@ -402,6 +402,24 @@ var OrderPrivacy = map[string]FieldRule{
 	"customer_phone_masked": adminOnly("سجلُّ الطلبات — هاتفٌ مخفيٌّ جزئيّاً"),
 }
 
+// PartyViewFields **بطاقةُ الطرف الآخر** (`server/party_live.go`، قرارُ المالك ٢٠٢٦-١١-٢٨) — **كلُّ ما يخرج له
+// ولا غيره.** رقمُ المرسل بالأمانة مسموحٌ بقرار المالك («لديك أمانة من صاحب الرقم»)، **ولا اسمُ الكابتن
+// ولا رقمُه** (`captain_assigned` وحدَه، والشاشةُ تكتب «كابتن رحّال غو»)، **ولا مبلغٌ أبداً.**
+// وحقلٌ جديدٌ بالبطاقة لا يمرّ قبل أن يُكتب هون (`TestPartyView_OnlyContractFields`).
+var PartyViewFields = map[string]string{
+	"order_id":         "معرّفُ الطلب — لنداءات البطاقة",
+	"kind":             "أمانة · توصيلة · طلب",
+	"role":             "طرفُ التسليم أم الاستلام",
+	"sender_phone":     "رقمُ مرسل الأمانة — قرارُ المالك ٢٠٢٦-١١-٢٨",
+	"store_name":       "اسمُ المتجر بالتوصيلة",
+	"status":           "حالُ الطلب",
+	"captain_assigned": "صار في كابتن — بلا اسمه",
+	"code":             "كودُ التسليم لطرف التسليم وحدَه",
+	"answer":           "جوابُه نعم/لا",
+	"shared":           "وصل موقعُه",
+	"open":             "دورُه قائم",
+}
+
 // v يبني حكماً بالترتيب: زبونٌ · متجرٌ · سائقٌ · مندوبٌ · أدمن.
 func v(customer, merchant, driver, rep, admin Visibility) map[string]Visibility {
 	return map[string]Visibility{

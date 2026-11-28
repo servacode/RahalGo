@@ -869,6 +869,13 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/live-location", s.handleCustomerLiveLocation)
 			r.Delete("/orders/{id}/live-location", s.handleStopCustomerLiveLocation)
 			r.Put("/orders/{id}/elsewhere", s.handleCustomerElsewhere)
+			// **والطرفُ الآخر بالأمانة وتوصيلة المتجر يشارك موقعَه من تطبيقه** (قرارُ المالك ٢٠٢٦-١١-٢٨) —
+			// برقم حسابه، وبعد «نعم» وحدَها. انظر `party_live.go`.
+			r.Get("/my/party-orders", s.handlePartyOrders)
+			r.Get("/my/party-orders/{id}", s.handlePartyOrder)
+			r.Post("/my/party-orders/{id}/answer", s.handlePartyAnswer)
+			r.Post("/my/party-orders/{id}/live-location", s.handlePartyLiveLocation)
+			r.Delete("/my/party-orders/{id}/live-location", s.handleStopPartyLiveLocation)
 			// **أثرُ كود الخصم قبل الطلب** — والقواعدُ نفسُها لا نسخةٌ منها.
 			r.Post("/promo/preview", s.handlePromoPreview)
 			r.Post("/orders/{id}/rating", s.handleRateOrder)
